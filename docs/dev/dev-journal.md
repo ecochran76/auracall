@@ -52204,3 +52204,29 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
   posture remained paused pending a separate operator decision.
 - Plan 0385 and lane P84 are closed. The sanitized acceptance receipt is
   `docs/dev/notes/2026-09-30-issue-151-final-live-acceptance.md`.
+## 2026-10-01 - ChatGPT materialization surface repair
+
+- Focus: restore current ChatGPT conversation-file and generated-artifact
+  materialization under Plan 0386 while the scheduler remains paused.
+- Evidence: three bounded installed Bailey controls returned zero assets, while
+  passive direct CDP on the same root chat showed uploaded PDFs, generated
+  DOCX/PPTX/ZIP assets, and visible `Download file` controls. The adapter still
+  recognizes only legacy `button.behavior-btn` artifacts and legacy
+  `[role="group"][aria-label]` upload tiles; current controls use
+  `Open preview of <filename>` semantics.
+- Additional finding: the acceptance watcher was attached to remembered port
+  `45015`, but the exact `wsl-chrome-3` launch resolved dynamic port `55627`.
+  Exact-endpoint discovery is part of this repair; fixed-port observation is
+  not acceptance evidence.
+- Safety: provider-free repair and validation precede one no-retry installed
+  positive control. Broad reconciliation, snapshot refresh, scheduler resume,
+  warning dismissal, and prompt-based link repair are excluded.
+- Progress: widened the manifest-owned assistant artifact selector to current
+  semantic preview controls, normalized their filename separately from the
+  action label, and reused that contract at click time. User-turn file
+  discovery now accepts the same semantic preview surface while retaining
+  legacy tiles. Focused adapter, file-service, config, and rate-limit suites
+  pass 282/282; typecheck and a production build pass. A passive read of the
+  still-open exact dynamic endpoint found no rate-limit dialog; its page had
+  returned to ChatGPT home, so it correctly provided no conversation assets
+  and did not consume the live materialization canary.

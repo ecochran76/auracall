@@ -23932,3 +23932,17 @@ cleanup failure are not collapsed into a generic error.
 - Finish with a fresh exact-scope process, listener, and lease census. Retire
   only a settled idle lease after positively proving its owned browser is gone;
   active, ambiguous, or unrelated leases remain hard stops.
+## 2026-10-01: Treat semantic preview controls as ChatGPT asset identity
+
+- Current ChatGPT generated files and uploaded files can render as
+  `Open preview of <filename>` controls with a separate `Download file` action.
+  Limiting discovery to `button.behavior-btn` or legacy
+  `[role="group"][aria-label]` tiles makes a visibly downloadable chat look
+  empty.
+- Preserve one selector and title-normalization contract across discovery and
+  click-time activation. Strip only the semantic preview prefix, retain the
+  turn/message/index scope, and let the existing viewer-download path perform
+  the action.
+- Passive acceptance observers must bind the exact runtime-resolved DevTools
+  endpoint. A fixed remembered port can silently watch a different or absent
+  browser when managed Chrome uses dynamic port assignment.

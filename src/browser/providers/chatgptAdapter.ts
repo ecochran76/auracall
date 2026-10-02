@@ -256,7 +256,7 @@ const CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR = resolveBundledServiceDomSelect
 const CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
 	"assistant_artifact_button",
-	"button.behavior-btn",
+	'button.behavior-btn, button[aria-label^="Open preview of "]',
 );
 const CHATGPT_TEXTDOC_MESSAGE_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
@@ -9639,6 +9639,11 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
+      const artifactTitle = (button) => {
+        const ariaLabel = normalize(button.getAttribute('aria-label') || '');
+        const previewMatch = ariaLabel.match(/^Open preview of\\s+(.+)$/i);
+        return normalize(previewMatch?.[1] || button.textContent || ariaLabel || '');
+      };
       const collect = () => {
         const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((section, messageIndex) => {
@@ -9668,7 +9673,7 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
               messageId: entry.messageId || null,
               messageIndex: entry.messageIndex,
               buttonIndex,
-              title: normalize(button.textContent || button.getAttribute('aria-label') || '') || null,
+              title: artifactTitle(button) || null,
             }))
             .filter((button) => {
               const title = normalize(button.title || '');
@@ -9887,6 +9892,10 @@ async function readVisibleChatgptConversationFilesWithClient(
         }
         return null;
       };
+      const previewName = (node) => {
+        const ariaLabel = normalize(node.getAttribute?.('aria-label') || '');
+        return normalize(ariaLabel.match(/^Open preview of\\s+(.+)$/i)?.[1] || '');
+      };
       const collect = () => {
         const items = [];
         const nodes = Array.from(
@@ -9899,10 +9908,17 @@ async function readVisibleChatgptConversationFilesWithClient(
           const section = node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)});
           const turnId = normalize(section?.getAttribute('data-turn-id') || '');
           const messageId = normalize(node.getAttribute('data-message-id') || '');
-          const tiles = Array.from(node.querySelectorAll('[role="group"][aria-label]'))
+          const legacyTiles = Array.from(node.querySelectorAll('[role="group"][aria-label]'))
             .filter((tile) => tile.querySelector('button[aria-label], a[aria-label], button, a'));
+          const semanticPreviewControls = Array.from(
+            node.querySelectorAll('button[aria-label^="Open preview of "]'),
+          ).filter((button) => !legacyTiles.some((tile) => tile.contains(button)));
+          const tiles = [...legacyTiles, ...semanticPreviewControls];
           tiles.forEach((tile, tileIndex) => {
+            const semanticName = previewName(tile);
             const name = normalize(
+              semanticName ||
+              previewName(tile.querySelector('button[aria-label^="Open preview of "]')) ||
               tile.getAttribute('aria-label') ||
               tile.querySelector('button[aria-label], a[aria-label]')?.getAttribute('aria-label') ||
               '',
@@ -12139,6 +12155,11 @@ async function tagChatgptArtifactButtonWithClient(
           const rect = node.getBoundingClientRect();
           return rect.width > 0 && rect.height > 0;
         };
+        const artifactTitle = (node) => {
+          const ariaLabel = normalize(node.getAttribute('aria-label') || '');
+          const previewMatch = ariaLabel.match(/^Open preview of\\s+(.+)$/i);
+          return normalize(previewMatch?.[1] || node.textContent || ariaLabel || '').toLowerCase();
+        };
         document.querySelectorAll('[' + attr + ']').forEach((node) => node.removeAttribute(attr));
         const expectedTitle = normalize(${JSON.stringify(artifact.title)}).toLowerCase();
         const expectedMessageId = normalize(${JSON.stringify(artifact.messageId ?? null)});
@@ -12176,7 +12197,7 @@ async function tagChatgptArtifactButtonWithClient(
                 messageId: root.messageId,
                 messageIndex: root.messageIndex,
                 buttonIndex,
-                title: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('download') || '').toLowerCase(),
+                title: artifactTitle(node) || normalize(node.getAttribute('download') || '').toLowerCase(),
                 href: '',
               }));
             const anchors = Array.from(root.section.querySelectorAll('a[href]'))

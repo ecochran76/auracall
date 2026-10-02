@@ -1663,3 +1663,25 @@ lanes:
     integration_receipt: f55e687261a063f36b94cd41dd40d89fba233686
     disposition: PR 153 integrated the governed provider-traffic path, the canonical build was installed byte-identically, and the sole direct-CDP canary completed with one top-level navigation, 163 requests, no warning, and a clean exact-scope census; scheduler resume remains excluded.
     updated_at: 2026-09-30
+  - id: P85
+    objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
+    plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
+    plan_ref: refs/heads/fix/chatgpt-materialization-surface
+    branch: fix/chatgpt-materialization-surface
+    target: main
+    plan_state: OPEN
+    custody_state: OWNED
+    checkpoint: cb07bfca07d25df83082cab3bd41db6f3acd5008
+    remote_ref: null
+    integration: merge
+    work_items: []
+    dependencies: [P84]
+    overlaps: [P84]
+    reconciled_overlaps: [P84]
+    reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
+    blocker: null
+    validation_status: observed-live-defect
+    validation_ref: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
+    integration_receipt: null
+    disposition: Three bounded installed controls returned zero assets while passive CDP showed downloadable Bailey proposal files; implementation and one positive-control acceptance remain.
+    updated_at: 2026-10-01

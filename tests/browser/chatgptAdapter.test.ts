@@ -4107,6 +4107,8 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		).resolves.toEqual([]);
 		expect(evaluate).toHaveBeenCalledTimes(1);
 		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(1);
+		expect(expression).toContain('button[aria-label^="Open preview of "]');
+		expect(expression).toContain("/^Open preview of\\s+(.+)$/i");
 	});
 
 	test("bounds a stalled visible download artifact probe and records its pending operation", async () => {
@@ -4170,6 +4172,8 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		expect(evaluate).toHaveBeenCalledTimes(1);
 		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(1);
 		expect(expression).not.toContain("for (let attempt = 0; attempt < 20");
+		expect(expression).toContain("Open preview of");
+		expect(expression).toContain("previewMatch?.[1]");
 	});
 
 	test("emits stable conversation file refs from user-turn probes", () => {

@@ -922,6 +922,12 @@ Terminology note:
   snapshot refresh. Scrape telemetry records these boundaries as
   `llmService.materializeConversationFiles.reuseRefreshedCache` and
   `llmService.materializeConversationFiles.reuseRefreshedContext`.
+  Current ChatGPT conversation assets are discovered from semantic
+  `Open preview of <filename>` controls as well as legacy behavior-button and
+  upload-tile markup. The preview control supplies asset identity; an adjacent
+  `Download file` button is an action, not a filename. Discovery and
+  materialization preserve the same turn/message/index identity so an
+  unrelated download control cannot satisfy the request.
   ChatGPT `files-download` JSON may supply a signed URL as the JSON string
   itself, a recognized shallow URL field, or one `data`/`result` wrapper.
   Parsing a URL is not materialization proof: AuraCall still requires the
