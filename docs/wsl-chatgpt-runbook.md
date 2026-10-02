@@ -118,6 +118,12 @@ Aura-Call derives the managed browser profile directory automatically as
 `~/.auracall/browser-profiles/<auracallProfile>/<service>` unless you set
 `manualLoginProfileDir` explicitly.
 
+For passive CDP observation, resolve the live endpoint from that exact managed
+browser profile or from AuraCall's launch/session receipt. Do not assume an old
+fixed port such as `45015`: WSL Chrome may use a new auto-assigned DevTools port
+on every launch. A watcher attached to a remembered port is not evidence for
+the active browser and must fail closed before a live acceptance run.
+
 To run that same AuraCall-owned directory inside an agent-browser hidden
 RDP/Guacamole route, configure its named browser profile with
 `browserFamily: "chrome"`, `browserBuild: "stock_chrome"`, and

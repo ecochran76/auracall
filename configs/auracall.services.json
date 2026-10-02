@@ -463,7 +463,7 @@
           "conversation_turn_section": "[data-content-search-unit-key], section[data-testid^=\"conversation-turn-\"]",
           "message_author_role": "[data-message-author-role], [data-content-search-unit-key$=\":user\"], [data-content-search-unit-key$=\":assistant\"], [data-chatgpt-search-unit-key$=\":user\"], [data-chatgpt-search-unit-key$=\":assistant\"]",
           "user_message_author_role": "[data-message-author-role=\"user\"], [data-content-search-unit-key$=\":user\"], [data-chatgpt-search-unit-key$=\":user\"]",
-          "assistant_artifact_button": "button.behavior-btn",
+          "assistant_artifact_button": "button.behavior-btn, button[aria-label^=\"Open preview of \"]",
           "textdoc_message": "div[id^=\"textdoc-message-\"]",
           "conversation_options_button": "button[data-testid=\"conversation-options-button\"]",
           "delete_conversation_confirm_button": "button[data-testid=\"delete-conversation-confirm-button\"]"
