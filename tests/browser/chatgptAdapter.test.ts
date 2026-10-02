@@ -21,6 +21,7 @@ import {
 	classifyChatgptPostPayloadRouteForTest,
 	classifyChatgptRuntimeEvaluationFailureForTest,
 	clickChatgptViewerDownloadButtonWithClientForTest,
+	clickTaggedChatgptDownloadControlWithClientForTest,
 	closeChatgptTabConnectionForTest,
 	createChatgptAdapter,
 	downloadChatgptConversationFilesWithClientForTest,
@@ -4622,6 +4623,49 @@ describe("extractChatgptConversationArtifactsFromPayload", () => {
 });
 
 describe("normalizeChatgptConversationDownloadArtifactProbes", () => {
+	test("activates the tagged live download control with a trusted CDP pointer sequence", async () => {
+		const evaluate = vi.fn(async (_input: { expression?: string }) => ({
+			result: { value: { ok: true, x: 412.5, y: 287.25 } },
+		}));
+		const dispatchMouseEvent = vi.fn(async () => undefined);
+
+		await expect(
+			clickTaggedChatgptDownloadControlWithClientForTest(
+				// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
+				{ Runtime: { evaluate }, Input: { dispatchMouseEvent } } as never,
+			),
+		).resolves.toBe(true);
+
+		expect(evaluate).toHaveBeenCalledTimes(1);
+		expect(evaluate.mock.calls[0]?.[0].expression).toContain(
+			"target.scrollIntoView({ block: 'center', inline: 'center' })",
+		);
+		expect(evaluate.mock.calls[0]?.[0].expression).not.toContain("target.click()");
+		expect(dispatchMouseEvent.mock.calls).toEqual([
+			[{ type: "mouseMoved", x: 412.5, y: 287.25 }],
+			[
+				{
+					type: "mousePressed",
+					x: 412.5,
+					y: 287.25,
+					button: "left",
+					buttons: 1,
+					clickCount: 1,
+				},
+			],
+			[
+				{
+					type: "mouseReleased",
+					x: 412.5,
+					y: 287.25,
+					button: "left",
+					buttons: 0,
+					clickCount: 1,
+				},
+			],
+		]);
+	});
+
 	test("normalizes visible behavior-button downloads into synthetic artifacts", () => {
 		expect(
 			normalizeChatgptConversationDownloadArtifactProbes([

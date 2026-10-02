@@ -12195,6 +12195,60 @@ async function configureChatgptDownloadBehaviorWithClient(
 	}
 }
 
+async function clickTaggedChatgptDownloadControlWithClient(
+	client: ChromeClient,
+	options?: BrowserProviderListOptions,
+): Promise<boolean> {
+	recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+	const result = await client.Runtime.evaluate({
+		expression: `(() => {
+      const target = document.querySelector(${JSON.stringify(`[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`)});
+      if (!(target instanceof HTMLElement)) {
+        return { ok: false, reason: 'Download target missing before click' };
+      }
+      target.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = target.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return { ok: false, reason: 'Download target is not visible before click' };
+      }
+      return {
+        ok: true,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    })()`,
+		returnByValue: true,
+	});
+	const point = isRecord(result.result?.value) ? result.result.value : null;
+	if (point?.ok !== true || typeof point.x !== "number" || typeof point.y !== "number") {
+		return false;
+	}
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({ type: "mouseMoved", x: point.x, y: point.y });
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		buttons: 1,
+		clickCount: 1,
+	});
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		buttons: 0,
+		clickCount: 1,
+	});
+	return true;
+}
+
+export const clickTaggedChatgptDownloadControlWithClientForTest =
+	clickTaggedChatgptDownloadControlWithClient;
+
 async function tagChatgptArtifactButtonWithClient(
 	client: ChromeClient,
 	artifact: ConversationArtifact,
@@ -12977,20 +13031,8 @@ async function materializeChatgptConversationArtifactWithClient(
 					return null;
 				}
 				await armDownloadCapture(client.Runtime, { stateKey: CHATGPT_DOWNLOAD_CAPTURE_STATE_KEY });
-				recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
 				recordBrowserScrapeProviderAction(options, "chatgpt.clickArtifactDownload");
-				const clickResult = await client.Runtime.evaluate({
-					expression: `(() => {
-            const target = document.querySelector(${JSON.stringify(`[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`)});
-            if (!(target instanceof HTMLElement)) {
-              return { ok: false, reason: 'Download target missing before click' };
-            }
-            target.click();
-            return { ok: true };
-          })()`,
-					returnByValue: true,
-				});
-				if (!isRecord(clickResult.result?.value) || clickResult.result.value.ok !== true) {
+				if (!(await clickTaggedChatgptDownloadControlWithClient(client, options))) {
 					return null;
 				}
 				const capture = await waitForDownloadCapture(client.Runtime, {

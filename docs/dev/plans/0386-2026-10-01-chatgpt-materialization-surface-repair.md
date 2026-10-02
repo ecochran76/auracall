@@ -71,6 +71,18 @@ node and its descendant role node. PR #160 merged this follow-up at canonical
 Gate D remains open; the installed follow-up has not been re-probed, and no
 further live attempt is authorized.
 
+A direct agentic control then traversed the live root Bailey conversation and
+materialized `Bailey_FY27_Proposal_With_Figures.zip` through the exact semantic
+control. The 1,721,645-byte ZIP passed archive validation at SHA-256
+`c463e95d...8a46dc`. That comparison found the next product-path defect:
+discovery and tagging now match the current DOM, but activation still calls
+untrusted `HTMLElement.click()`. The live control produced no download for that
+call and completed immediately when activated with a trusted CDP pointer
+sequence. Source now uses the same visible-center `Input.dispatchMouseEvent`
+sequence. Gate D remains open pending canonical integration, install, and one
+installed product-path positive control; the direct agentic receipt is not
+substituted for that gate.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal

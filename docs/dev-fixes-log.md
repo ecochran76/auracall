@@ -23978,3 +23978,20 @@ cleanup failure are not collapsed into a generic error.
   and drops every control.
 - Keep this role contract identical across readiness, artifact/image
   discovery, and click-time tagging so admission and activation cannot drift.
+## 2026-10-02 - ChatGPT generated-file controls require trusted pointer activation
+
+- Symptom: the current Bailey DOM exposed a uniquely identifiable direct
+  generated-file control, discovery/tagging matched it, and
+  `HTMLElement.click()` returned successfully, but Chrome emitted no download.
+- Cause: the upgraded provider control is a React-managed
+  `span[role="button"][data-file-reference]` that requires a trusted pointer
+  activation on the live surface. A synthetic DOM click is not materialization
+  evidence.
+- Fix: after exact candidate tagging, scroll the tagged control into view,
+  validate nonzero geometry, and dispatch one CDP `mouseMoved` /
+  `mousePressed` / `mouseReleased` sequence at its center. Preserve the exact
+  tag-based identity and existing download capture/fallback behavior.
+- Proof: the live pointer sequence downloaded a valid 1,721,645-byte ZIP at
+  SHA-256 `c463e95d...8a46dc`; the focused regression executes the new helper
+  and asserts every CDP input event. Adapter tests (187), typecheck, and build
+  pass. Installed product-path acceptance remains a separate gate.
