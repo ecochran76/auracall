@@ -75,3 +75,15 @@ Remaining acceptance: install/integration of this cache repair; one serialized
 installed unchanged/new-asset proof and isolated request counts. Five controls
 are already recorded, so this slice does not silently open another live retry.
 Scheduler resume remains separate from these repairs.
+
+## Integration checkpoint
+
+Repair commit e3494c4c2 is pushed and PR #171 is published:
+https://github.com/ecochran76/auracall/pull/171 . Initial forge readback was
+MERGEABLE/CLEAN with no reported CI checks. Subsequent published-diff and
+review/status reads stalled; a bounded 20-second read timed out. The primary
+terminated its own stalled read command before its following merge command
+could execute. No merge or installed deployment is claimed. Preserve the root
+worktree belonging to the separate CDP-endpoint lane. Next action is forge
+readback, published diff self-check, merge and exact-canonical installation,
+followed by reconciliation of the remaining live-control boundary.
