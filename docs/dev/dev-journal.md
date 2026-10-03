@@ -52376,3 +52376,7 @@ Operator reboot cleared prior stuck browser children. Installed control 3/5 succ
 ## 2026-10-03 — Plan 0386 ZIP and unchanged-work repair (#165)
 
 Installed ZIP control 4 matched the successful agentic checksum and CRC. Control 5 revealed force=false redownloads unchanged assets. A prematurely queued control overlapped the ZIP window; cancellation returned 409, so isolated traffic acceptance is withheld. Real service regression now proves cache reuse, one new asset within one-transfer budget, force and corruption/missing-file recovery. No further live control; scheduler paused. See notes/2026-10-03-plan0386-zip-and-unchanged-repair.md.
+
+## 2026-10-03 — Plan0386 canonical cache install and cycle 3 (#165)
+
+PR171 merged and exact canonical commit installed with service parity. Reconciled five-repair-cycle authority separately from six historical probes. One serialized installed scenario verified PDF cache reuse but unresolved ZIP hit outer timeout, before the unchanged repeat. Browser cleanup census empty; scheduler paused. Provider-free stalled-scenario diagnosis is next. See notes/2026-10-03-plan0386-installed-cache-control.md.
