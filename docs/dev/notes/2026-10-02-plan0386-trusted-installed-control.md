@@ -50,3 +50,12 @@ against retained source and fixtures. Current evidence localizes the failure
 before a manifest or transfer exists but does not establish its root cause.
 Do not infer a new live budget from this note. Preserve the first failure and
 require a source-backed repair before another installed acceptance attempt.
+
+## Correction — 2026-10-03 full persisted readback
+
+The CLI monitoring projection stripped entries and telemetry. The full job has
+one skipped entry caused by `regenerate response`, and records two internal
+reload and two reopen actions. The single job-level attempt and zero assets
+remain correct. The prior no-internal-recovery/zero-entry inference is withdrawn.
+See `2026-10-03-plan0386-full-evidence-correction.json` and
+`2026-10-03-plan0386-live-follow-repair-loop.md` for the source-backed repair.

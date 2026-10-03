@@ -3,7 +3,7 @@
 State: OPEN
 Lane: P85
 Source base: `origin/main` at `cb07bfca07d25df83082cab3bd41db6f3acd5008`
-Branch: `fix/issue-165-artifact-discovery`
+Branch: `fix/issue-165-live-follow-replay`
 Target: `main`
 Integration: merge
 
@@ -100,6 +100,16 @@ are preserved in
 `docs/dev/notes/2026-10-03-plan0386-agentic-algorithm-comparison.md`.
 This is a source repair; the prior live job does not prove causality and Gate D
 remains open without a new installed acceptance budget.
+
+The resumed operator goal authorizes up to five evidence-driven repair cycles.
+A full persisted readback corrects the monitoring-only diagnosis: the prior job
+stopped on `regenerate response` and executed two reload/reopen recovery actions
+before discovery. Source now distinguishes ordinary regeneration controls from
+failure evidence, enforces single-visit materialization with no blocking-surface
+recovery, and verifies fresh native downloads against the selected filename.
+Seven deterministic product-path replays cover byte/manifest correctness and
+no-recovery failures. Installed cycle count is 0/5; Gate D remains open. Details:
+`docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md`.
 
 ## Observed Defect
 

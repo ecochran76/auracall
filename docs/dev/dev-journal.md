@@ -1,3 +1,14 @@
+## 2026-10-03 | Plan 0386 bounded live-follow repair
+
+Recovered full persisted evidence: the previous empty monitoring result hid
+a skipped `regenerate response` entry and two internal reload/reopen actions.
+Reproduced and repaired normal-control misclassification and stale-file false
+success. Production materialization now carries the single-visit contract and
+stops on real blockers without recovery effects. Seven product replay cases
+exercise discovery through manifest writing with isolated transport. Resumed
+goal permits at most five installed controls; none consumed yet. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md`.
+
 ## 2026-10-03 | Issue 165 artifact readiness parity
 
 Compared the retained successful agentic CDP command with product activation.
