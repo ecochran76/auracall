@@ -9687,28 +9687,10 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
           return buttons;
         });
       };
-      const hasAssistantArtifactControl = () => Array.from(
-        document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}),
-      ).some((section) => {
-        const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
-        const role = normalize(
-          roleNode?.getAttribute('data-message-author-role') ||
-          roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
-          roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
-          section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
-          section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
-          section.getAttribute('data-message-author-role') ||
-          section.getAttribute('data-turn') ||
-          '',
-        );
-        return role === 'assistant' && Boolean(
-          section.querySelector(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}),
-        );
-      });
-      // Message readiness can precede late-mounted generated-file controls.
-      // Wait on DOM mutation rather than reloading, navigating, or repeatedly
-      // forcing a full layout scan, then collect the settled surface once.
-      if (!hasAssistantArtifactControl()) {
+      let probes = collect();
+      // Readiness must use the same visibility, title, and textdoc exclusions
+      // as collection. An ineligible control must not hide a late-mounted file.
+      if (probes.length === 0) {
         await new Promise((resolve) => {
           let settled = false;
           const finish = () => {
@@ -9718,13 +9700,14 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
             resolve(undefined);
           };
           const observer = new MutationObserver(() => {
-            if (hasAssistantArtifactControl()) finish();
+            probes = collect();
+            if (probes.length > 0) finish();
           });
           observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
           setTimeout(finish, 5_000);
         });
       }
-      return collect();
+      return probes;
     })()`,
 					awaitPromise: true,
 					returnByValue: true,

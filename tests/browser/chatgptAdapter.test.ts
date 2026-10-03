@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { runInNewContext } from "node:vm";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
@@ -4114,6 +4115,73 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		expect(expression).toContain('[data-message-author-role=\\"user\\"]');
 	});
 
+	test.each([
+		"hidden",
+		"empty",
+		"textdoc",
+	])("waits past an ineligible %s control for the recorded ZIP shape", async (kind) => {
+		let mounted = false;
+		let observed = false;
+		class FixtureElement {
+			constructor(private readonly control: boolean) {}
+			getAttribute(name: string) {
+				if (name === "data-content-search-unit-key") return "fallback-turn-4:2:assistant";
+				if (name === "aria-label")
+					return mounted || kind !== "empty"
+						? "Download Bailey_FY27_Proposal_With_Figures.zip"
+						: "";
+				return null;
+			}
+			get textContent() {
+				return mounted ? "Bailey_FY27_Proposal_With_Figures.zip" : "";
+			}
+			getBoundingClientRect() {
+				return { width: !mounted && kind === "hidden" ? 0 : 80, height: 24 };
+			}
+			closest() {
+				return !mounted && kind === "textdoc" ? this : null;
+			}
+			querySelector() {
+				return this.control ? null : control;
+			}
+			querySelectorAll() {
+				return [control];
+			}
+		}
+		const control = new FixtureElement(true);
+		const root = new FixtureElement(false);
+		const evaluate = async ({ expression }: { expression: string }) => ({
+			result: {
+				value: await runInNewContext(expression, {
+					// biome-ignore lint/style/useNamingConvention: Browser global name.
+					Element: FixtureElement,
+					document: { querySelectorAll: () => [root], documentElement: root },
+					// biome-ignore lint/style/useNamingConvention: Browser global name.
+					MutationObserver: class {
+						constructor(private readonly callback: () => void) {}
+						observe() {
+							observed = true;
+							queueMicrotask(() => {
+								mounted = true;
+								this.callback();
+							});
+						}
+						disconnect() {}
+					},
+					setTimeout: () => 1,
+				}),
+			},
+		});
+		const probes = await readVisibleChatgptDownloadArtifactProbesWithClientForTest(
+			// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
+			{ Runtime: { evaluate } } as never,
+		);
+		expect(observed).toBe(true);
+		expect(probes).toMatchObject([
+			{ title: "Bailey_FY27_Proposal_With_Figures.zip", messageIndex: 0, buttonIndex: 0 },
+		]);
+	});
+
 	test("bounds a stalled visible download artifact probe and records its pending operation", async () => {
 		vi.useFakeTimers();
 		try {
@@ -4159,7 +4227,7 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		}
 	});
 
-	test("collects visible download artifact probes from the ready DOM only once", async () => {
+	test("evaluates visible download artifact readiness with the collection predicate", async () => {
 		let expression = "";
 		const evaluate = vi.fn(async (input: { expression?: string }) => {
 			expression = input.expression ?? "";
@@ -4173,15 +4241,15 @@ describe("normalizeChatgptConversationFileProbes", () => {
 			),
 		).resolves.toEqual([]);
 		expect(evaluate).toHaveBeenCalledTimes(1);
-		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(1);
+		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(2);
 		expect(expression).not.toContain("for (let attempt = 0; attempt < 20");
 		expect(expression).toContain("Open preview of");
 		expect(expression).toContain("previewMatch?.[1]");
 		expect(expression).toContain("MutationObserver");
 		expect(expression).toContain("setTimeout(finish, 5_000)");
 		expect(expression).toContain("downloadMatch?.[1]");
-		expect(expression).toContain("hasAssistantArtifactControl");
-		expect(expression).toContain("role === 'assistant'");
+		expect(expression).toContain("if (probes.length === 0)");
+		expect(expression).toContain("role !== 'assistant'");
 		expect(expression).toContain("section.getAttribute('data-content-search-unit-key')");
 		expect(expression).toContain("section.getAttribute('data-chatgpt-search-unit-key')");
 	});

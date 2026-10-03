@@ -1666,13 +1666,13 @@ lanes:
   - id: P85
     objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
     plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    plan_ref: refs/heads/fix/chatgpt-materialization-surface
-    branch: fix/chatgpt-materialization-surface
+    plan_ref: refs/heads/fix/issue-165-artifact-discovery
+    branch: fix/issue-165-artifact-discovery
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: b6130fc1f9dcc1b8bb25258fd3d8705b54c8ebd8
-    remote_ref: refs/remotes/origin/fix/chatgpt-materialization-surface
+    checkpoint: 3cc6706b2add253f832a7e4af42606b2b18604f3
+    remote_ref: refs/remotes/origin/fix/issue-165-artifact-discovery
     integration: merge
     work_items: [ecochran76/auracall#165]
     dependencies: [P84]
@@ -1680,8 +1680,8 @@ lanes:
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
     blocker: Installed trusted-pointer control settled skipped with zero materialized assets; provider-free discovery diagnosis is required before another live attempt.
-    validation_status: installed-parity-passed-live-control-skipped-gate-d-open
-    validation_ref: docs/dev/notes/2026-10-02-plan0386-trusted-installed-control.json
+    validation_status: provider-free-readiness-parity-passed-gate-d-open
+    validation_ref: docs/dev/notes/2026-10-03-plan0386-agentic-algorithm-comparison.md
     integration_receipt: 554cbe58b8d30b2360d6780894f1c31cbcf5444c
-    disposition: Canonical 2ff53befb installed with exact parity. Sole job hmj_92e88aa5b845422d96a5bb2e84575885 returned skipped with zero assets and no manifest; identity matched and no warning appeared. Final jobs, non-released leases, exact browser processes and listeners are zero; scheduler remains paused. Gate D is open and no retry ran.
-    updated_at: 2026-10-02
+    disposition: Issue 165 provider-free fixtures reproduce and repair premature readiness for hidden, unnamed, and textdoc controls. Agentic CDP comparison is preserved. Prior installed control remains skipped; Gate D is open. No new install or live attempt; scheduler remains paused.
+    updated_at: 2026-10-03

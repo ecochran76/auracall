@@ -3,7 +3,7 @@
 State: OPEN
 Lane: P85
 Source base: `origin/main` at `cb07bfca07d25df83082cab3bd41db6f3acd5008`
-Branch: `fix/chatgpt-materialization-surface`
+Branch: `fix/issue-165-artifact-discovery`
 Target: `main`
 Integration: merge
 
@@ -92,6 +92,14 @@ non-released leases, zero exact browser processes/listeners, and scheduler
 still paused. Gate D remains OPEN; no retry ran. Evidence:
 `docs/dev/notes/2026-10-02-plan0386-trusted-installed-control.md`.
 Issue #165 owns the next provider-free diagnosis; no new live budget is inferred.
+
+Provider-free issue #165 comparison reproduces readiness/collection eligibility
+drift for hidden, unnamed, and textdoc controls. Readiness now uses collected
+eligible probes. The actual recorded trusted CDP sequence and evidence limits
+are preserved in
+`docs/dev/notes/2026-10-03-plan0386-agentic-algorithm-comparison.md`.
+This is a source repair; the prior live job does not prove causality and Gate D
+remains open without a new installed acceptance budget.
 
 ## Observed Defect
 
