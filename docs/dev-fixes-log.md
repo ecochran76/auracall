@@ -24021,3 +24021,7 @@ cleanup failure are not collapsed into a generic error.
   no candidates before any manifest or transfer existed.
 - Preserve this terminal result and diagnose discovery provider-free rather
   than spending another live attempt on the activation hypothesis alone.
+
+## 2026-10-03 — Viewer download scope (#165)
+
+Generic ChatGPT `Download file` labels also occur in inline conversation cards. Viewer transfer must exclude conversation-turn descendants before matching generic download labels. A real helper/VM regression reproduced the wrong card click; keep filename verification as a separate guard.

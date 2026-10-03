@@ -12425,7 +12425,8 @@ async function clickChatgptViewerDownloadButtonWithClient(
           '',
         );
         const controls = Array.from(document.querySelectorAll('button, [role="button"], a'))
-          .filter((node) => isVisible(node) && node.getAttribute(taggedAttr) !== 'true')
+          .filter((node) => isVisible(node) && node.getAttribute(taggedAttr) !== 'true' &&
+            !node.closest?.(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((node) => ({ node, label: labelFor(node) }));
         const download = controls.find((entry) => /^Download(?: file)?$/i.test(entry.label));
         if (!(download?.node instanceof HTMLElement)) {

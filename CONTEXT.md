@@ -39,3 +39,6 @@ _Avoid_: Download attempt, materialization run
 **Acceptance run**:
 A bounded provider-specific verification workflow that produces operator-readable evidence about an Aura-Call behavior.
 _Avoid_: Smoke, acceptance script
+
+**Viewer download control**:
+A download action outside the conversation-turn cards, used after a selected artifact opens its preview. Generic inline `Download file` labels do not establish viewer authority.

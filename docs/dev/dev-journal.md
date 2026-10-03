@@ -52360,3 +52360,7 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - No warning, CAPTCHA, prompt, reload, or retry occurred. Exact PID cleanup left
   no managed-profile process or listener and zero non-released leases. The
   scheduler remains paused. Installed product-path acceptance is still pending.
+
+## 2026-10-03 — Plan 0386 cycle 2 (#165)
+
+Cycle 1 failed with a selected-PDF/downloaded-PPTX mismatch. Deterministic viewer-helper regression reproduced a page-wide inline-card click. Source excludes conversation controls; installed counter 1/5 and incremental acceptance remain open. See notes/2026-10-03-plan0386-cycle2-viewer-scope.md.
