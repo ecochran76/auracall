@@ -1,3 +1,11 @@
+## 2026-10-03 | ChatGPT artifact readiness eligibility
+
+An assistant control can match the selector while remaining hidden, unnamed,
+or excluded as textdoc. Presence alone must not settle generated-file readiness.
+Use the same collection predicate for readiness and returned probes; executable
+fixtures reproduce premature empty results and the later eligible ZIP mount.
+Issue #165; Plan 0386 acceptance remains open.
+
 - 2026-09-28: When nested browser deadlines keep masking the owner of a wait,
   stop widening budgets and emit one privacy-bounded lifecycle receipt through
   the real call chain. Use a closed stage/phase vocabulary, capped timestamps,

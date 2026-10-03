@@ -1,3 +1,11 @@
+## 2026-10-03 | Issue 165 artifact readiness parity
+
+Compared the retained successful agentic CDP command with product activation.
+Reproduced three readiness/collection mismatches with executable DOM fixtures;
+readiness now uses eligible collected probes. All 190 adapter tests and
+typecheck pass. Gate D remains open; no install or live retry. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-agentic-algorithm-comparison.md`.
+
 ## 2026-10-02 | Plan 0386 installed trusted-pointer control
 
 - Installed canonical `2ff53befb` with exact adapter/service byte parity and
