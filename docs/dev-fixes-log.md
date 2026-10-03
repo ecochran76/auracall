@@ -1,3 +1,11 @@
+## 2026-10-03 | Retained RDP readiness convergence
+
+A real p221 client run returned converging before the same handoff later became
+opened/ready. Resolve the retained handoff with bounded waiting; do not repeat
+open as a readiness probe. Preserve original build proof and enforce exact
+browser/handoff identity before CDP attachment. Tests cover successful convergence,
+identity substitution and the wait deadline.
+
 ## 2026-10-03 | Agent Browser canonical CDP attachment
 
 Managed browser inventory exposes `cdpEndpoint`, while older inventory provides

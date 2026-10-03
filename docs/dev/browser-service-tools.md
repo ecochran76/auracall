@@ -20,6 +20,14 @@ path would use.
 
 ## Agent-browser hidden RDP ownership lane
 
+When remote-view opening reports `converging`, AuraCall resolves that exact
+retained handoff rather than repeating open. The readiness phase makes at most
+30 resolutions within the smaller of the configured job timeout and 60 seconds.
+It retains the initial matching build proof and handoff URL, rejects changed
+browser or handoff identity, and attaches only after opened/ready. Cancellation
+also interrupts readiness waits. Agent Browser must support `remote-view resolve`.
+
+
 `browserProfiles.<id>.agentBrowserRdp.enabled=true` moves process/display
 ownership to agent-browser while AuraCall retains the exact managed browser
 profile directory. The BrowserService launcher passes that AuraCall path via

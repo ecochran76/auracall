@@ -1,3 +1,11 @@
+## 2026-10-03 | p221 actual-client readiness repair
+
+Implemented bounded retained-handoff resolution for an initially converging RDP
+open. Initial build proof and operator URL remain attached to the original
+browser/handoff identity. All 21 launcher tests, typecheck and compilation passed. Compiled actual-client
+retest is pending the qualified p221 command publication; public viewer/input
+and Plan 0222 acceptance remain open.
+
 ## 2026-10-03 | P222 canonical endpoint repair
 
 Repaired the task launcher to prefer canonical CDP endpoints and retain legacy
