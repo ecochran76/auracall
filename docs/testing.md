@@ -3257,3 +3257,5 @@
     unchanged.
 - If you are debugging a raw direct-CDP setup instead of Aura-Call’s integrated Windows path, you can still pin `AURACALL_BROWSER_PORT` / `AURACALL_BROWSER_DEBUG_PORT` and use firewall hints from `scripts/test-browser.ts`. That is now a fallback/debug workflow, not the primary Windows setup.
 - Scoped browser runs can be smoke-tested by passing `--project-id` / `--conversation-id` to a browser command; they should not change default config behavior.
+
+Viewer download scope regression: `pnpm vitest run tests/browser/chatgptViewerDownloadScope.test.ts`. Executes the real helper evaluation with captured inline-card shapes and synthetic DOM; no provider calls.
