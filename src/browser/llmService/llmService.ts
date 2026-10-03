@@ -488,6 +488,34 @@ function artifactTitleSpecificityScore(value: string): number {
 	return score;
 }
 
+async function findReusableConversationArtifact(
+	artifact: ConversationArtifact,
+	files: FileRef[],
+): Promise<FileRef | null> {
+	const candidate = files.find(
+		(file) =>
+			file.id === artifact.id &&
+			file.name === artifact.title &&
+			file.remoteUrl === artifact.uri &&
+			file.source === "conversation",
+	);
+	if (!candidate?.localPath) return null;
+	try {
+		const stat = await fs.stat(candidate.localPath);
+		if (
+			!stat.isFile() ||
+			stat.size === 0 ||
+			(candidate.size !== undefined && stat.size !== candidate.size)
+		)
+			return null;
+		const checksumSha256 = await calculateSha256(candidate.localPath);
+		if (candidate.checksumSha256 && checksumSha256 !== candidate.checksumSha256) return null;
+		return { ...candidate, size: stat.size, checksumSha256 };
+	} catch {
+		return null;
+	}
+}
+
 function normalizeArtifactFetchError(error: unknown): string {
 	if (error instanceof Error && error.message.trim()) {
 		return error.message.trim();
@@ -1872,6 +1900,7 @@ export abstract class LlmService {
 			listOptions?: BrowserProviderListOptions;
 			contextTimeoutMs?: number;
 			refresh?: boolean;
+			force?: boolean;
 			maxItems?: number | null;
 			excludeArtifact?: (
 				artifact: ConversationArtifact,
@@ -1925,7 +1954,7 @@ export abstract class LlmService {
 					(artifact) => !isChatgptArtifactMissingLiveControl(artifact),
 				),
 			);
-			const artifacts = limitItems(artifactCandidates, options?.maxItems);
+			let artifacts = artifactCandidates;
 			if (listOptions.useProviderSession === true) {
 				listOptions.skipFeatureSignature = true;
 				if (listOptions.preserveInteractionGovernorForProviderSession !== true) {
@@ -1984,6 +2013,23 @@ export abstract class LlmService {
 				listOptions,
 				"llmService.materializeConversationArtifacts.beginTransfers",
 			);
+
+			const reusable = new Map<string, FileRef>();
+			if (options?.force !== true) {
+				for (const artifact of artifacts) {
+					const file = await findReusableConversationArtifact(artifact, existing.items);
+					if (file) reusable.set(artifact.id, file);
+				}
+			}
+			const transfers = new Set(
+				limitItems(
+					artifacts.filter((artifact) => !reusable.has(artifact.id)),
+					options?.maxItems,
+				).map((artifact) => artifact.id),
+			);
+			artifacts = artifacts.filter(
+				(artifact) => reusable.has(artifact.id) || transfers.has(artifact.id),
+			);
 			const merged = new Map(existing.items.map((item) => [item.id, item]));
 			const materialized: FileRef[] = [];
 			const manifestEntries: ConversationArtifactFetchManifestEntry[] = [];
@@ -1992,6 +2038,30 @@ export abstract class LlmService {
 					listOptions,
 					"llmService.materializeConversationArtifacts.transferCandidate",
 				);
+				const cachedFile = reusable.get(artifact.id);
+				if (cachedFile) {
+					recordBrowserScrapeProviderAction(
+						listOptions,
+						"llmService.materializeConversationArtifacts.reuseVerifiedCache",
+					);
+					materialized.push(cachedFile);
+					merged.set(cachedFile.id, cachedFile);
+					manifestEntries.push({
+						artifactId: artifact.id,
+						title: artifact.title,
+						kind: artifact.kind,
+						uri: artifact.uri ?? null,
+						status: "materialized",
+						fileId: cachedFile.id,
+						fileName: cachedFile.name,
+						localPath: cachedFile.localPath,
+						remoteUrl: cachedFile.remoteUrl ?? artifact.uri ?? null,
+						mimeType: cachedFile.mimeType,
+						size: cachedFile.size,
+						materializationMethod: "cached-provider-file",
+					});
+					continue;
+				}
 				const artifactDir = path.join(
 					attachmentsDir,
 					sanitizeArtifactPathSegment(
@@ -2038,6 +2108,9 @@ export abstract class LlmService {
 							status: "skipped",
 						});
 						continue;
+					}
+					if (file.localPath && (await fs.stat(file.localPath).catch(() => null))?.isFile()) {
+						file.checksumSha256 = await calculateSha256(file.localPath);
 					}
 					materialized.push(file);
 					merged.set(file.id, file);

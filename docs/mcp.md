@@ -183,7 +183,11 @@ scoped keys, response batches, attachments, and polling rules, see
   `runtimeProfile`, `browserProfile`, `boundIdentityKey`, `conversationId`,
   `providerConversationUrl`, and `projectId`), a selected `conversationIds`
   batch, `catalogItemId`, `catalogKind`, `archiveItemId`, or `reconcile`. It
-  also accepts `refreshSnapshot`, `assetKinds`, `maxItems`, and `force`. List
+  also accepts `refreshSnapshot`, `assetKinds`, `maxItems`, and `force`. Artifact
+  transfers reuse readable cached files matching the current artifact ID, filename
+  and URI unless `force=true`; cached files do not consume the artifact transfer
+  budget. Missing files, changed sizes or mismatched retained checksums require
+  transfer. Context refresh and forced artifact transfer are separate controls. List
   accepts optional `status`, `provider`, `runtimeProfile`, `sourceType`, and
   `limit`; job/cancel accept one `id`.
 - Behavior: queues and reads durable `history_materialization_job` records. The
