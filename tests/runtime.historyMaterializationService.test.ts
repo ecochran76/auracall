@@ -52,6 +52,7 @@ describe("history materialization service", () => {
 
 		expect(workKey).toMatch(/^sha256:[a-f0-9]{64}$/);
 		expect(workKey).not.toContain("conversation-sensitive");
+		expect(options.accountMirrorSingleConversationVisit).toBe(true);
 		expect(options.accountMirrorProviderTrafficPlan?.budgets).toEqual([
 			{ phase: "materialization", kind: "page_navigate", workKey, limit: 1 },
 			{ phase: "materialization", kind: "in_page_action", workKey, limit: 2 },

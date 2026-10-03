@@ -1,3 +1,10 @@
+- ChatGPT product materialization replay (provider-free, synthetic bytes and CDP transport):
+  `pnpm vitest run tests/browser/chatgptMaterializationReplay.test.ts`.
+  Exercises recorded DOM discovery/tagging, product selection and native-file
+  verification, cache/manifest writing, normal Regenerate controls, and precise
+  failure for mismatched or ambiguous downloads. A real Retry must stop without
+  reload, navigation, or pointer input. No provider requests or browser launch.
+
 # Testing quickstart
 
 - ChatGPT materialization surface and recoverability states (provider-free):

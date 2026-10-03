@@ -1666,13 +1666,13 @@ lanes:
   - id: P85
     objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
     plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    plan_ref: refs/heads/fix/issue-165-artifact-discovery
-    branch: fix/issue-165-artifact-discovery
+    plan_ref: refs/heads/fix/issue-165-live-follow-replay
+    branch: fix/issue-165-live-follow-replay
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 3cc6706b2add253f832a7e4af42606b2b18604f3
-    remote_ref: refs/remotes/origin/fix/issue-165-artifact-discovery
+    checkpoint: 6b4fedaa7537957d1c3619fc8e76b25478b4788d
+    remote_ref: refs/remotes/origin/fix/issue-165-live-follow-replay
     integration: merge
     work_items: [ecochran76/auracall#165]
     dependencies: [P84]
@@ -1680,8 +1680,8 @@ lanes:
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
     blocker: Installed trusted-pointer control settled skipped with zero materialized assets; provider-free discovery diagnosis is required before another live attempt.
-    validation_status: provider-free-readiness-parity-passed-gate-d-open
-    validation_ref: docs/dev/notes/2026-10-03-plan0386-agentic-algorithm-comparison.md
+    validation_status: provider-free-product-replay-passed-installed-pending
+    validation_ref: docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md
     integration_receipt: 554cbe58b8d30b2360d6780894f1c31cbcf5444c
-    disposition: Issue 165 provider-free fixtures reproduce and repair premature readiness for hidden, unnamed, and textdoc controls. Agentic CDP comparison is preserved. Prior installed control remains skipped; Gate D is open. No new install or live attempt; scheduler remains paused.
+    disposition: Full persisted evidence corrects the old monitoring-only inference. Provider-free replay repairs normal Regenerate blocking, stale native-file acceptance, and missing single-visit enforcement. Resumed bounded goal has consumed zero of five installed controls; canonical install and Gate D acceptance remain pending.
     updated_at: 2026-10-03

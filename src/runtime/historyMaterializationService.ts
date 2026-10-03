@@ -6320,9 +6320,13 @@ export function resolveHistoryMaterializationProviderListOptions(
 export function createHistoryMaterializationTrafficOptions(
 	conversationId: string,
 	inPageActionLimit: number,
-): Pick<BrowserProviderListOptions, "providerTrafficContext" | "accountMirrorProviderTrafficPlan"> {
+): Pick<
+	BrowserProviderListOptions,
+	"providerTrafficContext" | "accountMirrorProviderTrafficPlan" | "accountMirrorSingleConversationVisit"
+> {
 	const workKey = createAccountMirrorProviderTrafficWorkKey("materialization", conversationId);
 	return {
+		accountMirrorSingleConversationVisit: true,
 		providerTrafficContext: {
 			trafficPhase: "materialization",
 			workKey,

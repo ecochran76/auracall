@@ -1,3 +1,13 @@
+## 2026-10-03 | Materialization blockers and fresh download attribution
+
+Regenerate/Continue generating labels alone do not prove a failed turn;
+require independent failure text before recovery. Single-visit materialization
+stops on blockers before recovery effects. Direct and preview-pane Download actions share trusted pointer input.
+Match native downloads to a pre-click
+filesystem baseline and selected filename; reject mismatched/ambiguous fresh
+files. The compact job-monitoring projection intentionally drops entries and
+telemetry: use full persisted evidence for diagnosis and acceptance.
+
 ## 2026-10-03 | ChatGPT artifact readiness eligibility
 
 An assistant control can match the selector while remaining hidden, unnamed,
