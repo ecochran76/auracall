@@ -324,6 +324,35 @@ function selectBrowserRecord(
   throw new Error('agent-browser browser inventory did not identify one exact opened browser.');
 }
 
+/** Resolve canonical CDP inventory first, retaining legacy host/port compatibility. */
+function resolveBrowserCdpConnection(browser: JsonRecord): { host: string; port: number } {
+  if (browser.cdpEndpoint !== undefined && browser.cdpEndpoint !== null) {
+    const endpoint = nonEmptyString(browser.cdpEndpoint);
+    try {
+      if (!endpoint) throw new Error('empty endpoint');
+      const parsed = new URL(endpoint);
+      // WHATWG URL removes default ports, so inspect the explicit authority too.
+      const authority = endpoint.match(/^(?:https?|wss?):\/\/([^/?#]+)/i)?.[1];
+      const explicitPort = authority?.match(/:(\d+)$/)?.[1];
+      const port = explicitPort ? Number(explicitPort) : 0;
+      if (!['http:', 'https:', 'ws:', 'wss:'].includes(parsed.protocol)
+        || !parsed.hostname || !Number.isInteger(port) || port <= 0 || port > 65535
+        || parsed.username || parsed.password || endpoint.includes('?') || endpoint.includes('#')) {
+        throw new Error('invalid endpoint');
+      }
+      const host = parsed.hostname.replace(/^\[|\]$/g, '');
+      return { host, port };
+    } catch {
+      throw new Error('agent-browser opened browser has an invalid canonical CDP endpoint in service inventory.');
+    }
+  }
+  const port = positiveInteger(browser.cdpPort);
+  if (!port || port > 65535) {
+    throw new Error('agent-browser opened browser has no responsive CDP port in service inventory.');
+  }
+  return { host: nonEmptyString(browser.cdpHost) ?? '127.0.0.1', port };
+}
+
 export async function launchAgentBrowserRdpSession(
   options: LaunchAgentBrowserRdpSessionOptions,
 ): Promise<AgentBrowserRdpLaunchResult> {
@@ -354,11 +383,7 @@ export async function launchAgentBrowserRdpSession(
     'agent-browser service browsers',
   );
   const browser = selectBrowserRecord(inventoryEnvelope, opened.browserId, plan.session);
-  const port = positiveInteger(browser.cdpPort);
-  if (!port) {
-    throw new Error('agent-browser opened browser has no responsive CDP port in service inventory.');
-  }
-  const host = nonEmptyString(browser.cdpHost) ?? '127.0.0.1';
+  const { host, port } = resolveBrowserCdpConnection(browser);
   const pid = positiveInteger(browser.pid) ?? undefined;
   return {
     chrome: { host, port, ...(pid ? { pid } : {}) },

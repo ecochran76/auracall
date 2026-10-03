@@ -128,7 +128,7 @@ describe('agent-browser RDP launcher', () => {
     ]));
   });
 
-  test.each([{ cdpHost: '127.0.0.1', cdpPort: 45015 }, { cdpEndpoint: 'http://127.0.0.1:45015' }])('accepts an exact CDP inventory record %j', async (connection) => {
+  test.each([{ cdpHost: '127.0.0.1', cdpPort: 45015 }, { cdpEndpoint: 'http://127.0.0.1:45015' }, { cdpEndpoint: 'ws://127.0.0.1:45015/devtools/browser/abc', cdpPort: 123 }, { cdpEndpoint: 'http://127.0.0.1:80' }])('accepts an exact CDP inventory record %j', async (connection) => {
     const calls: string[][] = [];
     const runner: AgentBrowserCommandRunner = async (_executable, args) => {
       calls.push(args);
@@ -162,12 +162,28 @@ describe('agent-browser RDP launcher', () => {
 
     expect(calls).toHaveLength(2);
     expect(result).toEqual({
-      chrome: { host: '127.0.0.1', port: 45015, pid: 20260 },
-      port: 45015,
+      chrome: { host: '127.0.0.1', port: connection.cdpEndpoint === 'http://127.0.0.1:80' ? 80 : 45015, pid: 20260 },
+      port: connection.cdpEndpoint === 'http://127.0.0.1:80' ? 80 : 45015,
       browserId: 'browser-123',
       session: 'auracall-wsl-chrome-3-chatgpt',
       handoffUrl: 'https://guac.example.test/#/client/route-123',
     });
+  });
+
+  test.each([
+    'ftp://127.0.0.1:45015', 'http://127.0.0.1', 'http://127.0.0.1:0',
+    'http://127.0.0.1:65536', 'http://user:pass@127.0.0.1:45015',
+    'http://127.0.0.1:45015?token=secret', 'http://127.0.0.1:45015#fragment', '',
+  ])('rejects invalid canonical endpoint without legacy fallback: %s', async (cdpEndpoint) => {
+    const runner = vi.fn<AgentBrowserCommandRunner>()
+      .mockResolvedValueOnce({ stdout: openedResponse(), stderr: '' })
+      .mockResolvedValueOnce({ stdout: JSON.stringify({ success: true, data: {
+        browsers: [{ id: 'browser-123', cdpEndpoint, cdpHost: '127.0.0.1', cdpPort: 45015 }],
+      } }), stderr: '' });
+    await expect(launchAgentBrowserRdpSession({
+      config: chromeConfig(), userDataDir: '/tmp/auracall-test-profile',
+      url: 'https://example.com', serviceTarget: 'chatgpt', logger: vi.fn() as BrowserLogger, runner,
+    })).rejects.toThrow('invalid canonical CDP endpoint');
   });
 
   test('stops before CDP attachment when the route is not visible or proof is mismatched', async () => {

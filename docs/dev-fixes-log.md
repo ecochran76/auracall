@@ -1,3 +1,10 @@
+## 2026-10-03 | Agent Browser canonical CDP attachment
+
+Managed browser inventory exposes `cdpEndpoint`, while older inventory provides
+`cdpHost`/`cdpPort`. Prefer canonical endpoints and validate protocol, explicit
+port and absence of credentials/query/fragment before attachment. URL parsing
+normalizes default ports away, so preserve the explicit authority port.
+
 ## 2026-10-03 | ChatGPT artifact readiness eligibility
 
 An assistant control can match the selector while remaining hidden, unnamed,

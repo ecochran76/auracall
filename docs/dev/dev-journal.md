@@ -1,3 +1,10 @@
+## 2026-10-03 | P222 canonical endpoint repair
+
+Repaired the task launcher to prefer canonical CDP endpoints and retain legacy
+host/port compatibility. Focused regression covers precedence, explicit default
+ports and invalid endpoint rejection. Typecheck/build and isolated p221 client
+acceptance are tracked in Agent Browser RUNBOOK.md; no AuraCall user runtime install.
+
 ## 2026-10-03 | Agent Browser P222 canonical CDP regression checkpoint
 
 Actual isolated task launcher passed open readiness but managed browser inventory
