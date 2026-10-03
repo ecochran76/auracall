@@ -108,7 +108,12 @@ before discovery. Source now distinguishes ordinary regeneration controls from
 failure evidence, enforces single-visit materialization with no blocking-surface
 recovery, and verifies fresh native downloads against the selected filename.
 Seven deterministic product-path replays cover byte/manifest correctness and
-no-recovery failures. Installed cycle count is 0/5; Gate D remains open. Details:
+no-recovery failures. Repair cycles are 3/5 (six individual probes, kept as
+separate history); Gate D remains open. PR #171 is merged and installed at
+`6e2b3478057c6959079d2abf40e89a1177b969f9`. Installed cycle 3 verified PDF
+cache reuse but its new ZIP transfer hit the scenario timeout; unchanged repeat
+did not run. Scheduler remains paused. See
+`docs/dev/notes/2026-10-03-plan0386-installed-cache-control.md`. Earlier details:
 `docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md`.
 
 ## Observed Defect
