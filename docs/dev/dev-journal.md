@@ -1,3 +1,11 @@
+## 2026-10-03 | Agent Browser P222 canonical CDP regression checkpoint
+
+Actual isolated task launcher passed open readiness but managed browser inventory
+was absent. Agent Browser source repair is qualified, not installed. Expanded
+existing launcher test proves canonical cdpEndpoint fails current host/port parsing.
+Client repair remains pending at operator token-stop checkpoint. Task artifacts
+live under agent-browser-dev-p221/evidence/cargo-signal; no user runtime published.
+
 ## 2026-10-03 | Issue 165 artifact readiness parity
 
 Compared the retained successful agentic CDP command with product activation.

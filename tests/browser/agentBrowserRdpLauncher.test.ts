@@ -128,7 +128,7 @@ describe('agent-browser RDP launcher', () => {
     ]));
   });
 
-  test('accepts only an operator-ready, build-matched browser with an exact CDP inventory record', async () => {
+  test.each([{ cdpHost: '127.0.0.1', cdpPort: 45015 }, { cdpEndpoint: 'http://127.0.0.1:45015' }])('accepts an exact CDP inventory record %j', async (connection) => {
     const calls: string[][] = [];
     const runner: AgentBrowserCommandRunner = async (_executable, args) => {
       calls.push(args);
@@ -141,8 +141,7 @@ describe('agent-browser RDP launcher', () => {
           data: {
             browsers: [{
               id: 'browser-123',
-              cdpHost: '127.0.0.1',
-              cdpPort: 45015,
+              ...connection,
               pid: 20260,
             }],
           },

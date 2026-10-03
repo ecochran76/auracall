@@ -866,3 +866,9 @@ Shared DevTools attachment is owned by
 
 - `pnpm tsx scripts/verify-grok-context-get.ts <conversationId> [projectId]`
   - Fetches conversation context through the Grok adapter path and prints message count.
+
+### P222 canonical inventory qualification pending
+
+The launcher currently reads cdpHost/cdpPort. Browser Session Manager inventory
+uses canonical cdpEndpoint. The focused launcher regression now demonstrates this
+mismatch; normalize the canonical endpoint before claiming actual client success.
