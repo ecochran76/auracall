@@ -4257,6 +4257,7 @@ async function materializeConversationTarget(input: {
 							listOptions,
 							contextTimeoutMs: input.contextTimeoutMs,
 							refresh: refreshMaterializationSource,
+							force: input.request.force === true,
 							maxItems: remaining,
 							excludeArtifact,
 						},

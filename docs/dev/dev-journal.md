@@ -52368,3 +52368,11 @@ Cycle 1 failed with a selected-PDF/downloaded-PPTX mismatch. Deterministic viewe
 ## 2026-10-03 — Plan 0386 installed cycle 2 (#165)
 
 Tab replacement restored identity, but installed control 2/5 failed on transfer-target responsiveness and cleanup. Main browser exited; exact GPU and on-device-model subprocesses remain with SIGKILL pending. No further browser launch is authorized by this evidence. See notes/2026-10-03-plan0386-cycle2-runtime-receipt.md.
+
+## 2026-10-03 — Plan 0386 post-reboot control (#165)
+
+Operator reboot cleared prior stuck browser children. Installed control 3/5 succeeded in 32 seconds: correct selected PDF, independent checksum/header verification, six trusted CDP mouse events, no recorded reload/navigation and clean exact-profile process census. Scheduler remains paused; ZIP and incremental acceptance remain open. See notes/2026-10-03-plan0386-post-reboot-control.md.
+
+## 2026-10-03 — Plan 0386 ZIP and unchanged-work repair (#165)
+
+Installed ZIP control 4 matched the successful agentic checksum and CRC. Control 5 revealed force=false redownloads unchanged assets. A prematurely queued control overlapped the ZIP window; cancellation returned 409, so isolated traffic acceptance is withheld. Real service regression now proves cache reuse, one new asset within one-transfer budget, force and corruption/missing-file recovery. No further live control; scheduler paused. See notes/2026-10-03-plan0386-zip-and-unchanged-repair.md.

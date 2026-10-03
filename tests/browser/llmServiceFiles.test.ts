@@ -1005,6 +1005,90 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
+	test("unchanged artifact reuse leaves transfer budget for one new artifact", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-artifact-reuse-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as never,
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const artifact = (id: string): ConversationArtifact => ({
+			id,
+			title: `${id}.zip`,
+			kind: "download",
+			uri: `chatgpt://download-button/${id}/0`,
+		});
+		let artifacts = [artifact("old")];
+		const materialize = vi.fn(
+			async (_id: string, a: ConversationArtifact, dest: string): Promise<FileRef> => {
+				const localPath = path.join(dest, a.title);
+				await fs.writeFile(localPath, `verified-${a.id}`);
+				return {
+					id: a.id,
+					name: a.title,
+					provider: "chatgpt",
+					source: "conversation",
+					localPath,
+					size: (await fs.stat(localPath)).size,
+					remoteUrl: a.uri,
+				};
+			},
+		);
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(async () => ({
+				provider: "chatgpt",
+				conversationId: "reuse",
+				messages: [],
+				artifacts,
+			})),
+			materializeConversationArtifact: materialize,
+		};
+		const service = new TestLlmService(provider as never, new JsonCacheStore(), cacheContext);
+		try {
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			materialize.mockClear();
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).not.toHaveBeenCalled();
+			artifacts = [artifact("old"), artifact("new")];
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			expect(materialize.mock.calls[0]?.[1].id).toBe("new");
+			materialize.mockClear();
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).not.toHaveBeenCalled();
+			const cached = await new JsonCacheStore().readConversationAttachments(cacheContext, "reuse");
+			const old = cached.items.find((file) => file.id === "old");
+			const added = cached.items.find((file) => file.id === "new");
+			if (!old?.localPath || !added?.localPath) throw new Error("Fixture cache paths missing");
+			expect(old.checksumSha256).toMatch(/^[a-f0-9]{64}$/);
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1, force: true });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			materialize.mockClear();
+			await fs.writeFile(added.localPath, "corrupt--new");
+			expect((await fs.stat(added.localPath)).size).toBe(added.size);
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			expect(materialize.mock.calls[0]?.[1].id).toBe("new");
+			materialize.mockClear();
+			await fs.rm(old.localPath);
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			expect(materialize.mock.calls[0]?.[1].id).toBe("old");
+			materialize.mockClear();
+			artifacts = [];
+			const absent = await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(absent.files).toEqual([]);
+			expect(materialize).not.toHaveBeenCalled();
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("settles and closes each scoped provider session before transferring the next artifact", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-llm-artifact-settlement-"));
 		setAuracallHomeDirOverrideForTest(homeDir);

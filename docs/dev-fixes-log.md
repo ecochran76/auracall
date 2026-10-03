@@ -24025,3 +24025,7 @@ cleanup failure are not collapsed into a generic error.
 ## 2026-10-03 — Viewer download scope (#165)
 
 Generic ChatGPT `Download file` labels also occur in inline conversation cards. Viewer transfer must exclude conversation-turn descendants before matching generic download labels. A real helper/VM regression reproduced the wrong card click; keep filename verification as a separate guard.
+
+## 2026-10-03 — Avoid unchanged artifact redownloads (#165)
+
+The artifact loop read attachments but never reused them. Check exact current artifact ID/name/URI and local integrity before transfer; apply transfer limits after reuse and pass explicit force separately from context refresh. A repeated real-service regression reproduces the old duplicate and proves unchanged repeats, one added artifact, force, missing files and same-size corruption. Installed incremental acceptance remains pending.
