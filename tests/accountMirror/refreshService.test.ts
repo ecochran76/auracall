@@ -13,6 +13,7 @@ import {
 	type AccountMirrorRefreshError,
 	classifyChatgptRateLimitCensusProbeForTest,
 	createAccountMirrorRefreshService,
+	detectProviderGuardWithTargetCensus,
 	deriveRetainedMaterializationConversationIdsForTest,
 	mergeConversationsByObservedOrderForTest,
 	readPreviousAccountMirrorFilesForTest,
@@ -90,6 +91,95 @@ describe("account mirror refresh service", () => {
 		setAuracallHomeDirOverrideForTest(homeDir);
 		return homeDir;
 	}
+
+	test("checks only the owned ChatGPT page without inspecting restored tabs", async () => {
+		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
+		const instances = await import("../../packages/browser-service/src/service/stateRegistry.js");
+		const census = vi
+			.spyOn(instances, "listInstancesWithLiveness")
+			.mockImplementation(() => new Promise(() => {}));
+		const evaluate = vi.fn().mockResolvedValue({ result: { value: null } });
+		const close = vi.fn().mockResolvedValue(undefined);
+		const connect = vi.spyOn(lifecycle, "connectToChromeTarget").mockResolvedValue({
+			// biome-ignore lint/style/useNamingConvention: Chrome DevTools protocol domain.
+			Runtime: { evaluate },
+			close,
+		} as never);
+		try {
+			const result = await detectProviderGuardWithTargetCensus({
+				config: { ...config, auracallProfile: "default", model: "test", browser: {} },
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				browserProfileId: "default",
+				detectedAtMs: Date.now(),
+				ownedTarget: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+			});
+			expect(result).toBeNull();
+			expect(connect).toHaveBeenCalledWith(expect.objectContaining({ target: "crawler-1" }));
+			expect(census).not.toHaveBeenCalled();
+			expect(close).toHaveBeenCalledOnce();
+		} finally {
+			vi.restoreAllMocks();
+		}
+	});
+
+	test("stops on a visible warning on the owned ChatGPT page", async () => {
+		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
+		const close = vi.fn().mockResolvedValue(undefined);
+		vi.spyOn(lifecycle, "connectToChromeTarget").mockResolvedValue({
+			// biome-ignore lint/style/useNamingConvention: Chrome DevTools protocol domain.
+			Runtime: {
+				evaluate: vi.fn().mockResolvedValue({
+					result: { value: { text: "Too many requests. You're making requests too quickly." } },
+				}),
+			},
+			close,
+		} as never);
+		try {
+			expect(
+				await detectProviderGuardWithTargetCensus({
+					config,
+					provider: "chatgpt",
+					runtimeProfileId: "default",
+					browserProfileId: "default",
+					detectedAtMs: Date.now(),
+					ownedTarget: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+				}),
+			).toMatchObject({ state: "cooldown", summary: expect.stringContaining("Too many requests") });
+		} finally {
+			vi.restoreAllMocks();
+		}
+	});
+
+	test("bounds a stuck owned-page warning check and reports its target", async () => {
+		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
+		const close = vi.fn().mockResolvedValue(undefined);
+		vi.useFakeTimers();
+		vi.spyOn(lifecycle, "connectToChromeTarget").mockResolvedValue({
+			// biome-ignore lint/style/useNamingConvention: Chrome DevTools protocol domain.
+			Runtime: { evaluate: vi.fn(() => new Promise(() => {})) },
+			close,
+		} as never);
+		try {
+			const checking = detectProviderGuardWithTargetCensus({
+				config,
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				browserProfileId: "default",
+				detectedAtMs: Date.now(),
+				ownedTarget: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+			});
+			const verdict = expect(checking).rejects.toThrow(
+				"ChatGPT warning check timed out for owned tab crawler-1.",
+			);
+			await vi.advanceTimersByTimeAsync(10_000);
+			await verdict;
+			expect(close).toHaveBeenCalledOnce();
+		} finally {
+			vi.useRealTimers();
+			vi.restoreAllMocks();
+		}
+	});
 
 	test("selects retained detail fingerprints for route-free materialization reuse", () => {
 		const counters = {
@@ -471,12 +561,14 @@ describe("account mirror refresh service", () => {
 			config: affinityConfig,
 			now: () => new Date("2026-04-29T12:00:00.000Z"),
 		});
+		const providerGuardCensus = vi.fn(async () => null);
 		const service = createAccountMirrorRefreshService({
 			config: affinityConfig,
 			registry,
 			dispatcher,
 			metadataCollector,
 			persistence: createNoopPersistence(),
+			providerGuardCensus,
 			liveFollowAffinityFactory: affinityFactory as never,
 			now: () => new Date("2026-04-29T12:00:00.000Z"),
 		});
@@ -488,6 +580,11 @@ describe("account mirror refresh service", () => {
 			liveFollowOperationId: "completion-1",
 		});
 
+		expect(providerGuardCensus).toHaveBeenCalledWith(
+			expect.objectContaining({
+				ownedTarget: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+			}),
+		);
 		expect(result.status).toBe("completed");
 		expect(acquireQueued).not.toHaveBeenCalled();
 		expect(metadataCollector.collect).toHaveBeenCalledWith(
@@ -584,6 +681,7 @@ describe("account mirror refresh service", () => {
 			}),
 			metadataCollector,
 			persistence: createNoopPersistence(),
+			providerGuardCensus: vi.fn(async () => null),
 			liveFollowAffinityFactory: vi.fn(async () => ({
 				tabAffinity: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
 				interactionGovernor: {
