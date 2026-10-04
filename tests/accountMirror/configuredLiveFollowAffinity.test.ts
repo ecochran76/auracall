@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import {
 	buildLiveFollowWarningEvidence,
@@ -37,5 +37,97 @@ describe("configured live-follow affinity", () => {
 			openTargetCount: 7,
 			resourcePathClasses: [],
 		});
+	});
+});
+
+// Exercise completion after the collector has released its read transport.
+describe("live-follow final warning transport", () => {
+	test.each([
+		"clean",
+		"late-warning",
+		"probe-failure",
+	])("checks fresh final transport and preserves %s outcome", async (outcome) => {
+		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
+		const runtimeModule = await import("../../src/browser/tabConcurrencyRuntime.js");
+		const coordinator = await import("../../src/accountMirror/liveFollowTabCoordinator.js");
+		const { BrowserService } = await import("../../src/browser/service/browserService.js");
+		const { createConfiguredLiveFollowAffinity } = await import(
+			"../../src/accountMirror/configuredLiveFollowAffinity.js"
+		);
+		const claim = { leaseId: "lease-1", revision: 1 };
+		const lease = {
+			leaseId: "lease-1",
+			targetId: "target-1",
+			ownerOperationId: "op-1",
+			revision: 1,
+		};
+		const registry = {
+			list: vi.fn(async () => []),
+			recordMeaningfulUse: vi.fn(async () => ({ ok: true, value: { claim } })),
+			idle: vi.fn(async () => ({ ok: true })),
+		};
+		const warningRecord = vi.fn(async () => undefined);
+		const guardModule = await import("../../src/browser/chatgptRateLimitGuard.js");
+		vi.spyOn(guardModule, "recordChatgptRateLimitDetection").mockResolvedValue(undefined as never);
+		vi.spyOn(lifecycle, "listChromeTargets").mockResolvedValue([]);
+		const close = vi.fn(async () => undefined);
+		const evaluate = vi.fn(async () => {
+			if (outcome === "probe-failure") throw new Error("fresh probe failed");
+			return { result: { value: outcome === "late-warning" ? "Too many requests" : null } };
+		});
+		const connect = vi
+			.spyOn(lifecycle, "connectToChromeTarget")
+			// biome-ignore lint/style/useNamingConvention: CDP names its protocol domain Runtime.
+			.mockResolvedValue({ Runtime: { evaluate }, close } as never);
+		vi.spyOn(runtimeModule, "createBrowserTabConcurrencyRuntime").mockReturnValue({
+			registry,
+			ledger: { recordProviderWarning: warningRecord },
+		} as never);
+		vi.spyOn(coordinator, "acquireLiveFollowCrawlerTab").mockResolvedValue({
+			endpoint: { host: "127.0.0.1", port: 37749 },
+			lease,
+			claim,
+		} as never);
+		vi.spyOn(BrowserService, "fromConfig").mockReturnValue({
+			resolveServiceTarget: async () => ({
+				host: "127.0.0.1",
+				port: 37749,
+				managedBrowserProfile: "/managed/chatgpt",
+			}),
+			getMutationAuditSink: () => async () => undefined,
+		} as never);
+		try {
+			const affinity = await createConfiguredLiveFollowAffinity({
+				userConfig: {
+					auracallProfile: "runtime-1",
+					browser: { tabConcurrencyMode: "tab-affinity" },
+					profiles: {
+						"runtime-1": { services: { chatgpt: { identity: { accountId: "account-1" } } } },
+					},
+				} as never,
+				provider: "chatgpt",
+				runtimeProfileId: "runtime-1",
+				operationId: "op-1",
+				maxBrowserInteractionsPerMinute: 20,
+			});
+			const staleEvaluate = vi.fn(async () => ({ result: { value: null } }));
+			await affinity?.providerTrafficGovernor.checkWarning?.({ evaluate: staleEvaluate });
+			staleEvaluate.mockRejectedValue(new Error("WebSocket is not open: readyState 3 (CLOSED)"));
+			registry.list.mockResolvedValue([lease] as never);
+			if (outcome === "clean") await expect(affinity?.completeSuccess()).resolves.toBeUndefined();
+			else
+				await expect(affinity?.completeSuccess()).rejects.toThrow(
+					outcome === "late-warning" ? /Too many requests/ : /fresh probe failed/,
+				);
+			expect(registry.idle).toHaveBeenCalledTimes(outcome === "clean" ? 1 : 0);
+			expect(warningRecord).toHaveBeenCalledTimes(outcome === "late-warning" ? 1 : 0);
+			expect(connect).toHaveBeenCalledWith(
+				expect.objectContaining({ target: "target-1", port: 37749 }),
+			);
+			expect(evaluate).toHaveBeenCalledOnce();
+			expect(close).toHaveBeenCalledOnce();
+		} finally {
+			vi.restoreAllMocks();
+		}
 	});
 });
