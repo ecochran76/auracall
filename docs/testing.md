@@ -3293,3 +3293,7 @@ A one-transfer batch with two reused assets and two uncached eligible assets mus
   requested-phase selection through the full collector with retained index rows
   and a prior cursor. Changed reads once; retained partial and unchanged complete
   rows incur no detail read. This is provider-free, not installed live proof.
+
+- The changed-frontier planner table includes same-epoch completed detail with
+  four known missing assets: expect retained materialization rather than skip.
+  Run `pnpm vitest run tests/accountMirror/changeFrontierPlanner.test.ts`.

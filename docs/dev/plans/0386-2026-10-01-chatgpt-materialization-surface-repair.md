@@ -283,3 +283,11 @@ Installed scheduler recovery succeeds after PR187. Full collector regression now
 reproduces and repairs requested detail-phase bypass of deterministic frontier
 selection. Explicit full_sweep remains comprehensive. Installed automatic
 selection and scheduler resume remain open. See ../notes/2026-10-04-plan0386-scheduler-installed-acceptance.md.
+
+
+## 2026-10-04 same-epoch partial assets
+
+PR188 installed with exact parity. A local regression then showed a completed
+detail checkpoint could skip known missing assets; the shortcut now requires
+zero missing assets. Installed automatic selection and scheduler resume remain
+open. See ../notes/2026-10-04-plan0386-partial-completion-frontier.md.

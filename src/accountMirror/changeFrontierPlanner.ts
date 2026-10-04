@@ -115,7 +115,12 @@ function decideRow(input: {
 	if (isFuture(workState.retryNotBefore, input.now)) {
 		return decision(workState.conversationKey, "defer", "retry_not_before");
 	}
-	if (workState.epochId === input.epochId && workState.outcome === "complete") {
+	if (
+		workState.epochId === input.epochId &&
+		workState.outcome === "complete" &&
+		freshness.assetCounts.missingLocal === 0 &&
+		freshness.state !== "missing_assets"
+	) {
 		return decision(workState.conversationKey, "skip", "same_epoch_complete");
 	}
 	if (workState.epochId === input.epochId && workState.outcome === "terminal") {

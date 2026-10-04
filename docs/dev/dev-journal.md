@@ -52567,3 +52567,8 @@ PR187 installed with exact parity. Eligible scheduler control completed one fres
 ## 2026-10-04 | Issue165 requested detail frontier repair
 
 Full collector regression exposed requested detail recovery bypassing changed/unchanged planning. Steady-follow now applies that planner to preserved cached index rows, selects only changed detail, retains partial assets for materialization, skips unchanged complete rows, and normalizes filtered cursor evidence. 110 focused tests pass. Explicit full sweeps remain comprehensive. Installed acceptance and scheduler resume pending.
+
+
+## 2026-10-04 | Issue165 same-epoch partial asset checkpoint
+
+PR188 installed with exact collector parity. Before another provider control, local regression reproduced completed detail skipping four known missing assets in the same epoch. Shortcut now requires zero missing assets; retained materialization remains eligible. Scheduler paused; installed automatic selection and resume remain open. See notes/2026-10-04-plan0386-partial-completion-frontier.md.
