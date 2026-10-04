@@ -1,3 +1,13 @@
+## 2026-10-03 | Issue 165 context-session handoff, repair cycle 5
+
+Installed cycle 4 removed the read failure: fresh context succeeded in 11 seconds,
+but the ZIP timed out before download. Browser cleanup is empty and its lease
+released; no retry ran. A 32 ms local regression then reproduced loss of the
+read's retained session across deadline-scoped options. Session custody now
+returns to the caller, avoiding duplicate read admission and allowing transfer.
+Scheduler paused, Gate D open. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
+
 ## 2026-10-03 | Issue 165 identity-proof session custody
 
 A provider-free adapter replay reproduces target-owned on the read following

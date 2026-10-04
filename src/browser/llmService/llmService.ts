@@ -2815,6 +2815,7 @@ export abstract class LlmService {
 		let lastStage = "preflight:buildListOptions";
 		let abortError: ConversationContextReadError | null = null;
 		let listOptions: BrowserProviderListOptions = providedListOptions ?? {};
+		let scopedListOptions: BrowserProviderListOptions | undefined;
 		let cacheContext = await this.resolveCacheContext(
 			{ ...listOptions, skipFeatureSignature: true },
 			{ detect: false, prompt: false },
@@ -2915,7 +2916,7 @@ export abstract class LlmService {
 							),
 							controller.signal,
 						);
-			const scopedListOptions: BrowserProviderListOptions = {
+			scopedListOptions = {
 				...listOptions,
 				abortSignal: controller.signal,
 				scrapeTelemetry: telemetry,
@@ -3008,6 +3009,10 @@ export abstract class LlmService {
 			}
 			throw terminalError;
 		} finally {
+			// The provider retains on the deadline-scoped copy; return custody to its caller.
+			if (listOptions.useProviderSession === true && scopedListOptions) {
+				listOptions.providerSession = scopedListOptions.providerSession;
+			}
 			cancelTimer(deadlineTimer);
 			callerSignal?.removeEventListener("abort", onCallerAbort);
 			telemetry.onUpdate = originalTelemetryUpdate;
