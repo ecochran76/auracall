@@ -137,6 +137,14 @@ options copy in its utility wrapper. That facade custody repair is source-only;
 no ninth probe or scheduler resume ran. Owned browser processes and leases
 are released; incremental ZIP and repeat acceptance remain open.
 
+The operator renewed one installation/control after that exhausted loop.
+Canonical PR #176 at 500619f6e is now installed with byte parity. Renewed control
+1 / historical probe 9 succeeded: verified ZIP captured once, PDF reused, cached
+repeat zero downloads/CDP/observed requests, no observed warning, clean process,
+listener and lease cleanup. Gate D remains OPEN only for archive projection
+agreement and broader queued/scheduler acceptance is not inferred. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent JSON.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal

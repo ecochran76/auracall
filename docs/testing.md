@@ -1,3 +1,9 @@
+- Installed ChatGPT session-custody/incremental control (opt-in, already run):
+  `docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent
+  JSON bind canonical PR 176 to one verified ZIP download and a cached repeat
+  with zero downloads/CDP/observed requests. This direct service control does
+  not establish archive publication or autonomous scheduler acceptance.
+
 - ChatGPT product materialization replay (provider-free, synthetic bytes and CDP transport):
   `pnpm vitest run tests/browser/chatgptMaterializationReplay.test.ts`.
   Exercises recorded DOM discovery/tagging, product selection and native-file

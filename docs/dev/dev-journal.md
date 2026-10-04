@@ -1,3 +1,13 @@
+## 2026-10-03 | Issue 165 renewed control verifies ZIP and cached repeat
+
+Installed canonical PR 176 (500619f6e) with matching service bytes. Renewed
+control 1 / historical probe 9 succeeded: PDF reused, correct ZIP captured once
+with valid CRC and retained checksum. Cached repeat had zero downloads, CDP
+calls and observed requests. Browser processes, listener and owned leases are
+cleared; scheduler paused. Gate D still requires archive projection agreement:
+exact filename/checksum archive queries returned no row. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent JSON.
+
 ## 2026-10-03 | Issue 165 fifth control stopped, facade regression corrected
 
 Final installed control still timed out before ZIP download, despite a successful
