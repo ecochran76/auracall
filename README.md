@@ -1128,7 +1128,10 @@ Terminology note:
   non-overridable. For phase-isolated detail diagnosis, use
   `requestedPhase: "detail-inventory"` with `sweepMode: "steady_follow"` so the
   collector resumes cached detail candidates without replaying the project and
-  root rails; `full_sweep` intentionally refreshes those discovery surfaces.
+  root rails. Steady-follow detail recovery also applies changed/unchanged
+  planning to the retained index rows: only changed or incomplete detail is
+  read, while retained assets use materialization and complete rows skip.
+  `full_sweep` intentionally refreshes those discovery surfaces.
   Use `auracall api mirror-reconcile-all --dry-run` to create a durable
   multi-tenant reconciliation campaign plan without touching provider
   browsers. The dry-run planner reads config/status/cache evidence, classifies

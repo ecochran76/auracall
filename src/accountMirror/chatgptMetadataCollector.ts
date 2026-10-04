@@ -136,6 +136,7 @@ export interface AccountMirrorMetadataCollectorInput {
 	requestedPhase?: AccountMirrorCollectorPhase | null;
 	previousEvidence?: AccountMirrorMetadataEvidence | null;
 	previousFiles?: readonly FileRef[] | null;
+	previousConversations?: readonly Conversation[] | null;
 	previousConversationFreshness?: ReadonlyMap<
 		string,
 		ConversationFreshnessFrontierCachedSummary
@@ -652,7 +653,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 						freshFrontierThreshold: input.limits.freshFrontierThreshold,
 					});
 			const deterministicFrontier =
-				honorRequestedDetailPhase || (input.sweepMode ?? "steady_follow") === "full_sweep"
+				(input.sweepMode ?? "steady_follow") === "full_sweep"
 					? { detailConversations: legacyFrontier.detailConversations, plan: null }
 					: applyDeterministicChangeFrontier({
 							conversations,
@@ -664,7 +665,17 @@ export function createChatgptAccountMirrorMetadataCollector(
 						});
 			const frontier = {
 				detailConversations: deterministicFrontier.detailConversations,
-				evidence: legacyFrontier.evidence,
+				evidence:
+					deterministicFrontier.plan && legacyFrontier.evidence
+						? {
+								...legacyFrontier.evidence,
+								rowsExamined: conversations.length,
+								rowsSelectedForDetail: deterministicFrontier.detailConversations.length,
+								selectedConversationIds: deterministicFrontier.detailConversations.map(
+									(conversation) => conversation.id,
+								),
+							}
+						: legacyFrontier.evidence,
 			};
 			await reportCollectorProgress(input, {
 				phase: "detail-inventory",
@@ -680,7 +691,8 @@ export function createChatgptAccountMirrorMetadataCollector(
 				frontierEvidence: frontier.evidence,
 				detailConversations: frontier.detailConversations,
 				projectsLength: projects.items.length,
-				resetCursorForFreshnessFrontier: !honorRequestedDetailPhase,
+				resetCursorForFreshnessFrontier:
+					!honorRequestedDetailPhase || Boolean(deterministicFrontier.plan),
 			});
 			const projectIndexRead = !honorRequestedDetailPhase && !skipSteadyFollowProjectDiscovery;
 			const chatgptAccountLibraryRead =
@@ -1350,7 +1362,7 @@ export function selectProjectConversationCursorForRequestedPhase(
 export function resolveRequestedDetailPhaseConversations(
 	input: Pick<
 		AccountMirrorMetadataCollectorInput,
-		"provider" | "previousEvidence" | "requestedPhase"
+		"provider" | "previousEvidence" | "requestedPhase" | "previousConversations"
 	>,
 ): Conversation[] {
 	if (input.requestedPhase !== "detail-inventory") return [];
@@ -1365,11 +1377,17 @@ export function resolveRequestedDetailPhaseConversations(
 				]
 			: []),
 	]);
-	return ids.map((id) => ({
-		id,
-		title: id,
-		provider: input.provider,
-	}));
+	const retained = new Map(
+		input.previousConversations?.map((conversation) => [conversation.id, conversation]),
+	);
+	return ids.map(
+		(id) =>
+			retained.get(id) ?? {
+				id,
+				title: id,
+				provider: input.provider,
+			},
+	);
 }
 
 function resolveRequestedCollectorPhase(

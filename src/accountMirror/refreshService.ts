@@ -569,6 +569,7 @@ export function createAccountMirrorRefreshService(input: {
 						...(development ? { detailReadCap: development.maxConversations } : {}),
 						previousEvidence: target.metadataEvidence,
 						previousFiles,
+						previousConversations: previousCatalog?.conversations ?? [],
 						previousConversationFreshness,
 						previousConversationWorkStates,
 						onIdentityVerified: (evidence) => {

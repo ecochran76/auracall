@@ -304,6 +304,7 @@ describe("account mirror refresh service", () => {
 			},
 			previousEvidence: null,
 			previousFiles: [],
+			previousConversations: [],
 			previousConversationFreshness: new Map(),
 			previousConversationWorkStates: new Map(),
 			abortSignal: expect.any(AbortSignal),

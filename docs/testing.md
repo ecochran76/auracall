@@ -3287,3 +3287,9 @@ A one-transfer batch with two reused assets and two uncached eligible assets mus
 - Live-follow final warning lifecycle (focused, provider-free):
   `pnpm vitest run tests/accountMirror/configuredLiveFollowAffinity.test.ts tests/accountMirror/refreshService.test.ts tests/browser-service/providerTrafficGovernor.test.ts`.
   Exercises real configured completion after collector transport release and preserves late-warning/probe-failure stops. Live scheduler convergence remains a separate gate.
+
+- Requested detail-recovery frontier wiring: the collector regression in
+  `tests/accountMirror/chatgptMetadataCollector.test.ts` exercises normal and
+  requested-phase selection through the full collector with retained index rows
+  and a prior cursor. Changed reads once; retained partial and unchanged complete
+  rows incur no detail read. This is provider-free, not installed live proof.

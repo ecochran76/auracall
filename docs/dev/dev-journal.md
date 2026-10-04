@@ -52562,3 +52562,8 @@ Real configured affinity regression reproduces CLOSED after collector transport 
 ## 2026-10-04 | Issue165 successful installed scheduler recovery
 
 PR187 installed with exact parity. Eligible scheduler control completed one fresh detail read and final warning inspection with matching identity and no observed warnings. Initial backoff skip preserved; actual pass completed within provider-interaction budget and retained yielded cursor. Automatic changed/unchanged selection and scheduler resume remain open. See notes/2026-10-04-plan0386-scheduler-installed-acceptance.md.
+
+
+## 2026-10-04 | Issue165 requested detail frontier repair
+
+Full collector regression exposed requested detail recovery bypassing changed/unchanged planning. Steady-follow now applies that planner to preserved cached index rows, selects only changed detail, retains partial assets for materialization, skips unchanged complete rows, and normalizes filtered cursor evidence. 110 focused tests pass. Explicit full sweeps remain comprehensive. Installed acceptance and scheduler resume pending.
