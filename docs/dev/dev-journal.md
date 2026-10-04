@@ -1,3 +1,12 @@
+## 2026-10-03 | Repository reconciliation after PR 177
+
+Root returned to canonical main with .tmp/ preserved. Removed 32 clean,
+integrated, unowned worktrees and pruned eight missing registrations; all
+branches remain. Preserved dirty issue107-scope, conflicting PR 120, installed
+canonical checkpoint and published the root P222 source branch in a dedicated
+worktree. No runtime/provider effect. Evidence and remaining integration gates:
+`docs/dev/notes/2026-10-03-repository-reconciliation.md` (issue 178).
+
 ## 2026-10-03 | Issue 165 renewed control verifies ZIP and cached repeat
 
 Installed canonical PR 176 (500619f6e) with matching service bytes. Renewed
