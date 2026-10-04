@@ -3,9 +3,42 @@
 State: OPEN
 Lane: P85
 Source base: `origin/main` at `cb07bfca07d25df83082cab3bd41db6f3acd5008`
-Branch: `fix/issue-165-live-follow-replay`
+Branch: `fix/issue165-follow-continuation`
 Target: `main`
 Integration: merge
+
+## Bounded resumption | 2026-10-04 21:21 UTC
+
+Owner: primary agent for Eric Cochran; work item: Issue #165; base: PR193,
+`42d0b7c730b507cb77f537bad30c37598d070d3f`. User confirmed shared understanding:
+500,000 additional tokens or one hour, whichever comes first, ending no later
+than 2026-10-04T22:21:31Z. Up to five live passes in this packet; count the
+already-running 21:19 cadence pass as pass 1 conservatively. Historical passes
+and failures remain separate. Checkpoint at material transitions and every
+15 minutes; at most two review/rework cycles and two no-progress checkpoints
+before changing tactics. One primary owns serialized runtime custody.
+
+Acceptance: proven native browser absence, revision-fenced old lease release,
+admitted owned crawler creation, matching configured identity, completed normal
+refresh, and a runnable automatic materialization completion. Prior positive
+PDF capture remains separate proof. Existing receipts are preferred. A failure
+or ambiguity stops additional live work until local diagnosis demonstrates a
+remediation. Identity mismatch, CAPTCHA, provider warning, ambiguous custody,
+failed absence proof, five passes, or either budget ceiling stops live work.
+Preserve five other operator-paused completions and unrelated dirty work.
+No prompts, Answer now clicks, warning dismissal, broad cleanup or redesign.
+
+Initial readback: installed PR193 API PID48106; preceding scheduled refresh
+failed collector timeout at 21:10:04Z; no runnable wsl-chrome-3 completion;
+next cadence running from 21:19:09Z. Scheduler durably paused at 21:23Z to
+contain cadence while local diagnosis proceeds. Pause does not cancel the
+in-flight refresh. Graphiti atlas discovery returned no useful manifest;
+repository and authenticated runtime evidence remain authoritative.
+
+This packet supersedes older one-shot/non-resume restrictions only for the
+accepted continuation above. Terminal outcome is accepted automatic recovery
+and materialization continuation, or a truthful unmet-criterion receipt at the
+first stop boundary. A source fix alone cannot close Plan0386.
 
 ## Stable Objective
 

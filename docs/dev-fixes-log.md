@@ -1,3 +1,14 @@
+## 2026-10-04 | Explicit scheduler resume must reconcile missing subscriptions
+
+Paused startup suppresses both runnable completion runners and configured
+live-follow reconciliation. Restoring runners alone leaves a configured target
+with only terminal history inert. Explicit scheduler resume now also invokes the
+existing guarded reconciler when that startup capability is enabled. It creates a
+successor for failed history, preserves terminal evidence and operator-paused
+targets, and remains idempotent. A real HTTP regression failed with zero refresh
+calls before the change and passed afterward; this is source proof, not installed
+live acceptance.
+
 ## 2026-10-04 | Missing endpoint is not browser absence proof
 
 A retained crawler lease can outlive browser shutdown or a host reboot. Reconcile
