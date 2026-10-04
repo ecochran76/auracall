@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { CHATGPT_URL, GEMINI_URL } from "../../src/browser/constants.js";
 import type { CacheStore } from "../../src/browser/llmService/cache/store.js";
@@ -17,6 +18,7 @@ import {
 	type ProviderCacheContext,
 	resolveProviderCachePath,
 } from "../../src/browser/providers/cache.js";
+import { beforeChatgptBrowserInteractionForTest } from "../../src/browser/providers/chatgptAdapter.js";
 import type { ConversationArtifact, FileRef, Project } from "../../src/browser/providers/domain.js";
 import { createBrowserScrapeTelemetryRecorder } from "../../src/browser/providers/scrapeTelemetry.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
@@ -1050,6 +1052,85 @@ describe("llmService project file cache writes", () => {
 			expect(materialize).toHaveBeenCalledTimes(1);
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("fresh context hands its retained session to artifact transfer without readmission", async () => {
+		const home = await mkdtemp(path.join(os.tmpdir(), "auracall-context-session-"));
+		setAuracallHomeDirOverrideForTest(home);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as never,
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		let clock = 1000;
+		const sleep = vi.fn(async (ms: number) => {
+			clock += ms;
+		});
+		const governor = createBrowserInteractionGovernor({
+			now: () => clock,
+			sleep,
+			cooldownsByClass: { "conversation-read": 120000 },
+		});
+		const close = vi.fn(async () => undefined);
+		const session = { providerId: "chatgpt" as const, key: "retained-read", value: {}, close };
+		const artifact: ConversationArtifact = {
+			id: "download-dom:message-8:0",
+			title: "proposal.zip",
+			kind: "download",
+			uri: "chatgpt://download-button/message-8/0",
+		};
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(
+				async (_id: string, _project: string | undefined, options: BrowserProviderListOptions) => {
+					await beforeChatgptBrowserInteractionForTest(options, "conversation-read");
+					options.providerSession = session;
+					return {
+						provider: "chatgpt",
+						conversationId: "handoff",
+						messages: [{ role: "assistant", text: "fresh response" }],
+						artifacts: [artifact],
+					};
+				},
+			),
+			materializeConversationArtifact: vi.fn(
+				async (
+					_id: string,
+					a: ConversationArtifact,
+					dest: string,
+					_project: string | undefined,
+					options: BrowserProviderListOptions,
+				): Promise<FileRef> => {
+					await beforeChatgptBrowserInteractionForTest(options, "conversation-read");
+					if (options.providerSession !== session) throw new Error("Read session custody lost");
+					const localPath = path.join(dest, a.title);
+					await fs.writeFile(localPath, "verified fixture ZIP");
+					return {
+						id: a.id,
+						name: a.title,
+						provider: "chatgpt",
+						source: "conversation",
+						localPath,
+					};
+				},
+			),
+		};
+		try {
+			const service = new TestLlmService(provider as never, new JsonCacheStore(), cacheContext);
+			const result = await service.materializeConversationArtifacts("handoff", {
+				listOptions: {
+					interactionGovernor: governor,
+					preserveInteractionGovernorForProviderSession: true,
+				},
+			});
+			expect(result.files).toHaveLength(1);
+			expect(sleep).not.toHaveBeenCalled();
+			expect(close).toHaveBeenCalledTimes(1);
+		} finally {
+			await rm(home, { recursive: true, force: true });
 		}
 	});
 

@@ -1,3 +1,11 @@
+## 2026-10-03 | Return deadline-scoped context session custody
+
+Fresh context reads copy options to scope their deadline. Synchronize retained
+provider-session ownership back to the session-enabled caller in finally,
+including an aborted session's removal. Otherwise the next artifact transfer
+loses the session and incurs duplicate read admission or target ownership
+conflicts. Preserve the real governor; fix session reuse rather than cooldowns.
+
 ## 2026-10-03 | Identity proof must retain session ownership
 
 A proof-only method cannot retain a newly created browser session on private

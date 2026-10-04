@@ -124,6 +124,12 @@ Historical lease timing fits this explanation, but the original exception was
 not retained. No seventh provider probe at this source checkpoint. Evidence:
 `docs/dev/notes/2026-10-03-plan0386-proof-session-custody.md`.
 
+Installed cycle 4 (probe 7) verified successful fresh context after proof-session
+cleanup, then failed before ZIP download. Repair cycle 5 has a local red/green
+reproduction for the context deadline-copy session handoff. No eighth provider
+probe at this source checkpoint; scheduler remains paused and Gate D open.
+`docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal
