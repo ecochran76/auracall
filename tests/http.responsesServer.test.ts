@@ -5681,6 +5681,66 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("resumes restored runnable completions after paused startup without resuming operator-paused targets", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-http-restored-resume-"));
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		await writeAccountMirrorSchedulerControlState({
+			paused: true,
+			updatedAt: new Date().toISOString(),
+		});
+		const config = { model: "gpt-5.2", browser: { cache: { rootDir: homeDir } } };
+		const store = createAccountMirrorCompletionStore({ config });
+		for (const status of ["idle_waiting", "paused"] as const) {
+			await store.writeOperation({
+				object: "account_mirror_completion",
+				id: `restored_${status}`,
+				provider: "chatgpt",
+				runtimeProfileId: status === "paused" ? "other" : "default",
+				mode: "live_follow",
+				phase: "steady_follow",
+				status,
+				startedAt: new Date().toISOString(),
+				completedAt: null,
+				nextAttemptAt: null,
+				maxPasses: null,
+				passCount: 0,
+				lastRefresh: null,
+				mirrorCompleteness: null,
+				error: null,
+				lifecycleEvents: [],
+			});
+		}
+		const requestRefresh = vi.fn((_request: unknown) => new Promise<never>(() => {}));
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0, accountMirrorSchedulerIntervalMs: 60_000 },
+			{ config, accountMirrorRefreshService: { requestRefresh } },
+		);
+		try {
+			expect(requestRefresh).not.toHaveBeenCalled();
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ accountMirrorScheduler: { action: "resume" } }),
+			});
+			expect(response.status).toBe(200);
+			await vi.waitFor(() => expect(requestRefresh).toHaveBeenCalledTimes(1), { timeout: 1000 });
+			expect(requestRefresh.mock.calls[0]?.[0]).toMatchObject({ runtimeProfileId: "default" });
+			const paused = await fetch(
+				`http://127.0.0.1:${server.port}/v1/account-mirrors/completions/restored_paused`,
+			);
+			expect(await paused.json()).toMatchObject({ status: "paused" });
+			await fetch(`http://127.0.0.1:${server.port}/status`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ accountMirrorScheduler: { action: "resume" } }),
+			});
+			expect(requestRefresh).toHaveBeenCalledTimes(1);
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("scopes proof server startup without reconciling unrelated live-follow targets", async () => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-http-account-mirror-proof-scope-"),

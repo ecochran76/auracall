@@ -238,6 +238,7 @@ export interface AccountMirrorCompletionService {
 	upgradePolicy?(
 		request: AccountMirrorCompletionPolicyUpgradeRequest,
 	): AccountMirrorCompletionOperation | null;
+	resumeActiveOperations?(): void;
 	prepareForShutdown?(): AccountMirrorCompletionOperation[];
 }
 
@@ -923,9 +924,9 @@ export function createAccountMirrorCompletionService(input: {
 		}
 	};
 
-	if (input.resumeActiveOperations) {
+	const resumeActiveOperations = () => {
 		for (const operation of operations.values()) {
-			if (isRunnableOperation(operation)) {
+			if (isRunnableOperation(operation) && !activeRuns.has(operation.id)) {
 				if (shouldBlockGeminiResume(operation)) {
 					blockGeminiResume(operation, "automatic");
 					continue;
@@ -939,9 +940,12 @@ export function createAccountMirrorCompletionService(input: {
 				launch(operation.id);
 			}
 		}
-	}
+	};
+
+	if (input.resumeActiveOperations) resumeActiveOperations();
 
 	const service: AccountMirrorCompletionService = {
+		resumeActiveOperations,
 		start(request = {}) {
 			const id = generateId();
 			const sweepMode = normalizeSweepMode(request.sweepMode);

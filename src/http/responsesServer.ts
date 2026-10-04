@@ -3257,6 +3257,9 @@ export async function createResponsesHttpServer(
 							if (accountMirrorSchedulerState.state !== "running") {
 								accountMirrorSchedulerState.state = "idle";
 							}
+							if (resumeAccountMirrorCompletionsOnStartRequested) {
+								accountMirrorCompletionService.resumeActiveOperations?.();
+							}
 							scheduleAccountMirrorScheduler(0, "operator-resume");
 						}
 						controlResult = {

@@ -3297,3 +3297,5 @@ A one-transfer batch with two reused assets and two uncached eligible assets mus
 - The changed-frontier planner table includes same-epoch completed detail with
   four known missing assets: expect retained materialization rather than skip.
   Run `pnpm vitest run tests/accountMirror/changeFrontierPlanner.test.ts`.
+
+Scheduler paused-startup regression: `pnpm vitest run tests/http.responsesServer.test.ts -t "resumes restored runnable completions after paused startup"`. This exercises persisted runnable and operator-paused operations through the real HTTP resume endpoint, including repeated resume without duplicate refresh. It is provider-free; installed autonomous continuation requires separate live acceptance.
