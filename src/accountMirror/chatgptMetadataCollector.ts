@@ -2843,6 +2843,13 @@ async function safeReadConversationContext(
 				return client.getConversationContext(conversation.id, {
 					projectId: conversation.projectId,
 					refresh: true,
+					...(isChatgpt
+						? {
+								allowCacheFallback: false,
+								retryAttempts: 0,
+								...(typeof timeoutMs === "number" && timeoutMs > 0 ? { timeoutMs } : {}),
+							}
+						: {}),
 					listOptions: providerListOptions,
 				});
 			},

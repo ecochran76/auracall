@@ -1,3 +1,7 @@
+## 2026-10-04 | Fresh collector reads must not silently reuse cached evidence
+
+ChatGPT metadata collection must disable cache fallback and retries and forward its declared deadline. A timeout must remain a failed fresh read. Scheduler refresh failures, including unexpected transport exceptions, must return a current failure receipt rather than leave an earlier dry-run result as latest. Navigation success remains a separate acceptance gate. See docs/dev/notes/2026-10-04-plan0386-collector-fresh-read-contract.md.
+
 ## 2026-10-03 | Installed session reuse removes duplicate materialization work
 
 Canonical PR 176's real ChatGPT service path captured the unresolved ZIP once

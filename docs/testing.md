@@ -3279,3 +3279,7 @@ The history materialization worker must accept two verified cached-provider-file
 ### Partial materialization frontier
 
 A one-transfer batch with two reused assets and two uncached eligible assets must report one pending artifact. The worker must retain partial asset completeness and a deferred frontier checkpoint; a later unchanged pass must remain eligible for the pending retained assets. Run tests/browser/llmServiceFiles.test.ts and tests/runtime.historyMaterializationService.test.ts for focused selection and evidence coverage. Detailed local acceptance uses the durable job store because monitoring responses omit manifest entries and telemetry.
+
+- Fresh ChatGPT collector and scheduler failure contracts (focused, provider-free):
+  `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/schedulerService.test.ts`.
+  Exercises real-service cached fallback leakage and unexpected refresh failure receipts; does not prove installed navigation or scheduler resume.

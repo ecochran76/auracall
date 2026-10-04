@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
+import { readBoundedChatgptDetailInventory } from "../../src/accountMirror/chatgptMetadataCollector.js";
 import { CHATGPT_URL, GEMINI_URL } from "../../src/browser/constants.js";
 import type { CacheStore } from "../../src/browser/llmService/cache/store.js";
 import { JsonCacheStore } from "../../src/browser/llmService/cache/store.js";
@@ -1105,8 +1106,21 @@ describe("llmService project file cache writes", () => {
 				service.materializeConversationArtifacts("failed-refresh", { refresh: true }),
 			).rejects.toThrow("fresh target read failed");
 			expect(materialize).not.toHaveBeenCalled();
+			const inventory = await readBoundedChatgptDetailInventory(
+				{
+					listProjectFiles: vi.fn(async () => []),
+					listConversationFiles: vi.fn(async () => []),
+					listAccountFiles: vi.fn(async () => []),
+					getConversationContext: service.getConversationContext.bind(service),
+				},
+				[],
+				[{ id: "failed-refresh", title: "Failed refresh", provider: "chatgpt" }],
+				10,
+				{ providerCallTimeoutMs: 1000 },
+			);
+			expect(inventory.artifacts).toEqual([]);
 			await service.materializeConversationArtifacts("failed-refresh", { refresh: false });
-			expect(provider.readConversationContext).toHaveBeenCalledTimes(1);
+			expect(provider.readConversationContext).toHaveBeenCalledTimes(2);
 			expect(materialize).toHaveBeenCalledTimes(1);
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
