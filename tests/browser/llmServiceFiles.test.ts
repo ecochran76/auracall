@@ -1005,6 +1005,54 @@ describe("llmService project file cache writes", () => {
 		}
 	});
 
+	test("failed fresh artifact context stops before cached download controls are used", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-failed-artifact-refresh-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as never,
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		await store.writeConversationContext(cacheContext, "failed-refresh", {
+			provider: "chatgpt",
+			conversationId: "failed-refresh",
+			messages: [{ role: "assistant", text: "cached response" }],
+			artifacts: [
+				{
+					id: "download-dom:message-8:0",
+					title: "proposal.zip",
+					kind: "download",
+					uri: "chatgpt://download-button/message-8/0",
+				},
+			],
+		});
+		const materialize = vi.fn(async () => {
+			throw new Error("stale control attempted");
+		});
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(async () => {
+				throw new Error("fresh target read failed");
+			}),
+			materializeConversationArtifact: materialize,
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+		try {
+			await expect(
+				service.materializeConversationArtifacts("failed-refresh", { refresh: true }),
+			).rejects.toThrow("fresh target read failed");
+			expect(materialize).not.toHaveBeenCalled();
+			await service.materializeConversationArtifacts("failed-refresh", { refresh: false });
+			expect(provider.readConversationContext).toHaveBeenCalledTimes(1);
+			expect(materialize).toHaveBeenCalledTimes(1);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
 	test("unchanged artifact reuse leaves transfer budget for one new artifact", async () => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-artifact-reuse-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
