@@ -130,6 +130,13 @@ reproduction for the context deadline-copy session handoff. No eighth provider
 probe at this source checkpoint; scheduler remains paused and Gate D open.
 `docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
 
+The fifth installed control (probe 8) still failed before ZIP download; fresh
+read succeeded. Five-cycle provider budget is exhausted. The regression now
+uses actual ChatgptService tab-affinity topology and catches another private
+options copy in its utility wrapper. That facade custody repair is source-only;
+no ninth probe or scheduler resume ran. Owned browser processes and leases
+are released; incremental ZIP and repeat acceptance remain open.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal

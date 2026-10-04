@@ -60,3 +60,52 @@ At this source checkpoint no cycle-5 installed control has run.
 
 Local validation: 184 focused tests, typecheck, build, scoped Biome, plan audit
 and diff check pass. The red test took 32 ms, green 27 ms before broader checks.
+
+## Final installed control and actual ChatGPT facade correction
+
+PR 175 merged at 2d57e3a2d192009a46e3f800749a4591acec6798 and was installed.
+Canonical/installed LlmService SHA-256:
+74d0da25cf51aad5d43aedcdd28a73e7ba0dfdcdde430ff01a0946e66858e3b0.
+Repair cycle 5, probe 8 ran 2026-10-04T01:50:53.303Z through
+2026-10-04T01:52:49.534Z. Fresh read succeeded in 10681 ms, completed
+2026-10-04T01:51:17.673Z. PDF reused with its prior verified digest; ZIP again
+recorded Bounded incremental control timeout before download. No unchanged
+repeat ran. Zero warnings observed under the same observer coverage described
+above. First-pass page-target network window: 175 requests, one Document;
+whole observer window including proof: 230 requests, two Documents.
+Proof telemetry records one Page.navigate. First-pass telemetry records one
+target attach, Page.enable=1, Runtime.enable=1, Runtime.evaluate=7, no mouse
+input, no Page.navigate/reload. Downloads attempted/succeeded/failed all zero.
+These counts do not represent all-target HTTP traffic.
+
+Browser.close ran; fresh OS census has zero exact browser processes. Proof
+lease 72f8a5c7-2c15-446e-82e6-c2770f0c2632 released as preserved; read lease
+8ba06329-c628-4bd1-9a37-317b79fda58d released by runtime maintenance as
+already-missing. Receipt/harness: /tmp/auracall-repair-cycle5-incremental.{json,mjs}.
+All five repair cycles are now consumed; eight historical individual probes
+remain separate history. No further provider control is authorized by this loop.
+
+The base-service regression was insufficient for this installed path. The
+actual ChatgptService wraps getConversationContext in runWithUtilityAffinity,
+which makes another options copy for an explicit target. Returning session
+custody from the base method reached that wrapper's copy, not the artifact
+materializer's options. The regression now uses createLlmService('chatgpt')
+in tab-affinity mode with the real facade and a provider-retention fixture.
+It failed in 340 ms even with PR 175 present. Returning custody from the
+explicit-target utility wrapper made the same test pass in 294 ms. It asserts
+file production, zero duplicate cooldown sleeps, and one session close.
+This fixes the actual service topology without weakening the governor.
+
+This final facade correction is source-only: no installation or extra live
+attempt follows the failed fifth control. Incremental ZIP capture and unchanged
+repeat remain unaccepted. Gate D is open, scheduler paused, issue 165 open.
+
+Temporary diagnostic scripts were moved to /tmp/auracall-plan0386-debug/
+with private directory permissions; the JSON receipts remain at their recorded
+/tmp paths. No temporary instrumentation remains in product or test code.
+
+Final source-only facade validation: 198 focused tests in eight files pass,
+including ChatgptService, actual-facade custody, context/files, proof custody,
+recorded ZIP replay, lifecycle, traffic authority and history jobs. Typecheck,
+build, scoped Biome, plan audit and diff check pass. No retry or live acceptance
+is inferred from this local result.

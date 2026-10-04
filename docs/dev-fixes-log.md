@@ -1,3 +1,11 @@
+## 2026-10-03 | Test session custody through the actual provider service
+
+A base-service regression can miss copies introduced by the provider facade.
+Exercise createLlmService with the installed tab-affinity topology. Explicit-
+target utility wrappers must return retained-session custody to a session-enabled
+caller, just as deadline-scoped reads do. Preserve provider pacing and test
+session reuse and exactly-once close across every load-bearing copy boundary.
+
 ## 2026-10-03 | Return deadline-scoped context session custody
 
 Fresh context reads copy options to scope their deadline. Synchronize retained
