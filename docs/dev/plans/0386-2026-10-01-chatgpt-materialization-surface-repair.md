@@ -40,6 +40,17 @@ accepted continuation above. Terminal outcome is accepted automatic recovery
 and materialization continuation, or a truthful unmet-criterion receipt at the
 first stop boundary. A source fix alone cannot close Plan0386.
 
+### 21:50 UTC continuation checkpoint
+
+`blocker_reduction`: PR194 integrated explicit resume reconciliation and installed
+with canonical hash parity. Pass2 proved creation of a running wsl-chrome-3
+successor while preserving the other five pauses, but stalled before crawler
+custody. Passive probes plus a red real-helper regression demonstrated that
+endpoint-only blank launch selects a frozen restored blank through the login
+helper. The second bounded repair skips that reuse for about:blank only;
+ordinary login semantics remain. Pass2 and scheduler cadence are paused pending
+validation/integration. No completed refresh or automatic capture is claimed.
+
 ## Stable Objective
 
 Restore ChatGPT conversation-file and generated-artifact materialization on the
