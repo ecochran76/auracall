@@ -172,11 +172,13 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		idleTtlMs: 15 * 60_000,
 		absoluteTtlMs: 8 * 60 * 60_000,
 		now: input.now,
+		coldStartTargetPolicy: "create",
 		resolveExistingEndpoint: async () => toEndpoint(initialTarget),
 		startBrowser: async () => {
 			const started = await browserService.resolveServiceTarget({
 				serviceId: "chatgpt",
-				configuredUrl,
+				// Provider navigation belongs to the single admitted crawler target below.
+				configuredUrl: "about:blank",
 				ensurePort: true,
 				abortSignal: input.abortSignal,
 			});

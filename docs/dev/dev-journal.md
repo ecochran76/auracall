@@ -1,3 +1,11 @@
+## 2026-10-04 | Explicit cold-start crawler custody
+
+Cold launch can expose restored ChatGPT pages before crawler reservation.
+Source now launches blank and creates one admitted crawler with explicit target-ID
+custody rather than adopting ambiguous restored pages. Existing ambiguous-reuse
+rejection remains intact; restored pages are not closed. Provider-free regression
+reproduced the installed failure before the fix. Installed acceptance is pending.
+
 ## 2026-10-04 | Installed resume repair and cold-start custody gate
 
 PR 190 is merged and installed with exact build parity. Scheduler resume now

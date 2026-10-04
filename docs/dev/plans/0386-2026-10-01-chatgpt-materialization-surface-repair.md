@@ -14,6 +14,27 @@ current provider surface, fail explicitly when that surface drifts again, and
 prove one installed positive control without resuming continuous scheduling or
 spending an unbounded provider-traffic budget.
 
+## Authorized live-follow continuation: cold-start custody
+
+The user's active goal extends the original bounded materialization slice to
+positive normal-worker capture, automatic changed/unchanged handling, scheduler
+resume, and RDP source integration. PRs 183–191 preserve completed integration
+and acceptance evidence. The remaining installed gate is successful unattended
+continuation: PR 190 restores runners on resume, but its first automatic pass
+failed closed on multiple compatible unowned startup pages.
+
+This bounded packet on `fix/issue165-owned-cold-start-target`, owned by the primary
+agent, changes only cold-start crawler custody. Start the browser on a blank URL,
+then create exactly one provider crawler through the existing admitted pre-lease
+traffic action and reserve its returned target ID. Preserve restored pages;
+never infer their ownership from URL or silently adopt them. Keep the default
+ambiguous-adoption rejection for reuse callers and all identity, warning, lease,
+budget, rollback and retry guards. Required evidence: red-capable coordinator
+regression, real factory/coordinator handoff, denied-budget coverage, installed
+hash parity, and one normal resumed automatic pass. Terminal condition is an
+accepted automatic pass or a truthful guarded failure with the remaining gate
+recorded; a guarded failure does not complete the wider user goal.
+
 ## Current State
 
 PR #155 integrated the current semantic preview/download selector repair and

@@ -1,3 +1,10 @@
+## 2026-10-04 | Cold launch must establish crawler custody explicitly
+
+A browser endpoint and compatible-page census do not identify the startup tab.
+Chromium may expose retained pages alongside startup. Launch live follow on blank,
+then create exactly one crawler via the pre-lease governor and reserve its returned
+ID. Preserve unowned pages and the default fail-closed ambiguous-adoption contract.
+
 ## 2026-10-04 | Scheduler resume must restore suppressed completion runners
 
 A server started with persisted scheduler pause loads active operations without
