@@ -8062,6 +8062,66 @@ describe("history materialization service", () => {
 		});
 	});
 
+	it.each([
+		0, 1, 2,
+	])("counts only new transfers against maxItems when returning cached assets (%i new)", async (newTransfers) => {
+		let scheduled: (() => Promise<void>) | undefined;
+		const service = createHistoryMaterializationService({
+			config: {},
+			store: createInMemoryHistoryMaterializationJobStore([]),
+			catalogService: { readCatalog: vi.fn(), readItem: vi.fn() },
+			generateId: () => "hmj_cached_transfer_budget",
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: async (target) => ({
+				object: "history_materialization_result",
+				generatedAt: "2026-10-04T18:22:54.419Z",
+				status: "materialized",
+				target,
+				source: {
+					type: "conversation",
+					provider: "chatgpt",
+					conversationId: target.conversationId,
+				},
+				manifestPaths: [],
+				entries: Array.from({ length: 2 + newTransfers }, (_, index) => ({
+					kind: "artifact",
+					providerId: `asset-${index}`,
+					title: `asset-${index}.pdf`,
+					status: "materialized",
+					localPath: `/fixture/asset-${index}.pdf`,
+					remoteUrl: null,
+					cacheKey: null,
+					checksumSha256: null,
+					mimeType: "application/pdf",
+					size: 10,
+					materializationMethod: index < 2 ? "cached-provider-file" : "browser-download",
+					reason: null,
+					archiveItemId: null,
+					assetRoute: null,
+				})),
+				archiveItems: [],
+				metrics: { conversations: 1, materialized: 2 + newTransfers, skipped: 0, failed: 0 },
+				message: "Two verified cached assets plus new transfers.",
+			}),
+		});
+		await service.createJob({
+			provider: "chatgpt",
+			conversationId: "conv_cached_budget",
+			assetKinds: ["artifacts"],
+			maxItems: 1,
+		});
+		if (!scheduled) throw new Error("Expected queued worker.");
+		await scheduled();
+		const job = await service.readJob("hmj_cached_transfer_budget");
+		expect(job?.status).toBe(newTransfers <= 1 ? "succeeded" : "failed");
+		if (newTransfers <= 1) {
+			expect(job?.result?.entries).toHaveLength(2 + newTransfers);
+			expect(job?.result?.attempts?.[0].accounting.assetsAttempted).toBe(newTransfers);
+		}
+	});
+
 	it("fails closed before publishing an attempt receipt on target mismatch or evidence failure", async () => {
 		const runCase = async (input: {
 			jobId: string;

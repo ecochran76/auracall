@@ -852,9 +852,11 @@ function verifyHistoryMaterializationAttemptResult(
 		}
 	}
 	const maxItems = normalizeMaxItems(attempt.request.maxItems);
-	if (maxItems !== null && result.metrics.materialized > maxItems) {
+	const cachedAssets = result.entries.filter(isVerifiedCachedHistoryMaterializationEntry).length;
+	const newMaterializations = result.metrics.materialized - cachedAssets;
+	if (maxItems !== null && newMaterializations > maxItems) {
 		throw new Error(
-			`History materialization attempt result materialized ${result.metrics.materialized} exceeds maxItems ${maxItems}.`,
+			`History materialization attempt result new materializations ${newMaterializations} exceeds maxItems ${maxItems}.`,
 		);
 	}
 }
@@ -4060,7 +4062,10 @@ function evidenceFromMaterializationResult(
 			retryNotBefore: deferredRetryNotBefore,
 			checkpointedAt: result.generatedAt,
 			artifactResolutions: entryCount,
-			downloads: materializedCount,
+			downloads: result.entries.filter(
+				(entry) =>
+					entry.status === "materialized" && !isVerifiedCachedHistoryMaterializationEntry(entry),
+			).length,
 			duplicates: duplicateAliasCount,
 		},
 	};
@@ -4403,10 +4408,7 @@ export function classifyHistoryMaterializationEntryRecoverability(
 	if (entry.reason === "missing_live_control") {
 		return "repair_prompt_candidate";
 	}
-	if (
-		entry.assetAvailability === "unavailable" ||
-		entry.failureKind === "provider_unavailable"
-	) {
+	if (entry.assetAvailability === "unavailable" || entry.failureKind === "provider_unavailable") {
 		return "terminally_unavailable";
 	}
 	if (
@@ -5770,7 +5772,17 @@ function maxKnownCount(values: unknown[]): number {
 
 function countAttemptedReconciliationAssetBudget(result: HistoryMaterializationResult): number {
 	if (isTerminalConversationUnavailableResult(result)) return 0;
-	return result.entries.filter((entry) => historyEntryIdentifiesConcreteAsset(entry)).length;
+	return result.entries.filter(
+		(entry) =>
+			historyEntryIdentifiesConcreteAsset(entry) &&
+			!isVerifiedCachedHistoryMaterializationEntry(entry),
+	).length;
+}
+
+function isVerifiedCachedHistoryMaterializationEntry(
+	entry: HistoryMaterializationManifestEntry,
+): boolean {
+	return entry.status === "materialized" && entry.materializationMethod === "cached-provider-file";
 }
 
 async function reconciliationRetryAttemptedAtByConversationId(input: {
@@ -6323,7 +6335,9 @@ export function createHistoryMaterializationTrafficOptions(
 	inPageActionLimit: number,
 ): Pick<
 	BrowserProviderListOptions,
-	"providerTrafficContext" | "accountMirrorProviderTrafficPlan" | "accountMirrorSingleConversationVisit"
+	| "providerTrafficContext"
+	| "accountMirrorProviderTrafficPlan"
+	| "accountMirrorSingleConversationVisit"
 > {
 	const workKey = createAccountMirrorProviderTrafficWorkKey("materialization", conversationId);
 	return {

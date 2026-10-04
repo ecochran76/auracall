@@ -3269,3 +3269,8 @@
 - Scoped browser runs can be smoke-tested by passing `--project-id` / `--conversation-id` to a browser command; they should not change default config behavior.
 
 Viewer download scope regression: `pnpm vitest run tests/browser/chatgptViewerDownloadScope.test.ts`. Executes the real helper evaluation with captured inline-card shapes and synthetic DOM; no provider calls.
+
+
+### Queued worker cache reuse and transfer limits
+
+The history materialization worker must accept two verified cached-provider-file entries plus one new transfer with maxItems=1, retain all three available assets, and account for one attempted transfer. Two new transfers under that limit must fail. Run the focused cases with pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "counts only new transfers". Cache reuse must not increment frontier download counts.

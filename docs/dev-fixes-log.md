@@ -24092,3 +24092,8 @@ Generic ChatGPT `Download file` labels also occur in inline conversation cards. 
 ## 2026-10-03 — Avoid unchanged artifact redownloads (#165)
 
 The artifact loop read attachments but never reused them. Check exact current artifact ID/name/URI and local integrity before transfer; apply transfer limits after reuse and pass explicit force separately from context refresh. A repeated real-service regression reproduces the old duplicate and proves unchanged repeats, one added artifact, force, missing files and same-size corruption. Installed incremental acceptance remains pending.
+
+
+## 2026-10-04 | Cached availability is not a new transfer
+
+ChatGPT materialization returns verified cached-provider-file assets alongside up to maxItems new transfers. Worker validation and frontier download/budget counters must exclude those reused assets. A normal queued worker exposed this mismatch after a successful PDF capture; preserve its failed job and captured bytes. Regression retains rejection of actual new-transfer overflow. See notes/2026-10-04-plan0386-worker-cache-accounting.md.
