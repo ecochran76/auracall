@@ -1,3 +1,14 @@
+## 2026-10-03 | Issue 165 fifth control stopped, facade regression corrected
+
+Final installed control still timed out before ZIP download, despite a successful
+fresh read. Browser processes and owned leases are released. Five repair cycles
+are consumed; no additional provider attempt ran. The base-service test missed
+a ChatgptService utility wrapper copy. The regression now exercises the actual
+facade; it failed in 340 ms, then passed after explicit-target session custody
+was returned to its caller. This facade correction is source-only pending a
+renewed installed acceptance budget. Scheduler paused, Gate D open; see
+`docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
+
 ## 2026-10-03 | Issue 165 context-session handoff, repair cycle 5
 
 Installed cycle 4 removed the read failure: fresh context succeeded in 11 seconds,

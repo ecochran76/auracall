@@ -9,6 +9,7 @@ import { CHATGPT_URL, GEMINI_URL } from "../../src/browser/constants.js";
 import type { CacheStore } from "../../src/browser/llmService/cache/store.js";
 import { JsonCacheStore } from "../../src/browser/llmService/cache/store.js";
 import { LlmService } from "../../src/browser/llmService/llmService.js";
+import { createLlmService } from "../../src/browser/llmService/providers/index.js";
 import type {
 	LlmServiceAdapter,
 	PromptInput,
@@ -20,6 +21,7 @@ import {
 } from "../../src/browser/providers/cache.js";
 import { beforeChatgptBrowserInteractionForTest } from "../../src/browser/providers/chatgptAdapter.js";
 import type { ConversationArtifact, FileRef, Project } from "../../src/browser/providers/domain.js";
+import { getProvider } from "../../src/browser/providers/index.js";
 import { createBrowserScrapeTelemetryRecorder } from "../../src/browser/providers/scrapeTelemetry.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 import type { ResolvedUserConfig } from "../../src/config.js";
@@ -1119,9 +1121,36 @@ describe("llmService project file cache writes", () => {
 			),
 		};
 		try {
-			const service = new TestLlmService(provider as never, new JsonCacheStore(), cacheContext);
+			const actualAdapter = getProvider("chatgpt");
+			const readSpy = vi
+				.spyOn(actualAdapter, "readConversationContext")
+				.mockImplementation(provider.readConversationContext as never);
+			const transferSpy = vi
+				.spyOn(actualAdapter, "materializeConversationArtifact")
+				.mockImplementation(provider.materializeConversationArtifact as never);
+			const service = createLlmService(
+				"chatgpt",
+				{
+					browser: { cache: {}, tabConcurrencyMode: "tab-affinity" },
+				} as never,
+				{
+					browserService: {
+						resolveServiceTarget: vi.fn(async () => ({
+							host: "127.0.0.1",
+							port: 45009,
+							managedBrowserProfile: "/managed/chatgpt",
+							browserProcessId: 1234,
+							tab: { targetId: "owned-target", url: "https://chatgpt.com/c/handoff" },
+						})),
+					} as never,
+				},
+			);
+			vi.spyOn(service, "resolveCacheContext").mockResolvedValue(cacheContext);
 			const result = await service.materializeConversationArtifacts("handoff", {
 				listOptions: {
+					tabTargetId: "owned-target",
+					host: "127.0.0.1",
+					port: 45009,
 					interactionGovernor: governor,
 					preserveInteractionGovernorForProviderSession: true,
 				},
@@ -1129,7 +1158,10 @@ describe("llmService project file cache writes", () => {
 			expect(result.files).toHaveLength(1);
 			expect(sleep).not.toHaveBeenCalled();
 			expect(close).toHaveBeenCalledTimes(1);
+			readSpy.mockRestore();
+			transferSpy.mockRestore();
 		} finally {
+			vi.restoreAllMocks();
 			await rm(home, { recursive: true, force: true });
 		}
 	});
