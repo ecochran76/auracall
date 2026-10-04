@@ -1,3 +1,19 @@
+## 2026-10-04 22:04 UTC | Plan0386 budget-limited closeout
+
+PR194 and PR195 merged and were installed from canonical SHAe747154d4 with
+five matching module hashes. Three of five allowed passes used. Pass3 created
+an owned crawler after backoff, but no normal refresh completed and no automatic
+materialization job was created. Goal budget reached 504761/500000 tokens;
+full acceptance remains open. Paused the packet-owned completion, stopped its
+in-flight API/browser group, proved exact native absence, and restarted API
+PID80665 with scheduler paused, six paused completions and zero running.
+Restored background drain to original unpaused state. One retained idle lease
+remains fenced for normal same-workload absence recovery; no manual release.
+Prior 183246-byte positive-control PDF still matches cache/archive hash and HTTP200.
+Evidence and next gate: docs/dev/notes/2026-10-04-plan0386-bounded-resumption.md
+and its acceptance JSON. Memory disposition unavailable: no qualified atlas route,
+no write attempted. Unrelated root and repair-worktree dirty state preserved.
+
 ## 2026-10-04 21:50 UTC | Plan0386 cold-start blocker reproduced
 
 PR194 merged and was installed from exact canonical SHA549ee0eae with four

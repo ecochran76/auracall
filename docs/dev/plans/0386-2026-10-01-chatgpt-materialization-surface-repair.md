@@ -51,6 +51,18 @@ helper. The second bounded repair skips that reuse for about:blank only;
 ordinary login semantics remain. Pass2 and scheduler cadence are paused pending
 validation/integration. No completed refresh or automatic capture is claimed.
 
+### Budget-limited closeout | 22:04 UTC
+
+The goal service reported 504761/500000 tokens and marked this continuation
+`budget_limited`. Three of five live passes used; full acceptance remains open.
+PR194 and PR195 are merged and installed at canonical SHAe747154d4. Pass3
+proved fast owned-crawler creation but did not complete normal refresh or create
+an automatic materialization job. Runtime contained: scheduler paused, all six
+completions paused, background drain restored, exact managed browser absent and
+API PID80665 restarted. One idle crawler lease remains fenced for subsequent
+same-workload absence recovery. No new source work or live pass after budget stop.
+See the bounded-resumption note and acceptance JSON for evidence and next gate.
+
 ## Stable Objective
 
 Restore ChatGPT conversation-file and generated-artifact materialization on the

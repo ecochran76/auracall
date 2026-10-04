@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "status": "PARTIAL_BUDGET_LIMITED",
+  "issue": "ecochran76/auracall#165",
+  "sourceSha": "e747154d428b97ae25a624e9537d9ca1cb37ddf0",
+  "integratedPrs": [
+    194,
+    195
+  ],
+  "bounds": {
+    "tokenBudget": 500000,
+    "budgetLimitReportedTokens": 504761,
+    "reportedElapsedSeconds": 2734,
+    "wallDeadline": "2026-10-04T22:21:31Z",
+    "livePassLimit": 5,
+    "livePassesUsed": 3
+  },
+  "acceptance": {
+    "fullRecoveryChainAccepted": false,
+    "strictAbsenceProven": true,
+    "oldSameWorkloadLeaseReleased": true,
+    "ownedCrawlerCreated": true,
+    "automaticCompletionRunnerStarted": true,
+    "freshNormalRefreshCompleted": false,
+    "automaticMaterializationJobCreated": false,
+    "historicalPositiveControlCacheParity": true
+  },
+  "oldLeaseRelease": {
+    "leaseId": "2dc37b7c-eb67-4e4b-a56b-2578a88a337a",
+    "revision": 7,
+    "targetId": "1685C732A4D271090399E5EC6D25E722",
+    "state": "released",
+    "lossReason": "target-missing",
+    "finalDisposition": "already-missing",
+    "heartbeatAt": "2026-10-04T20:55:48.074Z",
+    "workload": {
+      "kind": "live-follow",
+      "operationId": "account-mirror-scheduler:chatgpt:wsl-chrome-3"
+    }
+  },
+  "installedParity": {
+    "at": "2026-10-04T21:53:04.330Z",
+    "sourceSha": "e747154d428b97ae25a624e9537d9ca1cb37ddf0",
+    "hashes": [
+      {
+        "file": "dist/src/http/responsesServer.js",
+        "source": "3a4051020abe0645932450f92a6c20da6d7c8161f43ce2fae7654069f8b3acc9",
+        "runtime": "3a4051020abe0645932450f92a6c20da6d7c8161f43ce2fae7654069f8b3acc9",
+        "match": true
+      },
+      {
+        "file": "dist/packages/browser-service/src/manualLogin.js",
+        "source": "a551c00424ebb5ad5838f87a930db39c1d805d0bc53e6d8b9d859feb7b89df94",
+        "runtime": "a551c00424ebb5ad5838f87a930db39c1d805d0bc53e6d8b9d859feb7b89df94",
+        "match": true
+      },
+      {
+        "file": "dist/src/accountMirror/configuredLiveFollowAffinity.js",
+        "source": "1e3651196068b5d1ecf681738011bf9c8ce0d39c761cb58967b4d38003902977",
+        "runtime": "1e3651196068b5d1ecf681738011bf9c8ce0d39c761cb58967b4d38003902977",
+        "match": true
+      },
+      {
+        "file": "dist/src/accountMirror/liveFollowTabCoordinator.js",
+        "source": "80b617111dd7b3eda03a0b324c20e42a3bac465dcfeeb91164518f8fbf8282a0",
+        "runtime": "80b617111dd7b3eda03a0b324c20e42a3bac465dcfeeb91164518f8fbf8282a0",
+        "match": true
+      },
+      {
+        "file": "dist/packages/browser-service/src/processCheck.js",
+        "source": "cde4ed279c65eee6a1a2a0b31a87493f9a0ae33750252b9f49ca9502552b00f6",
+        "runtime": "cde4ed279c65eee6a1a2a0b31a87493f9a0ae33750252b9f49ca9502552b00f6",
+        "match": true
+      }
+    ]
+  },
+  "historicalPositiveControl": {
+    "verifiedAt": "2026-10-04T21:57:33.697Z",
+    "jobId": "hmj_9fa5382a07a7423ca13cdccb3b2a62fd",
+    "status": "succeeded",
+    "size": 183246,
+    "archiveHttpStatus": 200,
+    "sha256": "88a11545071c98f40838e2115e92524608bf11eb8dfc15e2a46436805efe0362",
+    "localHashMatches": true,
+    "archiveHashMatches": true,
+    "proofScope": "prior positive-control PDF still present and cache/archive consistent; no new provider work"
+  },
+  "passLedger": [
+    {
+      "pass": 1,
+      "kind": "inherited-cadence",
+      "startedAt": "2026-10-04T21:19:09.985Z",
+      "completedAt": "2026-10-04T21:34:45.228Z",
+      "outcome": "refresh-blocked",
+      "error": "crawler heartbeat stale-claim"
+    },
+    {
+      "pass": 2,
+      "kind": "explicit-scheduler-resume",
+      "completionId": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+      "outcome": "runner-started-startup-stalled",
+      "pausedByPacket": true
+    },
+    {
+      "pass": 3,
+      "kind": "resume-owned-completion",
+      "outcome": "owned-crawler-created-refresh-unsettled-at-budget-stop",
+      "leaseId": "002b46eb-cb83-4def-8c94-9d8996dd7723",
+      "targetId": "1C4DB5CB52EAF320100D2E9A940A3173",
+      "passCount": 0,
+      "materializationJobId": null
+    }
+  ],
+  "containment": {
+    "nativeCensus": {
+      "at": "2026-10-04T22:04:35.579Z",
+      "profile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+      "absent": true
+    },
+    "statusReadAt": "2026-10-04T22:04:41.661Z",
+    "schedulerPaused": true,
+    "schedulerState": "paused",
+    "backgroundDrainPaused": false,
+    "completionMetrics": {
+      "total": 5117,
+      "active": 6,
+      "queued": 0,
+      "running": 0,
+      "idle_waiting": 0,
+      "paused": 6,
+      "completed": 80,
+      "blocked": 760,
+      "failed": 4218,
+      "cancelled": 53
+    },
+    "activeCompletionStates": [
+      {
+        "id": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+        "runtimeProfileId": "wsl-chrome-3",
+        "provider": "chatgpt",
+        "status": "paused"
+      },
+      {
+        "id": "acctmirror_completion_84251b28-12d9-4d5f-9bdc-3c77bd9eade0",
+        "runtimeProfileId": "default",
+        "provider": "chatgpt",
+        "status": "paused"
+      },
+      {
+        "id": "acctmirror_completion_bc68cd94-3f8e-4c2d-bd40-fc4299a5e591",
+        "runtimeProfileId": "wsl-chrome-2",
+        "provider": "chatgpt",
+        "status": "paused"
+      },
+      {
+        "id": "acctmirror_completion_65de7626-9aaf-4585-8224-601bee2cada4",
+        "runtimeProfileId": "wsl-chrome-4",
+        "provider": "chatgpt",
+        "status": "paused"
+      },
+      {
+        "id": "acctmirror_completion_2e50553f-5641-4482-a214-9ae2150ba3cb",
+        "runtimeProfileId": "default",
+        "provider": "grok",
+        "status": "paused"
+      },
+      {
+        "id": "acctmirror_completion_dad4f08c-a59e-4183-91b5-b0b7c445c40a",
+        "runtimeProfileId": "default",
+        "provider": "gemini",
+        "status": "paused"
+      }
+    ],
+    "leaseStates": {
+      "active": 0,
+      "idle": 1,
+      "retiring": 0,
+      "released": 235,
+      "lost": 0
+    },
+    "apiPid": 80665
+  },
+  "remainingGate": "Locate actual pre-collector stall without bypassing guards, then prove fresh matching identity, completed normal refresh and automatic materialization continuation.",
+  "memoryDisposition": "unavailable",
+  "memoryReason": "No qualified group routing manifest from bounded atlas discovery; no memory write attempted.",
+  "memoryReceipt": {
+    "artifact_path": "/tmp/auracall-plan0386-memory-disposition.json",
+    "command": "remember",
+    "disposition": "unavailable",
+    "graphiti_writes_attempted": 0,
+    "group_id": null,
+    "mcp_url": "http://127.0.0.1:8817/mcp",
+    "name": null,
+    "reason": "Narrow atlas discovery supplied no qualified group routing manifest; source outcomes are durable but a safe destination is unavailable. Preserve repository evidence without a memory write.",
+    "recorded_at": "2026-10-04T22:06:33.729369+00:00",
+    "reference_time": null,
+    "schema_version": "graphiti_closeout_memory_receipt.v1",
+    "source_artifact": "/home/ecochran76/workspace.local/auracall-follow-continuation/docs/dev/notes/2026-10-04-plan0386-bounded-resumption.md",
+    "source_description": null,
+    "status": "recorded_no_write",
+    "timeout_seconds": null,
+    "warnings": []
+  }
+}
