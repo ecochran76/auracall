@@ -132,6 +132,16 @@ describe("account-mirror changed-frontier planner", () => {
 		],
 		["unchanged complete", row("fresh"), "skip", "unchanged_complete"],
 		[
+			"same-epoch detail complete with missing assets",
+			row(
+				"partial",
+				{ outcome: "complete", detailFingerprint: "sha256:detail" },
+				{ assetCompleteness: "partial", assetCounts: { known: 5, local: 1, missingLocal: 4 } },
+			),
+			"materialize_retained",
+			"retained_assets_actionable",
+		],
+		[
 			"changed detail",
 			row("changed", {}, { state: "stale" }),
 			"visit_once",

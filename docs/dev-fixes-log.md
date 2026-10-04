@@ -1,3 +1,7 @@
+## 2026-10-04 | Completed detail is not completed asset capture
+
+Do not let a same-epoch complete detail checkpoint bypass known missing local assets. The planner must preserve retained materialization eligibility until missing assets are reconciled, while keeping warning, identity and retry gates.
+
 ## 2026-10-04 | Detail recovery must respect changed/unchanged planning
 
 A steady-follow requested detail phase must not unconditionally reread retained partial assets or unchanged complete conversations. Apply the same planner as discovery, preserve original cached index rows rather than ID-placeholder titles, and align cursor evidence with filtered selection. Explicit full sweeps retain comprehensive semantics.
