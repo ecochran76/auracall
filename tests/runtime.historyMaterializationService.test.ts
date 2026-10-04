@@ -8066,11 +8066,13 @@ describe("history materialization service", () => {
 		0, 1, 2,
 	])("counts only new transfers against maxItems when returning cached assets (%i new)", async (newTransfers) => {
 		let scheduled: (() => Promise<void>) | undefined;
+		const recordConversationEvidence = vi.fn(async () => undefined);
 		const service = createHistoryMaterializationService({
 			config: {},
 			store: createInMemoryHistoryMaterializationJobStore([]),
 			catalogService: { readCatalog: vi.fn(), readItem: vi.fn() },
 			generateId: () => "hmj_cached_transfer_budget",
+			recordConversationEvidence,
 			schedule: (work) => {
 				scheduled = work;
 			},
@@ -8102,6 +8104,7 @@ describe("history materialization service", () => {
 					assetRoute: null,
 				})),
 				archiveItems: [],
+				pendingAssetCount: newTransfers === 1 ? 5 : 0,
 				metrics: { conversations: 1, materialized: 2 + newTransfers, skipped: 0, failed: 0 },
 				message: "Two verified cached assets plus new transfers.",
 			}),
@@ -8119,6 +8122,16 @@ describe("history materialization service", () => {
 		if (newTransfers <= 1) {
 			expect(job?.result?.entries).toHaveLength(2 + newTransfers);
 			expect(job?.result?.attempts?.[0].accounting.assetsAttempted).toBe(newTransfers);
+			expect(recordConversationEvidence).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.objectContaining({
+					assetCompleteness: newTransfers === 1 ? "partial" : "complete",
+					frontierState: expect.objectContaining({
+						outcome: newTransfers === 1 ? "deferred" : "complete",
+						downloads: newTransfers,
+					}),
+				}),
+			);
 		}
 	});
 

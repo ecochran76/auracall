@@ -1,0 +1,72 @@
+{
+  "status": "succeeded",
+  "jobId": "hmj_0861741c86544fba8c10c65b1fb28032",
+  "canonicalCommit": "504b6efcf",
+  "completedAt": "2026-10-04T18:31:42.628Z",
+  "verificationAt": "2026-10-04T18:33:47.404Z",
+  "files": [
+    {
+      "id": "download-dom:message-1:0",
+      "name": "2026-05-31-21-06 2021-07-13 Shailja Goyal Ketal acrylate acssuschemeng.1c02931.pdf",
+      "bytes": 2132164,
+      "mime": "application/pdf",
+      "sha256": "d5b9b70647bb6ed38c83431ee2476501a4cd33f333203df8713b64828378cf08",
+      "newToCache": false,
+      "method": "cached-provider-file"
+    },
+    {
+      "id": "download-dom:message-1:1",
+      "name": "glycerol-ketals-as-building-blocks-for-a-new-class-of-biobased-(meth)acrylate-polymers.pdf",
+      "bytes": 2132150,
+      "mime": "application/pdf",
+      "sha256": "f753dc62116aa3b2b0a8ab0d2bdf83ac6a6cf18c529dd9625f5b9a6f6fe20205",
+      "newToCache": false,
+      "method": "cached-provider-file"
+    },
+    {
+      "id": "download-dom:message-1:2",
+      "name": "01-project-description.pdf",
+      "bytes": 640963,
+      "mime": "application/pdf",
+      "sha256": "a6514768274967054d9f276e691d1ee3a67a6ec6dda9a4351d0eb3cc967d9a0f",
+      "newToCache": true,
+      "method": "download-button"
+    },
+    {
+      "id": "download-dom:message-8:0",
+      "name": "Bailey_FY27_Proposal_With_Figures.zip",
+      "bytes": 1721645,
+      "mime": "application/zip",
+      "sha256": "c463e95ddac8fc739d5f5865986d63a33add63ff87696ec57a06be43bf8a46dc",
+      "newToCache": false,
+      "method": "cached-provider-file"
+    }
+  ],
+  "downloads": {
+    "attempted": 1,
+    "succeeded": 1,
+    "failed": 0
+  },
+  "cdpCalls": {
+    "Target.attachToTarget": 1,
+    "Page.enable": 1,
+    "Runtime.enable": 1,
+    "Runtime.evaluate": 11,
+    "Browser.setDownloadBehavior": 1,
+    "Input.dispatchMouseEvent": 6
+  },
+  "attemptAccounting": {
+    "targetConsumed": true,
+    "assetsAttempted": 1,
+    "providerGuardObserved": false,
+    "candidateMaterialized": true
+  },
+  "observer": {
+    "requests": 361,
+    "documentRequests": 3,
+    "warnings": [],
+    "disconnectedAt": "2026-10-04T18:31:40.876Z"
+  },
+  "initialHarnessFailure": "Expected exactly one newly captured asset, got 0",
+  "explanation": "Monitoring API deliberately omits entries, manifests and telemetry; verified the same terminal job through installed local durable job store, then authenticated archive HTTP routes. No provider retry."
+}

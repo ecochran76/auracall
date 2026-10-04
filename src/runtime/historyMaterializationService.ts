@@ -307,6 +307,7 @@ export interface HistoryMaterializationResult {
 	manifestPaths: string[];
 	entries: HistoryMaterializationManifestEntry[];
 	archiveItems: RunArchiveItem[];
+	pendingAssetCount?: number;
 	snapshotRefreshes?: HistoryMaterializationSnapshotRefresh[] | null;
 	attempts?: HistoryMaterializationAttemptReceipt[] | null;
 	scrapeTelemetry?: BrowserScrapeTelemetrySnapshot | null;
@@ -4040,7 +4041,10 @@ function evidenceFromMaterializationResult(
 	).length;
 	const completedCount = materializedCount + duplicateAliasCount;
 	const terminal = entryCount > 0 && unavailableCount === entryCount;
-	const complete = entryCount > 0 && completedCount === entryCount;
+	const complete =
+		entryCount > 0 &&
+		completedCount === entryCount &&
+		!(result.pendingAssetCount && result.pendingAssetCount > 0);
 	const deferredRetryNotBefore =
 		!terminal && !complete
 			? new Date(
@@ -4054,7 +4058,11 @@ function evidenceFromMaterializationResult(
 	return {
 		manifestObservedAt: result.generatedAt,
 		materializedAt: materializedCount > 0 ? result.generatedAt : undefined,
-		assetCompleteness: complete ? "complete" : undefined,
+		assetCompleteness: complete
+			? "complete"
+			: result.pendingAssetCount && result.pendingAssetCount > 0
+				? "partial"
+				: undefined,
 		frontierState: {
 			action: "materialize_retained",
 			outcome: terminal ? "terminal" : complete ? "complete" : "deferred",
@@ -4237,6 +4245,7 @@ async function materializeConversationTarget(input: {
 			artifacts: ConversationArtifact[];
 			files: FileRef[];
 			manifestPath: string | null;
+			pendingArtifactCount?: number;
 			unavailableArtifacts: Array<{
 				artifact: ConversationArtifact;
 				reason: "missing_live_control";
@@ -4382,6 +4391,7 @@ async function materializeConversationTarget(input: {
 			entries,
 			archiveItems,
 			scrapeTelemetry: snapshotBrowserScrapeTelemetry(scrapeTelemetry),
+			pendingAssetCount: artifactFetch?.pendingArtifactCount ?? 0,
 			metrics,
 			message:
 				metrics.materialized > 0

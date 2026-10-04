@@ -1301,6 +1301,10 @@ describe("llmService project file cache writes", () => {
 			const absent = await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
 			expect(absent.files).toEqual([]);
 			expect(materialize).not.toHaveBeenCalled();
+			artifacts = [artifact("old"), artifact("new"), artifact("next"), artifact("later")];
+			const capped = await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(capped).toMatchObject({ pendingArtifactCount: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
 		}
@@ -1603,6 +1607,7 @@ describe("llmService project file cache writes", () => {
 				artifacts: [],
 				files: [],
 				manifestPath: null,
+				pendingArtifactCount: 0,
 				unavailableArtifacts: [
 					{
 						artifact: expect.objectContaining({

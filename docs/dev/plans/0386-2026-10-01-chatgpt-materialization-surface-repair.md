@@ -160,6 +160,10 @@ provider bound, passive warning/network observation and exact-owner cleanup.
 A failed/ambiguous control stops provider work pending local diagnosis.
 Scheduler stays paused until changed/unchanged frontier acceptance is proven.
 
+### Renewed queued-worker acceptance | 2026-10-04
+
+Normal job hmj_0861741c86544fba8c10c65b1fb28032 succeeded on installed main 504b6efcf: one new verified PDF and three cache reuses, exact manifest/archive bytes, identity match, one attempted/succeeded transfer. The same terminal job was verified through the durable store after the compact monitoring projection confused the harness; no provider retry. Automatic frontier acceptance remains open because persistence marked a capped partial inventory complete. Successor repair propagates pending inventory counts and retains partial/deferred checkpoints; scheduler remains paused. See notes/2026-10-04-plan0386-partial-frontier.md.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal

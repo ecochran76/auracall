@@ -52537,3 +52537,8 @@ PR171 merged and exact canonical commit installed with service parity. Reconcile
 ## 2026-10-04 | Issue 165 queued-worker cache accounting
 
 Normal queued worker captured one new verified PDF but failed terminal validation because two verified cached assets were counted against maxItems=1. Reproduced locally and repaired validator, reconciliation budget, and frontier download accounting; 94 worker tests, 16 planner/metrics tests, and 80 frontier/completion tests passed; typecheck, build, scoped lint, and plan audit passed. Installed repaired acceptance and automatic frontier acceptance remain open; scheduler paused. See notes/2026-10-04-plan0386-worker-cache-accounting.md.
+
+
+## 2026-10-04 | Issue165 positive queued capture and partial frontier
+
+Installed worker hmj_0861741c86544fba8c10c65b1fb28032 succeeded: one new PDF, three cache reuses, one successful transfer, exact file/manifest/archive agreement, matching identity. Monitoring API omits detailed entries; local durable job verification resolved the harness mismatch without another provider run. Persistence wrongly marked the capped inventory complete; successor repair propagates pending counts and records partial/deferred. 149 focused tests, typecheck, and scoped lint passed. Scheduler paused; installed frontier acceptance pending. See notes/2026-10-04-plan0386-partial-frontier.md.

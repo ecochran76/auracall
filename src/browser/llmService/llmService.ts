@@ -1918,6 +1918,7 @@ export abstract class LlmService {
 		artifacts: ConversationArtifact[];
 		files: FileRef[];
 		manifestPath: string | null;
+		pendingArtifactCount?: number;
 		unavailableArtifacts: Array<{
 			artifact: ConversationArtifact;
 			reason: typeof CHATGPT_MISSING_LIVE_CONTROL_REASON;
@@ -1979,7 +1980,13 @@ export abstract class LlmService {
 				artifacts.length,
 			);
 			if (artifacts.length === 0) {
-				return { artifacts: [], files: [], manifestPath: null, unavailableArtifacts };
+				return {
+					artifacts: [],
+					files: [],
+					manifestPath: null,
+					pendingArtifactCount: 0,
+					unavailableArtifacts,
+				};
 			}
 			if (!this.provider.materializeConversationArtifact) {
 				throw new Error(`Conversation artifact fetch is not supported for ${this.providerId}.`);
@@ -2035,6 +2042,9 @@ export abstract class LlmService {
 					options?.maxItems,
 				).map((artifact) => artifact.id),
 			);
+			const pendingArtifactCount = artifacts.filter(
+				(artifact) => !reusable.has(artifact.id) && !transfers.has(artifact.id),
+			).length;
 			artifacts = artifacts.filter(
 				(artifact) => reusable.has(artifact.id) || transfers.has(artifact.id),
 			);
@@ -2178,7 +2188,13 @@ export abstract class LlmService {
 				entries: manifestEntries,
 			};
 			await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-			return { artifacts, files: materialized, manifestPath, unavailableArtifacts };
+			return {
+				artifacts,
+				files: materialized,
+				manifestPath,
+				pendingArtifactCount,
+				unavailableArtifacts,
+			};
 		} finally {
 			if (shouldCloseProviderSession) {
 				await closeScopedProviderSession(listOptions);
