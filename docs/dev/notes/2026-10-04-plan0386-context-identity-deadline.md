@@ -52,3 +52,26 @@ provider pacing change, or successful refresh claim was introduced.
 
 Installed acceptance of this change has not run. The remaining diagnosis gate
 is a bounded installed context read with fresh pending-operation evidence.
+
+## Installed control after PR199
+
+Canonical `d564943b30389eef614d8a66529fd3bf4ac3fa63` was built and installed;
+four relevant modules matched SHA256, including the adapter. One owned
+completion resumed at 23:49:29.779Z and was paused at 23:54:21.528Z. Identity
+matched and completed (reported monotonic elapsed 146867ms). Context then
+failed with `retry` (collector elapsed 119702ms); the context receipt reported
+108038ms and `lastStage=provider:chatgpt.readVisibleCanvasProbes`. Those elapsed
+values describe different layers and should not be equated. Neither identity
+timeout fired. This control does not prove a successful refresh or materialization.
+
+The observed context read progressed beyond the identity boundary, so the
+prior live stall is not reproduced at that boundary. Its cause remains
+unproven. Do not remove the provider retry hard stop. All six completions and
+the scheduler are paused, no completion is running, exact managed browser
+process absence is true, and the API restarted as PID439. One stale idle lease
+remains for ordinary guarded recovery; no cleanup bypass was used. Curated
+evidence: `2026-10-04-plan0386-pr199-installed-test.json`.
+
+Memory disposition: unavailable. Narrow atlas discovery returned unrelated
+Buffer CLI and IM CLI routes, with no qualified AuraCall group. A machine
+non-write receipt was recorded; no memory write was attempted.
