@@ -1,3 +1,11 @@
+## 2026-10-04 | Missing endpoint is not browser absence proof
+
+A retained crawler lease can outlive browser shutdown or a host reboot. Reconcile
+it through revision-fenced missing-target release only after a strict, bounded
+native process census proves the managed browser absent. Best-effort lookup that
+swallows probe errors cannot authorize cleanup. Unknown presence preserves the
+lease and refuses startup; Windows absence proof remains unsupported and closed.
+
 ## 2026-10-04 | Cold launch must establish crawler custody explicitly
 
 A browser endpoint and compatible-page census do not identify the startup tab.

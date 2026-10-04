@@ -1,3 +1,12 @@
+## 2026-10-04 | Proven-absence recovery for retained crawler leases
+
+PR 192 is installed with exact hash parity. Its first normal cadence pass failed
+before browser launch because a stable scheduler workload retained an idle lease
+after the owned test browser closed. The coordinator regression reproduces that
+cycle. Recovery now requires a successful native process census before releasing
+the missing target's lease with revision fencing; missing or failed proof keeps
+the guard closed. Installed acceptance remains pending.
+
 ## 2026-10-04 | Explicit cold-start crawler custody
 
 Cold launch can expose restored ChatGPT pages before crawler reservation.

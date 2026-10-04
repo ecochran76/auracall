@@ -4,6 +4,7 @@ import {
 	listChromeTargets,
 	openChromeTarget,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
+import { verifyChromeProcessAbsent } from "../../packages/browser-service/src/processCheck.js";
 import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import {
 	createLedgerBackedBrowserInteractionGovernor,
@@ -174,6 +175,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		now: input.now,
 		coldStartTargetPolicy: "create",
 		resolveExistingEndpoint: async () => toEndpoint(initialTarget),
+		verifyBrowserAbsent: () => verifyChromeProcessAbsent(managedBrowserProfile),
 		startBrowser: async () => {
 			const started = await browserService.resolveServiceTarget({
 				serviceId: "chatgpt",

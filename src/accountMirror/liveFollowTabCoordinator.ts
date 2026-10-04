@@ -30,6 +30,7 @@ export interface DedicatedBrowserTabInput {
 	profileControlTtlMs?: number;
 	now?: () => Date;
 	resolveExistingEndpoint: () => Promise<LiveFollowBrowserEndpoint | null>;
+	verifyBrowserAbsent?: () => Promise<boolean>;
 	startBrowser: () => Promise<LiveFollowBrowserEndpoint>;
 	listTargets?: (
 		endpoint: LiveFollowBrowserEndpoint,
@@ -74,7 +75,11 @@ async function acquireDedicatedBrowserTab(
 	const now = input.now ?? (() => new Date());
 	let endpoint = await input.resolveExistingEndpoint();
 	let startedBrowser = false;
-	const existing = await input.registry.findByWorkload(input.scope, workload);
+	let existing = await input.registry.findByWorkload(input.scope, workload);
+	if (existing && !endpoint && (await input.verifyBrowserAbsent?.()) === true) {
+		await releaseMissingCrawler(input.registry, existing, now().toISOString());
+		existing = null;
+	}
 	if (existing) {
 		if (!endpoint) {
 			throw new Error(

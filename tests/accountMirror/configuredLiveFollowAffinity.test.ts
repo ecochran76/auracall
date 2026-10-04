@@ -133,7 +133,10 @@ describe("live-follow final warning transport", () => {
 });
 
 describe("configured cold-start custody", () => {
-	test("launches blank and reserves only its admitted crawler with restored pages present", async () => {
+	test.each([
+		false,
+		true,
+	])("launches blank and reserves only its admitted crawler with restored pages and retained lease: %s", async (retainedLease) => {
 		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
 		const runtimeModule = await import("../../src/browser/tabConcurrencyRuntime.js");
 		const { createInMemoryBrowserTabLeaseRegistry } = await import(
@@ -144,6 +147,33 @@ describe("configured cold-start custody", () => {
 			"../../src/accountMirror/configuredLiveFollowAffinity.js"
 		);
 		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const processCheck = await import("../../packages/browser-service/src/processCheck.js");
+		const verifyAbsent = vi
+			.spyOn(processCheck, "verifyChromeProcessAbsent")
+			.mockResolvedValue(true);
+		if (retainedLease) {
+			const reserved = await registry.reserve({
+				scope: {
+					runtimeProfileId: "runtime-1",
+					managedBrowserProfile: "/managed/chatgpt",
+					service: "chatgpt",
+					tenantKey: "service-account:chatgpt:account-id=account-1",
+				},
+				targetId: "gone-target",
+				workload: { kind: "live-follow", operationId: "cold-start" },
+				operationId: "cold-start",
+				now: new Date().toISOString(),
+				idleTtlMs: 60_000,
+				absoluteTtlMs: 3_600_000,
+				targetFingerprint: "https://chatgpt.com/",
+			});
+			if (!reserved.ok) throw new Error("reserve failed");
+			await registry.idle({
+				claim: reserved.value.claim,
+				now: new Date().toISOString(),
+				effectState: "settled",
+			});
+		}
 		const resolveServiceTarget = vi.fn(async (request: { ensurePort: boolean }) =>
 			request.ensurePort
 				? {
@@ -190,7 +220,8 @@ describe("configured cold-start custody", () => {
 			expect(affinity?.tabAffinity.targetId).toBe("owned-crawler");
 			expect(open).toHaveBeenCalledTimes(1);
 			expect(close).not.toHaveBeenCalled();
-			expect(await registry.list()).toHaveLength(1);
+			expect((await registry.list()).filter((lease) => lease.state !== "released")).toHaveLength(1);
+			if (retainedLease) expect(verifyAbsent).toHaveBeenCalledWith("/managed/chatgpt");
 		} finally {
 			vi.restoreAllMocks();
 		}
