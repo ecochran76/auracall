@@ -1,3 +1,15 @@
+## 2026-10-04 | Verified-cache archive publication
+
+Published both checksum-verified cached assets through the installed history
+archive upsert, with no provider call or fabricated job ID. Local field and
+availability agreement plus stable repeated IDs pass. API readback timed out
+at five and 45 seconds; host load reached 116.61 and Git execution stalled.
+Queued-worker/autonomous acceptance stays open and scheduler remains paused.
+Evidence: `docs/dev/notes/2026-10-04-plan0386-cache-archive-reconciliation.md`.
+After operator reboot, authenticated API lookup and HTTP 200 asset download
+match the ZIP checksum/size. Host load is 3.03; publication/readback accepted.
+Queued-worker acceptance remains open, scheduler paused, no provider calls.
+
 ## 2026-10-04 | PR 120 canonical conflict reconciliation
 
 Merged current canonical main into the existing Library cache-bypass branch.

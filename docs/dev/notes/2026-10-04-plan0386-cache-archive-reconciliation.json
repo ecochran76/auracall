@@ -1,0 +1,16 @@
+{
+  "source": "post-reboot authenticated API readback",
+  "observedAt": "2026-10-04T14:02:12.094Z",
+  "providerCalls": 0,
+  "item": {
+    "id": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6ab6d340-89e4-83ea-9990-d8fb278993e6:download-dom_message-8_0",
+    "name": "Bailey_FY27_Proposal_With_Figures.zip",
+    "size": 1721645,
+    "mimeType": "application/zip",
+    "checksumSha256": "c463e95ddac8fc739d5f5865986d63a33add63ff87696ec57a06be43bf8a46dc",
+    "fileAvailable": true
+  },
+  "assetHttpStatus": 200,
+  "schedulerState": "paused",
+  "queuedWorkerAccepted": false
+}
