@@ -4,6 +4,11 @@ import type {
 	ProviderInteractionPolicy,
 	ProviderWarningClassification,
 } from "../../packages/browser-service/src/service/interactionLedger.js";
+import {
+	createInMemoryBrowserMutationLog,
+	type BrowserMutationAuditSink,
+} from "../../packages/browser-service/src/service/mutationDispatcher.js";
+import { createProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type {
 	BrowserTabLease,
 	BrowserTabLeaseRegistry,
@@ -12,6 +17,8 @@ import type {
 	TabLeaseWorkload,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import type { PromptInput, PromptResult } from "./llmService/types.js";
+import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
+import { probeVisibleChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import {
 	assertChatgptLeasedPromptResult,
 	buildChatgptLeasedPromptOptions,
@@ -42,6 +49,7 @@ type ChatgptTabAffinityExecutionInput = {
 	idleTtlMs: number;
 	now?: () => Date;
 	classifyProviderWarning?: ProviderWarningClassifier;
+	mutationAudit?: BrowserMutationAuditSink;
 };
 
 export type ProviderWarningClassifier = (error: unknown) => {
@@ -78,6 +86,7 @@ export interface ExecuteProvisionedChatgptConversationInput {
 	idleTtlMs: number;
 	now?: () => Date;
 	classifyProviderWarning: ProviderWarningClassifier;
+	mutationAudit?: BrowserMutationAuditSink;
 }
 
 export async function executeChatgptConversation(
@@ -193,6 +202,7 @@ export async function executeProvisionedChatgptConversation(
 			idleTtlMs: request.idleTtlMs,
 			now,
 			classifyProviderWarning: request.classifyProviderWarning,
+			mutationAudit: request.mutationAudit,
 		},
 		reservationId,
 		now,
@@ -211,6 +221,57 @@ async function executeAdmittedChatgptConversation(
 		endpoint: request.endpoint,
 		options: request.options,
 		input: request.input,
+	});
+	providerOptions.providerTrafficGovernor = createProviderTrafficGovernor({
+		attribution: {
+			provider: "chatgpt",
+			runtimeProfileId: request.lease.scope.runtimeProfileId,
+			managedBrowserProfile: request.lease.scope.managedBrowserProfile,
+			workloadId: workloadId(request.lease),
+			operationId: request.operationId,
+			tabLeaseId: request.lease.leaseId,
+		},
+		// The enclosing prompt reservation already owns admission and settlement.
+		interactionGovernor: { beforeInteraction: async () => undefined },
+		mutationAudit:
+			request.mutationAudit ??
+			request.options?.mutationAudit ??
+			createInMemoryBrowserMutationLog().record,
+		assertLease: async (attribution) => {
+			const lease = (await request.registry.list({ states: ["active"] })).find(
+				(candidate) => candidate.leaseId === attribution.tabLeaseId,
+			);
+			if (
+				!lease ||
+				lease.ownerOperationId !== attribution.operationId ||
+				lease.targetId !== request.lease.targetId ||
+				lease.revision !== request.claim.revision
+			) {
+				throw new Error("Provider traffic tab lease ownership changed before prompt action.");
+			}
+		},
+		probeWarning: probeVisibleChatgptRateLimitWarning,
+		persistWarning: async (warning) => {
+			const observedAt = now();
+			await request.ledger.recordProviderWarning({
+				scope: {
+					provider: "chatgpt",
+					tenantKey: request.lease.scope.tenantKey,
+					runtimeProfileId: request.lease.scope.runtimeProfileId,
+					managedBrowserProfile: request.lease.scope.managedBrowserProfile,
+				},
+				classification: warning.classification,
+				reason: warning.reason,
+				observedAt: observedAt.toISOString(),
+			});
+			await recordChatgptRateLimitDetection({
+				profileName: request.lease.scope.runtimeProfileId,
+				managedProfileDir: request.lease.scope.managedBrowserProfile,
+				action: "prompt:provider-traffic-governor",
+				reason: warning.reason,
+				now: observedAt.getTime(),
+			});
+		},
 	});
 
 	let result: PromptResult;

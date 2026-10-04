@@ -90,6 +90,9 @@ export type RegistryOptions = {
   registryPath: string;
 };
 
+const REGISTRY_LOCK_TIMEOUT_MS = 5_000;
+const REGISTRY_LOCK_POLL_MS = 25;
+
 async function loadRegistry(options: RegistryOptions): Promise<BrowserStateRegistry> {
   const file = options.registryPath;
   try {
@@ -113,12 +116,64 @@ async function saveRegistry(options: RegistryOptions, registry: BrowserStateRegi
   await fs.rename(temp, file);
 }
 
+async function withRegistryLock<T>(options: RegistryOptions, operation: () => Promise<T>): Promise<T> {
+  await fs.mkdir(path.dirname(options.registryPath), { recursive: true });
+  const lockPath = `${options.registryPath}.lock`;
+  const startedAt = Date.now();
+  let handle: Awaited<ReturnType<typeof fs.open>> | null = null;
+  while (!handle) {
+    try {
+      handle = await fs.open(lockPath, 'wx', 0o600);
+      await handle.writeFile(JSON.stringify({ ownerPid: process.pid, acquiredAt: new Date().toISOString() }));
+    } catch (error) {
+      if (!isNodeError(error, 'EEXIST')) throw error;
+      if (await removeStaleRegistryLock(lockPath)) continue;
+      if (Date.now() - startedAt >= REGISTRY_LOCK_TIMEOUT_MS) {
+        throw new Error(`Timed out waiting for browser state registry lock: ${lockPath}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, REGISTRY_LOCK_POLL_MS));
+    }
+  }
+  try {
+    return await operation();
+  } finally {
+    await handle.close();
+    await fs.rm(lockPath, { force: true });
+  }
+}
+
+async function removeStaleRegistryLock(lockPath: string): Promise<boolean> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(lockPath, 'utf8')) as { ownerPid?: unknown };
+    if (typeof parsed.ownerPid === 'number' && isProcessRunning(parsed.ownerPid)) return false;
+    await fs.rm(lockPath, { force: true });
+    return true;
+  } catch (error) {
+    return isNodeError(error, 'ENOENT');
+  }
+}
+
+function isProcessRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isNodeError(error: unknown, code: string): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error && error.code === code;
+}
+
 export async function registerInstance(options: RegistryOptions, instance: BrowserInstance): Promise<void> {
-  const registry = await loadRegistry(options);
-  const profileName = resolveProfileDirectoryName(instance.profilePath, instance.profileName ?? 'Default');
-  const key = buildRegistryKey(instance.profilePath, profileName);
-  registry.instances[key] = { ...instance, profileName };
-  await saveRegistry(options, registry);
+  await withRegistryLock(options, async () => {
+    const registry = await loadRegistry(options);
+    const profileName = resolveProfileDirectoryName(instance.profilePath, instance.profileName ?? 'Default');
+    const key = buildRegistryKey(instance.profilePath, profileName);
+    registry.instances[key] = { ...instance, profileName };
+    await saveRegistry(options, registry);
+  });
 }
 
 export async function unregisterInstance(
@@ -126,13 +181,42 @@ export async function unregisterInstance(
   profilePath: string,
   profileName?: string | null,
 ): Promise<void> {
-  const registry = await loadRegistry(options);
-  const resolvedProfile = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
-  const key = buildRegistryKey(profilePath, resolvedProfile);
-  if (registry.instances[key]) {
+  await withRegistryLock(options, async () => {
+    const registry = await loadRegistry(options);
+    const resolvedProfile = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
+    const key = buildRegistryKey(profilePath, resolvedProfile);
+    if (registry.instances[key]) {
+      delete registry.instances[key];
+      await saveRegistry(options, registry);
+    }
+  });
+}
+
+export type BrowserInstanceGeneration = Pick<BrowserInstance, 'pid' | 'port' | 'launchedAt'>;
+
+export async function unregisterInstanceIfMatches(
+  options: RegistryOptions,
+  profilePath: string,
+  profileName: string | null | undefined,
+  expected: BrowserInstanceGeneration,
+): Promise<boolean> {
+  return withRegistryLock(options, async () => {
+    const registry = await loadRegistry(options);
+    const resolvedProfile = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
+    const key = buildRegistryKey(profilePath, resolvedProfile);
+    const current = registry.instances[key];
+    if (
+      !current ||
+      current.pid !== expected.pid ||
+      current.port !== expected.port ||
+      current.launchedAt !== expected.launchedAt
+    ) {
+      return false;
+    }
     delete registry.instances[key];
     await saveRegistry(options, registry);
-  }
+    return true;
+  });
 }
 
 export async function classifyInstanceLiveness(instance: BrowserInstance): Promise<BrowserInstanceStatus> {
@@ -228,25 +312,27 @@ export async function getInstance(
 }
 
 export async function pruneRegistryDetailed(options: RegistryOptions): Promise<PruneRegistryResult> {
-  const registry = await loadRegistry(options);
-  let changed = false;
-  const pruned: PrunedBrowserInstance[] = [];
-  for (const [key, instance] of Object.entries(registry.instances)) {
-    const status = await classifyInstanceLiveness(instance);
-    if (!status.alive) {
-      delete registry.instances[key];
-      changed = true;
-      pruned.push({
-        key,
-        instance,
-        ...status,
-      });
+  return withRegistryLock(options, async () => {
+    const registry = await loadRegistry(options);
+    let changed = false;
+    const pruned: PrunedBrowserInstance[] = [];
+    for (const [key, instance] of Object.entries(registry.instances)) {
+      const status = await classifyInstanceLiveness(instance);
+      if (!status.alive) {
+        delete registry.instances[key];
+        changed = true;
+        pruned.push({
+          key,
+          instance,
+          ...status,
+        });
+      }
     }
-  }
-  if (changed) {
-    await saveRegistry(options, registry);
-  }
-  return { pruned };
+    if (changed) {
+      await saveRegistry(options, registry);
+    }
+    return { pruned };
+  });
 }
 
 export async function pruneRegistry(options: RegistryOptions): Promise<void> {
@@ -264,15 +350,17 @@ export async function updateInstance(
   profileName: string | null | undefined,
   updates: Partial<BrowserInstance>,
 ): Promise<void> {
-  const registry = await loadRegistry(options);
-  const resolvedProfile = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
-  const key = buildRegistryKey(profilePath, resolvedProfile);
-  const existing = registry.instances[key];
-  if (!existing) {
-    return;
-  }
-  registry.instances[key] = { ...existing, ...updates, profileName: resolvedProfile };
-  await saveRegistry(options, registry);
+  await withRegistryLock(options, async () => {
+    const registry = await loadRegistry(options);
+    const resolvedProfile = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
+    const key = buildRegistryKey(profilePath, resolvedProfile);
+    const existing = registry.instances[key];
+    if (!existing) {
+      return;
+    }
+    registry.instances[key] = { ...existing, ...updates, profileName: resolvedProfile };
+    await saveRegistry(options, registry);
+  });
 }
 
 function buildRegistryKey(profilePath: string, profileName?: string): string {

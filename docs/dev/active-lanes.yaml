@@ -1039,20 +1039,20 @@ lanes:
     branch: feat/issue-49-chatgpt-affinity-rollout
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 4ca1a6cb36aff86d96f39ae243fa09fec3261c39
+    custody_state: PAUSED_REF
+    checkpoint: aed59b6c84af7b9e1edd11283c9bfd6e828f10c8
     remote_ref: refs/remotes/origin/feat/issue-49-chatgpt-affinity-rollout
     integration: merge
     work_items: [ecochran76/auracall#49]
     dependencies: [P52]
     overlaps: []
     reconciled_overlaps: []
-    blocker: null
+    blocker: Two published commits remain outside main; issue 49 is closed but the branch-local plan remains OPEN.
     validation_status: provider-free-lifecycle-repair-passed
     validation_ref: docs/dev/plans/0360-2026-09-25-chatgpt-tab-affinity-rollout.md
     integration_receipt: null
     disposition: Operator status, rollback, soak tooling, and heartbeat/TTL lifecycle repair are provider-free accepted. Installed ChatGPT soak and default enablement remain separate gated packets; Gemini and Grok stay serialized. GitHub Actions are waived by operator direction while unavailable.
-    updated_at: 2026-09-25
+    updated_at: 2026-10-02
   - id: P54
     objective: Repair current ChatGPT composer menu and connected-app mention selector drift without changing affinity or soak behavior.
     plan: docs/dev/plans/0361-2026-09-27-chatgpt-composer-selector-drift.md
@@ -1075,6 +1075,50 @@ lanes:
     integration_receipt: 54d747f6bca13ff8a4be7bf6b0780c4632a4e6fb
     disposition: PR 91 integrated the provider-free repair and bounded live acceptance evidence; issue 90 is closed and the remote topic ref is retained for audit custody.
     updated_at: 2026-09-27
+  - id: P75
+    objective: Restore exact-tab coexistence for foreground, utility or materialization, and live-follow workloads when the managed ChatGPT browser already exists.
+    plan: docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md
+    plan_ref: refs/heads/fix/issue-123-tab-affinity-coexistence
+    branch: fix/issue-123-tab-affinity-coexistence
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 0a800e22de8af69c77842c33eefb666d3775ca65
+    remote_ref: refs/remotes/origin/fix/issue-123-tab-affinity-coexistence
+    integration: merge
+    work_items: [ecochran76/auracall#123]
+    dependencies: [P52]
+    overlaps: [P53]
+    reconciled_overlaps: [P53]
+    reconciliation_note: P75 changed only shared endpoint discovery and aggregate status; P53 retains rollout authority and issue 125 owns the later provider-specific composer drift.
+    blocker: null
+    validation_status: installed-coexistence-accepted-integrated
+    validation_ref: docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md
+    integration_receipt: 1398eadd763db1e29d7586b4cf9659fbd2fc69d9
+    disposition: PR 124 integrated the validated coordination repair and issue 123 closed; issue 125 owns the independent pre-Send composer drift.
+    updated_at: 2026-09-28
+  - id: P76
+    objective: Recognize the current control-less ChatGPT root Chat composer without weakening explicit Work evidence.
+    plan: docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md
+    plan_ref: refs/heads/fix/issue-125-root-chat-mode
+    branch: fix/issue-125-root-chat-mode
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 56ef1bd4f2f562a713fd106239910492121111e2
+    remote_ref: refs/remotes/origin/fix/issue-125-root-chat-mode
+    integration: merge
+    work_items: [ecochran76/auracall#125]
+    dependencies: [P75]
+    overlaps: [P53, P54]
+    reconciled_overlaps: [P53, P54]
+    reconciliation_note: P76 changes only ChatGPT composer-mode classification; P53 retains rollout authority and P54 retains composer tool and connected-app selection.
+    blocker: null
+    validation_status: provider-free-accepted-integrated
+    validation_ref: docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md
+    integration_receipt: 2321ab9a212b0ed4d11579f7217086ac60dd14b1
+    disposition: PR 126 integrated the provider-free repair and issue 125 closed; issue 121 and PR 122 retain the separately governed connector-plus-wake acceptance.
+    updated_at: 2026-09-28
   - id: P55
     objective: Repair durable API runtime-profile provenance so explicit wsl-chrome-3 ChatGPT work cannot fall back to default Grok.
     plan: docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md
@@ -1443,3 +1487,223 @@ lanes:
     integration_receipt: null
     disposition: Cache-hang correction is provider-free accepted and one installed read-only acceptance returned promptly; full inventory acceptance remains unresolved although live GitHub issue 107 is closed.
     updated_at: 2026-09-28
+  - id: P74
+    objective: Select known ChatGPT connected apps through filtered drawer rows and verify their inline connector objects.
+    plan: docs/dev/plans/0374-2026-09-28-chatgpt-connected-app-selection-reliability.md
+    plan_ref: refs/heads/fix/issue-121-connected-app-selection
+    branch: fix/issue-121-connected-app-selection
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: 423131184ab7f3b4876256e63f97402b6e8e1d5b
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#121]
+    dependencies: [P61]
+    overlaps: [P61]
+    reconciled_overlaps: [P61]
+    reconciliation_note: P74 preserves Plan 0361 current-menu support, corrects the connected-app interaction to drawer filtering, and leaves private developer-app @mention selection unchanged.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0374-2026-09-28-chatgpt-connected-app-selection-reliability.md
+    integration_receipt: null
+    disposition: Provider-free correction accepted locally; publication, integration, and fresh installed acceptance remain separate gates.
+    updated_at: 2026-09-28
+  - id: P77
+    objective: Verify committed ChatGPT turns against the exact effective prompt when text files are pasted inline.
+    plan: docs/dev/plans/0377-2026-09-29-inline-file-prompt-commit.md
+    plan_ref: refs/heads/fix/issue-128-inline-file-commit
+    branch: fix/issue-128-inline-file-commit
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: b0184ba34303e186e8bb7f04743981f5ea6bfd4b
+    remote_ref: refs/remotes/origin/fix/issue-128-inline-file-commit
+    integration: merge
+    work_items: [ecochran76/auracall#128]
+    dependencies: [P74]
+    overlaps: [P74]
+    reconciled_overlaps: [P74]
+    reconciliation_note: P77 changes only committed-turn text fidelity and effect classification; P74 retains connected-app selection and completed wake acceptance.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0377-2026-09-29-inline-file-prompt-commit.md
+    integration_receipt: 4e5938cde82457697a80519cf54462b11bc23da1
+    disposition: Provider-free repair integrated and issue 128 closed; no terminal retry or live provider acceptance was performed.
+    updated_at: 2026-09-29
+  - id: P78
+    objective: Detect delayed account-wide ChatGPT rate limits across same-profile targets before releasing a browser lease.
+    plan: docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md
+    plan_ref: refs/heads/fix/issue-131-chatgpt-rate-limit-reconciliation
+    branch: fix/issue-131-chatgpt-rate-limit-reconciliation
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: ec5c30030146f9622a2fe31fae73881330bf21de
+    remote_ref: refs/remotes/origin/fix/issue-131-chatgpt-rate-limit-reconciliation
+    integration: merge
+    work_items: [ecochran76/auracall#131]
+    dependencies: [P77]
+    overlaps: [P77]
+    reconciled_overlaps: [P77]
+    reconciliation_note: P78 changes terminal rate-limit reconciliation and profile cooldown persistence; P77 retains committed-turn text fidelity and effect classification.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md
+    integration_receipt: ec5c30030146f9622a2fe31fae73881330bf21de
+    disposition: Provider-free repair integrated and issue 131 closed; no installed or live provider action was performed.
+    updated_at: 2026-09-29
+  - id: P79
+    objective: Retire exact owned browser registry generations when Chrome exits without deleting replacement leases.
+    plan: docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue-135-browser-exit-retirement
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 36a6061484dc7070f22ba575d141b0047a322a82
+    remote_ref: null
+    integration: merge
+    work_items: [ecochran76/auracall#135]
+    dependencies: [P78]
+    overlaps: []
+    reconciled_overlaps: []
+    reconciliation_note: P79 is a provider-neutral browser process/registry lifecycle repair; it does not alter P78 rate-limit reconciliation or invoke live provider work.
+    blocker: null
+    validation_status: provider-free-accepted
+    validation_ref: docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md
+    integration_receipt: 6f4b3b34918157e64ba0fff069e3280f6eb9bf11
+    disposition: Provider-free repair integrated through PR 136 and issue 135 closed; installed runtime and live acceptance were not performed.
+    updated_at: 2026-09-29
+  - id: P80
+    objective: Route every AuraCall-initiated provider-browser action through one authoritative browser-service traffic governor.
+    plan: docs/dev/plans/0380-2026-09-29-provider-traffic-governor.md
+    plan_ref: refs/heads/fix/issue-138-provider-traffic-governor
+    branch: fix/issue-138-provider-traffic-governor
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: f2e141931
+    remote_ref: refs/remotes/origin/main
+    integration: merge
+    work_items: [ecochran76/auracall#138]
+    dependencies: [P78, P79]
+    overlaps: [P78]
+    reconciled_overlaps: [P78]
+    reconciliation_note: P80 generalizes provider-action admission and warning persistence below P78; P78 retains prompt-terminal delayed warning reconciliation.
+    blocker: null
+    validation_status: provider-free-accepted-integrated
+    validation_ref: docs/dev/plans/0380-2026-09-29-provider-traffic-governor.md
+    integration_receipt: 6eb52c43298a32311c129666eddd1af3a72463f3
+    disposition: Provider-free repair integrated through PR 140 and issue 138 closed; scheduler resume, installed adoption, live acceptance, Issue 139, and network metering remain outside this lane.
+    updated_at: 2026-09-29
+  - id: P81
+    objective: Make account-mirror reconciliation proportional to the changed or genuinely incomplete frontier.
+    plan: docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md
+    plan_ref: refs/remotes/origin/main
+    branch: plan/issue-139-change-frontier
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 6bb09b85a7284bb895f5877b53241ac7acfe11a7
+    remote_ref: refs/remotes/origin/plan/issue-139-change-frontier
+    integration: merge
+    work_items: [ecochran76/auracall#139]
+    dependencies: [P80]
+    overlaps: [P80]
+    reconciled_overlaps: [P80]
+    reconciliation_note: P81 consumes P80's provider-traffic governor for admission, action receipts, and warning persistence; it changes account-mirror selection and evidence reuse without creating another traffic-control seam.
+    blocker: null
+    validation_status: provider-free-accepted-integrated-installed
+    validation_ref: docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md
+    integration_receipt: 35f854ad5a832a1c0c505a1e2b00928b01f46d54
+    disposition: Implementation and closeout integrated through PRs 144 and 145; Issue 139 closed and the exact runtime was installed with the scheduler paused. Installed canary exposed successor Issue 146.
+    updated_at: 2026-09-30
+  - id: P82
+    objective: Repair cold-start ChatGPT live-follow provider-traffic governor bootstrap without weakening lease or warning hard stops.
+    plan: docs/dev/plans/0382-2026-09-30-live-follow-governor-bootstrap.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue-146-live-follow-governor-bootstrap
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: bb90338915cd208228266cbcb70010d2c5dfe795
+    remote_ref: refs/remotes/origin/fix/issue-146-live-follow-governor-bootstrap
+    integration: merge
+    work_items: [ecochran76/auracall#146]
+    dependencies: [P80, P81]
+    overlaps: [P80, P81]
+    reconciled_overlaps: [P80, P81]
+    reconciliation_note: P82 preserves P80 governor-required semantics and repairs only the pre-lease bootstrap exposed by P81 installed acceptance.
+    blocker: null
+    validation_status: provider-free-accepted-integrated-installed-live-accepted-with-successor
+    validation_ref: docs/dev/plans/0382-2026-09-30-live-follow-governor-bootstrap.md
+    integration_receipt: 93972628624b8ea5b2420dade5891312ed49ffbb
+    disposition: Bounded affinity repair integrated through PR 147 and installed; one direct-CDP canary completed with no warning and exposed successor Issue 148 for immediate post-shutdown idle-lease retirement.
+    updated_at: 2026-09-30
+  - id: P83
+    objective: Retire idle ChatGPT tab leases immediately after exact bounded managed-browser shutdown proves their targets nonexistent.
+    plan: docs/dev/plans/0383-2026-09-30-bounded-cleanup-lease-retirement.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue-148-bounded-cleanup-lease-retirement
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 199b1b94a20645938b0e06370907f2838295c900
+    remote_ref: refs/remotes/origin/fix/issue-148-bounded-cleanup-lease-retirement
+    integration: merge
+    work_items: [ecochran76/auracall#148]
+    dependencies: [P82]
+    overlaps: [P80, P81, P82]
+    reconciled_overlaps: [P80, P81, P82]
+    reconciliation_note: P83 preserves P80/P82 lease and governor hard stops while reconciling only idle targets after exact owned browser shutdown.
+    blocker: null
+    validation_status: provider-free-accepted-integrated-installed
+    validation_ref: docs/dev/plans/0383-2026-09-30-bounded-cleanup-lease-retirement.md
+    integration_receipt: 669ad3a272794d5e499fc8693465fe3b3f99c198
+    disposition: Shared post-shutdown lease retirement integrated through PR 149 and installed byte-identically; both canary leases are released, no exact browser process or listener remains, and the scheduler stays paused without another provider canary.
+    updated_at: 2026-09-30
+  - id: P84
+    objective: Reduce bounded live-follow provider traffic to locally selected actionable work with phase-attributed physical budgets.
+    plan: docs/dev/plans/0385-2026-09-30-live-follow-provider-traffic-closeout.md
+    plan_ref: refs/heads/plan/issue-151-live-follow-traffic-efficiency
+    branch: plan/issue-151-live-follow-traffic-efficiency
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: f55e687261a063f36b94cd41dd40d89fba233686
+    remote_ref: refs/remotes/origin/plan/issue-151-live-follow-traffic-efficiency
+    integration: merge
+    work_items: [ecochran76/auracall#151]
+    dependencies: [P80, P81, P82, P83]
+    overlaps: [P80, P81]
+    reconciled_overlaps: [P80, P81]
+    reconciliation_note: P84 consumes the shared P80 governor and P81 changed-frontier state; it adds phase attribution, earlier actionability filtering, route reuse, and physical traffic acceptance without creating another control seam.
+    blocker: null
+    validation_status: installed-live-accepted
+    validation_ref: docs/dev/notes/2026-09-30-issue-151-final-live-acceptance.md
+    integration_receipt: f55e687261a063f36b94cd41dd40d89fba233686
+    disposition: PR 153 integrated the governed provider-traffic path, the canonical build was installed byte-identically, and the sole direct-CDP canary completed with one top-level navigation, 163 requests, no warning, and a clean exact-scope census; scheduler resume remains excluded.
+    updated_at: 2026-09-30
+  - id: P85
+    objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
+    plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
+    plan_ref: refs/heads/fix/issue-165-live-follow-replay
+    branch: fix/issue-165-live-follow-replay
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 6b4fedaa7537957d1c3619fc8e76b25478b4788d
+    remote_ref: refs/remotes/origin/fix/issue-165-live-follow-replay
+    integration: merge
+    work_items: [ecochran76/auracall#165]
+    dependencies: [P84]
+    overlaps: [P84]
+    reconciled_overlaps: [P84]
+    reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
+    blocker: Installed trusted-pointer control settled skipped with zero materialized assets; provider-free discovery diagnosis is required before another live attempt.
+    validation_status: provider-free-product-replay-passed-installed-pending
+    validation_ref: docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md
+    integration_receipt: 554cbe58b8d30b2360d6780894f1c31cbcf5444c
+    disposition: Full persisted evidence corrects the old monitoring-only inference. Provider-free replay repairs normal Regenerate blocking, stale native-file acceptance, and missing single-visit enforcement. Resumed bounded goal has consumed zero of five installed controls; canonical install and Gate D acceptance remain pending.
+    updated_at: 2026-10-03

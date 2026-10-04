@@ -179,6 +179,48 @@ describe("live-follow crawler tab coordinator", () => {
 		expect(openTarget).toHaveBeenCalledOnce();
 	});
 
+	test("rejects unplanned pre-lease target creation before opening a page", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const openTarget = vi.fn();
+		const begin = vi.fn(async () => {
+			throw new Error("pre-lease target budget exhausted");
+		});
+
+		await expect(
+			acquireLiveFollowCrawlerTab({
+				registry,
+				scope,
+				operationId: "completion-pre-lease-budget",
+				targetUrl: "https://chatgpt.com/",
+				idleTtlMs: 60_000,
+				absoluteTtlMs: 3_600_000,
+				resolveExistingEndpoint: async () => ({
+					host: "127.0.0.1",
+					port: 45011,
+					managedBrowserProfile: scope.managedBrowserProfile,
+				}),
+				startBrowser: vi.fn(),
+				inspectTarget: vi.fn(),
+				openTarget,
+				closeTarget: vi.fn(),
+				preLeaseProviderTrafficGovernor: {
+					attribution: {} as never,
+					begin,
+				},
+			}),
+		).rejects.toThrow("pre-lease target budget exhausted");
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				kind: "target-open-or-reuse",
+				interactionClass: "renavigation",
+				reused: false,
+			}),
+		);
+		expect(openTarget).not.toHaveBeenCalled();
+		expect(await registry.list()).toEqual([]);
+	});
+
 	test("uses the same exact-target lifecycle for bounded ephemeral work", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-utility",

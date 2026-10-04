@@ -3,8 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+	type AccountMirrorConversationWorkState,
+	fingerprintAccountMirrorConversationIndexRow,
+} from "../../src/accountMirror/changeFrontierState.js";
+import {
 	type AttachmentInventoryCursor,
 	allocateConversationReadBudgets,
+	applyDeterministicChangeFrontier,
 	buildGeminiRouteProgressEvidence,
 	createAccountMirrorListOptionsForTest,
 	createChatgptAccountMirrorMetadataCollector,
@@ -32,11 +37,17 @@ import {
 	shouldReadProjectConversationsForAccountMirror,
 	shouldResumeChatgptAttachmentInventoryCursor,
 } from "../../src/accountMirror/chatgptMetadataCollector.js";
+import {
+	createAccountMirrorMetadataTrafficPlanController,
+	createAccountMirrorProviderTrafficWorkKey,
+	freezeAccountMirrorDetailTrafficPlan,
+} from "../../src/accountMirror/providerTrafficPlan.js";
 import type { AccountMirrorCollectorDiagnosticEvent } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { listDomDriftObservations } from "../../src/browser/domDriftObservations.js";
 import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
 import {
+	createBrowserScrapeTelemetryRecorder,
 	recordBrowserScrapeCdpCall,
 	recordBrowserScrapeProviderAction,
 } from "../../src/browser/providers/scrapeTelemetry.js";
@@ -81,6 +92,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 		listOptions: {
 			...accountMirrorTabLifecycle,
 			useProviderSession: true,
+			accountMirrorSingleConversationVisit: true,
 			providerSession: undefined,
 			preserveActiveTab: false,
 			accountMirrorContextChunk: {
@@ -92,14 +104,24 @@ describe("ChatGPT account mirror metadata collector", () => {
 
 	test("pins affinity collection to one retained crawler target", () => {
 		const governor = { beforeInteraction: vi.fn(async () => undefined) };
+		const providerTrafficGovernor = {
+			attribution: {} as never,
+			begin: vi.fn(),
+		};
 		const onTargetNavigation = vi.fn(async () => undefined);
 		expect(
-			createAccountMirrorListOptionsForTest(undefined, governor, undefined, {
-				host: "127.0.0.1",
-				onTargetNavigation,
-				port: 45011,
-				targetId: "crawler-1",
-			}),
+			createAccountMirrorListOptionsForTest(
+				undefined,
+				governor,
+				undefined,
+				{
+					host: "127.0.0.1",
+					onTargetNavigation,
+					port: 45011,
+					targetId: "crawler-1",
+				},
+				providerTrafficGovernor,
+			),
 		).toMatchObject({
 			accountMirrorInventory: true,
 			allowNavigation: true,
@@ -109,8 +131,90 @@ describe("ChatGPT account mirror metadata collector", () => {
 			tabLifecycle: "retain",
 			tabTargetId: "crawler-1",
 			interactionGovernor: governor,
+			providerTrafficGovernor,
 			onTargetNavigation,
 		});
+	});
+
+	test("binds provider traffic to the collector phase before adapter work", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const options = createAccountMirrorListOptionsForTest(
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			{ attribution: {} as never, begin },
+			{ trafficPhase: "detail", workKey: "scope:conversation-detail" },
+		);
+
+		await options.providerTrafficGovernor?.begin({
+			kind: "navigate",
+			interactionClass: "conversation-read",
+			source: "provider:chatgpt:conversation-detail",
+		});
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				trafficPhase: "detail",
+				workKey: "scope:conversation-detail",
+			}),
+		);
+	});
+
+	test("binds selected detail work to its privacy-bounded row key", async () => {
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const controller = createAccountMirrorMetadataTrafficPlanController(
+			{ attribution: {} as never, begin },
+			{ maxPageReadsPerCycle: 4 },
+		);
+		const selectedWorkKey = createAccountMirrorProviderTrafficWorkKey(
+			"conversation",
+			"conversation-selected",
+		);
+		freezeAccountMirrorDetailTrafficPlan(controller, { workKeys: [selectedWorkKey] });
+		const getConversationContext = vi.fn(async (_id, options) => {
+			const action = await options.listOptions.providerTrafficGovernor.begin({
+				kind: "navigate",
+				interactionClass: "conversation-read",
+				source: "fixture:conversation-context",
+			});
+			await action.settle({ outcome: "succeeded" });
+			return { messages: [], artifacts: [], files: [] };
+		});
+
+		await readBoundedChatgptDetailInventory(
+			{
+				listAccountFiles: vi.fn(async () => []),
+				listProjectFiles: vi.fn(async () => []),
+				listConversationFiles: vi.fn(async () => []),
+				getConversationContext,
+			} as never,
+			[],
+			[
+				{
+					id: "conversation-selected",
+					title: "Selected",
+					provider: "chatgpt",
+				},
+			],
+			4,
+			{
+				maxDetailReads: 1,
+				prioritizeConversations: true,
+				skipAccountLibraryInventory: true,
+				usePerSurfaceTrafficContext: true,
+				listOptions: {
+					providerTrafficGovernor: controller.governor,
+				},
+			},
+		);
+
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				trafficPhase: "detail",
+				workKey: selectedWorkKey,
+			}),
+		);
 	});
 
 	test("allows a slow ChatGPT conversation surface to settle within the outer collector budget", () => {
@@ -281,6 +385,110 @@ describe("ChatGPT account mirror metadata collector", () => {
 				conversationId: "fresh_2",
 			},
 		});
+	});
+
+	test("makes the deterministic planner authoritative over legacy detail candidates", () => {
+		const conversations = [
+			{
+				id: "changed",
+				title: "Changed",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-09-30T12:00:00.000Z",
+			},
+			{
+				id: "retained",
+				title: "Retained",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-09-30T11:00:00.000Z",
+			},
+			{
+				id: "complete",
+				title: "Complete",
+				provider: "chatgpt" as const,
+				updatedAt: "2026-09-30T10:00:00.000Z",
+			},
+		];
+		const state = (
+			conversationId: string,
+			override: Partial<AccountMirrorConversationWorkState> = {},
+		) => {
+			const conversation = conversations.find((item) => item.id === conversationId);
+			if (!conversation) throw new Error(`Missing fixture conversation ${conversationId}.`);
+			return {
+				object: "account_mirror_conversation_work_state" as const,
+				version: 1 as const,
+				conversationKey: `key-${conversationId}`,
+				epochId: "prior-epoch",
+				indexFingerprint: fingerprintAccountMirrorConversationIndexRow(conversation),
+				detailFingerprint: "sha256:detail",
+				action: null,
+				outcome: "pending" as const,
+				assetAvailability: "unknown" as const,
+				retryNotBefore: null,
+				checkpointedAt: null,
+				physicalActivity: {
+					targetsCreated: 0,
+					navigations: 0,
+					reloads: 0,
+					snapshotRefreshes: 0,
+					artifactResolutions: 0,
+					downloads: 0,
+					duplicates: 0,
+				},
+				lifetimePhysicalActivity: {
+					targetsCreated: 0,
+					navigations: 0,
+					reloads: 0,
+					snapshotRefreshes: 0,
+					artifactResolutions: 0,
+					downloads: 0,
+					duplicates: 0,
+				},
+				...override,
+			};
+		};
+		const workStates = new Map<string, AccountMirrorConversationWorkState>([
+			["changed", state("changed", { indexFingerprint: "sha256:prior" })],
+			["retained", state("retained")],
+			["complete", state("complete")],
+		]);
+		const freshness = new Map(
+			conversations.map((conversation) => [
+				conversation.id,
+				{
+					conversationId: conversation.id,
+					detailObservedAt: "2026-09-30T12:00:00.000Z",
+					manifestObservedAt: "2026-09-30T12:00:00.000Z",
+					freshnessState: "fresh" as const,
+					routeabilityState: "routeable" as const,
+					detailCompleteness: "complete" as const,
+					assetCompleteness:
+						conversation.id === "retained" ? ("partial" as const) : ("complete" as const),
+					missingLocalCount: conversation.id === "retained" ? 1 : 0,
+					knownAssetCount: conversation.id === "retained" ? 1 : 0,
+					localAssetCount: 0,
+					incompleteDetailChunk: false,
+				},
+			]),
+		);
+
+		const result = applyDeterministicChangeFrontier({
+			conversations,
+			legacyDetailConversations: conversations,
+			previousConversationFreshness: freshness,
+			previousConversationWorkStates: workStates,
+			epochId: "current-epoch",
+			now: "2026-09-30T13:00:00.000Z",
+		});
+
+		expect(result.detailConversations.map((conversation) => conversation.id)).toEqual(["changed"]);
+		expect(
+			result.plan?.decisions.map(({ conversationKey, action }) => [conversationKey, action]),
+		).toEqual([
+			["key-changed", "visit_once"],
+			["key-retained", "materialize_retained"],
+			["key-complete", "skip"],
+		]);
 	});
 
 	test("does not select metadata-only remote asset backlog for detail inventory", () => {
@@ -1753,6 +1961,50 @@ describe("ChatGPT account mirror metadata collector", () => {
 			detailObservedConversationIds: [],
 			contextObservedConversationIds: [],
 		});
+	});
+
+	test("binds one coalesced ChatGPT context read to one visit receipt", async () => {
+		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
+		const client = {
+			listAccountFiles: vi.fn(async () => []),
+			listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(
+				async (_conversationId: string, options?: { listOptions?: BrowserProviderListOptions }) => {
+					recordBrowserScrapeCdpCall(options?.listOptions, "Page.navigate");
+					return {
+						provider: "chatgpt" as const,
+						conversationId: "conv_receipt",
+						messages: [{ role: "user" as const, text: "fixture" }],
+						artifacts: [],
+						files: [],
+						sources: [],
+					};
+				},
+			),
+		};
+
+		const inventory = await readBoundedChatgptDetailInventory(
+			client,
+			[],
+			[{ id: "conv_receipt", title: "Receipt", provider: "chatgpt" }],
+			4,
+			{
+				maxDetailReads: 1,
+				freshnessEpoch: "epoch_receipt",
+				listOptions: { scrapeTelemetry },
+				skipAccountLibraryInventory: true,
+			},
+		);
+
+		expect(inventory.visitBundles).toEqual([
+			expect.objectContaining({
+				conversationId: "conv_receipt",
+				freshnessEpoch: "epoch_receipt",
+				detail: expect.objectContaining({ observed: true, complete: true, messageCount: 1 }),
+				physicalVisit: expect.objectContaining({ navigations: 1, reloads: 0 }),
+			}),
+		]);
 	});
 
 	test("paces ChatGPT detail inventory reads through the browser interaction governor", async () => {

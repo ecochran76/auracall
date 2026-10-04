@@ -127,13 +127,30 @@ describe("ChatGPT composer mode", () => {
 		expect(toggleQueries).toBeGreaterThanOrEqual(2);
 	});
 
-	it("never treats a root composer with absent mode controls as proof of Chat", async () => {
+	it("accepts the current root Chat composer when mode controls remain absent", async () => {
 		vi.useFakeTimers();
 		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
-		installFixtureDocument((selector) =>
-			selector.includes("#prompt-textarea") ? [new FixtureElement("")] : [],
-		);
+		const editor = new FixtureElement("", {
+			role: "textbox",
+			"aria-label": "Ask ChatGPT",
+			contenteditable: "true",
+		});
+		installFixtureDocument((selector) => (selector.includes("#prompt-textarea") ? [editor] : []));
 		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest("chat")}`)();
+		await vi.advanceTimersByTimeAsync(11000);
+		expect(await pending).toEqual({ status: "already-selected", mode: "chat" });
+	});
+
+	it("does not infer Work from the current root composer without mode controls", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
+		const editor = new FixtureElement("", {
+			role: "textbox",
+			"aria-label": "Ask ChatGPT",
+			contenteditable: "true",
+		});
+		installFixtureDocument((selector) => (selector.includes("#prompt-textarea") ? [editor] : []));
+		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest("work")}`)();
 		await vi.advanceTimersByTimeAsync(11000);
 		expect(await pending).toEqual({ status: "mode-not-found", availableModes: [] });
 	});

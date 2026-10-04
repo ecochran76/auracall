@@ -9,7 +9,14 @@ import {
 	type LedgerBackedBrowserInteractionGovernor,
 } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 import type { BrowserOperationAcquiredResult } from "../../packages/browser-service/src/service/operationDispatcher.js";
+import {
+	createProviderTrafficGovernor,
+	type ProviderTrafficGovernor,
+	withProviderTrafficContext,
+} from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { classifyStructuredProviderWarning } from "../browser/chatgptAffinityRuntime.js";
+import { probeVisibleChatgptRateLimitWarning } from "../browser/chatgptProviderTraffic.js";
+import { recordChatgptRateLimitDetection } from "../browser/chatgptRateLimitGuard.js";
 import { retireExpiredChatgptTabLeases } from "../browser/chatgptTabRetirement.js";
 import { BrowserService } from "../browser/service/browserService.js";
 import { resolveRuntimeProfileUserConfig } from "../browser/service/profileConfig.js";
@@ -19,11 +26,16 @@ import type { ResolvedUserConfig } from "../config.js";
 import { resolveChatgptTenantLimits } from "../runtime/tenantExecutionLimits.js";
 import type { AccountMirrorMetadataCollectorInput } from "./chatgptMetadataCollector.js";
 import { acquireLiveFollowCrawlerTab } from "./liveFollowTabCoordinator.js";
+import { withAccountMirrorProviderTrafficPlan } from "./providerTrafficPlan.js";
 
 export interface ConfiguredLiveFollowAffinityContext {
 	tabAffinity: NonNullable<AccountMirrorMetadataCollectorInput["tabAffinity"]>;
 	interactionGovernor: LedgerBackedBrowserInteractionGovernor;
+	providerTrafficGovernor: ProviderTrafficGovernor;
 	operation: BrowserOperationAcquiredResult;
+	bindProviderTrafficAdmissionState?(
+		snapshot: NonNullable<ProviderTrafficGovernor["snapshotAdmissionState"]>,
+	): void;
 	completeSuccess(): Promise<void>;
 	completeFailure(error: unknown): Promise<void>;
 }
@@ -108,6 +120,48 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		inspectTarget,
 		closeTarget,
 	});
+	const limits = resolveChatgptTenantLimits(
+		clientConfig as Record<string, unknown>,
+		input.runtimeProfileId,
+	);
+	const baseGovernor = createBrowserInteractionGovernor({
+		maxInteractionsPerMinute: input.maxBrowserInteractionsPerMinute,
+		cooldownsByClass: {
+			"conversation-read": input.conversationReadCooldownMs,
+			"page-refresh": input.pageRefreshCooldownMs,
+			renavigation: input.renavigationCooldownMs,
+		},
+		abortSignal: input.abortSignal,
+	});
+	const preLeaseProviderTrafficGovernor = withProviderTrafficContext(
+		withAccountMirrorProviderTrafficPlan(
+			createProviderTrafficGovernor({
+				attribution: {
+					provider: "chatgpt",
+					runtimeProfileId: input.runtimeProfileId,
+					managedBrowserProfile,
+					workloadId: `live-follow:${input.operationId}`,
+					operationId: input.operationId,
+					tabLeaseId: `pre-lease:${input.operationId}`,
+				},
+				interactionGovernor: baseGovernor,
+				mutationAudit: browserService.getMutationAuditSink(),
+			}),
+			{
+				object: "account_mirror_provider_traffic_plan",
+				version: 1,
+				budgets: [
+					{
+						phase: "bootstrap",
+						kind: "target_create",
+						workKey: "scope:crawler-target",
+						limit: 1,
+					},
+				],
+			},
+		),
+		{ trafficPhase: "bootstrap", workKey: "scope:crawler-target" },
+	);
 	let coldStartTargets: Array<{ targetId: string; url: string }> = [];
 	const crawler = await acquireLiveFollowCrawlerTab({
 		registry: runtime.registry,
@@ -138,27 +192,19 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			return endpoint;
 		},
 		listTargets: async () => coldStartTargets,
+		preLeaseProviderTrafficGovernor,
 		inspectTarget,
 		openTarget: async ({ host, port, url }) => {
-			const target = await openChromeTarget(port, url, host);
+			const target = await openChromeTarget(port, url, host, undefined, {
+				kind: "pre-lease-target-acquisition",
+				operationId: input.operationId,
+				reason: "live-follow crawler lease acquisition",
+			});
 			const targetId = typeof target === "string" ? target : target.id;
 			if (!targetId) throw new Error("Live-follow target creation returned no target ID.");
 			return { targetId, url };
 		},
 		closeTarget: ({ host, port, targetId }) => closeTarget({ host, port }, targetId),
-	});
-	const limits = resolveChatgptTenantLimits(
-		clientConfig as Record<string, unknown>,
-		input.runtimeProfileId,
-	);
-	const baseGovernor = createBrowserInteractionGovernor({
-		maxInteractionsPerMinute: input.maxBrowserInteractionsPerMinute,
-		cooldownsByClass: {
-			"conversation-read": input.conversationReadCooldownMs,
-			"page-refresh": input.pageRefreshCooldownMs,
-			renavigation: input.renavigationCooldownMs,
-		},
-		abortSignal: input.abortSignal,
 	});
 	const interactionGovernor = createLedgerBackedBrowserInteractionGovernor({
 		ledger: runtime.ledger,
@@ -181,6 +227,69 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		now: input.now,
 	});
 	let crawlerClaim = crawler.claim;
+	let snapshotProviderTrafficAdmissionState:
+		| NonNullable<ProviderTrafficGovernor["snapshotAdmissionState"]>
+		| undefined;
+	let providerTrafficGovernor: ProviderTrafficGovernor;
+	providerTrafficGovernor = createProviderTrafficGovernor({
+		attribution: {
+			provider: "chatgpt",
+			runtimeProfileId: input.runtimeProfileId,
+			managedBrowserProfile,
+			workloadId: `live-follow:${input.operationId}`,
+			operationId: input.operationId,
+			tabLeaseId: crawler.lease.leaseId,
+		},
+		interactionGovernor,
+		mutationAudit: browserService.getMutationAuditSink(),
+		settleInteraction: (settlement) => interactionGovernor.finish(settlement),
+		probeWarning: probeVisibleChatgptRateLimitWarning,
+		persistWarning: async (warning) => {
+			const observedAt = (input.now ?? (() => new Date()))();
+			const targets = await listChromeTargets(crawler.endpoint.port, crawler.endpoint.host).catch(
+				() => null,
+			);
+			const openTargetCount = targets
+				? targets.filter((target) => target.type === "page").length
+				: null;
+			await runtime.ledger?.recordProviderWarning({
+				scope: {
+					provider: "chatgpt",
+					tenantKey,
+					runtimeProfileId: input.runtimeProfileId,
+					managedBrowserProfile,
+				},
+				classification: warning.classification,
+				reason: warning.reason,
+				observedAt: observedAt.toISOString(),
+				evidence: buildLiveFollowWarningEvidence(
+					warning,
+					openTargetCount,
+					snapshotProviderTrafficAdmissionState?.(),
+				),
+			});
+			await recordChatgptRateLimitDetection({
+				profileName: input.runtimeProfileId,
+				managedProfileDir: managedBrowserProfile,
+				action: "account-mirror:provider-traffic-governor",
+				reason: warning.reason,
+				now: observedAt.getTime(),
+			});
+			warningRecorded = true;
+		},
+		assertLease: async (attribution) => {
+			const leases = await runtime.registry?.list({ scope, states: ["active"] });
+			const lease = leases?.find((candidate) => candidate.leaseId === attribution.tabLeaseId);
+			if (
+				!lease ||
+				lease.ownerOperationId !== attribution.operationId ||
+				lease.targetId !== crawler.lease.targetId ||
+				lease.revision !== crawlerClaim.revision
+			) {
+				throw new Error("Provider traffic tab lease ownership changed before action.");
+			}
+		},
+	});
 	const recordTargetNavigation = async () => {
 		const recorded = await runtime.registry?.recordTargetAction({
 			claim: crawlerClaim,
@@ -238,6 +347,9 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		updatedAt: (input.now ?? (() => new Date()))().toISOString(),
 	};
 	return {
+		bindProviderTrafficAdmissionState(snapshot) {
+			snapshotProviderTrafficAdmissionState = snapshot;
+		},
 		tabAffinity: {
 			host: crawler.endpoint.host,
 			onTargetNavigation: recordTargetNavigation,
@@ -245,13 +357,19 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			targetId: crawler.lease.targetId,
 		},
 		interactionGovernor,
+		providerTrafficGovernor,
 		operation: {
 			acquired: true,
 			operation: operationRecord,
 			release: () =>
 				finish("failed", classifyLiveFollowFailureEffectState(), "affinity-context-released"),
 		},
-		completeSuccess: () => finish("succeeded", "settled"),
+		completeSuccess: async () => {
+			// The visible blocking surface can arrive after the final action settles.
+			// Reuse that action's probe context once before declaring the pass clean.
+			await providerTrafficGovernor.checkWarning?.();
+			await finish("succeeded", "settled");
+		},
 		completeFailure: async (error) => {
 			const warning = classifyLiveFollowWarning(error);
 			let finishError: unknown = null;
@@ -267,6 +385,13 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			let warningError: unknown = null;
 			if (warning && !warningRecorded) {
 				try {
+					const targets = await listChromeTargets(
+						crawler.endpoint.port,
+						crawler.endpoint.host,
+					).catch(() => null);
+					const openTargetCount = targets
+						? targets.filter((target) => target.type === "page").length
+						: null;
 					await runtime.ledger?.recordProviderWarning({
 						scope: {
 							provider: "chatgpt",
@@ -276,6 +401,11 @@ export async function createConfiguredLiveFollowAffinity(input: {
 						},
 						...warning,
 						observedAt: (input.now ?? (() => new Date()))().toISOString(),
+						evidence: buildLiveFollowWarningEvidence(
+							warning,
+							openTargetCount,
+							snapshotProviderTrafficAdmissionState?.(),
+						),
 					});
 					warningRecorded = true;
 				} catch (recordError) {
@@ -291,6 +421,21 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			if (finishError) throw finishError;
 			if (warningError) throw warningError;
 		},
+	};
+}
+
+export function buildLiveFollowWarningEvidence(
+	warning: { reason: string },
+	openTargetCount: number | null,
+	trafficAdmission?: ReturnType<NonNullable<ProviderTrafficGovernor["snapshotAdmissionState"]>>,
+) {
+	return {
+		classifierVersion: "chatgpt-visible-blocking-surface-v1",
+		visibleSummary: warning.reason,
+		sourceTargetClass: "leased-page",
+		openTargetCount,
+		resourcePathClasses: [],
+		...(trafficAdmission ? { trafficAdmission } : {}),
 	};
 }
 

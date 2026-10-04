@@ -13,6 +13,7 @@ import {
 	type AccountMirrorRefreshError,
 	classifyChatgptRateLimitCensusProbeForTest,
 	createAccountMirrorRefreshService,
+	deriveRetainedMaterializationConversationIdsForTest,
 	mergeConversationsByObservedOrderForTest,
 	readPreviousAccountMirrorFilesForTest,
 	writeChatgptRateLimitCensusGuardForTest,
@@ -89,6 +90,47 @@ describe("account mirror refresh service", () => {
 		setAuracallHomeDirOverrideForTest(homeDir);
 		return homeDir;
 	}
+
+	test("selects retained detail fingerprints for route-free materialization reuse", () => {
+		const counters = {
+			targetsCreated: 0,
+			navigations: 0,
+			reloads: 0,
+			snapshotRefreshes: 0,
+			artifactResolutions: 0,
+			downloads: 0,
+		};
+		const conversation = (id: string, availability: "available" | "unavailable" | "unknown") => ({
+			id,
+			title: id,
+			provider: "chatgpt" as const,
+			metadata: {
+				changeFrontierState: {
+					object: "account_mirror_conversation_work_state",
+					version: 1,
+					conversationKey: `key_${id}`,
+					epochId: "epoch_previous",
+					indexFingerprint: `index_${id}`,
+					detailFingerprint: `detail_${id}`,
+					action: "visit_once",
+					outcome: "complete",
+					assetAvailability: availability,
+					retryNotBefore: null,
+					checkpointedAt: "2026-09-30T18:00:00.000Z",
+					physicalActivity: counters,
+					lifetimePhysicalActivity: counters,
+				},
+			},
+		});
+
+		expect(
+			deriveRetainedMaterializationConversationIdsForTest([
+				conversation("retained", "unknown"),
+				conversation("terminal", "unavailable"),
+				{ id: "legacy", title: "legacy", provider: "chatgpt" },
+			]),
+		).toEqual(["retained"]);
+	});
 
 	test("bounds prior conversation cache hydration by cycle size and concurrency", async () => {
 		let activeReads = 0;
@@ -263,6 +305,7 @@ describe("account mirror refresh service", () => {
 			previousEvidence: null,
 			previousFiles: [],
 			previousConversationFreshness: new Map(),
+			previousConversationWorkStates: new Map(),
 			abortSignal: expect.any(AbortSignal),
 		});
 		const collectCalls = metadataCollector.collect.mock.calls as unknown as [
@@ -502,6 +545,86 @@ describe("account mirror refresh service", () => {
 				}),
 			}),
 		);
+	});
+
+	test("rejects production live-follow traffic above the frozen index plan before delegation", async () => {
+		const providerTrafficBegin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const metadataCollector = {
+			collect: vi.fn(async (collectorInput: AccountMirrorMetadataCollectorInput) => {
+				const action = await collectorInput.providerTrafficGovernor?.begin({
+					kind: "navigate",
+					interactionClass: "conversation-read",
+					source: "fixture:index:first",
+					trafficPhase: "index",
+					workKey: "scope:provider-index",
+				});
+				await action?.settle({ outcome: "succeeded" });
+				await collectorInput.providerTrafficGovernor?.begin({
+					kind: "navigate",
+					interactionClass: "conversation-read",
+					source: "fixture:index:second",
+					trafficPhase: "index",
+					workKey: "scope:provider-index",
+				});
+				throw new Error("unreachable");
+			}),
+		};
+		const completeFailure = vi.fn(async () => undefined);
+		const affinityConfig = {
+			...config,
+			auracallProfile: "default",
+			browser: { tabConcurrencyMode: "tab-affinity" },
+		};
+		const service = createAccountMirrorRefreshService({
+			config: affinityConfig,
+			registry: createAccountMirrorStatusRegistry({
+				config: affinityConfig,
+				now: () => new Date("2026-04-29T12:00:00.000Z"),
+			}),
+			metadataCollector,
+			persistence: createNoopPersistence(),
+			liveFollowAffinityFactory: vi.fn(async () => ({
+				tabAffinity: { host: "127.0.0.1", port: 45011, targetId: "crawler-1" },
+				interactionGovernor: {
+					beforeInteraction: vi.fn(async () => undefined),
+					finish: vi.fn(),
+				},
+				providerTrafficGovernor: {
+					attribution: {} as never,
+					begin: providerTrafficBegin,
+				},
+				operation: {
+					acquired: true as const,
+					operation: {
+						id: "completion-budget",
+						key: "tab-lease:lease-crawler",
+						managedProfileDir: "/managed/chatgpt",
+						serviceTarget: "chatgpt",
+						kind: "browser-execution" as const,
+						operationClass: "shared-read" as const,
+						ownerPid: process.pid,
+						ownerCommand: "account-mirror-live-follow:completion-budget",
+						startedAt: "2026-04-29T12:00:00.000Z",
+						updatedAt: "2026-04-29T12:00:00.000Z",
+					},
+					release: vi.fn(async () => undefined),
+				},
+				completeSuccess: vi.fn(async () => undefined),
+				completeFailure,
+			})) as never,
+			now: () => new Date("2026-04-29T12:00:00.000Z"),
+		});
+
+		await expect(
+			service.requestRefresh({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				explicitRefresh: true,
+				liveFollowOperationId: "completion-budget",
+			}),
+		).rejects.toThrow("Provider traffic budget exhausted for index/page_navigate at limit 1");
+		expect(providerTrafficBegin).toHaveBeenCalledTimes(1);
+		expect(completeFailure).toHaveBeenCalledOnce();
 	});
 
 	test("threads requested collector phase into metadata collection", async () => {
@@ -2169,6 +2292,10 @@ describe("account mirror refresh service", () => {
 			.mockResolvedValueOnce(4343)
 			.mockResolvedValueOnce(null);
 		const terminateManagedBrowserProcess = vi.fn(async () => {});
+		const retireIdleChatgptLeasesAfterManagedBrowserShutdown = vi.fn(async () => ({
+			retiredLeaseIds: ["lease-1"],
+			deferredLeaseIds: [],
+		}));
 		const service = createAccountMirrorRefreshService({
 			config,
 			dispatcher: createBrowserOperationDispatcher(),
@@ -2180,6 +2307,7 @@ describe("account mirror refresh service", () => {
 			persistence: createNoopPersistence(),
 			findManagedBrowserPid,
 			terminateManagedBrowserProcess,
+			retireIdleChatgptLeasesAfterManagedBrowserShutdown,
 			generateRequestId: () => "acctmirror_chatgpt_failed_cleanup",
 		});
 
@@ -2200,6 +2328,12 @@ describe("account mirror refresh service", () => {
 			}),
 		);
 		expect(findManagedBrowserPid).toHaveBeenCalledTimes(2);
+		expect(retireIdleChatgptLeasesAfterManagedBrowserShutdown).toHaveBeenCalledWith(
+			expect.objectContaining({
+				runtimeProfileId: "default",
+				managedBrowserProfile: expect.stringContaining("chatgpt"),
+			}),
+		);
 	});
 
 	test("reports dispatcher busy instead of bypassing the browser control plane", async () => {

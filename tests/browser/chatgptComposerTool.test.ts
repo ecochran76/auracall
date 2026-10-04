@@ -1,11 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
+  buildChatgptConnectedAppInventoryExpressionForTest,
   buildComposerChipVisibleExpressionForTest,
   ensureChatgptComposerTool,
   isNonPersistentComposerToolForTest,
   prepareChatgptWorkbenchLocalAttachment,
-  resolveChatgptWorkbenchAttachmentSurfaceForTest,
   resolveChatgptConnectedAppSelectionForTest,
+  resolveChatgptWorkbenchAttachmentSurfaceForTest,
   resolveComposerToolCandidatesForTest,
   resolveComposerToolLocationForTest,
   resolveCurrentComposerToolSelectionForTest,
@@ -155,6 +156,82 @@ describe('chatgpt composer tool selection', () => {
         { label: 'Future App', selectionState: 'selectable' },
       ]),
     ).toMatchObject({ status: 'unverified' });
+  });
+
+  test('keeps markerless known app rows in inventory for drawer selection', () => {
+    const expression = buildChatgptConnectedAppInventoryExpressionForTest();
+    expect(expression).toContain('"github"');
+    expect(expression).toContain('knownAppLabels.has(label.toLowerCase())');
+    expect(expression).toContain('const primarySelectors = [');
+    expect(expression).toContain('.map((selector) => item.querySelector(selector))');
+    expect(
+      resolveChatgptConnectedAppSelectionForTest('github', [
+        { label: 'GitHub', selectionState: 'selectable' },
+      ]),
+    ).toMatchObject({ status: 'unverified', match: { label: 'GitHub' } });
+  });
+
+  test('filters the open drawer and verifies the selected connector object', async () => {
+    let selectedReadCount = 0;
+    const menu = {
+      selector: '[data-auracall-chatgpt-composer-menu="true"]',
+      sourceSelector: '.composer-home-top-menu',
+      signature: 'github',
+      rect: { x: 0, y: 0, width: 320, height: 400 },
+      distanceToAnchor: null,
+      items: [{ label: 'github', selected: false }],
+      itemLabels: ['github'],
+    };
+    const Runtime = {
+      evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+        if (expression.includes("connectorPath.startsWith('app://connector_')")) {
+          selectedReadCount += 1;
+          return selectedReadCount >= 2
+            ? { result: { value: { label: 'github', connectorPath: 'app://connector_github' } } }
+            : { result: { value: null } };
+        }
+        if (expression.includes('const knownAppLabels')) {
+          return { result: { value: [{ label: 'GitHub', selectionState: 'selectable' }] } };
+        }
+        if (expression.includes('const ranked = Array.from')) {
+          return { result: { value: { blocked: false, label: 'github', x: 20, y: 30 } } };
+        }
+        if (expression.includes('data-auracall-chatgpt-composer-menu')) {
+          return { result: { value: menu } };
+        }
+        return { result: { value: true } };
+      }),
+    };
+    const Input = {
+      insertText: vi.fn(async () => undefined),
+      dispatchMouseEvent: vi.fn(async () => undefined),
+      dispatchKeyEvent: vi.fn(async () => undefined),
+    };
+
+    await expect(
+      ensureChatgptComposerTool(
+        { Runtime, Input, Page: { bringToFront: vi.fn(async () => undefined) } } as never,
+        'github',
+        () => undefined,
+      ),
+    ).resolves.toEqual({
+      receipt: {
+        requested: 'github',
+        observed: {
+          id: 'chatgpt.apps.github',
+          label: 'GitHub',
+          kind: 'connected_app',
+          availability: 'available',
+          connectionState: 'connected',
+          verified: true,
+        },
+      },
+    });
+    expect(Input.insertText).toHaveBeenCalledWith({ text: 'GitHub' });
+    expect(Input.dispatchMouseEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'mouseReleased', clickCount: 1 }),
+    );
+    expect(Input.dispatchKeyEvent).not.toHaveBeenCalled();
   });
 
   test('surfaces bounded retry-safe pre-Send evidence for a disconnected provider row', async () => {

@@ -118,6 +118,12 @@ Aura-Call derives the managed browser profile directory automatically as
 `~/.auracall/browser-profiles/<auracallProfile>/<service>` unless you set
 `manualLoginProfileDir` explicitly.
 
+For passive CDP observation, resolve the live endpoint from that exact managed
+browser profile or from AuraCall's launch/session receipt. Do not assume an old
+fixed port such as `45015`: WSL Chrome may use a new auto-assigned DevTools port
+on every launch. A watcher attached to a remembered port is not evidence for
+the active browser and must fail closed before a live acceptance run.
+
 To run that same AuraCall-owned directory inside an agent-browser hidden
 RDP/Guacamole route, configure its named browser profile with
 `browserFamily: "chrome"`, `browserBuild: "stock_chrome"`, and
@@ -266,4 +272,8 @@ alias oracle-login='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle --target
 
 ## Chat mode preflight
 
-On new-chat and project landing pages AuraCall waits for explicit Chat/Work controls before accepting the requested mode. A visible composer alone does not prove Chat. Missing controls stop the run before prompting; established conversation routes retain their mode-marker compatibility checks.
+On the exact new-chat root, AuraCall first waits boundedly for explicit
+Chat/Work controls. If none appear, one exact visible enabled prompt editor and
+no active current-route `Work` badge may establish Chat; it can never establish
+Work. Project landing pages still require explicit controls, while established
+conversation routes retain their mode-marker compatibility checks.

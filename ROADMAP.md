@@ -1,5 +1,22 @@
 # Aura-Call Roadmap
 
+- Completed P78 / issue 131: [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)
+  adds bounded terminal reconciliation for delayed account-wide ChatGPT rate
+  limits on the leased or sibling same-profile target. The source packet is
+  provider-free and preserves non-retryable post-effect semantics; installation
+  and live provider acceptance remain separately gated. PR 132 integrated the
+  provider-free repair at `ec5c30030146f9622a2fe31fae73881330bf21de`.
+
+- Completed P76 / issue 125: [Plan 0376](docs/dev/plans/0376-2026-09-28-root-chat-composer-mode.md)
+  integrated the control-less root Chat composer repair through PR 126 at
+  canonical `2321ab9a2`, preserving explicit Work evidence and Chat/Work
+  selector separation. Issue 121 retains the separately governed fresh
+  connector-plus-wake acceptance.
+
+- Completed P75 / issue 123: [Plan 0375](docs/dev/plans/0375-2026-09-28-tab-affinity-workload-coexistence.md)
+  integrated exact-tab coexistence through PR 124 at canonical `1398eadd7`.
+  The installed smoke proved distinct foreground and history-materialization
+  targets, then stopped pre-Send on the separate issue-125 composer drift.
 - Open P55 / issues 93-98 and 100: [Plan 0362](docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md)
   governs the declarative, resumable ChatGPT agent-workflow campaign. Current
   state: explicit `wsl-chrome-3` provenance for issue 94 is integrated and
@@ -4385,6 +4402,18 @@ Release discipline:
 
 ### Browser Service Hardening
 See [docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md](docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md).
+
+- P79 / [Plan 0379](docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md)
+  is integrated under issue 135; owned Chrome exit now retires only its exact
+  browser-registry generation.
+- P80 / [Plan 0380](docs/dev/plans/0380-2026-09-29-provider-traffic-governor.md)
+  is integrated under issue 138 and supplies the authoritative provider-action
+  admission, receipt, and warning-persistence seam.
+- P81 / [Plan 0381](docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md)
+  is open under issue 139. It will make account-mirror work proportional to one
+  shared provider-index epoch plus the changed/incomplete conversation and
+  missing-local-asset frontier. Provider-free implementation comes next;
+  scheduler resume, installation, and live acceptance remain separate gates.
 
 Historical focused reliability slices:
 - [docs/dev/plans/0141-2026-06-12-agent-browser-migration.md](docs/dev/plans/0141-2026-06-12-agent-browser-migration.md) (closed as pilot deferred; no-launch BYOP mapping accepted, live mutation held for agent-browser external-BYOP adopt/reuse support)

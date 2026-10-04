@@ -47,6 +47,49 @@ export interface ProviderInteractionUsageSummary {
   interactionsLastMinute: number;
 }
 
+export interface ProviderWarningInteractionEvidence {
+  occurredAt: string;
+  deltaMs: number | null;
+  interactionClass: ProviderInteractionClass | null;
+  eventType: ProviderInteractionEventType;
+  outcome: ProviderInteractionOutcome | null;
+}
+
+export interface ProviderWarningEvidence {
+  version: 1;
+  classifierVersion: string;
+  visibleSummary: string;
+  sourceTargetClass: string;
+  firstObservedAt: string;
+  openTargetCount: number | null;
+  precedingInteractions: ProviderWarningInteractionEvidence[];
+  cumulativeCounts: {
+    interactions: number;
+    navigations: number;
+    reloads: number;
+    conversationReads: number;
+    artifactReads: number;
+  };
+  resourcePathClasses: string[];
+  trafficAdmission?: {
+    version: 1;
+    phases: Array<{ phase: string; admitted: number; limit: number; remaining: number }>;
+    budgets: Array<{
+      phase: string;
+      kind: string;
+      admitted: number;
+      limit: number;
+      remaining: number;
+    }>;
+    recentEffects?: Array<{
+      occurredAt: string;
+      phase: string;
+      kind: string;
+      outcome: string;
+    }>;
+  };
+}
+
 export interface ProviderWarningRecord {
   provider: string;
   tenantKey: string;
@@ -54,6 +97,7 @@ export interface ProviderWarningRecord {
   reason: string;
   observedAt: string;
   cooldownUntil: string | null;
+  evidence: ProviderWarningEvidence | null;
 }
 
 export interface ProviderInteractionRecord {
@@ -171,6 +215,15 @@ export interface ProviderInteractionLedger {
     reason: string;
     observedAt: string;
     cooldownUntil?: string | null;
+    evidence?: {
+      classifierVersion: string;
+      visibleSummary: string;
+      sourceTargetClass: string;
+      openTargetCount?: number | null;
+      resourcePathClasses?: string[];
+      precedingInteractionLimit?: number;
+      trafficAdmission?: ProviderWarningEvidence['trafficAdmission'];
+    } | null;
   }): Promise<{ warning: ProviderWarningRecord; frozenReservationIds: string[] }>;
   clearProviderWarning(input: {
     scope: ProviderInteractionScope;
@@ -516,6 +569,15 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     reason: string;
     observedAt: string;
     cooldownUntil?: string | null;
+    evidence?: {
+      classifierVersion: string;
+      visibleSummary: string;
+      sourceTargetClass: string;
+      openTargetCount?: number | null;
+      resourcePathClasses?: string[];
+      precedingInteractionLimit?: number;
+      trafficAdmission?: ProviderWarningEvidence['trafficAdmission'];
+    } | null;
   }): Promise<{ warning: ProviderWarningRecord; frozenReservationIds: string[] }> {
     const scope = normalizeScope(input.scope);
     const observedAtMs = parseTimestamp(input.observedAt, 'observedAt');
@@ -532,6 +594,15 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
       reason: requireNonEmpty(input.reason, 'reason'),
       observedAt: new Date(observedAtMs).toISOString(),
       cooldownUntil,
+      evidence: input.evidence
+        ? buildProviderWarningEvidence({
+            input: input.evidence,
+            observedAt: new Date(observedAtMs).toISOString(),
+            events: this.events.filter(
+              (event) => aggregateScopeKey(event.scope) === aggregateScopeKey(scope),
+            ),
+          })
+        : null,
     };
     this.warnings.set(aggregateScopeKey(scope), warning);
     this.appendEvent({
@@ -1061,7 +1132,126 @@ function normalizeOptionalReason(value: string | null | undefined): string | nul
 }
 
 function cloneWarning(warning: ProviderWarningRecord): ProviderWarningRecord {
-  return { ...warning };
+  return {
+    ...warning,
+    evidence: warning.evidence
+      ? {
+          ...warning.evidence,
+          precedingInteractions: warning.evidence.precedingInteractions.map((entry) => ({ ...entry })),
+          cumulativeCounts: { ...warning.evidence.cumulativeCounts },
+          resourcePathClasses: [...warning.evidence.resourcePathClasses],
+          ...(warning.evidence.trafficAdmission
+            ? {
+                trafficAdmission: {
+                  version: 1,
+                  phases: warning.evidence.trafficAdmission.phases.map((entry) => ({ ...entry })),
+                  budgets: warning.evidence.trafficAdmission.budgets.map((entry) => ({ ...entry })),
+                  ...(warning.evidence.trafficAdmission.recentEffects
+                    ? {
+                        recentEffects: warning.evidence.trafficAdmission.recentEffects.map((entry) => ({
+                          ...entry,
+                        })),
+                      }
+                    : {}),
+                },
+              }
+            : {}),
+        }
+      : null,
+  };
+}
+
+function buildProviderWarningEvidence(input: {
+  input: {
+    classifierVersion: string;
+    visibleSummary: string;
+    sourceTargetClass: string;
+    openTargetCount?: number | null;
+    resourcePathClasses?: string[];
+    precedingInteractionLimit?: number;
+    trafficAdmission?: ProviderWarningEvidence['trafficAdmission'];
+  };
+  observedAt: string;
+  events: ProviderInteractionEvent[];
+}): ProviderWarningEvidence {
+  const limit = Math.min(50, Math.max(1, Math.floor(input.input.precedingInteractionLimit ?? 20)));
+  const relevant = input.events.filter((event) =>
+    event.type === 'interaction-started' ||
+    event.type === 'interaction-settled' ||
+    event.type === 'passive-observed'
+  );
+  const window = relevant.slice(-limit);
+  let previousAt: number | null = null;
+  const precedingInteractions = window.map((event) => {
+    const at = Date.parse(event.occurredAt);
+    const deltaMs = previousAt === null ? null : Math.max(0, at - previousAt);
+    previousAt = at;
+    return {
+      occurredAt: event.occurredAt,
+      deltaMs,
+      interactionClass: event.interactionClass,
+      eventType: event.type,
+      outcome: event.outcome,
+    } satisfies ProviderWarningInteractionEvidence;
+  });
+  const settled = relevant.filter((event) => event.type === 'interaction-settled');
+  const countClass = (interactionClass: ProviderInteractionClass) =>
+    settled.filter((event) => event.interactionClass === interactionClass).length;
+  return {
+    version: 1,
+    classifierVersion: requireNonEmpty(input.input.classifierVersion, 'classifierVersion'),
+    visibleSummary: requireNonEmpty(input.input.visibleSummary, 'visibleSummary'),
+    sourceTargetClass: requireNonEmpty(input.input.sourceTargetClass, 'sourceTargetClass'),
+    firstObservedAt: input.observedAt,
+    openTargetCount:
+      input.input.openTargetCount == null
+        ? null
+        : Math.max(0, Math.floor(input.input.openTargetCount)),
+    precedingInteractions,
+    cumulativeCounts: {
+      interactions: settled.length,
+      navigations: countClass('navigation'),
+      reloads: countClass('reload'),
+      conversationReads: countClass('conversation-read'),
+      artifactReads: countClass('artifact-read'),
+    },
+    resourcePathClasses: [...new Set((input.input.resourcePathClasses ?? [])
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean))].slice(0, 20),
+    ...(input.input.trafficAdmission
+      ? {
+          trafficAdmission: {
+            version: 1,
+            phases: input.input.trafficAdmission.phases.map(sanitizeTrafficAdmissionEntry),
+            budgets: input.input.trafficAdmission.budgets.map(sanitizeTrafficAdmissionEntry),
+            ...(input.input.trafficAdmission.recentEffects
+              ? {
+                  recentEffects: input.input.trafficAdmission.recentEffects.slice(-20).map((entry) => ({
+                    occurredAt: new Date(Date.parse(entry.occurredAt)).toISOString(),
+                    phase: requireNonEmpty(entry.phase, 'trafficAdmission.effect.phase').toLowerCase(),
+                    kind: requireNonEmpty(entry.kind, 'trafficAdmission.effect.kind').toLowerCase(),
+                    outcome: requireNonEmpty(entry.outcome, 'trafficAdmission.effect.outcome').toLowerCase(),
+                  })),
+                }
+              : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+function sanitizeTrafficAdmissionEntry<
+  T extends { phase: string; admitted: number; limit: number; remaining: number },
+>(
+  entry: T,
+): T {
+  return {
+    ...entry,
+    phase: requireNonEmpty(entry.phase, 'trafficAdmission.phase').toLowerCase(),
+    admitted: Math.max(0, Math.floor(entry.admitted)),
+    limit: Math.max(0, Math.floor(entry.limit)),
+    remaining: Math.max(0, Math.floor(entry.remaining)),
+  };
 }
 
 function cloneRecord(record: ProviderInteractionRecord): ProviderInteractionRecord {

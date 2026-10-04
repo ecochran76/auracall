@@ -516,6 +516,11 @@ Current limits:
   - when every selected transfer fails, the durable job is `failed` and keeps
     its per-file manifest diagnostics; `skipped` is reserved for a genuinely
     empty or terminally ineligible materialization
+  - full-detail manifest entries expose `assetAvailability` as `available`,
+    `unavailable`, or `unknown`; confirmed volatile misses are non-retryable
+    `provider_unavailable`, while a persistent ChatGPT Library
+    `library_row_not_found` remains `unknown` because DOM lookup failure does
+    not prove provider-file deletion
   - reconciliation with `assetKinds: ["media"]` scans unavailable
     media-generation archive artifacts and can resume Gemini media
     materialization when cached account history has a matching provider

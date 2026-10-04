@@ -1,9 +1,124 @@
 import { describe, expect, test, vi } from "vitest";
 
 import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
-import { runConfiguredChatgptTabMaintenance } from "../../src/browser/configuredChatgptTabMaintenance.js";
+import {
+	retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown,
+	runConfiguredChatgptTabMaintenance,
+} from "../../src/browser/configuredChatgptTabMaintenance.js";
 
 describe("configured ChatGPT tab maintenance", () => {
+	test("retires only settled idle leases in the exact stopped managed-browser scope", async () => {
+		const leaseIds = ["crawler", "materialization", "active", "uncertain", "unrelated"];
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => leaseIds.shift() ?? "unexpected",
+		});
+		const scope = {
+			runtimeProfileId: "affinity",
+			managedBrowserProfile: "/managed/affinity/chatgpt",
+			service: "chatgpt",
+			tenantKey: "service-account:chatgpt:account-id=account-1",
+		};
+		const reserve = async (input: {
+			targetId: string;
+			workload: { kind: "live-follow" | "ephemeral"; operationId: string };
+			scope?: typeof scope;
+		}) => {
+			const result = await registry.reserve({
+				scope: input.scope ?? scope,
+				targetId: input.targetId,
+				workload: input.workload,
+				operationId: `owner-${input.targetId}`,
+				now: "2026-09-30T18:00:00.000Z",
+				idleTtlMs: 900_000,
+				absoluteTtlMs: 3_600_000,
+			});
+			if (!result.ok) throw new Error(`failed to reserve ${input.targetId}`);
+			return result.value.claim;
+		};
+		const crawlerClaim = await reserve({
+			targetId: "crawler-target",
+			workload: { kind: "live-follow", operationId: "completion-1" },
+		});
+		const materializationClaim = await reserve({
+			targetId: "materialization-target",
+			workload: { kind: "ephemeral", operationId: "materialization-1" },
+		});
+		await reserve({
+			targetId: "active-target",
+			workload: { kind: "ephemeral", operationId: "active-1" },
+		});
+		const uncertainClaim = await reserve({
+			targetId: "uncertain-target",
+			workload: { kind: "ephemeral", operationId: "uncertain-1" },
+		});
+		const unrelatedClaim = await reserve({
+			targetId: "unrelated-target",
+			workload: { kind: "ephemeral", operationId: "unrelated-1" },
+			scope: {
+				...scope,
+				runtimeProfileId: "other",
+				managedBrowserProfile: "/managed/other/chatgpt",
+			},
+		});
+		await registry.idle({
+			claim: crawlerClaim,
+			now: "2026-09-30T18:00:01.000Z",
+			effectState: "settled",
+		});
+		await registry.idle({
+			claim: materializationClaim,
+			now: "2026-09-30T18:00:02.000Z",
+			effectState: "settled",
+		});
+		await registry.idle({
+			claim: uncertainClaim,
+			now: "2026-09-30T18:00:03.000Z",
+			effectState: "outcome-unknown",
+		});
+		await registry.idle({
+			claim: unrelatedClaim,
+			now: "2026-09-30T18:00:04.000Z",
+			effectState: "settled",
+		});
+
+		const summary = await retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown({
+			userConfig: {
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				profiles: {
+					affinity: {
+						browser: { tabConcurrencyMode: "tab-affinity" },
+						services: { chatgpt: { identity: { accountId: "account-1" } } },
+					},
+				},
+			} as never,
+			runtimeProfileId: "affinity",
+			managedBrowserProfile: "/managed/affinity/chatgpt",
+			now: () => new Date("2026-09-30T18:01:00.000Z"),
+			deps: { createRuntime: () => ({ registry }) },
+		});
+
+		expect(summary).toEqual({
+			retiredLeaseIds: ["crawler", "materialization"],
+			deferredLeaseIds: ["uncertain"],
+		});
+		const leases = Object.fromEntries(
+			(await registry.list()).map((lease) => [lease.leaseId, lease]),
+		);
+		expect(leases.crawler).toMatchObject({
+			state: "released",
+			retirementReason: "operator",
+			finalDisposition: "already-missing",
+		});
+		expect(leases.materialization).toMatchObject({
+			state: "released",
+			retirementReason: "operator",
+			finalDisposition: "already-missing",
+		});
+		expect(leases.active).toMatchObject({ state: "active" });
+		expect(leases.uncertain).toMatchObject({ state: "idle", effectState: "outcome-unknown" });
+		expect(leases.unrelated).toMatchObject({ state: "idle" });
+	});
+
 	test("counts one physical browser census across runtime profiles", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const listTargets = vi.fn(async () => [

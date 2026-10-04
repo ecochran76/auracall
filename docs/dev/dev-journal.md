@@ -1,3 +1,113 @@
+## 2026-10-04 | PR 120 canonical conflict reconciliation
+
+Merged current canonical main into the existing Library cache-bypass branch.
+Resolved five additive documentation conflicts by preserving current canonical
+history and P73/P55 records; all source changes merged without conflict.
+Primary validation: 68 focused tests, typecheck, plan audit and scoped lint pass.
+The CLI-only opt-out remains explicit; general account-file persistence is
+unchanged. No installed/browser/provider control ran in this reconciliation.
+
+## 2026-10-03 | Repository reconciliation after PR 177
+
+Root returned to canonical main with .tmp/ preserved. Removed 32 clean,
+integrated, unowned worktrees and pruned eight missing registrations; all
+branches remain. Preserved dirty issue107-scope, conflicting PR 120, installed
+canonical checkpoint and published the root P222 source branch in a dedicated
+worktree. No runtime/provider effect. Evidence and remaining integration gates:
+`docs/dev/notes/2026-10-03-repository-reconciliation.md` (issue 178).
+
+## 2026-10-03 | Issue 165 renewed control verifies ZIP and cached repeat
+
+Installed canonical PR 176 (500619f6e) with matching service bytes. Renewed
+control 1 / historical probe 9 succeeded: PDF reused, correct ZIP captured once
+with valid CRC and retained checksum. Cached repeat had zero downloads, CDP
+calls and observed requests. Browser processes, listener and owned leases are
+cleared; scheduler paused. Gate D still requires archive projection agreement:
+exact filename/checksum archive queries returned no row. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent JSON.
+
+## 2026-10-03 | Issue 165 fifth control stopped, facade regression corrected
+
+Final installed control still timed out before ZIP download, despite a successful
+fresh read. Browser processes and owned leases are released. Five repair cycles
+are consumed; no additional provider attempt ran. The base-service test missed
+a ChatgptService utility wrapper copy. The regression now exercises the actual
+facade; it failed in 340 ms, then passed after explicit-target session custody
+was returned to its caller. This facade correction is source-only pending a
+renewed installed acceptance budget. Scheduler paused, Gate D open; see
+`docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
+
+## 2026-10-03 | Issue 165 context-session handoff, repair cycle 5
+
+Installed cycle 4 removed the read failure: fresh context succeeded in 11 seconds,
+but the ZIP timed out before download. Browser cleanup is empty and its lease
+released; no retry ran. A 32 ms local regression then reproduced loss of the
+read's retained session across deadline-scoped options. Session custody now
+returns to the caller, avoiding duplicate read admission and allowing transfer.
+Scheduler paused, Gate D open. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
+
+## 2026-10-03 | Issue 165 identity-proof session custody
+
+A provider-free adapter replay reproduces target-owned on the read following
+identity proof. The proof retained a session on private copied options, leaving
+its lease inaccessible to the caller. Cleanup now releases only newly created
+proof sessions; caller sessions remain borrowed. Historical lease timing fits
+this cause, but the original exception was not retained. Repair cycle 4 local
+continuation; scheduler paused and Gate D open. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-proof-session-custody.md`.
+
+## 2026-10-03 | Issue 165 failed-refresh materialization guard
+
+Repair cycle 4 local diagnosis reproduced a fresh context failure falling back
+silently to cached download controls. Artifact materialization now requires its
+requested context refresh to succeed; explicit refresh=false still permits cache
+use. The regression failed in 48 ms before the fix. All 171 focused tests, typecheck,
+build, scoped Biome, and plan audit pass. This prevents stale control
+attempts and preserves the original read error; it does not establish the cause
+of the installed target read failure. No new provider probe or installation ran;
+scheduler remains paused and Gate D remains open.
+
+## 2026-10-03 | Plan 0386 bounded live-follow repair
+
+Recovered full persisted evidence: the previous empty monitoring result hid
+a skipped `regenerate response` entry and two internal reload/reopen actions.
+Reproduced and repaired normal-control misclassification and stale-file false
+success. Production materialization now carries the single-visit contract and
+stops on real blockers without recovery effects. Seven product replay cases
+exercise discovery through manifest writing with isolated transport. Resumed
+goal permits at most five installed controls; none consumed yet. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md`.
+
+## 2026-10-03 | Issue 165 artifact readiness parity
+
+Compared the retained successful agentic CDP command with product activation.
+Reproduced three readiness/collection mismatches with executable DOM fixtures;
+readiness now uses eligible collected probes. All 190 adapter tests and
+typecheck pass. Gate D remains open; no install or live retry. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-agentic-algorithm-comparison.md`.
+
+## 2026-10-02 | Plan 0386 installed trusted-pointer control
+
+- Installed canonical `2ff53befb` with exact adapter/service byte parity and
+  healthy API. Scheduler stayed paused.
+- Sole authorized artifact-only job `hmj_92e88aa5b845422d96a5bb2e84575885`
+  returned skipped: zero assets/manifest/archive entries, identity matched,
+  no warning. No retry ran; Gate D remains open.
+- Fresh cleanup: 207 released leases, zero active jobs, exact browser processes,
+  and endpoint listeners. Issue 165 owns provider-free diagnosis; sanitized
+  receipt: `docs/dev/notes/2026-10-02-plan0386-trusted-installed-control.json`.
+
+## 2026-10-02 | Issue 163 root and worktree reconciliation
+
+- PR 162 merged at `554cbe58b`; root re-anchored to canonical main. Primary
+  verification: 187 adapter tests and typecheck passed.
+- Preserved two unpublished-to-main affinity commits, three dirty recovery
+  files, open PR 120, and the untracked root receipt. Worktree review and
+  remaining catalog problems are recorded in
+  `docs/dev/notes/2026-10-02-issue163-worktree-reconciliation.md`.
+- P53 now projects paused-ref custody; P85 records the canonical trusted-pointer
+  integration while leaving Gate D open. No install or provider effect ran.
 ## 2026-09-28 | Plan 0362 planning-audit wiring reconciliation
 
 - The active-only planning audit reported exactly two unbaselined findings:
@@ -44758,6 +44868,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   chunk. Diagnostics correctly classified the duplicate. No rate-limit,
   ChatGPT guard, CAPTCHA, verification, identity conflict, or second pass
   occurred.
+- PR 140 merged the provider-free repair to canonical `main` at
+  `6eb52c43298a32311c129666eddd1af3a72463f3` and closed Issue 138. P80 is
+  integrated; the scheduler remains operator-paused, and installed adoption,
+  live acceptance, Issue 139, and network metering remain outside this lane.
 - A post-cancel race let the in-flight refresh settle and queue
   `hmj_153db2c1a1b54933b3518027478298c`; its only execution produced 1
   materialized, 6 skipped, and 1 `retrieval_failed`. This keeps M5 open and
@@ -51506,3 +51620,865 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - Provider-free regressions cover exact adoption, absence, CDP cleanup, and a
   retained event-loop handle. No install, live browser, provider access,
   retry, navigation, refresh, target creation, attachment, prompt, or Send ran.
+## 2026-09-28 | Plan 0375 provider-free browser-coordination repair
+
+- Reproduced issue 123 at the production affinity seam: a foreground
+  conversation with an unrelated exact-tab lease failed with
+  `tab-leases-active` even though the managed browser already exposed a live
+  DevTools endpoint.
+- The no-launch service-target lookup consulted the endpoint registry but
+  skipped live managed-profile owner discovery. It now adopts a responsive
+  owner during `ensurePort=false`; absent or unresponsive browser startup keeps
+  the existing profile-wide exclusion and fail-closed behavior.
+- Reconciled API status with the maintenance owner: root or any resolved
+  AuraCall runtime profile selecting affinity now exposes the shared aggregate
+  registry and ledger as `tab-affinity` instead of falsely reporting a
+  serialized posture.
+- Provider-free regressions cover the exact unrelated-lease failure, direct
+  no-launch owner adoption, and nested-profile HTTP status projection. The
+  installed runtime matched both changed built modules byte-for-byte. With an
+  active history-materialization lease on target `26B813...6C93`, one fresh
+  foreground run acquired distinct target `A87C08...86B2`, adopted port
+  `45015`, and verified the configured SoyLei identity without
+  `tab-leases-active` or browser-startup control.
+- The same one-shot run then stopped before Send on current ChatGPT root
+  composer-mode drift. Its lease settled idle with `effectState=none`; the
+  materialization lease stayed active and Chrome PID `58611` stayed live. No
+  retry ran. Issue 125 owns the provider-selector successor before issue 121's
+  final connector-plus-wake acceptance.
+
+## 2026-09-28 | Plan 0376 root Chat composer-mode repair
+
+- The installed issue-123 smoke proved browser coordination, then stopped
+  before Send because the exact ChatGPT root exposed a ready `Ask ChatGPT`
+  editor without historical Chat/Work controls.
+- A provider-free root-route fixture reproduced the exact `mode-not-found`
+  result after the full control-hydration wait. The implementation had retained
+  the editor fallback only for established conversation routes.
+- The exact `/` root may now use that fallback for desired Chat after the
+  existing wait. Desired Work still fails without positive Work evidence;
+  project landing pages still require controls; current-route Work badges still
+  reject implicit Chat. No installed or live provider effect ran.
+
+## 2026-09-28 | Issue 121 connected-app selection reliability
+
+- Preserved terminal session `mail-architectu-wake-1790608058` without retry;
+  its verified error receipt proves publication but not automatic Codex wake.
+- Read-only browser inspection stopped at the active installed API operation
+  lease. No override, navigation, click, cleanup, prompt submission, or wake
+  arming occurred.
+- Opened issue 121 and Plan 0374 / lane P74 from canonical `origin/main`.
+- Implemented provider-free classification for manifest-known markerless app
+  rows plus ecosystem-mention provider-identity verification at source
+  checkpoint `098fc819e`. Focused and adjacent behavioral tests, typecheck,
+  build, scoped lint, plan audit, and diff hygiene passed. One unrelated
+  lifecycle structure-regex failure reproduced unchanged on the untouched
+  baseline. Installed acceptance remains separately gated.
+- Published branch tip `01caa1b64` and opened PR 122. With explicit authority,
+  installed that exact tip and restarted only the loopback AuraCall API.
+- The required read-only GitHub capability discovery then stalled silently.
+  The first attempt was interrupted after more than five minutes; one bounded
+  180-second diagnostic retry reproduced the stall. Browser doctor showed an
+  authenticated focused ChatGPT root, but no stable GitHub capability receipt
+  was obtained.
+- Stopped before Send. No fresh session, provider submission, terminal receipt,
+  wake source, or wake record was created; the earlier terminal session was not
+  retried. The retained browser remains available for bounded diagnosis.
+- Reopened the implementation after operator correction: connected apps are
+  selected inside the open tool drawer by typing the connector name and
+  activating the filtered row, not through the developer-app `@mention`
+  picker.
+- Screenshot and CDP inspection on the retained authenticated browser proved
+  the exact GitHub flow. The filtered row was activated once and produced a
+  non-editable `[app-mention-name="github"]` object with
+  `app-mention-path="app://connector_76869538009648d5b282a4bb21c3d157"` plus
+  a trailing editable text span. The unsent draft was then cleared.
+- Corrected source now always performs the drawer filter for connected apps,
+  rejects `Connect` rows, and verifies the inline connector path. Private
+  developer-app `@mention` behavior remains unchanged. Focused tests and
+  typecheck pass; no Send, approval, `Answer now`, provider request, session
+  retry, or wake action occurred.
+- Installed corrected PR tip `b5f8c46f7`, restarted only the loopback API,
+  and submitted one fresh read-only GitHub run, `github-wake-1790616900`.
+  It terminated at the pre-effect model gate because ChatGPT exposed `6Pro`
+  while the configured selector requested `6 Pro`; connector selection and
+  Send were never reached.
+- Verified terminal error receipt
+  `evt_45d98dd41979596590b284b8cc8d49494059c4e26a8e38bd19eebfbe7091f7a0`
+  was already terminal on first authenticated observation. Per the no-resubmit
+  and no-terminal-arm rules, no retry or wake was created.
+- A new installed run, `github-wake-1790631700`, used the current-model
+  strategy and reached connected-app discovery. It observed the selectable
+  GitHub row but failed closed before Send because the inventory label included
+  the adjacent description text. Receipt
+  `evt_66eef8046cb8b3048b22e2f5ffbac831af918898fd575d5492e164e77ba7a3ff`
+  is terminal; the session was not retried and no wake was armed.
+- CDP inspection proved the exact DOM cause: a comma-separated selector list
+  returned an earlier outer `span.truncate` before the later exact-label span.
+  Connected-app inventory, filtered-menu readback, and activation now query
+  primary-label selectors in explicit priority order.
+- Installed source commit `b46044aff` with exact changed-module byte parity.
+  Two uniquely identified post-fix sessions then terminated before browser
+  startup with `tab-leases-active`: `github-wake-1790631985` / event
+  `evt_9b058e33d09d70666bd078c8ad7a7dce6590b87251e93ed75a2ca81be1622155`
+  and `github-wake-1790632021` / event
+  `evt_1697bba0c1638d2030ad55f5f4272348817e7e31419b77d6ad6ad5af8058033a`.
+  Between them, the API reported zero active browser operations and zero tab
+  leases. Neither session was retried, no wake was armed, and further provider
+  attempts stopped. Issue 121 remains open pending admission-race resolution
+  and one complete connector-plus-wake acceptance.
+- The legitimate idle lease later expired normally. Fresh installed session
+  `github-wake-1790632645` selected GitHub, committed the connector plus full
+  prompt, and received the exact expected issue title. AuraCall misclassified
+  the successful exchange as `Prompt did not appear in conversation before
+  timeout` because the committed connector is rendered as an
+  `app://connector_...` prompt link rather than the composer-time app mention.
+- Its verified terminal event matched the armed wake, but the single dispatch
+  attempt encountered an active Codex writer and failed; the terminal session
+  was not retried or re-armed. The committed-turn reader now removes the
+  observed connector presentation node, with a focused provider-free
+  regression. A fresh installed run still gates closure.
+- Rebuilt and installed exact rebased PR tip `94323efca` with complete `dist`
+  byte parity and an active API at PID `28623`. A single 240-second read-only
+  capability inventory again stalled without output and was not retried.
+- Fresh session `github-connector-1790645332` then used the stable GitHub
+  capability through `wsl-chrome-3`, verified the exact connected object and
+  SoyLei Pro identity before Send, submitted once, and returned the expected
+  issue title. Verified succeeded receipt
+  `evt_59a5c1f7a6e650b31b6a364e574c0f3592063ebb941986b581a2d3c49ca6ccef`
+  binds a 73-byte result with digest
+  `sha256:dbf1bbc9fe31b74e8dc913fff16d0cdaf426c6b3494d9440e5b568171bee7ef0`.
+- Wake setup raced the fast terminal receipt: its source check already returned
+  `succeeded`, but the chained command still created
+  `wake_1a94b101f2dc4867bfbc6885b0ba92bf`. The only app-server attempt failed
+  against the current active writer. No retry or second wake ran. The failed
+  wake is archived, its source and temporary service credential are removed,
+  and active wake count is zero. Connector acceptance passed; automatic Codex
+  resumption, merge, and issue closure remain open.
+- A second authorized session, `github-wake-1790647330`, again completed the
+  exact GitHub connector request and published verified succeeded receipt
+  `evt_a90be7c8f0b433bb45632e3f145f2d6546eab591a94f1aa5576acc4ee59a11a4`.
+  Its wake was armed while pending but failed its sole dispatch because the
+  AuraCall recipe forced app-server targeting into the still-active writer.
+- Current runtime evidence showed `TMUX_PANE=%28`; codex-wake's default path
+  would have captured that active TUI. The recipe and skill now preserve tmux
+  capture when available and reserve explicit app-server targeting for
+  headless continuation. The failed wake is archived, its source and temporary
+  credential are removed, and no provider retry ran.
+- Retried the installed acceptance with explicit authority after restarting
+  the stale API service. Exact installed `dist` parity, receipt readiness,
+  monitor readiness, and tmux pane `%28` passed, but fresh session
+  `github-tui-wake-1790650111` failed closed at browser startup with
+  `tab-leases-active`. Receipt
+  `evt_0dd700113a904028d83b30c15e5fdc83680a417d6bb58f87d44e74491a691249`
+  verified terminal `error` before provider effect. Read-only concurrency
+  evidence showed two unexpired settled idle leases and no active, lost, or
+  uncertain lease. No wake/source was armed; the temporary wake-service
+  credential was removed and active wake count remained zero.
+- Reclassified that lease fence as a product defect: with no managed-browser
+  endpoint, the idle targets could not still exist and should not block a new
+  browser startup until TTL expiry. Added a red-first provisioner regression
+  and repaired the absent-browser path to release only safe idle `none` or
+  `settled` leases as `target-missing`/`already-missing`. Active, in-flight,
+  outcome-unknown, retiring, and lost states remain fail-closed. Five focused
+  suites pass 37/37; scoped Biome and typecheck also pass.
+- Installed exact repair commit `47c3d7f13` and retried after proving full
+  installed parity, API PID `4949`, receipt readiness, wake-monitor readiness,
+  and tmux pane `%28`. Session `github-tui-wake-1790652238` still failed
+  pre-effect because a settled active ephemeral lease remained owned by dead
+  pre-restart PID `48758`. The cleanup scope also needed to match profile-wide
+  startup fencing rather than the request tenant alone. Expanded the repair to
+  release safe idle leases plus safe active leases with a proven-dead owner
+  across the exact managed browser profile. The new cross-tenant/dead-owner
+  regression passes; five focused suites now pass 38/38. No provider request,
+  wake, or source was created.
+- After WSL recovery, rebuilt exact commit `46742378c`, verified complete
+  installed `dist` parity, and re-anchored fresh API, process, monitor, wake,
+  tmux, and managed-browser state. Session `github-tui-wake-1790653512`
+  selected the exact connected GitHub capability, submitted once, returned the
+  expected issue title, and published verified succeeded receipt
+  `evt_cc2994e4c18d5e8be148c33ec4a4c134c7920f3ab8c6db5895ae3e8c5d005966`.
+- Wake `wake_9159b865e70645b8b12cb5631abf9fb9` matched the exact receipt in
+  one attempt through tmux, observed acknowledgement, and recorded
+  `visibility_result.classification=visible_prompt_observed`. Cleanup archived
+  the wake, removed its source and temporary credential, restarted the wake
+  service, and confirmed zero active wakes. Installed acceptance is complete.
+- Issue 128 diagnosis localized the installed inline-file false negative to
+  committed-turn DOM fidelity rather than prompt assembly: the full 10,526
+  characters were queued, but `<br>` boundaries disappeared and a presentation
+  ellipsis remained. Plan 0377 / lane P77 owns a provider-free exactness repair;
+  the terminal session is not eligible for retry.
+- Commit `5dc24ca89` preserves `<br>` boundaries, removes only a terminal
+  presentation ellipsis during comparison, retains authored-text rejection,
+  and classifies a new committed turn with a cleared composer and conversation
+  route as `effect_observed`. Focused and adjacent tests pass 57/57; typecheck,
+  scoped Biome, and build pass.
+- Published-diff self-review found and corrected one scope leak: terminal
+  ellipsis tolerance now exists only in committed-turn normalization, while
+  pre-Send composer verification explicitly remains fail-closed.
+- PR 129 merged the validated repair to `main` at `4e5938cde`; issue 128 closed
+  automatically. Closeout remained documentation-only and did not install,
+  restart services, retry the terminal session, or create another provider
+  effect.
+
+## 2026-09-29 | Issue 131 ChatGPT rate-limit terminal reconciliation
+
+- Opened issue 131 after the operator observed ChatGPT's account-wide `Too many
+  requests` warning without a corresponding `wsl-chrome-3` cooldown record.
+- Confirmed the installed phrase classifier exists; the gap is bounded to
+  delayed or sibling-target warning visibility after the active error path.
+- Plan 0378 / lane P78 owns a provider-free terminal reconciliation repair.
+  Live requests, warning dismissal, installation, and service mutation remain
+  outside this packet.
+- Implemented a bounded three-pass terminal census over ChatGPT page targets
+  on the exact browser endpoint, inspecting the leased target first and closing
+  every sibling inspection client without navigation, clicks, or tab closure.
+- Wired the census into local and remote success and failure exits. A detected
+  warning now persists the browser-profile cooldown even after an observed or
+  uncertain provider effect, while returning `retrySafe=false` and preserving
+  the original effect classification.
+- Provider-free validation at source checkpoint `813c4a6d8`: typecheck and
+  build passed; 290 focused/adjacent tests passed across 8 files; diff hygiene
+  and the 377-plan audit passed. Scoped Biome reported only the expected fake
+  CDP `Runtime` naming warning. No live ChatGPT request, installation, browser
+  mutation, or service restart was performed.
+- PR 132 merged the validated repair to canonical `main` at `ec5c30030146` and
+  closed issue 131. P78 is reconciled as integrated; installed acceptance and
+  any live ChatGPT request remain deliberately unperformed.
+
+## 2026-09-29 | Issue 135 owned browser exit retirement
+
+- Runtime evidence showed an absent `wsl-chrome-3` Chrome/DevTools endpoint
+  while `browser-state.json` retained the failed materialization job's owner,
+  operation, lease, PID, and port. Linux had already reused that PID for
+  `slack-receipts-mcp`; Slack did not acquire the lease.
+- Issue 135 and Plan 0379 / lane P79 now govern a provider-free repair in the
+  reusable browser-service lifecycle and registry layers.
+- The required invariant is generation-safe retirement: owned child exit and
+  explicit/signal-driven kill may delete only the exact matching registered
+  launch, never a replacement entry for the same managed browser profile.
+- Graphiti was healthy but returned no prior fact for this defect. Current
+  runtime evidence, CodeGraph source flow, and focused tests remain authority.
+- Provider-free checkpoint `36a6061484` passes 55 focused and adjacent tests,
+  typecheck, production build, and diff hygiene. The active-plan audit reports
+  only the pre-existing Plan 0362 wiring findings; no live effect occurred.
+- PR 136 merged at canonical receipt `6f4b3b34918157e64ba0fff069e3280f6eb9bf11`
+  and closed issue 135. P79 is integrated; installed adoption and live
+  acceptance were deliberately not performed.
+
+## 2026-09-29 | Issue 138 authoritative provider traffic governor
+
+- A recurring live-follow incident showed ChatGPT's visible `Too many requests`
+  warning while `wsl-chrome-3` retained no rate-limit detection or cooldown and
+  the provider-interaction ledger retained no warning. Later reload/read work
+  still settled as successful.
+- Containment paused the account-mirror scheduler, left zero queued/running
+  completions, and closed only the owned `wsl-chrome-3` browser. The scheduler
+  must remain paused throughout provider-free source work.
+- Issue 138 / Plan 0380 / lane P80 now own the architecture repair: combine
+  physical mutation dispatch, ledger-backed admission, exact lease attribution,
+  post-action warning detection, and cooldown persistence into one mandatory
+  browser-service governor lifecycle.
+- Issue 139 owns the dependent incremental reconciliation algorithm. CDP network
+  metering and HTTPS interception remain deferred.
+# 2026-09-29 — Issue 138 provider traffic governor implementation
+
+- Added the provider-neutral `ProviderTrafficGovernor` lifecycle with immutable
+  attribution, fail-closed lease/admission/start ordering, immediate physical
+  settlement, bounded warning probing, durable warning persistence, and
+  same-operation fencing.
+- Threaded the governor through Account Mirror live-follow metadata collection,
+  provider list options, CDP client context, and browser-service navigation and
+  reload/fallback seams. The configured ChatGPT path now verifies the current
+  exact lease generation and writes both ledger warning evidence and the
+  managed browser profile cooldown when the visible rate-limit dialog is found.
+- Provider-free checkpoint validation: 122 focused tests and TypeScript
+  typecheck pass. No browser, provider, scheduler, lease, or installed-runtime
+  effect was performed.
+- The second implementation packet extended the same governor through shared
+  ChatGPT utility affinity, leased prompt affinity, and provider target reuse.
+  Direct navigation/reload CDP effects remain concentrated in browser-service;
+  provider target-reuse callers now pass the carried governor. A structural
+  regression inventories those seams.
+- Raw target creation now fails before `CDP.New` without explicit attributed
+  pre-lease acquisition authority; all production callers declare that boundary,
+  while reused-target provider work uses the governor. The expanded provider-free
+  checkpoint passes 285 focused and adjacent tests plus typecheck and diff hygiene.
+- Remaining before closeout: full build/lint/planning and CodeGraph audits,
+  plan/lane reconciliation, review/integration, and installed adoption decision.
+- Completion-audit hardening marks every CDP client carrying provider traffic
+  authority as governor-required. Losing that governor now throws before the
+  physical action instead of silently falling back to optional pacing/audit.
+  Provider-neutral Gemini/Grok paths without configured lease authority retain
+  their existing behavior; they cannot falsely claim the governed contract.
+- The provider-neutral completion packet removes that residual exception.
+  Serialized mode now retains durable traffic-safety registry/ledger state
+  while remaining concurrency-disabled. Configured ChatGPT, Gemini, and Grok
+  options require authority; exact target reuse and CDP client attachment
+  acquire short-lived exact leases, ledger-backed admission, and authoritative
+  mutation recording, while client close idles and releases that authority once.
+  Missing managed-profile/target authority fails before the physical action.
+  Provider-free validation currently passes 312 adjacent adapter/service tests,
+  the 9-test authority/runtime slice, typecheck, and exact target-reuse ordering.
+
+- Completion audit found and closed a legacy direct-prompt bypass: the leased
+  governor was discarded before remote execution, recovery refresh rebuilt a
+  partial CDP carrier without authority, and required-authority connection
+  failure could fall back to the first tab. Checkpoint `2f638ac3c` preserves the
+  exact governor through those paths and fails closed instead of cross-target
+  fallback.
+- Final provider-free evidence includes 72 focused/affected passing tests,
+  3,414 comprehensive passing tests with 69 skips, typecheck, production build,
+  full lint with zero errors, and diff hygiene. After repairing four failures
+  caused by minimal test doubles, the broad-suite exceptions are the two known
+  baseline failures (one structural assertion and one Grok timeout) and stale
+  pre-reboot Node executable paths in three MCP stdio suites. No live provider/
+  browser, scheduler, install, or lease effect occurred.
+
+## 2026-09-29 | Issue 139 changed-frontier planning and current-interface survey
+
+- Issue 139 / Plan 0381 / lane P81 now govern the incremental reconciliation
+  algorithm after the Issue 138 traffic governor.
+- A bounded read-only survey attached to the existing `wsl-chrome-3` ChatGPT
+  root without navigation, reload, click, prompt, target creation, target
+  closure, or warning dismissal. The scheduler remained operator-paused.
+- The current root is a collection-oriented surface: global conversations,
+  pins/pages, spaces, automations, and per-project conversation lists hydrate
+  alongside visible Pinned, Projects, and Recents sections. The plan therefore
+  uses one shared provider-index epoch rather than optimizing legacy sidebar
+  traversal.
+- Ten ready ChatGPT root targets were retained at survey time. They were
+  observed but not closed or treated as account-mirror-owned.
+- No rate-limit warning was visible or triggered. Plan 0381 requires a
+  sanitized append-only interaction timeline and, if a warning appears, a
+  bounded signature of the warning plus preceding action classes and timing;
+  that evidence may support correlation but not causal network attribution.
+- Next implementation packet is provider-free: reproduce duplicate
+  visit/refresh/materialization behavior against fixtures representing the
+  current service collections. Installation, scheduler resume, and live
+  acceptance remain separately gated.
+- PR 142 merged the planning packet to canonical `main` at
+  `fcf388fe8c9ffc56279d5952beff9a31abc22219`. Issue 139 and Plan 0381 remain
+  open for provider-free implementation; planning integration does not claim
+  the algorithm is repaired.
+
+## 2026-09-30 | Issue 139 direct-CDP algorithm survey
+
+- Installed current main, kept the production account-mirror scheduler paused,
+  and ran a bounded isolated API proof against AuraCall runtime profile
+  `wsl-chrome-3`. The proof server was stopped afterward.
+- Added a sanitized CDP capture harness and recorded every ChatGPT page
+  target's Network/Page/Runtime events while polling the visible DOM for the
+  known `Too many requests` dialog. No warning or verification surface appeared.
+- Two one-item detail passes deterministically caused three same-conversation
+  navigations and 888/853 requests. This disproves the earlier one-item/one-read
+  cost model and establishes full-page hydration as the dominant amplification.
+- A retained reconciliation still caused 239 requests before making zero asset
+  attempts. A persistent Library lookup caused 293 requests before a terminal
+  `library_row_not_found` failure.
+- Four volatile upload probes stopped locally with zero provider requests. The
+  sampled skip was backed by exact older `tile_not_found` evidence, but that
+  evidence is only a failed child beneath a succeeded job and has no explicit
+  `unavailable`, failure-kind, or retryability value.
+- Current installed browser retirement cleaned stale ownership left by the
+  older runtime. Historical tab-lease ledger rows were not misreported as
+  active leases.
+- Durable sanitized analysis:
+  `docs/dev/notes/2026-09-30-issue139-live-algorithm-cdp-survey.md`.
+- Next: encode these observed branches as provider-free P0 fixtures, then make
+  physical visits and asset availability explicit planner state.
+
+## 2026-09-30 | Issue 139 P0 fixture and volatile availability contract
+
+- Added a compact provider-free fixture derived from the direct-CDP survey. It
+  freezes both 853/888-request detail passes, their three same-conversation
+  navigations, retained provider work with zero asset attempts, persistent
+  Library retrieval failure, volatile terminal skip, and absence of a visible
+  rate-limit warning.
+- Added deterministic tests proving the logical two-interaction model
+  undercounts physical detail work and that retained materialization reaches
+  the provider before actionability is known.
+- Detailed materialization entries now carry explicit `assetAvailability`.
+  Materialized/duplicate assets are `available`; confirmed volatile missing
+  assets are `unavailable`, `provider_unavailable`, and non-retryable; other
+  failures are `unknown`.
+- Kept persistent ChatGPT Library `library_row_not_found` distinct from volatile
+  terminal absence. A missing Library DOM row remains a retrieval failure with
+  `unknown` availability rather than falsely terminalizing a persistent file.
+- Focused 93-test materialization/fixture run and TypeScript typecheck pass.
+  Next is the P1 durable epoch/work-state schema and migration contract.
+
+## 2026-09-30 | Issue 139 P1 durable epoch and work state
+
+- Added a versioned provider-index epoch containing sanitized scope hashes,
+  index fingerprint, observation time, and project/conversation coverage.
+- Every persisted conversation now carries versioned change-frontier work
+  state: action, outcome, availability, retry/checkpoint fields, and explicit
+  physical targets, navigations, reloads, refreshes, resolutions, and downloads.
+- Same-epoch snapshot rewrites preserve work and counters. A new epoch rolls
+  current physical counters into lifetime totals, resets the row to pending,
+  and retains availability evidence.
+- Legacy, malformed, or missing state migrates conservatively to pending work,
+  unknown availability, and zero counters. Raw account and conversation ids are
+  not retained in the new state keys.
+- Nine focused normalization/persistence tests and TypeScript typecheck pass.
+  This packet remained provider-free and left the scheduler paused. Next is the
+  P2 pure deterministic frontier planner.
+
+## 2026-09-30 | Issue 139 P2 pure changed-frontier planner
+
+- Added a provider-free planner that maps every row to exactly one of `skip`,
+  `visit_once`, `materialize_retained`, or `defer` with a durable reason and
+  hashed checkpoint key.
+- Decision precedence stops active retry horizons and provider guards, retains
+  same-epoch complete/terminal work, defers identity mismatches, and skips
+  confirmed provider or volatile absence.
+- Changed index fingerprints force a fresh visit before retained evidence can
+  be consumed. Missing assets use `materialize_retained` only when current
+  detail and manifest evidence are both present.
+- Duplicate pseudokeys never create a second provider action. Exact keyset
+  checkpoints resume after completed work; an absent key safely restarts the
+  bounded row set rather than silently dropping work.
+- Fifteen table-driven planner cases plus the P1 state and legacy freshness
+  suites pass. No browser/provider action occurred; the scheduler remains
+  paused. Next is P3 once-per-epoch visit-bundle integration.
+
+## 2026-09-30 | Issue 139 P3 single-visit bundle and receipt
+
+- The collector now creates the exact provider-index epoch immediately after
+  shared index acquisition and passes it through every selected ChatGPT detail
+  read and later persistence.
+- One coalesced context read returns one `ConversationVisitBundle` containing
+  detail completeness/fingerprint, artifact and file refs, route evidence, and
+  per-row target, navigation, and reload counts.
+- Account-mirror reads no longer force the conversation payload route after a
+  failed in-page fetch, reload transient blocking surfaces, or reopen the
+  conversation during the same logical visit. Non-account-mirror fallback
+  behavior remains available and now records its physical mutations.
+- More than one recorded navigation in a row fails closed. Persistence accepts
+  only a matching-epoch bundle and checkpoints its visit action/outcome,
+  detail fingerprint, and physical counters; stale bundles cannot contaminate
+  a later epoch.
+- The affected collector, ChatGPT adapter, refresh, persistence, and bundle
+  suites pass 283/283 with TypeScript and diff hygiene. This packet remained
+  provider-free; the scheduler remains paused. Next is P4 retained-evidence
+  materialization without a second snapshot refresh.
+## 2026-09-30 | Issue 139 retained-evidence materialization
+
+- Durable detail fingerprints now nominate retained snapshot evidence for
+  completion-owned materialization, deduplicated with current-pass detail rows.
+  The history materializer consumes that evidence without reopening or
+  refreshing the conversation when no new snapshot is required.
+- Materialization checkpoints row action/outcome, aggregate availability, and
+  physical artifact-resolution/download counters. Individual volatile and
+  persistent asset availability remains intact; mixed results stay deferred.
+- Focused and adjacent coverage passed 213 tests plus typecheck and diff
+  hygiene. The production scheduler stayed paused and no provider work ran.
+## 2026-09-30 | Issue 139 amplification and warning evidence
+
+- Current-epoch changed-frontier evidence now aggregates action counts,
+  physical visits/navigation/reloads, snapshot refreshes, artifact resolutions,
+  downloads, duplicates, deferred rows, and a per-actionable-row amplification
+  ratio without conversation identifiers.
+- Provider-warning persistence now adds a versioned classifier signature,
+  sanitized visible summary, source target class, first observation, open-page
+  count, and a capped preceding interaction timeline with timing deltas and
+  cumulative counts. It excludes operation/lease IDs, routes, and content.
+- The 182-test focused provider-free gate, typecheck, and diff hygiene pass.
+  The production scheduler stayed paused and no provider work ran.
+## 2026-09-30 | Issue 139 authoritative planner integration
+
+- P6 discovered that the pure changed-frontier planner had no production
+  caller. Steady live follow now invokes it after the shared provider-index
+  epoch; only changed rows enter detail work, retained rows bypass it, and
+  complete/deferred/terminal decisions are checkpointed without route work.
+- Unmigrated rows retain one compatibility pass through the legacy selector;
+  explicit full sweeps preserve their existing all-row behavior. Deferred
+  materialization writes the provider failure cooldown to `retryNotBefore`.
+- The integrated provider-free gate passed 505 tests, typecheck, production
+  build, affected formatting/lint, diff hygiene, and active-plan audit with
+  zero errors. The scheduler remained paused; no provider work ran.
+## 2026-09-30 | Issue 139 merge and installed closeout
+
+- PR #144 merged to `main` as
+  `faa4163aeabd578c373b6548d18615c268071f8c`; issue #139 closed as completed.
+- The verified build was installed into `~/.auracall/user-runtime`. Installed
+  files contain the authoritative planner call, durable frontier plan,
+  amplification metrics, and warning classifier signature.
+- The user API restarted healthy at PID 45285. Local status returned `ok: true`
+  and scheduler posture `paused`; the scheduler unit remained inactive. No
+  browser/provider work, warning dismissal, prompt, or scheduler resume ran.
+
+## 2026-09-30 | Issue 146 live-follow governor bootstrap defect
+
+- The authorized installed Issue 139 canary began with the scheduler paused,
+  zero non-released tab leases, zero active browser-profile controls, and no
+  `wsl-chrome-3` managed browser process or DevTools listener.
+- Completion `acctmirror_completion_91246108-b7fc-44ae-bec7-0586effb6c43`
+  failed before pass one because `provider:chatgpt:connect-tab` required a
+  traffic governor before the lease-bound governor could be constructed.
+- A direct read-only CDP observer saw one root ChatGPT target and 152 requests
+  (151 ChatGPT, one third-party), zero document requests or frame navigations,
+  and no visible rate-limit warning. The completion was not retried.
+- Issue #146 and Plan 0382 now govern the corrective lane. The scheduler stays
+  paused; the next step is a provider-free regression and bootstrap repair.
+- Source reconciliation found that bounded mode alone nulled
+  `liveFollowOperationId`; no lease was ever created. The completion service
+  now preserves its exact operation ID for bounded and unbounded passes, while
+  the affinity factory still selects tab-affinity versus serialized behavior.
+- The focused regression failed before the fix and passed after it. The
+  adjacent completion, refresh, affinity, lease, governor, and warning gate is
+  green at 130 tests; broader validation and installed acceptance remain.
+- Issue #146 repair integrated through PR 147 at `939726286` and was installed
+  byte-identically. One direct-CDP bounded canary completed one pass and one
+  selected materialization attempt without a visible rate-limit warning.
+- The canary exposed Issue #148: exact managed-browser cleanup removed the
+  process and listener but left its live-follow and ephemeral leases `idle` for
+  nonexistent targets. Plan 0383 owns immediate post-shutdown retirement; no
+  additional provider canary is authorized or required.
+
+## 2026-09-30 | Issue 148 bounded-cleanup lease retirement
+
+- Confirmed both bounded cleanup paths stopped exact managed Chromium processes
+  without reconciling their reusable idle tab leases.
+- Added one provider-free configured ChatGPT shutdown helper that retires only
+  settled idle leases in the exact runtime/profile/service/tenant scope through
+  `retiring` to `released/already-missing`.
+- Metadata refresh and history materialization now invoke that same helper only
+  after positive process-absence proof and before releasing their browser
+  operation fence. History cleanup also verifies no owned PID remains after
+  termination.
+- The regression failed against the old implementation, then the widened
+  lease/affinity/completion/refresh/materialization suites passed 240/240 with
+  typecheck, production build, affected Biome check, and diff hygiene. Active,
+  outcome-unknown, and unrelated leases remained fenced. The scheduler stayed
+  paused and no provider work was authorized during source validation.
+- PR #149 merged at `669ad3a27`. The installed helper, account-mirror refresh,
+  and history-materialization artifacts match the built source hashes exactly.
+- Both canary leases had naturally expired through the old path before install
+  and now read `released/already-missing`; the installed helper returned an
+  empty no-op result and the exact runtime profile has zero non-released leases.
+- The installed API is healthy on port 18095. `wsl-chrome-3` has no managed
+  browser process or port 45015 listener. API scheduler posture/state remain
+  paused and the scheduler unit remains inactive. No provider canary, warning
+  dismissal, navigation, reload, or retry ran during this repair closeout.
+
+## 2026-09-30 | Issue 151 provider-traffic efficiency plan
+
+- Opened Issue #151 from the accepted direct-CDP canary evidence: one bounded
+  pass produced 2,146 requests, 11 document loads, four `Page.navigate`
+  commands, and six of six logical interactions despite no visible warning.
+- Plan 0384 / lane P84 turns the remaining problem into one bounded successor
+  plan executed through serial provider-free slices: baseline attribution,
+  deep shared instrumentation, local actionability, one-pass route reuse, and
+  deterministic budgets before a single final installed canary.
+- The raw network meter remains deferred. The plan first governs the actions
+  AuraCall controls and requires every top-level document/navigation to
+  reconcile to a precomputed route plan.
+- The scheduler and its unit remain paused. No browser/provider activity was
+  performed while creating this plan.
+
+## 2026-09-30 | Issue 151 P0 and P1 phase-attribution checkpoint
+
+- Added a sanitized fixture for the accepted 2,146-request canary and a typed
+  provider-traffic plan/reconciliation contract. The baseline fails with 15
+  explicitly unattributed controllable effects while retaining subframe and
+  hydration counts as separate observations.
+- Added phase-budget reconciliation: attributed controllable effects that lack
+  or exceed a precomputed phase budget fail closed.
+- Extended shared browser mutation receipts with immutable traffic phase and
+  privacy-bounded work-key fields. Account-mirror metadata collection now
+  scopes provider traffic to bootstrap, index, or detail before adapter calls.
+- The focused 69-test gate and typecheck pass. P0 is source-complete; P1 still
+  needs CDP effect reconciliation and materialization-phase attribution. The
+  scheduler stayed paused and no browser/provider work ran.
+
+## 2026-09-30 | Issue 151 P2 local materialization actionability
+
+- Removed the permissive steady-follow fallback that treated missing local
+  actionability evidence as authorization to materialize. Explicit full-sweep
+  requests retain their operator-requested fallback when no reader exists.
+- Implicit materialization now requires a positive `retrievableMissing` count.
+  Unknown or deferred rows remain visible but cannot independently cause a
+  provider route, snapshot refresh, or artifact attempt.
+- The focused regression proves both the pure decision and the production
+  completion path: four unknown/deferred rows with zero retrievable assets do
+  not create a history-materialization job. No browser/provider work ran.
+
+## 2026-09-30 | Issue 151 P1/P3 completion and P4 budget tracer
+
+- Completed provider-free phase attribution by joining completed mutation
+  receipts with caller-supplied CDP effects into one sanitized observation.
+  Action IDs, provider sources, routes, and raw work identifiers do not enter
+  the derived evidence.
+- History materialization utility affinity now binds the `materialization`
+  phase and a bounded scope key before the shared governor admits provider
+  work.
+- Revalidated the existing one-visit bundle and retained-snapshot path: a row
+  rejects multiple navigations and exact reused conversation IDs skip a second
+  snapshot refresh. P2 prevents creation of the no-action job entirely.
+- Began P4 with a budget wrapper that rejects a second detail navigation before
+  delegating to the underlying governor. Production pass-plan construction and
+  warning integration remain. No browser/provider work ran.
+
+## 2026-09-30 | Issue 151 completion-plan reframe
+
+- Replaced Plan 0384's remaining slice-by-slice P4/P5 framing with Plan 0385,
+  one outcome-level completion controller for production enforcement, warning
+  correlation, canonical integration, exact installation, the sole final
+  direct-CDP canary, and truthful issue disposition.
+- Plan 0385 inherits the accepted baseline, P0 through P3 evidence, current
+  implementation checkpoint, retry history, privacy boundaries, and scheduler
+  posture. The reframe does not reopen accepted work or reset live-attempt and
+  review bounds.
+- The final canary remains limited to one attempt after every provider-free,
+  integration, install, and inert-preflight gate passes. Scheduler resume,
+  automatic warning dismissal, provider retries, and the deferred network
+  meter remain outside scope.
+
+## 2026-09-30 | Issue 151 Gate A production-budget checkpoint
+
+- Wired the provider-traffic budget into the real live-follow refresh path.
+  Bootstrap and index authority freeze before collection; detail authority
+  freezes only after deterministic frontier selection.
+- The controlled ChatGPT pass now yields after one planned detail read instead
+  of entering a second navigation that the budget would reject. A production-
+  path regression proves a second index navigation is rejected before the
+  underlying governor begins it.
+- Separated `in-page-click` observation as `in_page_action`; it is no longer
+  falsely reported as a route visit. Delegate admission failure still rolls
+  back reserved capacity.
+- Focused and adjacent metadata, refresh, completion, materialization, and
+  utility-affinity tests passed 268/268 after correcting a widened Gemini yield
+  regression. The final focused rerun passed 101/101 with typecheck, production
+  build, and diff hygiene. No provider/browser work ran.
+- Gate A remains open for materialization budgeting, exact per-row work keys,
+  and explicit recovery admission.
+
+## 2026-09-30 | Issue 151 Gate A exact-work checkpoint
+
+- Replaced the coarse detail/materialization scope with deterministic SHA-256
+  work keys derived from local conversation or project identity. Raw row IDs do
+  not enter governor receipts or traffic plans.
+- Metadata detail options now bind the exact selected surface before adapter
+  work. Unselected rows have zero authority, and account-library work retains a
+  separate bounded scope.
+- Both history-materialization transfer and snapshot-refresh paths now construct
+  exact materialization plans. Configured utility affinity applies the plan
+  inside the real governor chain before phase context, and a production-path
+  regression proves the second navigation is rejected before a third mutation
+  record can be written.
+- The focused metadata, refresh, materialization, affinity, and plan suites pass
+  201/201 with typecheck, production build, Biome, and diff hygiene. No provider
+  or browser work ran.
+- Gate A remains open because cold-start target creation happens before the
+  lease-backed governor exists, and recovery needs a separately causal
+  admission rather than implicit reuse of ordinary route authority.
+
+## 2026-09-30 | Issue 151 Gate A provider-free acceptance
+
+- Routed cold-start crawler target creation through the shared provider-traffic
+  governor before `openTarget`. It carries a one-use bootstrap plan and a
+  provisional pre-lease attribution; denied admission leaves the target and
+  lease registries untouched, while failed post-create settlement closes the
+  exact unleased target.
+- Added separately causal recovery admission. Recovery requires a frozen phase,
+  a distinct SHA-256 work key, a nonempty reason, and a one-use budget; ordinary
+  route capacity cannot be reused as recovery authority.
+- Confirmed reservation rollback after cancelled delegate admission and retained
+  the one-visit invariant. The widened production-path gate passes 285/285 with
+  typecheck. No provider/browser activity ran.
+- Gate A is complete. Gate B warning/cooldown correlation is next.
+## 2026-09-30 - Issue 151 Gate B warning admission freeze
+
+- Made visible-warning detection freeze the provider-traffic governor before
+  asynchronous warning persistence, closing the concurrent-admission window.
+- Added a final passive warning check that reuses the last bounded probe
+  context before a live-follow pass can settle successfully. This detects a
+  warning rendered just after the final admitted action without reload,
+  navigation, dismissal, or retry.
+- Provider-free tests cover both the persistence race and delayed-warning
+  detection. Gate B remains open for the combined budget/phase/guard receipt
+  and scheduler outcome diagnostics.
+## 2026-09-30 - Issue 151 Gate B provider-free acceptance
+
+- Bound the exact staged controller's privacy-safe admission snapshot into
+  warning persistence: phase and effect counts include admitted, limit, and
+  remaining values without work keys or provider IDs.
+- Added a bounded recent-effect window at the shared governor seam containing
+  only timestamp, phase, mutation kind, and outcome. The ledger combines it
+  with the existing sanitized interaction timeline and persisted warning and
+  cooldown record.
+- Scheduler diagnostics now distinguish `budget_exhausted`, `warning_stop`,
+  `clean_completion`, `cleanup_failure`, active work, and other failures.
+- Provider-free Gate B validation passed: 72 focused/adjacent tests plus
+  typecheck. No browser or provider activity occurred.
+## 2026-09-30 - Issue 151 Gate C source validation
+
+- Full provider-free suite: 3,487 passed, 65 skipped, and 2 failed across 397
+  files. Both failures reproduce in isolation and their source/test files are
+  byte-identical to `origin/main`: the disabled Grok video readback fixture
+  exceeds its 5-second timeout, and the ChatGPT prompt structure test expects
+  a source shape absent on main. They are recorded as unrelated, not excluded.
+- Issue 151 focused and adjacent suites remain green (72 tests), along with
+  typecheck, production build, diff hygiene, and the active-plan audit.
+- CodeGraph was synchronized after the changes (1,015 files, 19,352 nodes,
+  77,324 edges). Impact review covered the shared governor, staged controller,
+  configured utility affinity, live-follow affinity, refresh service, and
+  their tests.
+
+## 2026-09-30 - Issue 151 installed direct-CDP acceptance and closeout
+
+- PR #153 merged the implementation at canonical SHA `f55e68726`. A detached
+  canonical build was installed, and every touched installed runtime artifact
+  matched the build byte-for-byte. The installed API was healthy and the
+  scheduler remained paused.
+- Exact inert preflight removed one orphaned owned browser process and then
+  confirmed zero exact process, listener, or non-released lease before live
+  work. No unrelated browser state was touched.
+- The sole installed canary completed one pass with a `clean_completion`
+  outcome. AuraCall recorded one explicit navigation; continuous direct CDP
+  observed one top-level document/navigation, four subframe navigations, and
+  163 total requests. No visible rate-limit warning or observer error appeared,
+  and no retry ran.
+- Exact cleanup stopped the owned browser and retired its settled idle lease
+  through the installed maintenance path. The fresh final census was zero for
+  exact processes, listeners, and non-released leases. Scheduler state and
+  posture remained paused pending a separate operator decision.
+- Plan 0385 and lane P84 are closed. The sanitized acceptance receipt is
+  `docs/dev/notes/2026-09-30-issue-151-final-live-acceptance.md`.
+## 2026-10-01 - ChatGPT materialization surface repair
+
+- Focus: restore current ChatGPT conversation-file and generated-artifact
+  materialization under Plan 0386 while the scheduler remains paused.
+- Evidence: three bounded installed Bailey controls returned zero assets, while
+  passive direct CDP on the same root chat showed uploaded PDFs, generated
+  DOCX/PPTX/ZIP assets, and visible `Download file` controls. The adapter still
+  recognizes only legacy `button.behavior-btn` artifacts and legacy
+  `[role="group"][aria-label]` upload tiles; current controls use
+  `Open preview of <filename>` semantics.
+- Additional finding: the acceptance watcher was attached to remembered port
+  `45015`, but the exact `wsl-chrome-3` launch resolved dynamic port `55627`.
+  Exact-endpoint discovery is part of this repair; fixed-port observation is
+  not acceptance evidence.
+- Safety: provider-free repair and validation precede one no-retry installed
+  positive control. Broad reconciliation, snapshot refresh, scheduler resume,
+  warning dismissal, and prompt-based link repair are excluded.
+- Progress: widened the manifest-owned assistant artifact selector to current
+  semantic preview controls, normalized their filename separately from the
+  action label, and reused that contract at click time. User-turn file
+  discovery now accepts the same semantic preview surface while retaining
+  legacy tiles. Focused adapter, file-service, config, and rate-limit suites
+  pass 282/282; typecheck and a production build pass. A passive read of the
+  still-open exact dynamic endpoint found no rate-limit dialog; its page had
+  returned to ChatGPT home, so it correctly provided no conversation assets
+  and did not consume the live materialization canary.
+- Installed acceptance: canonical merge `ef2ca681a` was installed with exact
+  adapter/manifest checksums and the scheduler remained paused. The sole
+  materialization canary `hmj_6b3e342c2e144f5bab077a244f27d6d0`
+  still returned zero assets without a provider warning. Reconciliation with
+  the earlier passive evidence localized the remaining gap: the job completed
+  before the current generated-file controls finished mounting; repeated
+  passive snapshots shortly afterward contained the expected controls. The
+  provider-free follow-up now waits once on DOM mutation for late asset
+  controls, without reload/navigation/polling, and also recognizes the current
+  filename-bearing `Download <filename>` semantic control. No second live
+  materialization attempt is authorized in this plan.
+- Closeout checkpoint: PR #156 merged the readiness follow-up at canonical
+  `404053dd1` and that merge was installed. Installed/source SHA-256 values
+  match for both `chatgptAdapter.js`
+  (`25ca2e335d4bca5aa68c11716e34729b385a44838d0f532e0f4e38b0eb4277cb`)
+  and `auracall.services.json`
+  (`0e0ce2092e40f796f29558c9296e6e90db001757793be13ff9e800e57f92c186`).
+  Final readback: scheduler paused, no queued/running materialization jobs,
+  zero exact owned browser processes/listeners, and zero non-released exact
+  leases. The dynamic observer is active and reports `currentPort: null` when
+  the managed browser is absent; it detected no hard stop during the consumed
+  canary. The installed positive control remains unproven because the live
+  attempt bound was not widened.
+
+## 2026-10-02 - Plan 0386 authorized positive-control retry
+
+- Ran exactly one installed Bailey generated-artifact control after an inert
+  preflight. Job `hmj_1d8bf96fdc8e44c28b8c6dbf384e0d80` used
+  `wsl-chrome-3`, no snapshot refresh, `maxItems=1`, and no retry. It terminated
+  skipped with zero typed assets and no provider warning.
+- The dynamic CDP observer followed the exact managed endpoint and recorded no
+  rate-limit/CAPTCHA hard stop. The browser cleaned itself up and the scheduler
+  remained paused.
+- Source diagnosis found the remaining race: readiness used a page-global
+  preview/download selector, while collection was assistant/user-turn scoped.
+  The repair now applies identical structural scope to readiness and labels
+  results as downloadable, repair-prompt candidate, metadata-only, terminally
+  unavailable, or materialized. Automatic repair prompting remains excluded.
+- Provider-free validation is green for 282 focused tests and typecheck. Gate D
+  remains open pending integration, install, and separately authorized live
+  proof of one readable Bailey asset.
+- PR #158 merged the scoped-readiness repair at canonical
+  `faac74e6b60f4356781be512719855d5dea44751`. The canonical build was installed
+  and the changed adapter/materialization-service artifacts match installed
+  bytes exactly. Fresh readback shows the API active, scheduler paused, zero
+  active history-materialization jobs, all 204 leases released, and no exact
+  `wsl-chrome-3` browser process. Only the separately authorized live positive
+  proof remains.
+
+## 2026-10-02 - Plan 0386 installed retry and selector-self diagnosis
+
+- The separately authorized single retry
+  `hmj_ac49686510764445a6ecb8b3ebc8498d` used the same root Bailey
+  conversation, `wsl-chrome-3`, artifacts-only, `maxItems=1`, no refresh, and
+  no retry. It again returned zero entries and zero materializations with a
+  matching provider identity.
+- Continuous direct CDP followed exact port `45015`; the attempt added 315
+  requests, three documents, one top-level navigation, and ten subframe
+  navigations. No rate-limit/CAPTCHA hard stop or watcher error appeared.
+  Cleanup left no exact browser process and all 205 leases released. Scheduler
+  posture remained paused.
+- Structural trace localized the remaining source defect: modern
+  `[data-content-search-unit-key]` roots can carry their own assistant role,
+  while artifact discovery inspected modern role keys only on descendants.
+  The provider-free follow-up reads both the selected root and descendant
+  across discovery/readiness/tagging. Focused tests (282), typecheck, and the
+  production build pass. PR #160 merged the fix at canonical `d8ed3c96f`; the
+  installed adapter matches at SHA-256 `b6e64869...43f233d8`. The API is active,
+  scheduler remains paused, and active materialization jobs are zero. No
+  additional live attempt is authorized.
+
+## 2026-10-02 - Plan 0386 agentic generated-asset materialization
+
+- Directly browsed the exact `wsl-chrome-3` managed profile rather than asking
+  the product materializer to describe its own surface. The newest Bailey
+  branch was a clean negative control; one final navigation to the root Bailey
+  chat exposed the generated PPTX, DOCX, and ZIP controls.
+- Captured the actual structural contract: the assistant role is carried by
+  the selected `data-content-search-unit-key` root, preview controls are
+  buttons, and the direct ZIP is a filename-labelled `span[role="button"]`.
+- A DOM `target.click()` did not start a download. One trusted CDP pointer click
+  on the same unique ZIP control completed a 1,721,645-byte download at SHA-256
+  `c463e95d...8a46dc`; `unzip -t` verified the contained DOCX.
+- Replaced the product artifact path's untrusted click with visible-center CDP
+  mouse dispatch. The focused test executes and asserts the three-event pointer
+  sequence. All 187 adapter tests, typecheck, and production build pass.
+- No warning, CAPTCHA, prompt, reload, or retry occurred. Exact PID cleanup left
+  no managed-profile process or listener and zero non-released leases. The
+  scheduler remains paused. Installed product-path acceptance is still pending.
+
+## 2026-10-03 — Plan 0386 cycle 2 (#165)
+
+Cycle 1 failed with a selected-PDF/downloaded-PPTX mismatch. Deterministic viewer-helper regression reproduced a page-wide inline-card click. Source excludes conversation controls; installed counter 1/5 and incremental acceptance remain open. See notes/2026-10-03-plan0386-cycle2-viewer-scope.md.
+
+## 2026-10-03 — Plan 0386 installed cycle 2 (#165)
+
+Tab replacement restored identity, but installed control 2/5 failed on transfer-target responsiveness and cleanup. Main browser exited; exact GPU and on-device-model subprocesses remain with SIGKILL pending. No further browser launch is authorized by this evidence. See notes/2026-10-03-plan0386-cycle2-runtime-receipt.md.
+
+## 2026-10-03 — Plan 0386 post-reboot control (#165)
+
+Operator reboot cleared prior stuck browser children. Installed control 3/5 succeeded in 32 seconds: correct selected PDF, independent checksum/header verification, six trusted CDP mouse events, no recorded reload/navigation and clean exact-profile process census. Scheduler remains paused; ZIP and incremental acceptance remain open. See notes/2026-10-03-plan0386-post-reboot-control.md.
+
+## 2026-10-03 — Plan 0386 ZIP and unchanged-work repair (#165)
+
+Installed ZIP control 4 matched the successful agentic checksum and CRC. Control 5 revealed force=false redownloads unchanged assets. A prematurely queued control overlapped the ZIP window; cancellation returned 409, so isolated traffic acceptance is withheld. Real service regression now proves cache reuse, one new asset within one-transfer budget, force and corruption/missing-file recovery. No further live control; scheduler paused. See notes/2026-10-03-plan0386-zip-and-unchanged-repair.md.
+
+## 2026-10-03 — Plan0386 canonical cache install and cycle 3 (#165)
+
+PR171 merged and exact canonical commit installed with service parity. Reconciled five-repair-cycle authority separately from six historical probes. One serialized installed scenario verified PDF cache reuse but unresolved ZIP hit outer timeout, before the unchanged repeat. Browser cleanup census empty; scheduler paused. Provider-free stalled-scenario diagnosis is next. See notes/2026-10-03-plan0386-installed-cache-control.md.

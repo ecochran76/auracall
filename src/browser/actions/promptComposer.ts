@@ -35,6 +35,12 @@ function normalizedComposerText(value: string): string {
 		.trim();
 }
 
+function normalizedCommittedTurnText(value: string): string {
+	return normalizedComposerText(value)
+		.replace(/\s*…\s*$/u, "")
+		.trim();
+}
+
 function composerContainsPrompt(value: string, prompt: string): boolean {
 	const normalizedPrompt = normalizedComposerText(prompt);
 	return Boolean(normalizedPrompt) && normalizedComposerText(value) === normalizedPrompt;
@@ -50,7 +56,10 @@ function composerContainsPromptWithProtectedLabels(
 	const expected = normalizedComposerText(prompt);
 	return protectedLabels.some((label) => {
 		const prefix = normalizedComposerText(label);
-		return Boolean(prefix) && (observed === `${prefix}${expected}` || observed === `${prefix} ${expected}`);
+		return (
+			Boolean(prefix) &&
+			(observed === `${prefix}${expected}` || observed === `${prefix} ${expected}`)
+		);
 	});
 }
 
@@ -107,6 +116,7 @@ function buildReadCommittedTurnTextFunction(): string {
 	  const presentationOnlySelector = [
         '[data-inline-selection-pill]',
 		'[app-mention-name]',
+		'[data-prompt-link-href^="app://"]',
 	    'button',
 	    '[role="button"]',
 	    '[role="group"][class*="file-tile"]',
@@ -123,6 +133,10 @@ function buildReadCommittedTurnTextFunction(): string {
 	      return;
 	    }
 	    if (!(current instanceof Element) || current.matches(presentationOnlySelector)) return;
+	    if (current.tagName === 'BR') {
+	      appendBoundary();
+	      return;
+	    }
 	    const display = window.getComputedStyle(current).display;
 	    const blockBoundary = /^(block|list-item|table-row|flex|grid)$/.test(display);
 	    if (blockBoundary) appendBoundary();
@@ -451,7 +465,8 @@ export async function submitPrompt(
 	const observedTarget = postVerification.result?.value?.targetText ?? "";
 	const observedTargetUserText = postVerification.result?.value?.targetUserText ?? "";
 	const observedTargetProtectedLabels = postVerification.result?.value?.targetProtectedLabels ?? [];
-	const observedTargetWithoutAppMentions = postVerification.result?.value?.targetWithoutAppMentions ?? "";
+	const observedTargetWithoutAppMentions =
+		postVerification.result?.value?.targetWithoutAppMentions ?? "";
 	if (
 		!composerContainsPrompt(observedTargetUserText, prompt) &&
 		!composerContainsPrompt(observedEditorUserText, prompt) &&
@@ -773,6 +788,7 @@ async function verifyPromptCommitted(
 	      text = text.replace(/\`([^\`]*)\`/g, '$1');
 	      text = text.replace(/^\\s{0,3}#{1,6}\\s+/gm, '');
 	      text = text.replace(/^\\s*(?:[-*+]\\s+|\\d+[.)]\\s+)/gm, '');
+	      text = text.replace(/\\s*…\\s*$/u, '');
 	      return text.replace(/\\s+/g, ' ').trim();
 	    };
 	    const normalizedPrompt = normalize(${encodedPrompt});
@@ -917,12 +933,7 @@ async function verifyPromptCommitted(
 		);
 	}
 	const effectState =
-		latestInfo?.hasNewTurn &&
-		latestInfo.lastMatched &&
-		latestInfo.lastExtraTextRecognized &&
-		latestInfo.composerCleared &&
-		latestInfo.inConversation &&
-		(latestInfo.assistantVisible || latestInfo.stopVisible)
+		latestInfo?.hasNewTurn && latestInfo.composerCleared && latestInfo.inConversation
 			? "effect_observed"
 			: latestInfo?.baseline !== undefined &&
 					latestInfo.baseline >= 0 &&
@@ -931,7 +942,9 @@ async function verifyPromptCommitted(
 				? "pre_effect"
 				: "unknown";
 	throw new BrowserAutomationError(
-		"Prompt did not appear in conversation before timeout (send may have failed)",
+		effectState === "effect_observed"
+			? "A new prompt turn was committed, but its text could not be verified against the submitted prompt"
+			: "Prompt did not appear in conversation before timeout (send may have failed)",
 		{
 			stage: "submit-prompt",
 			code: "prompt-commit-unconfirmed",
@@ -944,6 +957,7 @@ async function verifyPromptCommitted(
 export const __test__ = {
 	composerContainsPrompt,
 	composerContainsPromptWithProtectedLabels,
+	normalizedCommittedTurnText,
 	normalizedComposerText,
 	promptMismatchDiagnostics,
 	buildReadComposerUserTextFunction,

@@ -24,6 +24,7 @@ import {
 	resolveChatgptRateLimitCooldownMs,
 	writeChatgptRateLimitGuardState,
 } from "../browser/chatgptRateLimitGuard.js";
+import { retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown } from "../browser/configuredChatgptTabMaintenance.js";
 import { recordDomDriftObservation } from "../browser/domDriftObservations.js";
 import {
 	type BrowserOperationQueueObservation,
@@ -38,6 +39,8 @@ import {
 	type AccountMirrorPersistence,
 	createAccountMirrorPersistence,
 } from "./cachePersistence.js";
+import { deriveAccountMirrorChangeFrontierMetrics } from "./changeFrontierMetrics.js";
+import { normalizeAccountMirrorConversationWorkState } from "./changeFrontierState.js";
 import {
 	AccountMirrorIdentityMismatchError,
 	type AccountMirrorMetadataCollector,
@@ -57,6 +60,7 @@ import type {
 	AccountMirrorProviderGuardKind,
 	AccountMirrorProviderGuardState,
 } from "./politePolicy.js";
+import { createAccountMirrorMetadataTrafficPlanController } from "./providerTrafficPlan.js";
 import type {
 	AccountMirrorCollectorDiagnosticEvent,
 	AccountMirrorCollectorPhase,
@@ -215,6 +219,7 @@ export function createAccountMirrorRefreshService(input: {
 	generateRequestId?: () => string;
 	developmentControlsEnabled?: boolean;
 	liveFollowAffinityFactory?: typeof createConfiguredLiveFollowAffinity;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown?: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 }): AccountMirrorRefreshService {
 	const now = input.now ?? (() => new Date());
 	const registry =
@@ -245,6 +250,9 @@ export function createAccountMirrorRefreshService(input: {
 	const generateRequestId = input.generateRequestId ?? (() => `acctmirror_${randomUUID()}`);
 	const liveFollowAffinityFactory =
 		input.liveFollowAffinityFactory ?? createConfiguredLiveFollowAffinity;
+	const retireIdleChatgptLeasesAfterManagedBrowserShutdown =
+		input.retireIdleChatgptLeasesAfterManagedBrowserShutdown ??
+		retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 
 	return {
 		async requestRefresh(request = {}) {
@@ -478,6 +486,19 @@ export function createAccountMirrorRefreshService(input: {
 			const collectorSignal = request.abortSignal
 				? AbortSignal.any([collectorAbort.signal, request.abortSignal])
 				: collectorAbort.signal;
+			const providerTrafficPlanController = affinity?.providerTrafficGovernor
+				? createAccountMirrorMetadataTrafficPlanController(affinity.providerTrafficGovernor, {
+						maxPageReadsPerCycle:
+							development?.maxConversations ?? target.limits.maxPageReadsPerCycle,
+					})
+				: null;
+			if (providerTrafficPlanController?.governor.snapshotAdmissionState) {
+				affinity?.bindProviderTrafficAdmissionState?.(
+					providerTrafficPlanController.governor.snapshotAdmissionState.bind(
+						providerTrafficPlanController.governor,
+					),
+				);
+			}
 			try {
 				const providerGuard = await providerGuardCensus({
 					config: input.config,
@@ -501,6 +522,13 @@ export function createAccountMirrorRefreshService(input: {
 					boundIdentityKey: target.expectedIdentityKey ?? null,
 					limit: 10_000,
 				});
+				const previousConversationWorkStates = new Map(
+					(previousCatalog?.conversations ?? []).flatMap((conversation) => {
+						const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+						const state = normalizeAccountMirrorConversationWorkState(metadata.changeFrontierState);
+						return state ? [[conversation.id, state] as const] : [];
+					}),
+				);
 				const previousFiles = await readPreviousAccountMirrorFiles({
 					persistence,
 					provider,
@@ -542,6 +570,7 @@ export function createAccountMirrorRefreshService(input: {
 						previousEvidence: target.metadataEvidence,
 						previousFiles,
 						previousConversationFreshness,
+						previousConversationWorkStates,
 						onIdentityVerified: (evidence) => {
 							verifiedIdentityRef.current = evidence;
 						},
@@ -560,6 +589,9 @@ export function createAccountMirrorRefreshService(input: {
 							return false;
 						},
 						interactionGovernor: affinity?.interactionGovernor,
+						providerTrafficGovernor:
+							providerTrafficPlanController?.governor ?? affinity?.providerTrafficGovernor,
+						providerTrafficPlanController: providerTrafficPlanController ?? undefined,
 						tabAffinity: affinity?.tabAffinity,
 					}),
 					development?.maxWallTimeMs ??
@@ -667,6 +699,7 @@ export function createAccountMirrorRefreshService(input: {
 					metadataCounts: collectionWithPriorManifests.metadataCounts,
 					metadataEvidence: collectionWithPriorManifests.evidence,
 					manifests: collectionWithPriorManifests.manifests,
+					visitBundles: collectionWithPriorManifests.visitBundles,
 				});
 				await persistRefreshState(persistence, {
 					provider,
@@ -722,6 +755,7 @@ export function createAccountMirrorRefreshService(input: {
 					managedProfileDir,
 					findManagedBrowserPid,
 					terminateManagedBrowserProcess,
+					retireIdleChatgptLeasesAfterManagedBrowserShutdown,
 				});
 				return {
 					object: "account_mirror_refresh",
@@ -916,6 +950,7 @@ export function createAccountMirrorRefreshService(input: {
 					managedProfileDir,
 					findManagedBrowserPid,
 					terminateManagedBrowserProcess,
+					retireIdleChatgptLeasesAfterManagedBrowserShutdown,
 				});
 				if (isIdentityMismatch) {
 					throw new AccountMirrorRefreshError(
@@ -1348,12 +1383,24 @@ async function cleanupManagedBrowserAfterRefresh(input: {
 		provider: AccountMirrorProvider;
 		runtimeProfileId: string;
 	}) => Promise<void>;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 }): Promise<AccountMirrorRefreshBrowserLifecycle | null> {
 	if (input.request.cleanupManagedBrowserAfterRefresh !== true) {
 		return null;
 	}
 	const pid = await input.findManagedBrowserPid(input.managedProfileDir);
 	if (!pid) {
+		try {
+			await reconcileStoppedAccountMirrorChatgptLeases(input);
+		} catch (error) {
+			return {
+				cleanupRequested: true,
+				status: "failed",
+				managedProfileDir: input.managedProfileDir,
+				pid: null,
+				message: error instanceof Error ? error.message : String(error),
+			};
+		}
 		return {
 			cleanupRequested: true,
 			status: "not_running",
@@ -1384,6 +1431,7 @@ async function cleanupManagedBrowserAfterRefresh(input: {
 				message: `Managed browser profile remained owned by PID ${remainingOwnerPid} after bounded cleanup.`,
 			};
 		}
+		await reconcileStoppedAccountMirrorChatgptLeases(input);
 		return {
 			cleanupRequested: true,
 			status: "terminated",
@@ -1400,6 +1448,21 @@ async function cleanupManagedBrowserAfterRefresh(input: {
 			message: error instanceof Error ? error.message : String(error),
 		};
 	}
+}
+
+async function reconcileStoppedAccountMirrorChatgptLeases(input: {
+	config: Record<string, unknown> | null | undefined;
+	provider: AccountMirrorProvider;
+	runtimeProfileId: string;
+	managedProfileDir: string;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
+}): Promise<void> {
+	if (input.provider !== "chatgpt" || !input.config || typeof input.config !== "object") return;
+	await input.retireIdleChatgptLeasesAfterManagedBrowserShutdown({
+		userConfig: input.config,
+		runtimeProfileId: input.runtimeProfileId,
+		managedBrowserProfile: input.managedProfileDir,
+	});
 }
 
 async function terminateManagedBrowserProcessByPid(input: { pid: number }): Promise<void> {
@@ -2154,6 +2217,13 @@ function withRefreshEvidenceModel(input: {
 		metadataCounts: mergedTotal,
 		evidence: {
 			...input.collection.evidence,
+			changeFrontierMetrics: deriveAccountMirrorChangeFrontierMetrics(
+				input.mergedManifests.conversations,
+				input.collection.evidence.changeFrontierPlan ?? null,
+			),
+			retainedMaterializationConversationIds: deriveRetainedMaterializationConversationIds(
+				input.mergedManifests.conversations,
+			),
 			countEvidence: {
 				observedThisPass: input.collection.metadataCounts,
 				retainedFromCache: input.retainedCounts,
@@ -2192,6 +2262,23 @@ function withRefreshEvidenceModel(input: {
 		},
 	};
 }
+
+function deriveRetainedMaterializationConversationIds(
+	conversations: readonly Conversation[],
+): string[] {
+	const ids: string[] = [];
+	for (const conversation of conversations) {
+		const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+		const state = normalizeAccountMirrorConversationWorkState(metadata.changeFrontierState);
+		if (!state?.detailFingerprint) continue;
+		if (state.assetAvailability === "unavailable") continue;
+		ids.push(conversation.id);
+	}
+	return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+}
+
+export const deriveRetainedMaterializationConversationIdsForTest =
+	deriveRetainedMaterializationConversationIds;
 
 function countsFromManifests(
 	manifests: AccountMirrorMetadataCollectorResult["manifests"],

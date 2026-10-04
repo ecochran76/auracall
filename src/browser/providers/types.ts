@@ -1,9 +1,15 @@
 import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
+import type {
+	ProviderTrafficAuthorityFactory,
+	ProviderTrafficContext,
+	ProviderTrafficGovernor,
+} from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type { BrowserAttachment } from "../../../packages/browser-service/src/types.js";
+import type { AccountMirrorProviderTrafficPlan } from "../../accountMirror/providerTrafficPlan.js";
 import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptComposerTool.js";
-import type { LibraryInventoryLifecycle } from "../libraryInventoryDiagnostics.js";
 import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from "../libraryFiles.js";
+import type { LibraryInventoryLifecycle } from "../libraryInventoryDiagnostics.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
 import type {
 	ProviderSessionAuthorization,
@@ -63,6 +69,11 @@ export interface BrowserProviderListOptions {
 	mutationAudit?: BrowserMutationAuditSink;
 	mutationSourcePrefix?: string;
 	interactionGovernor?: BrowserInteractionGovernor;
+	providerTrafficGovernor?: ProviderTrafficGovernor;
+	providerTrafficContext?: ProviderTrafficContext;
+	accountMirrorProviderTrafficPlan?: AccountMirrorProviderTrafficPlan;
+	providerTrafficAuthorityFactory?: ProviderTrafficAuthorityFactory;
+	providerTrafficRequired?: boolean;
 	preserveInteractionGovernorForProviderSession?: boolean;
 	disableProviderMutationRetry?: boolean;
 	disableAccountFileListRetry?: boolean;
@@ -73,6 +84,8 @@ export interface BrowserProviderListOptions {
 	disableProjectClickFallback?: boolean;
 	abortSignal?: AbortSignal;
 	accountMirrorInventory?: boolean;
+	/** Prevent a detail read from force-navigating an already admitted conversation route again. */
+	accountMirrorSingleConversationVisit?: boolean;
 	accountMirrorContextChunk?: {
 		startMessageIndex?: number | null;
 		maxMessages?: number | null;

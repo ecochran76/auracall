@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 import type { ProviderWarningClassification } from "../../packages/browser-service/src/service/interactionLedger.js";
+import type { BrowserMutationAuditSink } from "../../packages/browser-service/src/service/mutationDispatcher.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
 import {
@@ -45,7 +46,12 @@ export async function runChatgptPromptWithConfiguredAffinity(input: {
 		ensurePort?: boolean;
 		abortSignal?: AbortSignal;
 	}) => Promise<ChatgptServiceTargetResolution>;
-	openTarget: (input: { host: string; port: number; url: string }) => Promise<ChatgptOpenedTarget>;
+	openTarget: (input: {
+		host: string;
+		port: number;
+		url: string;
+		operationId: string;
+	}) => Promise<ChatgptOpenedTarget>;
 	closeTarget: (input: { host: string; port: number; targetId: string }) => Promise<void>;
 	inspectTarget?: (
 		endpoint: ChatgptManagedBrowserEndpoint,
@@ -54,6 +60,7 @@ export async function runChatgptPromptWithConfiguredAffinity(input: {
 	now?: () => Date;
 	generateId?: () => string;
 	classifyProviderWarning?: ProviderWarningClassifier;
+	mutationAudit?: BrowserMutationAuditSink;
 }): Promise<PromptResult> {
 	if (input.runtime.mode === "serialized") {
 		return input.runSerialized(input.input, input.options);
@@ -146,7 +153,7 @@ export async function runChatgptPromptWithConfiguredAffinity(input: {
 				throw new Error("ChatGPT browser startup did not return the expected endpoint.");
 			return endpoint;
 		},
-		openTarget: input.openTarget,
+		openTarget: (targetInput) => input.openTarget({ ...targetInput, operationId }),
 		inspectTarget: input.inspectTarget,
 		closeTarget: input.closeTarget,
 	});
@@ -177,6 +184,7 @@ export async function runChatgptPromptWithConfiguredAffinity(input: {
 		idleTtlMs: 15 * 60_000,
 		now: input.now,
 		classifyProviderWarning: input.classifyProviderWarning ?? classifyStructuredProviderWarning,
+		mutationAudit: input.mutationAudit,
 	});
 	if (execution.status === "denied") {
 		throw new Error(`ChatGPT tab-affinity admission denied: ${execution.admission.reason}.`);

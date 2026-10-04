@@ -6,6 +6,7 @@ import type { AccountMirrorBackfillLedger } from "../../src/accountMirror/backfi
 import {
 	type AccountMirrorCompletionOperation,
 	createAccountMirrorCompletionService,
+	hasLocallyActionableMaterializationBacklog,
 } from "../../src/accountMirror/completionService.js";
 import { createAccountMirrorCompletionStore } from "../../src/accountMirror/completionStore.js";
 import { chooseLiveFollowCyclePhase } from "../../src/accountMirror/liveFollowCycleDecision.js";
@@ -156,6 +157,22 @@ function createRefreshResult(): AccountMirrorRefreshResult {
 }
 
 describe("live-follow cycle decision", () => {
+	test("requires positive local backlog evidence before provider materialization", () => {
+		expect(hasLocallyActionableMaterializationBacklog(undefined)).toBe(false);
+		expect(
+			hasLocallyActionableMaterializationBacklog({
+				retrievableMissing: 0,
+				unknownOrDeferred: 4,
+			}),
+		).toBe(false);
+		expect(
+			hasLocallyActionableMaterializationBacklog({
+				retrievableMissing: 1,
+				unknownOrDeferred: 0,
+			}),
+		).toBe(true);
+	});
+
 	test("continues conversation detail when a detail cursor is pending", () => {
 		const decision = chooseLiveFollowCyclePhase({
 			operation: {
@@ -797,7 +814,7 @@ describe("account mirror completion service", () => {
 		expect(service.read("acctmirror_pause_waiter")?.status).toBe("paused");
 	});
 
-	test("persists operation state for restart readback", async () => {
+	test("persists bounded operation state and preserves its live-follow affinity id", async () => {
 		const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-completion-store-"));
 		try {
 			const store = createAccountMirrorCompletionStore({
@@ -835,6 +852,11 @@ describe("account mirror completion service", () => {
 				mode: "bounded",
 				passCount: 1,
 			});
+			expect(requestRefresh).toHaveBeenCalledWith(
+				expect.objectContaining({
+					liveFollowOperationId: "acctmirror_persisted",
+				}),
+			);
 			expect(await store.listOperations({ activeOnly: false, limit: null })).toHaveLength(1);
 			expect(await store.listOperations({ activeOnly: true, limit: null })).toHaveLength(0);
 
@@ -2359,6 +2381,7 @@ describe("account mirror completion service", () => {
 				projectSampleIds: [],
 				conversationSampleIds: ["conv_collector_fresh_1"],
 				detailConversationIdsThisPass: ["conv_collector_fresh_1"],
+				retainedMaterializationConversationIds: ["conv_retained_1"],
 				truncated: { projects: false, conversations: false, artifacts: false },
 			},
 		}));
@@ -2412,7 +2435,7 @@ describe("account mirror completion service", () => {
 			reconcile: true,
 			refreshSnapshot: true,
 			reuseSnapshotAfter: "2026-04-30T12:00:00.000Z",
-			reuseSnapshotConversationIds: ["conv_collector_fresh_1"],
+			reuseSnapshotConversationIds: ["conv_collector_fresh_1", "conv_retained_1"],
 			providerWorkNotBefore: "2026-04-30T12:02:01.000Z",
 			interactionPolicy: {
 				maxInteractionsPerMinute: 8,
@@ -2438,7 +2461,7 @@ describe("account mirror completion service", () => {
 					reconcile: true,
 					refreshSnapshot: true,
 					reuseSnapshotAfter: "2026-04-30T12:00:00.000Z",
-					reuseSnapshotConversationIds: ["conv_collector_fresh_1"],
+					reuseSnapshotConversationIds: ["conv_collector_fresh_1", "conv_retained_1"],
 					providerWorkNotBefore: "2026-04-30T12:02:01.000Z",
 					interactionPolicy: {
 						maxInteractionsPerMinute: 8,
@@ -2605,7 +2628,7 @@ describe("account mirror completion service", () => {
 			);
 		const readMaterializationBacklog = vi.fn(async () => ({
 			retrievableMissing: 0,
-			unknownOrDeferred: 0,
+			unknownOrDeferred: 4,
 		}));
 		const registry = createAccountMirrorStatusRegistry({
 			config,

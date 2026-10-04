@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "account-mirror-cdp-capture",
+  "startedAt": "2026-09-30T14:12:43.298Z",
+  "completedAt": "2026-09-30T14:12:47.327Z",
+  "scope": {
+    "provider": "chatgpt",
+    "runtimeProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "wsl-chrome-3/chatgpt",
+    "requestedPhase": null,
+    "mode": "materialize-library",
+    "maxConversations": 1,
+    "maxPasses": 1,
+    "scheduler": "isolated-disabled"
+  },
+  "targets": {
+    "before": 0,
+    "after": 0
+  },
+  "warning": null,
+  "run": {
+    "status": "failed",
+    "startedAt": "2026-09-30T14:12:44.481Z",
+    "completedAt": "2026-09-30T14:12:46.031Z",
+    "attemptCount": 1,
+    "error": {
+      "code": null,
+      "message": "Live-follow browser startup control denied: tab-leases-active."
+    },
+    "message": "Live-follow browser startup control denied: tab-leases-active.",
+    "metrics": null,
+    "candidateFunnel": null,
+    "snapshotRefresh": null,
+    "manifest": [],
+    "scrapeTelemetry": null
+  },
+  "metrics": {
+    "eventCount": 2,
+    "requestCount": 0,
+    "navigationCount": 0,
+    "routeCounts": []
+  },
+  "events": [
+    {
+      "at": "2026-09-30T14:12:43.348Z",
+      "elapsedMs": 50,
+      "kind": "capture.started",
+      "targetCount": 0
+    },
+    {
+      "at": "2026-09-30T14:12:44.286Z",
+      "elapsedMs": 988,
+      "kind": "materialization-run.started",
+      "refreshSnapshot": false,
+      "maxItems": 1,
+      "reused": false,
+      "selectedKind": "persistent-library-file",
+      "selectedKey": "dfe7581cde07"
+    }
+  ]
+}

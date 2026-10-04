@@ -1,8 +1,10 @@
+import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 const ORIGINAL_ENV = { ...process.env };
 
 afterEach(() => {
+  process.exitCode = 0;
   vi.resetModules();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
@@ -29,8 +31,10 @@ async function importChromeLifecycleWithMocks(options: {
   existingProcess?: { pid: number; port: number; commandLine: string } | null;
 }) {
   const execFileMock = createExecFileMock();
-  const unregisterInstance = vi.fn(async () => {});
-  const registerInstance = vi.fn(async () => {});
+  const unregisterInstance = vi.fn(async (..._args: unknown[]) => {});
+  const unregisterInstanceIfMatches = vi.fn(async (..._args: unknown[]) => true);
+  const registerInstance = vi.fn(async (_registryOptions: unknown, _instance: unknown) => {});
+  const chromeProcess = new EventEmitter();
   const findActiveInstance = vi.fn(async () => {
     if (!options.registeredPid) {
       return null;
@@ -56,10 +60,22 @@ async function importChromeLifecycleWithMocks(options: {
   vi.doMock('node:child_process', () => ({
     execFile: execFileMock,
   }));
+  vi.doMock('chrome-launcher', () => ({
+    Launcher: class {
+      pid = 44567;
+      port = 9222;
+      chromeProcess = chromeProcess;
+      remoteDebuggingPipes = undefined;
+      spawn() {}
+      async launch() {}
+      async kill() {}
+    },
+  }));
   vi.doMock('../../packages/browser-service/src/service/stateRegistry.js', () => ({
     findActiveInstance,
     registerInstance,
     unregisterInstance,
+    unregisterInstanceIfMatches,
   }));
   vi.doMock('../../packages/browser-service/src/processCheck.js', () => ({
     isDevToolsResponsive,
@@ -83,7 +99,9 @@ async function importChromeLifecycleWithMocks(options: {
     chromeLifecycle,
     execFileMock,
     unregisterInstance,
+    unregisterInstanceIfMatches,
     registerInstance,
+    chromeProcess,
     findActiveInstance,
     findChromeProcessUsingUserDataDir,
     isDevToolsResponsive,
@@ -94,7 +112,7 @@ async function importChromeLifecycleWithMocks(options: {
 describe('chromeLifecycle ownership', () => {
   test('keeps shutdown ownership when reusing a registry instance started by the current run', async () => {
     process.env.WSL_DISTRO_NAME = 'Ubuntu';
-    const { chromeLifecycle, execFileMock, unregisterInstance } = await importChromeLifecycleWithMocks({
+    const { chromeLifecycle, execFileMock, unregisterInstanceIfMatches } = await importChromeLifecycleWithMocks({
       registeredPid: 41234,
     });
 
@@ -113,10 +131,15 @@ describe('chromeLifecycle ownership', () => {
 
     expect(chrome.pid).toBe(41234);
     await chrome.kill();
-    expect(unregisterInstance).toHaveBeenCalledWith(
+    expect(unregisterInstanceIfMatches).toHaveBeenCalledWith(
       { registryPath: '/tmp/auracall-browser-state.json' },
       '/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/default/grok',
       'Default',
+      {
+        pid: 41234,
+        port: 45891,
+        launchedAt: expect.any(String),
+      },
     );
     expect(execFileMock).toHaveBeenCalledWith(
       '/mnt/c/Windows/System32/taskkill.exe',
@@ -191,5 +214,81 @@ describe('chromeLifecycle ownership', () => {
     await chrome.kill();
     expect(messages).toContain('Skipping shutdown of reused Chrome instance.');
     expect(execFileMock).not.toHaveBeenCalled();
+  });
+
+  test('retires the matching registry generation when owned Chrome exits', async () => {
+    const userDataDir = '/tmp/auracall-owned-chrome';
+    const {
+      chromeLifecycle,
+      chromeProcess,
+      registerInstance,
+      unregisterInstanceIfMatches,
+    } = await importChromeLifecycleWithMocks({ registeredPid: null });
+
+    await chromeLifecycle.launchChrome(
+      { chromeProfile: 'Default' } as never,
+      userDataDir,
+      () => undefined,
+      { registryPath: '/tmp/auracall-browser-state.json' },
+    );
+    const registered = registerInstance.mock.calls[0]?.[1] as {
+      pid: number;
+      port: number;
+      launchedAt: string;
+    };
+
+    chromeProcess.emit('exit', 0, null);
+    await vi.waitFor(() => expect(unregisterInstanceIfMatches).toHaveBeenCalledTimes(1));
+    expect(unregisterInstanceIfMatches).toHaveBeenCalledWith(
+      { registryPath: '/tmp/auracall-browser-state.json' },
+      userDataDir,
+      'Default',
+      {
+        pid: registered?.pid,
+        port: registered?.port,
+        launchedAt: registered?.launchedAt,
+      },
+    );
+  });
+
+  test('retires the matching owned generation during SIGTERM cleanup', async () => {
+    const userDataDir = '/tmp/auracall-owned-chrome-sigterm';
+    const {
+      chromeLifecycle,
+      registerInstance,
+      unregisterInstanceIfMatches,
+    } = await importChromeLifecycleWithMocks({ registeredPid: null });
+    const chrome = await chromeLifecycle.launchChrome(
+      { chromeProfile: 'Default' } as never,
+      userDataDir,
+      () => undefined,
+      { registryPath: '/tmp/auracall-browser-state.json' },
+    );
+    const registered = registerInstance.mock.calls[0]?.[1] as {
+      pid: number;
+      port: number;
+      launchedAt: string;
+    };
+    const removeHooks = chromeLifecycle.registerTerminationHooks(
+      chrome,
+      userDataDir,
+      false,
+      () => undefined,
+    );
+
+    process.emit('SIGTERM');
+    await vi.waitFor(() => expect(unregisterInstanceIfMatches).toHaveBeenCalledTimes(1));
+    removeHooks();
+
+    expect(unregisterInstanceIfMatches).toHaveBeenCalledWith(
+      { registryPath: '/tmp/auracall-browser-state.json' },
+      userDataDir,
+      'Default',
+      {
+        pid: registered?.pid,
+        port: registered?.port,
+        launchedAt: registered?.launchedAt,
+      },
+    );
   });
 });

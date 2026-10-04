@@ -1,0 +1,37 @@
+{
+  "schema": "auracall.plan0386.full-evidence-correction.v1",
+  "readAt": "2026-10-03",
+  "jobId": "hmj_92e88aa5b845422d96a5bb2e84575885",
+  "status": "skipped",
+  "attemptCount": 1,
+  "metrics": {
+    "conversations": 1,
+    "materialized": 0,
+    "duplicateAliases": 0,
+    "skipped": 1,
+    "failed": 0
+  },
+  "manifestCount": 0,
+  "entryCount": 1,
+  "entries": [
+    {
+      "kind": "artifact",
+      "status": "skipped",
+      "reason": "readChatgptConversationContext:6ab6d340-89e4-83ea-9990-d8fb278993e6: regenerate response",
+      "recoverabilityState": "metadata_only"
+    }
+  ],
+  "candidates": {},
+  "providerActions": {
+    "llmService.materializeConversationArtifacts": 1,
+    "llmService.getConversationContext": 1,
+    "chatgpt.connectTab.start": 1,
+    "chatgpt.connectExistingTarget": 1,
+    "chatgpt.navigateUrl": 1,
+    "chatgpt.retainScopedTarget": 1,
+    "chatgpt.reloadBlockingSurface": 2,
+    "chatgpt.reopenConversation": 2,
+    "chatgpt.skipSameRouteNavigation": 2
+  },
+  "correction": "Previous receipt used the compact monitoring projection, which deliberately strips entries and scrape telemetry. Missing projection fields were not proof of missing persisted evidence."
+}

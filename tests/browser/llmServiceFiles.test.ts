@@ -3,11 +3,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { CHATGPT_URL, GEMINI_URL } from "../../src/browser/constants.js";
 import type { CacheStore } from "../../src/browser/llmService/cache/store.js";
 import { JsonCacheStore } from "../../src/browser/llmService/cache/store.js";
 import { LlmService } from "../../src/browser/llmService/llmService.js";
+import { createLlmService } from "../../src/browser/llmService/providers/index.js";
 import type {
 	LlmServiceAdapter,
 	PromptInput,
@@ -17,7 +19,9 @@ import {
 	type ProviderCacheContext,
 	resolveProviderCachePath,
 } from "../../src/browser/providers/cache.js";
+import { beforeChatgptBrowserInteractionForTest } from "../../src/browser/providers/chatgptAdapter.js";
 import type { ConversationArtifact, FileRef, Project } from "../../src/browser/providers/domain.js";
+import { getProvider } from "../../src/browser/providers/index.js";
 import { createBrowserScrapeTelemetryRecorder } from "../../src/browser/providers/scrapeTelemetry.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 import type { ResolvedUserConfig } from "../../src/config.js";
@@ -1056,6 +1060,247 @@ describe("llmService project file cache writes", () => {
 					error: "artifact fetch failed",
 				}),
 			]);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("failed fresh artifact context stops before cached download controls are used", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-failed-artifact-refresh-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as never,
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const store = new JsonCacheStore();
+		await store.writeConversationContext(cacheContext, "failed-refresh", {
+			provider: "chatgpt",
+			conversationId: "failed-refresh",
+			messages: [{ role: "assistant", text: "cached response" }],
+			artifacts: [
+				{
+					id: "download-dom:message-8:0",
+					title: "proposal.zip",
+					kind: "download",
+					uri: "chatgpt://download-button/message-8/0",
+				},
+			],
+		});
+		const materialize = vi.fn(async () => {
+			throw new Error("stale control attempted");
+		});
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(async () => {
+				throw new Error("fresh target read failed");
+			}),
+			materializeConversationArtifact: materialize,
+		};
+		const service = new TestLlmService(provider as never, store, cacheContext);
+		try {
+			await expect(
+				service.materializeConversationArtifacts("failed-refresh", { refresh: true }),
+			).rejects.toThrow("fresh target read failed");
+			expect(materialize).not.toHaveBeenCalled();
+			await service.materializeConversationArtifacts("failed-refresh", { refresh: false });
+			expect(provider.readConversationContext).toHaveBeenCalledTimes(1);
+			expect(materialize).toHaveBeenCalledTimes(1);
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("fresh context hands its retained session to artifact transfer without readmission", async () => {
+		const home = await mkdtemp(path.join(os.tmpdir(), "auracall-context-session-"));
+		setAuracallHomeDirOverrideForTest(home);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as never,
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		let clock = 1000;
+		const sleep = vi.fn(async (ms: number) => {
+			clock += ms;
+		});
+		const governor = createBrowserInteractionGovernor({
+			now: () => clock,
+			sleep,
+			cooldownsByClass: { "conversation-read": 120000 },
+		});
+		const close = vi.fn(async () => undefined);
+		const session = { providerId: "chatgpt" as const, key: "retained-read", value: {}, close };
+		const artifact: ConversationArtifact = {
+			id: "download-dom:message-8:0",
+			title: "proposal.zip",
+			kind: "download",
+			uri: "chatgpt://download-button/message-8/0",
+		};
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(
+				async (_id: string, _project: string | undefined, options: BrowserProviderListOptions) => {
+					await beforeChatgptBrowserInteractionForTest(options, "conversation-read");
+					options.providerSession = session;
+					return {
+						provider: "chatgpt",
+						conversationId: "handoff",
+						messages: [{ role: "assistant", text: "fresh response" }],
+						artifacts: [artifact],
+					};
+				},
+			),
+			materializeConversationArtifact: vi.fn(
+				async (
+					_id: string,
+					a: ConversationArtifact,
+					dest: string,
+					_project: string | undefined,
+					options: BrowserProviderListOptions,
+				): Promise<FileRef> => {
+					await beforeChatgptBrowserInteractionForTest(options, "conversation-read");
+					if (options.providerSession !== session) throw new Error("Read session custody lost");
+					const localPath = path.join(dest, a.title);
+					await fs.writeFile(localPath, "verified fixture ZIP");
+					return {
+						id: a.id,
+						name: a.title,
+						provider: "chatgpt",
+						source: "conversation",
+						localPath,
+					};
+				},
+			),
+		};
+		try {
+			const actualAdapter = getProvider("chatgpt");
+			const readSpy = vi
+				.spyOn(actualAdapter, "readConversationContext")
+				.mockImplementation(provider.readConversationContext as never);
+			const transferSpy = vi
+				.spyOn(actualAdapter, "materializeConversationArtifact")
+				.mockImplementation(provider.materializeConversationArtifact as never);
+			const service = createLlmService(
+				"chatgpt",
+				{
+					browser: { cache: {}, tabConcurrencyMode: "tab-affinity" },
+				} as never,
+				{
+					browserService: {
+						resolveServiceTarget: vi.fn(async () => ({
+							host: "127.0.0.1",
+							port: 45009,
+							managedBrowserProfile: "/managed/chatgpt",
+							browserProcessId: 1234,
+							tab: { targetId: "owned-target", url: "https://chatgpt.com/c/handoff" },
+						})),
+					} as never,
+				},
+			);
+			vi.spyOn(service, "resolveCacheContext").mockResolvedValue(cacheContext);
+			const result = await service.materializeConversationArtifacts("handoff", {
+				listOptions: {
+					tabTargetId: "owned-target",
+					host: "127.0.0.1",
+					port: 45009,
+					interactionGovernor: governor,
+					preserveInteractionGovernorForProviderSession: true,
+				},
+			});
+			expect(result.files).toHaveLength(1);
+			expect(sleep).not.toHaveBeenCalled();
+			expect(close).toHaveBeenCalledTimes(1);
+			readSpy.mockRestore();
+			transferSpy.mockRestore();
+		} finally {
+			vi.restoreAllMocks();
+			await rm(home, { recursive: true, force: true });
+		}
+	});
+
+	test("unchanged artifact reuse leaves transfer budget for one new artifact", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-artifact-reuse-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as never,
+			listOptions: {},
+			identityKey: "cache-test@example.com",
+		};
+		const artifact = (id: string): ConversationArtifact => ({
+			id,
+			title: `${id}.zip`,
+			kind: "download",
+			uri: `chatgpt://download-button/${id}/0`,
+		});
+		let artifacts = [artifact("old")];
+		const materialize = vi.fn(
+			async (_id: string, a: ConversationArtifact, dest: string): Promise<FileRef> => {
+				const localPath = path.join(dest, a.title);
+				await fs.writeFile(localPath, `verified-${a.id}`);
+				return {
+					id: a.id,
+					name: a.title,
+					provider: "chatgpt",
+					source: "conversation",
+					localPath,
+					size: (await fs.stat(localPath)).size,
+					remoteUrl: a.uri,
+				};
+			},
+		);
+		const provider = {
+			id: "chatgpt",
+			config: { id: "chatgpt", selectors: {} as never },
+			readConversationContext: vi.fn(async () => ({
+				provider: "chatgpt",
+				conversationId: "reuse",
+				messages: [],
+				artifacts,
+			})),
+			materializeConversationArtifact: materialize,
+		};
+		const service = new TestLlmService(provider as never, new JsonCacheStore(), cacheContext);
+		try {
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			materialize.mockClear();
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).not.toHaveBeenCalled();
+			artifacts = [artifact("old"), artifact("new")];
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			expect(materialize.mock.calls[0]?.[1].id).toBe("new");
+			materialize.mockClear();
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).not.toHaveBeenCalled();
+			const cached = await new JsonCacheStore().readConversationAttachments(cacheContext, "reuse");
+			const old = cached.items.find((file) => file.id === "old");
+			const added = cached.items.find((file) => file.id === "new");
+			if (!old?.localPath || !added?.localPath) throw new Error("Fixture cache paths missing");
+			expect(old.checksumSha256).toMatch(/^[a-f0-9]{64}$/);
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1, force: true });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			materialize.mockClear();
+			await fs.writeFile(added.localPath, "corrupt--new");
+			expect((await fs.stat(added.localPath)).size).toBe(added.size);
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			expect(materialize.mock.calls[0]?.[1].id).toBe("new");
+			materialize.mockClear();
+			await fs.rm(old.localPath);
+			await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(materialize).toHaveBeenCalledTimes(1);
+			expect(materialize.mock.calls[0]?.[1].id).toBe("old");
+			materialize.mockClear();
+			artifacts = [];
+			const absent = await service.materializeConversationArtifacts("reuse", { maxItems: 1 });
+			expect(absent.files).toEqual([]);
+			expect(materialize).not.toHaveBeenCalled();
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
 		}

@@ -682,6 +682,7 @@ describe('account mirror catalog service', () => {
             materializationEligibility: {
               state: 'static_image_false_positive',
               reason: expect.stringContaining('favicon'),
+              recoverabilityState: 'metadata_only',
             },
           },
         },
@@ -691,6 +692,7 @@ describe('account mirror catalog service', () => {
             materializationEligibility: {
               state: 'unsupported_account_library_asset',
               reason: expect.stringContaining('account-library artifact rows are metadata-only'),
+              recoverabilityState: 'metadata_only',
             },
           },
         },
@@ -708,6 +710,7 @@ describe('account mirror catalog service', () => {
             materializationEligibility: {
               state: 'unsupported_conversation_file',
               reason: expect.stringContaining('do not currently expose a retrievable provider URL'),
+              recoverabilityState: 'metadata_only',
             },
           },
         },
@@ -723,6 +726,7 @@ describe('account mirror catalog service', () => {
             materializationEligibility: {
               state: 'unsupported_account_library_asset',
               reason: expect.stringContaining('account-library file rows are metadata-only'),
+              recoverabilityState: 'metadata_only',
             },
           },
         },

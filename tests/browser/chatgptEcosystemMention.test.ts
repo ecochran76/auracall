@@ -1,8 +1,8 @@
 // biome-ignore-all lint/style/useNamingConvention: Chrome DevTools Protocol domain names are case-sensitive.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	ensureChatgptEcosystemMention,
 	assertChatgptEcosystemMentionSelected,
+	ensureChatgptEcosystemMention,
 	readChatgptEcosystemMention,
 } from "../../src/browser/actions/chatgptEcosystemMention.js";
 

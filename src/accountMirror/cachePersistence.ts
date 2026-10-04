@@ -19,6 +19,15 @@ import type {
 } from "../browser/providers/domain.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { normalizeAccountMirrorBackfillLedger } from "./backfillLedger.js";
+import {
+	type AccountMirrorProviderIndexEpoch,
+	createAccountMirrorProviderIndexEpoch,
+	fingerprintAccountMirrorConversationIndexRow,
+	normalizeAccountMirrorConversationWorkState,
+	normalizeAccountMirrorProviderIndexEpoch,
+	rollAccountMirrorConversationWorkState,
+} from "./changeFrontierState.js";
+import type { ConversationVisitBundle } from "./conversationVisitBundle.js";
 import type { AccountMirrorProvider } from "./politePolicy.js";
 import type {
 	AccountMirrorMetadataCounts,
@@ -47,6 +56,7 @@ export interface AccountMirrorPersistenceRecord {
 		files: FileRef[];
 		media: AccountMirrorMediaManifestEntry[];
 	};
+	visitBundles?: readonly ConversationVisitBundle[];
 }
 
 export interface AccountMirrorConversationContextCacheEntry {
@@ -74,6 +84,16 @@ export interface AccountMirrorConversationEvidence {
 	fileCount?: number | null;
 	sourceCount?: number | null;
 	artifactCount?: number | null;
+	frontierState?: {
+		action: "materialize_retained";
+		outcome: "complete" | "deferred" | "terminal";
+		assetAvailability: "available" | "unavailable" | "unknown";
+		retryNotBefore: string | null;
+		checkpointedAt: string;
+		artifactResolutions: number;
+		downloads: number;
+		duplicates: number;
+	} | null;
 }
 
 export interface AccountMirrorPersistence {
@@ -157,6 +177,8 @@ export function createAccountMirrorPersistence(input: {
 				provider: record.provider,
 				boundIdentityKey: record.boundIdentityKey,
 			});
+			const epoch = createProviderIndexEpoch(record);
+			const existingConversations = await cacheStore.readConversations(context);
 			const snapshot: AccountMirrorCacheSnapshot = {
 				object: "account_mirror_snapshot",
 				version: 1,
@@ -166,7 +188,9 @@ export function createAccountMirrorPersistence(input: {
 				detectedAccountLevel: record.detectedAccountLevel,
 				collectedAt: record.completedAt,
 				metadataCounts: record.metadataCounts,
-				metadataEvidence: record.metadataEvidence,
+				metadataEvidence: record.metadataEvidence
+					? { ...record.metadataEvidence, providerIndexEpoch: epoch }
+					: null,
 				refresh: {
 					requestId: record.requestId,
 					runtimeProfileId: record.runtimeProfileId,
@@ -179,7 +203,15 @@ export function createAccountMirrorPersistence(input: {
 			};
 			await cacheStore.writeAccountMirrorSnapshot(context, snapshot);
 			await cacheStore.writeProjects(context, record.manifests.projects);
-			await cacheStore.writeConversations(context, annotateSnapshotConversations(record));
+			await cacheStore.writeConversations(
+				context,
+				annotateSnapshotConversations(
+					record,
+					epoch,
+					existingConversations.items,
+					record.visitBundles ?? [],
+				),
+			);
 			await cacheStore.writeAccountMirrorArtifacts(context, record.manifests.artifacts);
 			await cacheStore.writeAccountMirrorFiles(context, record.manifests.files);
 			await cacheStore.writeAccountMirrorMedia(context, record.manifests.media);
@@ -357,12 +389,40 @@ function mergeConversationEvidence(
 	evidence: AccountMirrorConversationEvidence,
 ): Conversation {
 	const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
-	const cleaned = cleanEvidenceRecord(evidence);
+	const { frontierState, ...surfaceEvidence } = evidence;
+	const cleaned = cleanEvidenceRecord(surfaceEvidence);
+	const existingWorkState = normalizeAccountMirrorConversationWorkState(
+		metadata.changeFrontierState,
+	);
+	const changeFrontierState =
+		frontierState && existingWorkState
+			? {
+					...existingWorkState,
+					action: frontierState.action,
+					outcome: frontierState.outcome,
+					assetAvailability: frontierState.assetAvailability,
+					retryNotBefore: frontierState.retryNotBefore,
+					checkpointedAt: frontierState.checkpointedAt,
+					physicalActivity: {
+						...existingWorkState.physicalActivity,
+						artifactResolutions:
+							existingWorkState.physicalActivity.artifactResolutions +
+							Math.max(0, Math.floor(frontierState.artifactResolutions)),
+						downloads:
+							existingWorkState.physicalActivity.downloads +
+							Math.max(0, Math.floor(frontierState.downloads)),
+						duplicates:
+							existingWorkState.physicalActivity.duplicates +
+							Math.max(0, Math.floor(frontierState.duplicates)),
+					},
+				}
+			: metadata.changeFrontierState;
 	return {
 		...conversation,
 		metadata: {
 			...metadata,
 			...cleaned,
+			...(changeFrontierState ? { changeFrontierState } : {}),
 		},
 	};
 }
@@ -386,9 +446,76 @@ function hasConversationContextPayload(context: ConversationContext): boolean {
 	);
 }
 
-function annotateSnapshotConversations(record: AccountMirrorPersistenceRecord): Conversation[] {
+function annotateSnapshotConversations(
+	record: AccountMirrorPersistenceRecord,
+	epoch: AccountMirrorProviderIndexEpoch,
+	existingConversations: readonly Conversation[],
+	visitBundles: readonly ConversationVisitBundle[],
+): Conversation[] {
+	const existingById = new Map(
+		existingConversations.map((conversation) => [conversation.id, conversation]),
+	);
+	const visitBundleById = new Map(
+		visitBundles
+			.filter((bundle) => bundle.freshnessEpoch === epoch.epochId)
+			.map((bundle) => [bundle.conversationId, bundle]),
+	);
+	const frontierPlan = record.metadataEvidence?.changeFrontierPlan;
+	const frontierDecisionByKey = new Map(
+		frontierPlan?.epochId === epoch.epochId
+			? frontierPlan.decisions.map((decision) => [decision.conversationKey, decision] as const)
+			: [],
+	);
 	return record.manifests.conversations.map((conversation, index) => {
 		const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
+		const existingMetadata = isRecord(existingById.get(conversation.id)?.metadata)
+			? existingById.get(conversation.id)?.metadata
+			: {};
+		const conversationFingerprint = fingerprintAccountMirrorConversationIndexRow(conversation);
+		const rolledState = rollAccountMirrorConversationWorkState({
+			conversation: {
+				...conversation,
+				metadata: { ...metadata, conversationFingerprint },
+			},
+			epoch,
+			previous: existingMetadata?.changeFrontierState,
+		});
+		const visitBundle = visitBundleById.get(conversation.id);
+		const frontierDecision = frontierDecisionByKey.get(rolledState.conversationKey);
+		const changeFrontierState = visitBundle
+			? {
+					...rolledState,
+					detailFingerprint: visitBundle.detail.fingerprint,
+					action: "visit_once" as const,
+					outcome: visitBundle.detail.complete ? ("complete" as const) : ("deferred" as const),
+					checkpointedAt: epoch.observedAt,
+					physicalActivity: {
+						...rolledState.physicalActivity,
+						targetsCreated:
+							rolledState.physicalActivity.targetsCreated +
+							visitBundle.physicalVisit.targetsCreated,
+						navigations:
+							rolledState.physicalActivity.navigations + visitBundle.physicalVisit.navigations,
+						reloads: rolledState.physicalActivity.reloads + visitBundle.physicalVisit.reloads,
+						snapshotRefreshes: rolledState.physicalActivity.snapshotRefreshes + 1,
+					},
+				}
+			: frontierDecision
+				? {
+						...rolledState,
+						action: frontierDecision.action,
+						outcome:
+							frontierDecision.action === "defer" || frontierDecision.action === "visit_once"
+								? ("deferred" as const)
+								: frontierDecision.action === "materialize_retained"
+									? ("pending" as const)
+									: frontierDecision.reason === "same_epoch_terminal" ||
+											frontierDecision.reason === "provider_unavailable"
+										? ("terminal" as const)
+										: ("complete" as const),
+						checkpointedAt: epoch.observedAt,
+					}
+				: rolledState;
 		return {
 			...conversation,
 			metadata: {
@@ -396,25 +523,29 @@ function annotateSnapshotConversations(record: AccountMirrorPersistenceRecord): 
 				indexObservedAt: record.completedAt,
 				indexSource: conversation.projectId ? "project-conversations" : "left-rail",
 				indexRank: index,
-				conversationFingerprint: fingerprintConversationIndexRow(conversation),
+				conversationFingerprint,
+				changeFrontierState,
 			},
 		};
 	});
 }
 
-function fingerprintConversationIndexRow(conversation: Conversation): string {
-	const metadata = isRecord(conversation.metadata) ? conversation.metadata : {};
-	const source = {
-		id: conversation.id,
-		title: conversation.title,
-		provider: conversation.provider,
-		projectId: conversation.projectId ?? null,
-		url: conversation.url ?? null,
-		updatedAt: conversation.updatedAt ?? null,
-		latestTurnId: readMetadataString(metadata, ["latestTurnId", "lastMessageId"]),
-	};
-	const digest = createHash("sha256").update(JSON.stringify(source)).digest("hex");
-	return `sha256:${digest.slice(0, 32)}`;
+function createProviderIndexEpoch(
+	record: AccountMirrorPersistenceRecord,
+): AccountMirrorProviderIndexEpoch {
+	const collected = normalizeAccountMirrorProviderIndexEpoch(
+		record.metadataEvidence?.providerIndexEpoch,
+	);
+	if (collected) return collected;
+	return createAccountMirrorProviderIndexEpoch({
+		provider: record.provider,
+		runtimeProfileId: record.runtimeProfileId,
+		browserProfileId: record.browserProfileId,
+		boundIdentityKey: record.boundIdentityKey,
+		observedAt: record.completedAt,
+		projectCount: record.manifests.projects.length,
+		conversations: record.manifests.conversations,
+	});
 }
 
 function createMirrorCacheContext(input: {
@@ -666,15 +797,6 @@ function readNestedString(
 	}
 	const trimmed = typeof current === "string" ? current.trim() : "";
 	return trimmed.length > 0 ? trimmed : null;
-}
-
-function readMetadataString(value: Record<string, unknown>, fields: string[]): string | null {
-	for (const field of fields) {
-		const candidate = value[field];
-		if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
-		if (typeof candidate === "number" && Number.isFinite(candidate)) return String(candidate);
-	}
-	return null;
 }
 
 function readOptionalString(value: unknown): string | null {

@@ -48,6 +48,7 @@ import {
 	clearAccountMirrorProviderGuard,
 	DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
 } from "../accountMirror/providerGuardControl.js";
+import { classifyAccountMirrorProviderTrafficOutcome } from "../accountMirror/providerTrafficOutcome.js";
 import { createAccountMirrorProviderWorkCoordinator } from "../accountMirror/providerWorkCoordinator.js";
 import {
 	type AccountMirrorReconciliationCampaign,
@@ -444,6 +445,26 @@ export function resolveTabAffinityMaintenanceIntervalMs(input: {
 		}
 	}
 	return 0;
+}
+
+function resolveTabConcurrencyStatusUserConfig(
+	userConfig: ResolvedUserConfig | null,
+): ResolvedUserConfig {
+	if (!userConfig || userConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+		return userConfig ?? ({} as ResolvedUserConfig);
+	}
+	for (const runtimeProfileId of Object.keys(
+		getCurrentRuntimeProfiles(userConfig as Record<string, unknown>),
+	)) {
+		const runtimeConfig = resolveRuntimeProfileUserConfig(userConfig, {
+			runtimeProfileId,
+			provider: "chatgpt",
+		}) as ResolvedUserConfig;
+		if (runtimeConfig.browser?.tabConcurrencyMode === "tab-affinity") {
+			return runtimeConfig;
+		}
+	}
+	return userConfig;
 }
 
 function composeExecutionGates(
@@ -1167,7 +1188,7 @@ export async function createResponsesHttpServer(
 		});
 	const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
 	const tabConcurrencyRuntime = createBrowserTabConcurrencyRuntime(
-		resolvedUserConfig ?? ({} as ResolvedUserConfig),
+		resolveTabConcurrencyStatusUserConfig(resolvedUserConfig),
 		{ now },
 	);
 	const readTabConcurrencyStatus =
@@ -6216,6 +6237,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 	latestLifecycleEvent: LiveFollowTargetAccountSummary["latestLifecycleEvent"];
 	accountLibraryCursor: AccountMirrorCompletionOperation["accountLibraryCursor"] | null;
 	error: AccountMirrorCompletionOperation["error"];
+	providerTrafficOutcome: ReturnType<typeof classifyAccountMirrorProviderTrafficOutcome>;
 } {
 	return {
 		id: operation.id,
@@ -6228,6 +6250,7 @@ function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorComplet
 		latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
 		accountLibraryCursor: operation.accountLibraryCursor ?? null,
 		error: operation.error,
+		providerTrafficOutcome: classifyAccountMirrorProviderTrafficOutcome(operation),
 	};
 }
 

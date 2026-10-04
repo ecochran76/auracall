@@ -249,6 +249,18 @@ type AccountMirrorMaterializationBacklogReader = (input: {
 	unknownOrDeferred: number;
 } | null>;
 
+export function hasLocallyActionableMaterializationBacklog(
+	backlog:
+		| {
+				retrievableMissing: number;
+				unknownOrDeferred: number;
+		  }
+		| null
+		| undefined,
+): boolean {
+	return Math.max(0, Math.floor(backlog?.retrievableMissing ?? 0)) > 0;
+}
+
 export function projectAccountMirrorCompletionForMonitoring(
 	operation: AccountMirrorCompletionOperation,
 ): AccountMirrorCompletionOperation {
@@ -729,8 +741,7 @@ export function createAccountMirrorCompletionService(input: {
 							: {}),
 						...(collectorTimeoutMs ? { collectorTimeoutMs } : {}),
 						abortSignal,
-						liveFollowOperationId:
-							refreshOperation.mode === "live_follow" ? refreshOperation.id : null,
+						liveFollowOperationId: refreshOperation.id,
 					});
 				} catch (error) {
 					const eligibleAt = readEligibleAt(error);
@@ -815,8 +826,12 @@ export function createAccountMirrorCompletionService(input: {
 				if (refreshed && queuedCompletionMaterialization) {
 					await queueCompletionMaterialization(refreshed, {
 						reuseSnapshotAfter: refresh.startedAt,
-						reuseSnapshotConversationIds:
-							refresh.metadataEvidence?.detailConversationIdsThisPass ?? [],
+						reuseSnapshotConversationIds: [
+							...new Set([
+								...(refresh.metadataEvidence?.detailConversationIdsThisPass ?? []),
+								...(refresh.metadataEvidence?.retainedMaterializationConversationIds ?? []),
+							]),
+						],
 						interactionPolicy: materializationInteractionPolicy(refreshedStatusEntry),
 						providerWorkNotBefore: materializationProviderWorkNotBefore(
 							refresh,
@@ -1786,11 +1801,7 @@ async function shouldQueueMaterialization(
 	if (!operation.materializationPolicy && operation.sweepMode !== "full_sweep") return false;
 	if (operation.materializationCursor?.passCount === operation.passCount) return false;
 	if (operation.provider === "gemini" && isGeminiShellOnlyRouteChurn(operation)) return false;
-	return hasActionableMaterializationBacklog(
-		operation,
-		statusEntry,
-		readMaterializationBacklog,
-	);
+	return hasActionableMaterializationBacklog(operation, statusEntry, readMaterializationBacklog);
 }
 
 async function shouldQueueMaterializationFromCompleteLedger(
@@ -1813,11 +1824,7 @@ async function shouldQueueMaterializationFromCompleteLedger(
 	if ((missing?.artifacts ?? 0) + (missing?.files ?? 0) + (missing?.media ?? 0) <= 0) {
 		return false;
 	}
-	return hasActionableMaterializationBacklog(
-		operation,
-		statusEntry,
-		readMaterializationBacklog,
-	);
+	return hasActionableMaterializationBacklog(operation, statusEntry, readMaterializationBacklog);
 }
 
 async function hasActionableMaterializationBacklog(
@@ -1825,15 +1832,15 @@ async function hasActionableMaterializationBacklog(
 	statusEntry: AccountMirrorStatusEntry | null | undefined,
 	readMaterializationBacklog: AccountMirrorMaterializationBacklogReader | undefined,
 ): Promise<boolean> {
-	if (!readMaterializationBacklog) return true;
+	if (!readMaterializationBacklog) return operation.sweepMode === "full_sweep";
 	if (!statusEntry) return false;
 	try {
 		const backlog = await readMaterializationBacklog({
 			provider: operation.provider,
 			runtimeProfileId: operation.runtimeProfileId,
 		});
-		if (!backlog) return true;
-		return backlog.retrievableMissing > 0 || backlog.unknownOrDeferred > 0;
+		if (!backlog) return operation.sweepMode === "full_sweep";
+		return hasLocallyActionableMaterializationBacklog(backlog);
 	} catch {
 		return false;
 	}

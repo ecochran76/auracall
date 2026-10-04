@@ -110,6 +110,143 @@ describe('stateRegistry (package)', () => {
 	    }
 	  });
 
+  test('retires only the exact registered browser generation', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-registry-'));
+    const registryPath = path.join(dir, 'browser-state.json');
+    const profilePath = '/tmp/profile';
+    const profileName = 'Default';
+    try {
+      const oldGeneration = {
+        pid: 1234,
+        port: 9222,
+        launchedAt: '2026-09-29T22:00:00.000Z',
+      };
+      await registry.registerInstance(
+        { registryPath },
+        {
+          ...oldGeneration,
+          host: '127.0.0.1',
+          profilePath,
+          profileName,
+          type: 'chrome',
+          lastSeenAt: oldGeneration.launchedAt,
+          owner: { kind: 'test', id: 'old-owner', acquiredAt: oldGeneration.launchedAt },
+          operation: { kind: 'test', id: 'old-operation' },
+          lease: {
+            id: 'old-lease',
+            ownerId: 'old-owner',
+            acquiredAt: oldGeneration.launchedAt,
+            heartbeatAt: oldGeneration.launchedAt,
+            expiresAt: null,
+            cleanupPolicy: 'test',
+          },
+        },
+      );
+
+      const replacement = {
+        pid: 5678,
+        port: 9333,
+        launchedAt: '2026-09-29T22:01:00.000Z',
+      };
+      await registry.registerInstance(
+        { registryPath },
+        {
+          ...replacement,
+          host: '127.0.0.1',
+          profilePath,
+          profileName,
+          type: 'chrome',
+          lastSeenAt: replacement.launchedAt,
+          owner: { kind: 'test', id: 'replacement-owner', acquiredAt: replacement.launchedAt },
+        },
+      );
+
+      expect(
+        await registry.unregisterInstanceIfMatches(
+          { registryPath },
+          profilePath,
+          profileName,
+          oldGeneration,
+        ),
+      ).toBe(false);
+      expect((await registry.getInstance({ registryPath }, profilePath, profileName))?.pid).toBe(5678);
+
+      expect(
+        await registry.unregisterInstanceIfMatches(
+          { registryPath },
+          profilePath,
+          profileName,
+          replacement,
+        ),
+      ).toBe(true);
+      expect(await registry.getInstance({ registryPath }, profilePath, profileName)).toBeNull();
+      expect(
+        await registry.unregisterInstanceIfMatches(
+          { registryPath },
+          profilePath,
+          profileName,
+          replacement,
+        ),
+      ).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('serializes old-generation retirement with replacement registration', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-registry-'));
+    const registryPath = path.join(dir, 'browser-state.json');
+    const profilePath = '/tmp/concurrent-profile';
+    const profileName = 'Default';
+    const oldGeneration = {
+      pid: 1234,
+      port: 9222,
+      launchedAt: '2026-09-29T22:00:00.000Z',
+    };
+    const replacement = {
+      pid: 5678,
+      port: 9333,
+      launchedAt: '2026-09-29T22:01:00.000Z',
+    };
+    try {
+      await registry.registerInstance(
+        { registryPath },
+        {
+          ...oldGeneration,
+          host: '127.0.0.1',
+          profilePath,
+          profileName,
+          type: 'chrome',
+          lastSeenAt: oldGeneration.launchedAt,
+        },
+      );
+
+      await Promise.all([
+        registry.unregisterInstanceIfMatches(
+          { registryPath },
+          profilePath,
+          profileName,
+          oldGeneration,
+        ),
+        registry.registerInstance(
+          { registryPath },
+          {
+            ...replacement,
+            host: '127.0.0.1',
+            profilePath,
+            profileName,
+            type: 'chrome',
+            lastSeenAt: replacement.launchedAt,
+          },
+        ),
+      ]);
+
+      expect(await registry.getInstance({ registryPath }, profilePath, profileName)).toMatchObject(replacement);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
 	  test('prunes dead instances', async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-registry-'));
     const registryPath = path.join(dir, 'browser-state.json');

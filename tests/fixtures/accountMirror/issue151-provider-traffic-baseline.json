@@ -1,0 +1,26 @@
+{
+  "object": "account_mirror_provider_traffic_observation",
+  "version": 1,
+  "scope": "bounded_steady_follow_pass",
+  "observedAt": "2026-09-30T00:00:00.000Z",
+  "logicalInteractions": 6,
+  "effects": [
+    { "phase": "unattributed", "kind": "page_navigate", "count": 4 },
+    { "phase": "unattributed", "kind": "top_level_document", "count": 11 },
+    { "phase": "unattributed", "kind": "frame_navigation", "count": 56 },
+    { "phase": "unattributed", "kind": "network_request", "count": 2146 },
+    { "phase": "unattributed", "kind": "chatgpt_request", "count": 2133 },
+    { "phase": "unattributed", "kind": "third_party_request", "count": 13 }
+  ],
+  "requestKinds": {
+    "Document": 11,
+    "Stylesheet": 145,
+    "Script": 989,
+    "Fetch": 952,
+    "Other": 12,
+    "XHR": 11,
+    "Image": 24,
+    "Font": 2
+  },
+  "warningObserved": false
+}

@@ -1,3 +1,62 @@
+## 2026-10-03 | Installed session reuse removes duplicate materialization work
+
+Canonical PR 176's real ChatGPT service path captured the unresolved ZIP once
+through three trusted CDP mouse events on the retained read session. The cached
+repeat verified both files with zero downloads, CDP calls or observed requests.
+Preserve manifest snapshots per pass and keep direct cache proof separate from
+archive publication and autonomous scheduler acceptance.
+
+## 2026-10-03 | Test session custody through the actual provider service
+
+A base-service regression can miss copies introduced by the provider facade.
+Exercise createLlmService with the installed tab-affinity topology. Explicit-
+target utility wrappers must return retained-session custody to a session-enabled
+caller, just as deadline-scoped reads do. Preserve provider pacing and test
+session reuse and exactly-once close across every load-bearing copy boundary.
+
+## 2026-10-03 | Return deadline-scoped context session custody
+
+Fresh context reads copy options to scope their deadline. Synchronize retained
+provider-session ownership back to the session-enabled caller in finally,
+including an aborted session's removal. Otherwise the next artifact transfer
+loses the session and incurs duplicate read admission or target ownership
+conflicts. Preserve the real governor; fix session reuse rather than cooldowns.
+
+## 2026-10-03 | Identity proof must retain session ownership
+
+A proof-only method cannot retain a newly created browser session on private
+copied options and return only the proof. That strands the target lease and
+makes the next read fail with target-owned. Close newly retained sessions in
+finally on success or identity conflict; preserve sessions supplied by callers.
+Real adapter/coordination-store replay catches the leak without provider calls.
+
+## 2026-10-03 | Preserve failed artifact-context refreshes
+
+A cached conversation may be useful for reading after a provider failure, but
+artifact materialization must not silently use its download controls after a
+requested fresh read fails. Disable context fallback at the materialization
+call site, preserving explicit refresh=false cache use. A real LlmService and
+JsonCacheStore regression proves the failed read rejects before any transfer.
+The earlier installed stall also involved a manually preserved interaction
+governor; this guard does not prove the underlying CDP failure or cooldown cause.
+
+## 2026-10-03 | Materialization blockers and fresh download attribution
+
+Regenerate/Continue generating labels alone do not prove a failed turn;
+require independent failure text before recovery. Single-visit materialization
+stops on blockers before recovery effects. Direct and preview-pane Download actions share trusted pointer input.
+Match native downloads to a pre-click
+filesystem baseline and selected filename; reject mismatched/ambiguous fresh
+files. The compact job-monitoring projection intentionally drops entries and
+telemetry: use full persisted evidence for diagnosis and acceptance.
+
+## 2026-10-03 | ChatGPT artifact readiness eligibility
+
+An assistant control can match the selector while remaining hidden, unnamed,
+or excluded as textdoc. Presence alone must not settle generated-file readiness.
+Use the same collection predicate for readiness and returned probes; executable
+fixtures reproduce premature empty results and the later eligible ZIP mount.
+Issue #165; Plan 0386 acceptance remains open.
 - 2026-09-28: A read-only provider result should not be masked by unrelated
   local persistence when the caller needs only a one-shot inventory. Installed
   stage timestamps proved ChatGPT Library DOM inventory completed in about 23
@@ -23373,6 +23432,58 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Do not issue another navigation merely because the acknowledgement was lost;
   that creates avoidable route churn on a correctly leased tab.
 
+## 2026-09-28 | Recheck terminal state before creating a receipt wake
+
+- A pending terminal-receipt observation can become terminal between identity
+  capture and HTTP/JSON source configuration, especially for short connected-
+  app requests.
+- Treat the fixed-source check as an action gate, not merely a connectivity
+  assertion. If it reports a terminal state or event ID, stop before the wake
+  creation command even when the earlier observation was pending.
+- Do not chain source check and wake creation when the check result must decide
+  whether creation is permitted. A post-terminal wake can consume its sole
+  app-server attempt against the still-active originating writer and cannot
+  prove automatic resumption.
+
+## 2026-09-28 | Let codex-wake capture the active TUI transport
+
+- A Codex thread ID does not mean app-server is the correct wake transport.
+  When the executing Codex session exposes `TMUX_PANE` and `TMUX`, codex-wake's
+  default creation path captures the current pane and socket for an
+  operator-visible TUI continuation.
+- Passing `--app-server-thread-id` explicitly overrides that capture. The wake
+  can then fail against the current active writer even though the tmux target
+  was available and appropriate.
+- Runtime-select the transport before wake creation. Use default tmux capture
+  for a live TUI; use an explicitly validated app-server thread only for a
+  headless/non-tmux workflow. Verify tmux acknowledgement and visible-prompt
+  classification separately from provider receipt success.
+
+## 2026-09-28 | Release safe idle tab leases when their browser is absent
+
+- A non-expired idle tab lease is reusable only while its managed-browser
+  endpoint still exists. If endpoint resolution proves the browser absent, its
+  target cannot remain live and the lease must not block browser startup until
+  its TTL expires.
+- Before acquiring browser-startup control, release only idle leases with
+  `none` or `settled` effect state as `target-missing`/`already-missing`.
+- Startup fencing is profile-wide, so absent-browser reconciliation must use
+  the same managed-browser-profile scope rather than the request tenant alone.
+  A safe active lease owned by a proven-dead PID is also a missing-target fence
+  and must be released. Preserve live-owner active leases and all in-flight,
+  outcome-unknown, retiring, and unresolved lost fences.
+
+## 2026-09-28 | Prove TUI wake success beyond dispatch
+
+- A terminal provider receipt and a submitted wake are separate acceptance
+  boundaries. For an operator-visible Codex TUI continuation, require the wake
+  record to match the exact receipt event, use tmux transport, observe the
+  submission acknowledgement, and record `visible_prompt_observed`.
+- Preserve the wake's captured original pane rather than substituting an
+  app-server thread because an environment also exposes a thread ID. Archive
+  the one-off wake and remove its source and temporary credential only after
+  the resumed turn verifies session provenance and the stored result.
+
 ## 2026-09-27 | Derive durable execution profiles after explicit selection
 
 - A durable request can correctly select an AuraCall runtime profile, browser
@@ -23563,3 +23674,407 @@ ChatGPT commits a native Skill mention before the user text. Prompt equality mus
 - Bound that settlement as one sequence. If it stalls after provider failure,
   preserve the provider error and leave the active lease fence intact; do not
   mark the target idle or silently make it available to another process.
+## 2026-09-28 | Discover live managed-profile owners before requesting startup control
+
+- A no-launch endpoint lookup must still inspect the live managed-profile
+  owner. Registry absence is not proof that Chrome is absent, and escalating
+  directly to browser-startup control incorrectly conflicts with unrelated
+  exact-tab leases.
+- Adopt only a responsive DevTools endpoint attributable to that owner. If an
+  owner exists without an attributable responsive endpoint, keep the
+  duplicate-process refusal; if no owner exists, only an explicit launch path
+  may request profile-wide startup control.
+- API concurrency status is aggregate user-scoped evidence. When root config is
+  serialized but a resolved AuraCall runtime profile selects affinity, report
+  the shared affinity registry and ledger rather than an empty serialized
+  projection.
+
+## 2026-09-28 | Accept root Chat only after the explicit mode-control wait
+
+- A current ChatGPT root may expose one exact enabled prompt editor without
+  rendering the historical Chat/Work controls. Restricting the control-less
+  Chat fallback to conversation routes turns that valid root into a false
+  pre-Send failure.
+- Preserve the bounded control wait first, then allow only exact `/` and
+  established conversation routes to use editor evidence for desired Chat.
+  The editor alone never proves Work, project landing pages remain explicit,
+  and an active current-route Work badge remains authoritative.
+
+
+## 2026-09-28 | Select connected apps through filtered composer drawer rows
+
+- Current ChatGPT connected apps live in the composer tool drawer. With the
+  drawer open, type the exact connector name into the focused composer, wait
+  for the filtered row, and activate that row once. Do not route connected
+  apps through the developer-app `@mention` picker.
+- Selection replaces the typed filter with a non-editable inline
+  `[app-mention-name]` object. Verify its exact label and an
+  `app://connector_...` value from `app-mention-path` or
+  `data-prompt-link-href`; ordinary prompt text can then exist before or after
+  that object.
+- Unknown markerless labels, ambiguous matches, rows ending in `Connect`, and
+  absent or mismatched connector objects remain fail-closed before Send.
+- Do not express preferred DOM selectors as one comma-separated
+  `querySelector()` argument. CSS selector lists return the first matching node
+  in document order, so an outer description wrapper can precede the intended
+  exact-label node. Query each selector separately in priority order and use
+  the first result; apply that same extraction rule to inventory, filtered
+  drawer readback, and activation.
+
+## 2026-09-28 | Exclude committed connector links from prompt verification
+
+- ChatGPT renders a selected app differently after submission: the composer
+  `[app-mention-name]` object becomes a presentation-only element whose
+  `data-prompt-link-href` starts with `app://connector_` in the committed user
+  turn.
+- Prompt-commit verification must ignore that connector label while retaining
+  adjacent authored text. Otherwise a successful Send and provider response
+  can be reported as a false timeout because the observed text is prefixed by
+  the connected-app name.
+- Keep the exclusion narrow to `app://` prompt links; ordinary committed links
+  and user text remain part of the exact prompt readback.
+## 2026-09-29 | Preserve inline-file committed-turn presentation
+
+- A full effective prompt can reach ChatGPT while committed-turn extraction
+  drops `<br>` boundaries, causing Markdown list markers to attach to preceding
+  text and fail exact normalized comparison. Preserve explicit break elements
+  as text boundaries before normalizing rich user turns.
+- Treat one terminal provider presentation ellipsis as chrome, but continue to
+  reject any following authored text. A new user turn beyond the baseline in a
+  conversation with a cleared composer proves provider effect even when its
+  text remains unverified; report `effect_observed` and do not imply Send may
+  have failed.
+
+## 2026-09-29 | Reconcile delayed account-wide ChatGPT rate limits before lease release
+
+- The phrase classifier was already correct, but browser prompt failures only
+  inspected the attached target at the instant the active error was handled.
+  An account-wide warning that appeared later or on a sibling ChatGPT tab
+  could escape the profile guard entirely.
+- After an observed or uncertain provider effect, local and remote browser
+  runs now perform a bounded read-only census of ChatGPT page targets on the
+  same DevTools endpoint. The leased target is checked first; sibling CDP
+  clients are always closed after inspection.
+- A detected warning records the browser-profile cooldown even after provider
+  effect, then returns a structured `retrySafe=false` reconciliation error.
+  Successful terminal paths run the same census before recording success and
+  releasing their lease.
+- The census never navigates, clicks, dismisses, or closes a target and retains
+  only the target identity, URL, sanitized summary, source class, and poll
+  attempt as diagnostic evidence.
+
+## 2026-09-29 | Owned Chrome exit left stale browser owner and lease state
+
+- Symptom: an owned managed browser profile remained in `browser-state.json`
+  after Chrome and its DevTools endpoint exited. The stale owner, operation,
+  lease, PID, and port survived long enough for Linux to reuse the PID for an
+  unrelated process.
+- Cause: explicit owned-handle shutdown deleted registry state by managed
+  browser profile alone, and ordinary child exit had no lifecycle observer.
+  Liveness pruning could repair the record only when a later read happened.
+- Fix: owned launches now observe child `exit`, and child exit, explicit kill,
+  and SIGTERM-driven kill all use an idempotent retirement operation matched on
+  PID, DevTools port, and `launchedAt`. Registry mutations are serialized under
+  a cross-process lock, preventing an old callback from racing and deleting a
+  replacement generation.
+- Guardrail: never treat PID equality alone as browser ownership proof. Keep
+  adopted/external browsers non-owned, and retain liveness pruning only as
+  abrupt-crash recovery.
+# 2026-09-29 — Provider traffic must have one authoritative lifecycle
+
+Optional pacing and best-effort mutation diagnostics are insufficient safety
+boundaries when provider traffic can originate from background reconciliation.
+A physical provider action must carry immutable runtime/profile/workload/
+operation/tab-lease attribution, verify the current lease generation, complete
+persisted admission and start recording before effect, settle the reservation
+immediately after effect, and durably persist any visible provider warning and
+cooldown before permitting later traffic.
+
+Serialized execution is not an exemption from that safety contract. Keep
+`enabled=false` as the concurrency-mode signal, but construct the same durable
+registry and interaction ledger in serialized mode. Configured ChatGPT, Gemini,
+and Grok clients acquire exact ephemeral authority when attaching to a target;
+target reuse acquires authority before focus or navigation, and client close
+settles and releases it exactly once. If no exact managed browser profile or
+target lease can be established, fail before the physical action rather than
+falling back to optional pacing or diagnostics.
+
+Legacy prompt execution must carry that exact authority too. Passing a leased
+target while dropping its governor creates an attribution bypass, and recovery
+navigation cannot rely on hidden properties after reducing a CDP client to
+`{ Page, Runtime }`. Thread the governor explicitly through leased execution
+and recovery helpers, and never fall back to an arbitrary first target after a
+required-authority attachment failure.
+
+## 2026-09-30 | Count physical browser work, not logical frontier rows
+
+A bounded frontier does not imply bounded provider traffic. Direct CDP evidence
+showed one account-mirror detail row navigating to the same ChatGPT conversation
+three times and producing more than 850 requests because each route visit
+rehydrated the application. Likewise, a retained materialization performed
+provider work before discovering that it had no actionable asset attempt.
+
+Admission and acceptance metrics must therefore count physical navigations,
+reloads, target creation, and artifact-resolution attempts. Select actionable
+work locally before opening the provider, reuse one loaded conversation visit
+bundle throughout detail and materialization, and reject any implementation
+whose logical item limit can still multiply into unbounded physical work.
+
+Volatile asset terminality is a separate state from aggregate job success. A
+`tile_not_found`, expired, missing, or provider-unavailable asset should persist
+an explicit `unavailable` availability value plus failure class and retryability.
+Do not hide that child state beneath a succeeded parent or rely on a free-text
+reason as the only durable availability signal.
+
+Do not infer volatility from a `chatgpt://file/` location alone. ChatGPT
+Library files use provider file identifiers too but are persistent inventory.
+A `library_row_not_found` DOM lookup failure remains `unknown`; only confirmed
+volatile missing/expired evidence becomes non-retryable `unavailable`.
+
+## 2026-09-30 | Roll physical activity across provider-index epochs
+
+Logical frontier-row counts cannot stand in for browser cost. Persist current-
+epoch counts for target creation, navigation, reload, snapshot refresh,
+artifact resolution, and download, then roll them into lifetime totals when a
+new provider-index epoch begins. Same-epoch persistence must be idempotent and
+must not reset completed work or double-count activity.
+
+Treat old or malformed work-state records as pending with unknown availability
+and zero counters. Persist only hashed account/conversation scope keys in the
+frontier state; raw provider identities and conversation identifiers remain in
+their existing governed cache fields, not in operational accounting records.
+
+## 2026-09-30 | A bounded pass must retain live-follow affinity
+
+- `maxPasses` bounds execution and requests managed-browser cleanup; it does
+  not turn a ChatGPT account-mirror pass into an unleased generic browser read.
+- Always carry the exact completion operation ID into the refresh service and
+  let the configured affinity factory decide whether the provider/runtime uses
+  tab affinity or the serialized fallback.
+- A mode-only gate on `liveFollowOperationId` bypassed the crawler lease and
+  traffic governor for every bounded canary. The shared physical-action seam
+  then correctly rejected `provider:chatgpt:connect-tab`, but only after the
+  browser root had loaded provider resources.
+
+## 2026-09-30 | Changed fingerprints outrank retained materialization
+
+Choose exactly one changed-frontier action per conversation and order the
+decision guards explicitly. A changed index fingerprint must select one fresh
+visit before missing-asset logic can reuse retained detail or manifest
+evidence; otherwise a stale reference can bypass the route refresh merely
+because local bytes are absent.
+
+Keyset resume must use the persisted pseudokey, not an array offset. Resume
+after an exact key and deduplicate repeated keys without provider work. If the
+checkpoint is absent from the new index, restart the bounded plan and surface
+that fact rather than skipping an unknown prefix.
+
+## 2026-09-30 | One detail row must own one route visit bundle
+
+Coalescing file and artifact reads into a context API is insufficient if the
+provider adapter can still force-navigate the same conversation for payload
+fallback or recovery. Account-mirror detail reads must prohibit route-bound
+payload fallback, transient-surface reload, and conversation reopen after the
+admitted visit. Prefer the already loaded DOM and defer incomplete evidence to
+a later epoch.
+
+Measure physical work around each context read, not only at pass level. Bind
+detail completeness, a sanitized fingerprint, artifact/file refs, and target,
+navigation, and reload deltas into one visit bundle. Fail closed on multiple
+navigations and persist bundle counters only when its epoch exactly matches the
+snapshot epoch.
+- 2026-09-30: A durable detail fingerprint is reusable materialization
+  evidence, not a reason to reopen the provider conversation. Carry retained
+  fingerprint rows into completion-owned materialization, deduplicate them with
+  current-pass visits, and checkpoint artifact-resolution/download counters.
+  Keep availability authoritative per entry: a confirmed missing volatile
+  upload can be unavailable while an unresolved persistent Library row remains
+  unknown, so mixed conversation-level state must remain deferred rather than
+  terminal.
+- 2026-09-30: A provider-warning flag alone cannot explain likely rate-limit
+  precursors. Persist a capped sanitized interaction window with timing deltas,
+  action classes, outcomes, open-page count, and cumulative physical counts at
+  first observation. Never place URLs, provider IDs, operation/lease IDs,
+  account data, headers, cookies, or content in that signature. Separately
+  publish current-epoch changed-frontier amplification metrics so deterministic
+  fixtures can compare intended work with physical work.
+- 2026-09-30: A pure planner and comprehensive unit table do not change runtime
+  behavior unless the collector calls that planner and persists every decision.
+  Wire deterministic selection immediately after the shared index epoch, keep
+  legacy selection only as an explicit migration/full-sweep boundary, and
+  checkpoint skip/defer/materialize decisions even when no detail visit occurs.
+  Deferred asset failures must also persist a provider-specific
+  `retryNotBefore`; an outcome label alone does not prevent immediate re-entry.
+
+## 2026-09-30 | Exact browser shutdown must retire reusable idle leases
+
+Idling a tab lease is correct while its managed browser remains available for
+reuse. Once bounded cleanup has positively established that the exact owned
+browser process is gone, leaving that lease idle creates a false
+`tab-leases-active` fence for a target that cannot exist.
+
+Keep shutdown proof and lease mutation separate but adjacent. Both metadata and
+history-materialization cleanup call one provider-free reconciliation seam
+while their exact browser-operation fence is still held. That seam resolves the
+configured tenant and exact AuraCall runtime profile plus managed browser
+profile, then uses the registry's ordinary `idle -> retiring -> released`
+transition with `operator` / `already-missing`. Never force-release active,
+in-flight, outcome-unknown, identity-ambiguous, or cross-scope leases.
+## 2026-09-30: Missing or uncertain materialization backlog is not actionability
+
+- Implicit steady-follow materialization previously treated unknown/deferred
+  rows as sufficient reason to create a provider job.
+- Fail closed before implicit job creation: require a positive local
+  `retrievableMissing` count. Preserve unknown/deferred evidence for later
+  reconciliation without converting uncertainty into provider traffic.
+  Keep explicitly requested full sweeps distinct from that implicit path.
+- Regression: `tests/accountMirror/completionService.test.ts` covers both the
+  pure decision and the production no-job path.
+# 2026-09-30: Freeze provider-traffic authority in the production pass
+
+- A traffic-budget helper is not enforcement until the production orchestration
+  wraps the governor that adapters actually receive.
+- Freeze discovery budgets before collection and detail budgets only after the
+  deterministic frontier exists. When a budget is intentionally smaller than
+  the frontier, cap and yield before the excess call instead of relying on an
+  exception after work selection.
+- Keep in-page actions distinct from route visits in traffic evidence; merging
+  them hides which physical behavior actually caused provider hydration.
+
+# 2026-09-30: Bind traffic budgets to exact privacy-safe work
+
+- A phase-wide `scope:*` key proves attribution but not selection. Hash the
+  local row identity into a stable `sha256:*` key and bind both the plan and the
+  adapter-facing governor to that exact value.
+- Apply a materialization plan inside configured utility affinity before adding
+  its phase context. This lets the budget inspect the final phase/work key and
+  reject excess activity before the shared governor writes an admission.
+- Treat pre-lease target creation as a separate unresolved boundary; do not
+  claim complete governor coverage merely because all post-lease actions are
+  budgeted.
+
+# 2026-09-30: Govern target creation before lease acquisition
+
+- A lease-backed governor cannot authorize creation of the target from which
+  that lease will be created. Use the same provider-traffic governor with
+  explicit provisional pre-lease attribution and a one-use bootstrap plan,
+  then reserve the lease only after the governed action settles.
+- If post-create settlement fails, close the exact unleased target before
+  propagating the failure. Admission failure must occur before `openTarget`.
+- Recovery is not spare ordinary capacity. Require a distinct hashed work key,
+  causal reason, and one-use admission so its receipt can be tied to the
+  original planned route without silently widening that route's budget.
+## Freeze provider traffic before persisting a visible warning
+
+When warning persistence is asynchronous, setting the in-memory stop latch
+after the write leaves a window in which another provider action can be
+admitted. Set the latch as soon as the classifier returns a warning, then
+persist it. Keep the last bounded probe context and perform one passive final
+check before reporting a pass as successful so a late-rendered warning remains
+attributable without causing any new provider traffic.
+## Join warning evidence at the traffic-governor seam
+
+Warning text alone cannot explain which bounded work preceded a stop. Expose a
+sanitized admission snapshot from the staged traffic controller and retain a
+short effect window in the shared governor. Persist only phase, effect kind,
+counts, timestamps, and outcomes; omit work keys, action IDs, URLs, target IDs,
+and provider content. Project a separate terminal outcome in scheduler
+diagnostics so budget exhaustion, warning stop, successful completion, and
+cleanup failure are not collapsed into a generic error.
+
+## 2026-09-30: Reconcile installed traffic acceptance with continuous direct CDP
+
+- Start the passive direct-CDP observer before the sole installed canary and
+  keep it attached through the terminal warning window. Compare AuraCall's
+  admitted explicit navigations with direct-CDP top-level documents while
+  retaining subframes and hydration requests as distinct observations.
+- A paused scheduler can still support one bounded acceptance pass through the
+  existing completion control. Do not resume continuous scheduling merely to
+  exercise one completion, and do not turn the control into retry authority.
+- Installed diagnostics can omit browser-mutation detail when the API service's
+  active AuraCall runtime profile differs from the canary profile. In that
+  case, require both the canary's own sanitized mutation telemetry and the
+  independent direct-CDP receipt rather than treating the absent projection as
+  zero activity.
+- Finish with a fresh exact-scope process, listener, and lease census. Retire
+  only a settled idle lease after positively proving its owned browser is gone;
+  active, ambiguous, or unrelated leases remain hard stops.
+## 2026-10-01: Treat semantic preview controls as ChatGPT asset identity
+
+- Current ChatGPT generated files and uploaded files can render as
+  `Open preview of <filename>` controls with a separate `Download file` action.
+  Limiting discovery to `button.behavior-btn` or legacy
+  `[role="group"][aria-label]` tiles makes a visibly downloadable chat look
+  empty.
+- Preserve one selector and title-normalization contract across discovery and
+  click-time activation. Strip only the semantic preview prefix, retain the
+  turn/message/index scope, and let the existing viewer-download path perform
+  the action.
+- Passive acceptance observers must bind the exact runtime-resolved DevTools
+  endpoint. A fixed remembered port can silently watch a different or absent
+  browser when managed Chrome uses dynamic port assignment.
+- Conversation/message readiness is not generated-asset readiness. Current
+  file controls can mount after message extraction has already succeeded. A
+  single immediate DOM scan therefore converts a recoverable late-hydration
+  state into a false empty result. Wait once with a bounded `MutationObserver`,
+  then perform one full collection; do not reload, navigate, or loop full-DOM
+  scans.
+
+## 2026-10-02: Scope late asset readiness to the typed conversation turn
+
+- A bounded wait is still incorrect when its predicate is broader than the
+  collector. ChatGPT may expose unrelated preview/download controls elsewhere
+  on the page; a page-global predicate can settle before the selected
+  assistant or user turn mounts its own control.
+- Use the same role/turn structure for the readiness predicate and final
+  collection. Mutation observation remains bounded and passive: no reload,
+  navigation, polling loop, or provider prompt is needed.
+- Preserve actionable absence semantics. A payload asset missing its live
+  control is a `repair_prompt_candidate`, metadata-only inventory is not a
+  download failure, and only explicit provider evidence is
+  `terminally_unavailable`.
+
+## 2026-10-02: Role-bearing selector roots must classify themselves
+
+- When a selector union can match both an outer turn container and the nested
+  role-bearing search unit, `querySelector()` alone is insufficient: it never
+  returns the selected element itself.
+- Derive role evidence from both the selected root and an eligible descendant.
+  Otherwise current `[data-content-search-unit-key$=":assistant"]` markup can
+  be visible and selectable while artifact discovery silently assigns no role
+  and drops every control.
+- Keep this role contract identical across readiness, artifact/image
+  discovery, and click-time tagging so admission and activation cannot drift.
+## 2026-10-02 - ChatGPT generated-file controls require trusted pointer activation
+
+- Symptom: the current Bailey DOM exposed a uniquely identifiable direct
+  generated-file control, discovery/tagging matched it, and
+  `HTMLElement.click()` returned successfully, but Chrome emitted no download.
+- Cause: the upgraded provider control is a React-managed
+  `span[role="button"][data-file-reference]` that requires a trusted pointer
+  activation on the live surface. A synthetic DOM click is not materialization
+  evidence.
+- Fix: after exact candidate tagging, scroll the tagged control into view,
+  validate nonzero geometry, and dispatch one CDP `mouseMoved` /
+  `mousePressed` / `mouseReleased` sequence at its center. Preserve the exact
+  tag-based identity and existing download capture/fallback behavior.
+- Proof: the live pointer sequence downloaded a valid 1,721,645-byte ZIP at
+  SHA-256 `c463e95d...8a46dc`; the focused regression executes the new helper
+  and asserts every CDP input event. Adapter tests (187), typecheck, and build
+  pass. Installed product-path acceptance remains a separate gate.
+
+## 2026-10-02 | Keep trusted activation and product discovery acceptance separate
+
+- An exact canonical install and a proven manual CDP download do not prove the
+  product discovers that asset. The Plan 0386 installed control still returned
+  no candidates before any manifest or transfer existed.
+- Preserve this terminal result and diagnose discovery provider-free rather
+  than spending another live attempt on the activation hypothesis alone.
+
+## 2026-10-03 — Viewer download scope (#165)
+
+Generic ChatGPT `Download file` labels also occur in inline conversation cards. Viewer transfer must exclude conversation-turn descendants before matching generic download labels. A real helper/VM regression reproduced the wrong card click; keep filename verification as a separate guard.
+
+## 2026-10-03 — Avoid unchanged artifact redownloads (#165)
+
+The artifact loop read attachments but never reused them. Check exact current artifact ID/name/URI and local integrity before transfer; apply transfer limits after reuse and pass explicit force separately from context refresh. A repeated real-service regression reproduces the old duplicate and proves unchanged repeats, one added artifact, force, missing files and same-size corruption. Installed incremental acceptance remains pending.

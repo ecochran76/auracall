@@ -1,3 +1,4 @@
+import type { ProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type {
 	BrowserProfileControlClaim,
 	BrowserTabLease,
@@ -34,6 +35,7 @@ export interface DedicatedBrowserTabInput {
 		endpoint: LiveFollowBrowserEndpoint,
 	) => Promise<Array<{ targetId: string; url: string }>>;
 	requireExistingTarget?: boolean;
+	preLeaseProviderTrafficGovernor?: ProviderTrafficGovernor;
 	inspectTarget: (
 		endpoint: LiveFollowBrowserEndpoint,
 		targetId: string,
@@ -180,13 +182,7 @@ async function acquireDedicatedBrowserTab(
 	if (input.requireExistingTarget && !reusableTarget) {
 		throw new Error("Dedicated browser work found no existing compatible target.");
 	}
-	const target =
-		reusableTarget ??
-		(await input.openTarget({
-			host: endpoint.host,
-			port: endpoint.port,
-			url: input.targetUrl,
-		}));
+	const target = reusableTarget ?? (await openPlannedPreLeaseTarget(input, endpoint));
 	const reserved = await input.registry.reserve({
 		scope: input.scope,
 		targetId: requireNonEmpty(target.targetId, "targetId"),
@@ -258,6 +254,52 @@ async function acquireDedicatedBrowserTab(
 		throw accountingError;
 	}
 	return { ...provisioned.value, endpoint };
+}
+
+async function openPlannedPreLeaseTarget(
+	input: DedicatedBrowserTabInput,
+	endpoint: LiveFollowBrowserEndpoint,
+): Promise<{ targetId: string; url: string }> {
+	const action = await input.preLeaseProviderTrafficGovernor?.begin({
+		kind: "target-open-or-reuse",
+		interactionClass: "renavigation",
+		source: "account-mirror:pre-lease-target",
+		requestedUrl: input.targetUrl,
+		toUrl: input.targetUrl,
+		reused: false,
+		reason: "dedicated crawler target creation",
+	});
+	let target: { targetId: string; url: string } | null = null;
+	try {
+		target = await input.openTarget({
+			host: endpoint.host,
+			port: endpoint.port,
+			url: input.targetUrl,
+		});
+		await action?.settle({
+			outcome: "succeeded",
+			targetId: target.targetId,
+			toUrl: target.url,
+			reused: false,
+		});
+		return target;
+	} catch (error) {
+		if (target) {
+			await input.closeTarget({
+				host: endpoint.host,
+				port: endpoint.port,
+				targetId: target.targetId,
+			});
+		}
+		if (action && !target) {
+			await action.settle({
+				outcome: "failed",
+				error: error instanceof Error ? error.message : String(error),
+				reused: false,
+			});
+		}
+		throw error;
+	}
 }
 
 async function selectExistingTarget(

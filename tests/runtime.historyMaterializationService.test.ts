@@ -12,7 +12,9 @@ import type { ProviderCacheContext } from "../src/browser/providers/cache.js";
 import type { ProviderSessionProof } from "../src/browser/providers/providerSessionAuthority.js";
 import type { RunArchiveItem, RunArchiveService } from "../src/runtime/archiveService.js";
 import {
+	classifyHistoryMaterializationEntryRecoverability,
 	createHistoryMaterializationService,
+	createHistoryMaterializationTrafficOptions,
 	formatHistoryMaterializationFailureReason,
 	type HistoryAccountLibraryListInput,
 	type HistoryAccountLibraryMaterializeInput,
@@ -44,6 +46,19 @@ describe("history materialization service", () => {
 		expect(historyMaterializationUtilityAffinityId(null)).toBeUndefined();
 	});
 
+	it("constructs exact privacy-bounded materialization traffic authority", () => {
+		const options = createHistoryMaterializationTrafficOptions("conversation-sensitive", 2);
+		const workKey = options.providerTrafficContext?.workKey;
+
+		expect(workKey).toMatch(/^sha256:[a-f0-9]{64}$/);
+		expect(workKey).not.toContain("conversation-sensitive");
+		expect(options.accountMirrorSingleConversationVisit).toBe(true);
+		expect(options.accountMirrorProviderTrafficPlan?.budgets).toEqual([
+			{ phase: "materialization", kind: "page_navigate", workKey, limit: 1 },
+			{ phase: "materialization", kind: "in_page_action", workKey, limit: 2 },
+		]);
+	});
+
 	it("classifies an all-failed transfer result as failed rather than skipped", () => {
 		expect(resolveHistoryMaterializationResultStatus({ materialized: 0, failed: 12 })).toBe(
 			"failed",
@@ -53,6 +68,190 @@ describe("history materialization service", () => {
 		);
 		expect(resolveHistoryMaterializationResultStatus({ materialized: 1, failed: 11 })).toBe(
 			"materialized",
+		);
+	});
+
+	it("classifies materialization recoverability without collapsing recoverable controls into unavailable assets", () => {
+		const entry = (overrides: Record<string, unknown> = {}) => ({
+			kind: "artifact" as const,
+			providerId: "artifact-1",
+			title: "proposal.docx",
+			status: "skipped" as const,
+			localPath: null,
+			remoteUrl: null,
+			cacheKey: null,
+			checksumSha256: null,
+			mimeType: null,
+			size: null,
+			materializationMethod: null,
+			reason: null,
+			archiveItemId: null,
+			assetRoute: null,
+			...overrides,
+		});
+
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({ status: "materialized", localPath: "/tmp/proposal.docx" }),
+			),
+		).toBe("materialized");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(entry({ reason: "missing_live_control" })),
+		).toBe("repair_prompt_candidate");
+		expect(classifyHistoryMaterializationEntryRecoverability(entry())).toBe("metadata_only");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({ status: "failed", failureKind: "provider_unavailable", retryable: false }),
+			),
+		).toBe("terminally_unavailable");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({
+					status: "failed",
+					failureKind: "retrieval_failed",
+					retryable: true,
+					remoteUrl: "chatgpt://download-button/turn-1/0",
+				}),
+			),
+		).toBe("downloadable_now");
+		expect(
+			classifyHistoryMaterializationEntryRecoverability(
+				entry({
+					status: "failed",
+					failureKind: "retrieval_failed",
+					retryable: false,
+					remoteUrl: "chatgpt://file/persistent-provider-row",
+				}),
+			),
+		).toBe("metadata_only");
+	});
+
+	it("marks a volatile miss unavailable without terminalizing a persistent Library retrieval failure", async () => {
+		const homeDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "auracall-history-materialize-volatile-unavailable-"),
+		);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		let scheduled: (() => Promise<void>) | undefined;
+		const recordConversationEvidence = vi.fn(async () => undefined);
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: vi.fn(async () => ({
+					object: "account_mirror_catalog" as const,
+					generatedAt: "2026-09-30T16:00:00.000Z",
+					kind: "all" as const,
+					limit: 500,
+					entries: [],
+					metrics: { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
+				})),
+				readItem: vi.fn(),
+			},
+			generateId: () => "hmj_volatile_unavailable",
+			now: sequenceNow([
+				"2026-09-30T16:00:00.000Z",
+				"2026-09-30T16:00:01.000Z",
+				"2026-09-30T16:00:02.000Z",
+			]),
+			schedule: (work) => {
+				scheduled = work;
+			},
+			recordConversationEvidence,
+			materializeConversation: vi.fn(
+				async (target): Promise<HistoryMaterializationResult> => ({
+					object: "history_materialization_result",
+					generatedAt: "2026-09-30T16:00:01.000Z",
+					status: "failed",
+					target,
+					source: {
+						type: "conversation",
+						provider: "chatgpt",
+						conversationId: target.conversationId,
+					},
+					manifestPaths: [],
+					entries: [
+						{
+							kind: "file",
+							providerId: "chatgpt://file/file_volatile_fixture",
+							title: "volatile-fixture.txt",
+							status: "failed",
+							localPath: null,
+							remoteUrl: "chatgpt://file/file_volatile_fixture",
+							cacheKey: null,
+							checksumSha256: null,
+							mimeType: "text/plain",
+							size: null,
+							materializationMethod: null,
+							reason: "tile_not_found",
+							archiveItemId: null,
+							assetRoute: null,
+						},
+						{
+							kind: "file",
+							providerId: "chatgpt://file/file_persistent_fixture",
+							title: "persistent-fixture.txt",
+							status: "failed",
+							localPath: null,
+							remoteUrl: "chatgpt://file/file_persistent_fixture",
+							cacheKey: null,
+							checksumSha256: null,
+							mimeType: "text/plain",
+							size: null,
+							materializationMethod: null,
+							reason: "ChatGPT account library file fetch failed: library_row_not_found",
+							failureKind: "retrieval_failed",
+							retryable: false,
+							archiveItemId: null,
+							assetRoute: null,
+						},
+					],
+					archiveItems: [],
+					metrics: { conversations: 1, materialized: 0, skipped: 0, failed: 2 },
+					message: "Volatile provider asset is no longer available.",
+				}),
+			),
+		});
+
+		await service.createJob({
+			provider: "chatgpt",
+			runtimeProfile: "wsl-chrome-3",
+			conversationId: "conv_volatile_fixture",
+			assetKinds: ["files"],
+			refreshSnapshot: false,
+		});
+		if (!scheduled) throw new Error("Expected volatile fixture job to be scheduled.");
+		await scheduled();
+
+		await expect(service.readJob("hmj_volatile_unavailable")).resolves.toMatchObject({
+			status: "failed",
+			result: {
+				entries: [
+					{
+						status: "failed",
+						assetAvailability: "unavailable",
+						failureKind: "provider_unavailable",
+						retryable: false,
+					},
+					{
+						status: "failed",
+						assetAvailability: "unknown",
+						failureKind: "retrieval_failed",
+						retryable: false,
+					},
+				],
+			},
+		});
+		expect(recordConversationEvidence).toHaveBeenCalledWith(
+			expect.objectContaining({ conversationId: "conv_volatile_fixture" }),
+			expect.objectContaining({
+				frontierState: expect.objectContaining({
+					action: "materialize_retained",
+					outcome: "deferred",
+					assetAvailability: "unknown",
+					retryNotBefore: "2026-09-30T16:02:01.000Z",
+					artifactResolutions: 2,
+					downloads: 0,
+				}),
+			}),
 		);
 	});
 
@@ -2685,6 +2884,13 @@ describe("history materialization service", () => {
 				manifestObservedAt: "2026-05-22T18:02:01.000Z",
 				materializedAt: "2026-05-22T18:02:01.000Z",
 				assetCompleteness: "complete",
+				frontierState: expect.objectContaining({
+					action: "materialize_retained",
+					outcome: "complete",
+					assetAvailability: "available",
+					artifactResolutions: 1,
+					downloads: 1,
+				}),
 			}),
 		);
 		const completed = await service.readJob("hmj_refresh_snapshot_1");
@@ -3476,6 +3682,7 @@ describe("history materialization service", () => {
 				status: "queued",
 				request: {
 					provider: "chatgpt",
+					runtimeProfile: "default",
 					conversationId: "conv_browser_ownership",
 					assetKinds: ["artifacts"],
 				},
@@ -3494,6 +3701,10 @@ describe("history materialization service", () => {
 			browserOperationDispatcher,
 			cleanupManagedBrowser: async () => {
 				events.push("cleanup");
+			},
+			retireIdleChatgptLeasesAfterManagedBrowserShutdown: async () => {
+				events.push("reconcile");
+				return { retiredLeaseIds: [], deferredLeaseIds: [] };
 			},
 			materializeConversation: vi.fn(async (target): Promise<HistoryMaterializationResult> => {
 				events.push("provider-work");
@@ -3530,7 +3741,11 @@ describe("history materialization service", () => {
 			}),
 			expect.any(Object),
 		);
-		expect(events).toEqual(["acquire", "provider-work", "cleanup", "release"]);
+		expect(events[0]).toBe("acquire");
+		expect(events[1]).toBe("provider-work");
+		expect(events[2]).toBe("cleanup");
+		expect(events.at(-1)).toBe("release");
+		expect(events.filter((event) => event === "reconcile").length).toBeGreaterThan(0);
 		expect(release).toHaveBeenCalledTimes(1);
 	});
 
@@ -8329,7 +8544,13 @@ describe("history materialization service", () => {
 				provider: "chatgpt",
 				runtimeProfile: "wsl-chrome-3",
 			}),
-			result: expect.objectContaining(guardedResult),
+			result: expect.objectContaining({
+				...guardedResult,
+				entries: guardedResult.entries.map((entry) => ({
+					...entry,
+					assetAvailability: "unknown",
+				})),
+			}),
 		});
 		await expect(service.readJob("hmj_guard_projection_1")).resolves.toMatchObject({
 			status: "skipped",

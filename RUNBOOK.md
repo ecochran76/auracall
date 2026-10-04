@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 631 | 2026-09-28
+
+- Integrated P76 / Plan 0376 through PR 126 at canonical `2321ab9a2`; issue
+  125 is closed. Exact root Chat may use editor evidence only after the bounded
+  explicit-control wait, while Work and project-landing boundaries remain
+  fail-closed.
+- Provider-free verification passed 24 focused and 158 adjacent tests plus
+  typecheck, scoped lint, build, diff hygiene, and plan audit. No installed or
+  live provider effect ran; issue 121 / PR 122 retains that authority.
+- Reconciled integrated P75 / Plan 0375 at canonical merge `1398eadd7`; issue
+  123 is closed and PR 122 is rebased, validated, and pushed at `311438f8a`.
+- Opened P76 / Plan 0376 for issue 125 from canonical main. The exact installed
+  failure is a current root Chat composer with a visible enabled editor but no
+  historical Chat/Work control after the full hydration wait.
+- A deterministic provider-free regression fails with the retained
+  `mode-not-found` result for desired Chat while the adjacent root desired-Work
+  case remains fail-closed. No install, browser/provider effect, scheduler
+  control, terminal-session retry, or GitHub Actions run occurred.
 ## Turn 632 | 2026-09-28
 
 - Reconciled the active-only planning audit for open P55 / [Plan 0362](docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md)
@@ -21893,3 +21911,68 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - PR 91 merged at canonical `54d747f6b`; issue 90 closed as completed and the
   exact topic head is ancestral to the fetched remote main. Retain the remote
   topic ref for audit custody.
+
+## Turn 622 | 2026-09-28
+
+- Opened issue 123 after an exact duplicate search found no matching work item.
+  P75 / Plan 0375 owns the browser-coordination prerequisite on
+  `fix/issue-123-tab-affinity-coexistence` from canonical
+  `fe6375955848afabacd9ef554dc943529866bcd1`.
+- Issue 121 / PR 122 remains connector-only and blocked at installed acceptance.
+  P75 must first reproduce and repair the case where an existing managed
+  browser plus unrelated exact-tab leases incorrectly denies foreground work
+  with `tab-leases-active`.
+- No browser, provider, scheduler, lease override, service restart, installed
+  runtime change, or terminal-session retry occurred in this planning packet.
+
+## Turn 623 | 2026-09-29
+
+- Opened issue 131 after an allowlisted forge preflight found no duplicate and
+  resolved the exact existing `bug` label.
+- P78 / [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)
+  owns a bounded provider-free repair for delayed account-wide ChatGPT rate
+  limits on the leased or sibling same-profile target.
+- The packet must persist a profile cooldown while preserving post-effect
+  non-retryability. No live request, warning dismissal, install, service
+  restart, or browser mutation is authorized.
+- Provider-free implementation passed typecheck, build, diff hygiene, and
+  290 focused/adjacent tests across 8 files. The 377-plan audit reported zero
+  validation errors.
+- PR 132 merged the repair to canonical `main` at
+  `ec5c30030146f9622a2fe31fae73881330bf21de`; issue 131 closed automatically.
+  No installed or live provider action was performed.
+
+## Turn 624 | 2026-09-29
+
+- Opened issue 135 after forge preflight and duplicate search confirmed the
+  owned target, exact existing `bug` label, and no matching work item.
+- P79 / [Plan 0379](docs/dev/plans/0379-2026-09-29-owned-browser-exit-retirement.md)
+  owns a provider-free browser-service repair for stale registry owner,
+  operation, and lease state after an owned Chrome process exits.
+- Retirement must match the exact launched generation so an old child-exit
+  callback or reused PID cannot delete a replacement managed browser profile
+  record. No browser launch, install, service restart, scheduler mutation, or
+  provider action is authorized in this lane.
+- PR 136 merged P79 to canonical `main` at `6f4b3b349`; issue 135 closed.
+  Provider-free validation remains the source acceptance boundary; no
+  installed-runtime or live-provider action occurred.
+
+## Turn 625 | 2026-09-29
+
+- Planned Issue 139 as P81 / [Plan 0381](docs/dev/plans/0381-2026-09-29-account-mirror-change-frontier.md)
+  after Issue 138's provider-traffic governor integrated through PR 140.
+- A bounded read-only survey attached to the already-running `wsl-chrome-3`
+  root surface. It observed current shared collections and retained target
+  topology without navigation, reload, click, prompt, target creation/closure,
+  warning dismissal, or scheduler mutation.
+- No rate-limit warning was visible or triggered. The plan requires every
+  reconciliation action to retain a sanitized append-only record and requires
+  any future warning to freeze work and persist its bounded signature plus the
+  preceding interaction timeline. Correlation must not be reported as causal
+  network attribution.
+- The first implementation packet is provider-free fixture work representing
+  the current collection-oriented service model. The account-mirror scheduler
+  remains operator-paused; installed adoption and live acceptance are outside
+  this planning slice.
+- PR 142 merged the plan to canonical `main` at `fcf388fe8`. Issue 139 and
+  Plan 0381 remain open for the provider-free implementation packets.

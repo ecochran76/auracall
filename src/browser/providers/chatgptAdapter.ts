@@ -4,7 +4,6 @@ import path from "node:path";
 import CDP from "chrome-remote-interface";
 import {
 	connectToChromeTarget,
-	openChromeTarget,
 	openOrReuseChromeTarget,
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
 import type { BrowserInteractionClass } from "../../../packages/browser-service/src/service/interactionGovernor.js";
@@ -107,6 +106,7 @@ import {
 	annotateClientMutationContext,
 	resolveMutationAudit,
 	resolveMutationSource,
+	resolveProviderTrafficGovernor,
 } from "./mutationAudit.js";
 import { providerNavigationAllowed } from "./navigationPolicy.js";
 import { assertProviderSessionAuthorization } from "./providerSessionAuthority.js";
@@ -256,7 +256,7 @@ const CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR = resolveBundledServiceDomSelect
 const CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
 	"assistant_artifact_button",
-	"button.behavior-btn",
+	'button.behavior-btn, button[aria-label^="Open preview of "], [aria-label^="Download "]:not([aria-label="Download file"])',
 );
 const CHATGPT_TEXTDOC_MESSAGE_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
@@ -711,7 +711,14 @@ export function classifyChatgptBlockingSurfaceProbe(
 	const retryAffordance = buttonLabels.find((label) =>
 		/^(retry|try again|regenerate|regenerate response|continue generating)$/.test(label),
 	);
-	if (retryAffordance) {
+	// Regenerate and Continue generating are also ordinary successful-turn
+	// controls. They require independent failure text before recovery may spend
+	// another navigation; Retry/Try again remain explicit failure actions.
+	const hasFailureText =
+		/server connection failed|connection failed|connection lost|network error|failed to connect|unable to connect|something went wrong|an error occurred|message could not be generated|please try again|failed to /i.test(
+			[text, ariaLabel].filter(Boolean).join(" "),
+		);
+	if (retryAffordance && (/^(retry|try again)$/.test(retryAffordance) || hasFailureText)) {
 		return {
 			kind: "retry-affordance",
 			summary: retryAffordance,
@@ -1126,7 +1133,10 @@ async function recoverVisibleChatgptBlockingSurfaceWithClient(
 		return null;
 	}
 	if (resolved.kind !== "rate-limit") {
-		if (!providerNavigationAllowed(options)) {
+		if (
+			!providerNavigationAllowed(options) ||
+			options?.accountMirrorSingleConversationVisit === true
+		) {
 			return {
 				action: "reload-page",
 				outcome: "skipped",
@@ -1134,6 +1144,8 @@ async function recoverVisibleChatgptBlockingSurfaceWithClient(
 			};
 		}
 		try {
+			recordBrowserScrapeCdpCall(options, "Page.reload");
+			recordBrowserScrapeProviderAction(options, "chatgpt.reloadBlockingSurface");
 			await reloadAndSettle(client, {
 				ignoreCache: true,
 				waitForDocumentReady: false,
@@ -1256,7 +1268,10 @@ async function withChatgptBlockingSurfaceRecovery<T>(
 	};
 	const runRecoverySequence = async (match: ChatgptBlockingSurfaceMatch): Promise<void> => {
 		lastRecoveryActions = [];
-		if (isChatgptAccountMirrorHardStop(match, options?.providerOptions)) {
+		if (
+			isChatgptAccountMirrorHardStop(match, options?.providerOptions) ||
+			options?.providerOptions?.accountMirrorSingleConversationVisit === true
+		) {
 			throw createChatgptBlockingSurfaceError(action, match);
 		}
 		await beforeChatgptBrowserInteraction(options?.providerOptions, "provider-recovery");
@@ -1333,7 +1348,10 @@ function buildChatgptConversationReopen(
 	options?: BrowserProviderListOptions,
 ): () => Promise<ChatgptRecoveryActionResult> {
 	return async () => {
-		if (!providerNavigationAllowed(options)) {
+		if (
+			!providerNavigationAllowed(options) ||
+			options?.accountMirrorSingleConversationVisit === true
+		) {
 			return {
 				action: "reopen-conversation",
 				outcome: "skipped",
@@ -1396,6 +1414,11 @@ async function beforeChatgptBrowserInteraction(
 	options: BrowserProviderListOptions | undefined,
 	kind: BrowserInteractionClass,
 ): Promise<void> {
+	if (options?.providerTrafficGovernor) {
+		// The physical browser seam owns admission for governed traffic. Calling
+		// the legacy governor here would reserve and count the same action twice.
+		return;
+	}
 	if (kind === "conversation-read" && options?.useProviderSession && options.providerSession) {
 		recordBrowserScrapeProviderAction(options, "chatgpt.skipScopedInteractionGovernor");
 		return;
@@ -3329,6 +3352,10 @@ export async function readChatgptConversationPayloadWithClient(
 	if (!providerNavigationAllowed(options)) {
 		return null;
 	}
+	if (options?.accountMirrorSingleConversationVisit === true) {
+		recordBrowserScrapeProviderAction(options, "chatgpt.skipPayloadRouteFallback.singleVisit");
+		return null;
+	}
 
 	const targetUrl = resolveChatgptConversationApiUrl(conversationId);
 	await client.Network.enable().catch(() => undefined);
@@ -3407,6 +3434,8 @@ export async function readChatgptConversationPayloadWithClient(
 	// home before the fallback starts. The exact Network response is the payload
 	// completion signal, so a pending Page.navigate acknowledgement must not gate
 	// this read after responseReceived/loadingFinished deliver the complete body.
+	recordBrowserScrapeCdpCall(options, "Page.navigate");
+	recordBrowserScrapeProviderAction(options, "chatgpt.navigatePayloadRouteFallback");
 	await navigateAndSettle(client, {
 		url: resolveChatgptConversationUrl(conversationId, _projectId),
 		forceNavigation: true,
@@ -3421,7 +3450,10 @@ export async function readChatgptConversationPayloadWithClient(
 			ok: response !== null,
 			reason: response ? undefined : "Exact conversation payload response not observed.",
 		})),
-	}).catch(() => finishBody(null));
+	}).catch(() => {
+		finishBody(null);
+		return null;
+	});
 	const response = await bodyPromise;
 	if (response?.kind === "terminal-unavailable") {
 		throw createChatgptConversationUnavailableError(conversationId, response.status);
@@ -4456,6 +4488,12 @@ async function connectToChatgptTab(
 				enableChatgptTargetDomains(client, options.tabTargetId, options),
 				options.abortSignal,
 			);
+			await annotateClientMutationContext(
+				client,
+				options,
+				"provider:chatgpt",
+				options.tabTargetId,
+			);
 			setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
 			await waitForChatgptOperationWithAbort(
 				dismissCreateProjectDialogIfOpen(client.Runtime),
@@ -4594,12 +4632,12 @@ async function connectToChatgptTab(
 		}
 		recordBrowserScrapeCdpCall(options, "Target.createTarget");
 		recordBrowserScrapeProviderAction(options, "chatgpt.openTarget");
-		const opened = failedTargetId
-			? { target: await openChromeTarget(resolvedPort, preferredUrl, host), reused: false }
-			: await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
+		const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
 					host,
 					reusePolicy:
-						forceNewDisposableTab || !extractChatgptConversationIdFromUrl(preferredUrl)
+						failedTargetId ||
+						forceNewDisposableTab ||
+						!extractChatgptConversationIdFromUrl(preferredUrl)
 							? "new"
 							: "same-origin",
 					compatibleHosts: CHATGPT_COMPATIBLE_HOSTS,
@@ -4609,6 +4647,11 @@ async function connectToChatgptTab(
 					cleanupExistingTargets: !forceNewDisposableTab,
 					suppressFocus: tabPolicy.suppressFocus,
 					mutationAudit: resolveMutationAudit(options),
+					providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+					providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+					providerTrafficRequired:
+						options?.providerTrafficRequired === true ||
+						resolveProviderTrafficGovernor(options) !== undefined,
 					mutationSource: resolveMutationSource(options, "provider:chatgpt", "connect-tab"),
 				});
 		targetInfo = opened.target ?? undefined;
@@ -4631,8 +4674,23 @@ async function connectToChatgptTab(
 		if (!options?.tabTargetId && providerNavigationAllowed(options)) {
 			recordBrowserScrapeCdpCall(options, "Target.createTarget");
 			recordBrowserScrapeProviderAction(options, "chatgpt.openTargetAfterAttachFailure");
-			const opened = await openChromeTarget(resolvedPort, preferredUrl, host);
-			const freshTargetId = resolveChatgptTargetId(opened);
+			const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
+				host,
+				reusePolicy: "new",
+				cleanupExistingTargets: false,
+				mutationAudit: resolveMutationAudit(options),
+				providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+				providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+				providerTrafficRequired:
+					options?.providerTrafficRequired === true ||
+					resolveProviderTrafficGovernor(options) !== undefined,
+				mutationSource: resolveMutationSource(
+					options,
+					"provider:chatgpt",
+					"recover-attach-target",
+				),
+			});
+			const freshTargetId = resolveChatgptTargetId(opened.target);
 			if (freshTargetId) {
 				client = await connectToChromeTarget({ host, port: resolvedPort, target: freshTargetId });
 				recordBrowserScrapeCdpCall(options, "Target.attachToTarget");
@@ -4645,7 +4703,7 @@ async function connectToChatgptTab(
 			throw error;
 		}
 	}
-	annotateClientMutationContext(client, options, "provider:chatgpt");
+	await annotateClientMutationContext(client, options, "provider:chatgpt", resolvedTargetId);
 	setClientSuppressFocus(client, tabPolicy.suppressFocus);
 	await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
 	const connection = {
@@ -9022,6 +9080,7 @@ async function readVisibleChatgptDeepResearchArtifactsFromTargets(
 	targetContext?: { host: string; port: number; targetId?: string | null },
 	messageIndex?: number,
 	allowedFrameUrls: Set<string> = new Set(),
+	options?: BrowserProviderListOptions,
 ): Promise<ConversationArtifact[]> {
 	if (!targetContext?.port || allowedFrameUrls.size === 0) {
 		return [];
@@ -9044,6 +9103,12 @@ async function readVisibleChatgptDeepResearchArtifactsFromTargets(
 			if (!frameClient) continue;
 			try {
 				await frameClient.Runtime.enable();
+				await annotateClientMutationContext(
+					frameClient,
+					options,
+					"provider:chatgpt:deep-research-frame",
+					targetId,
+				);
 				const { result } = await frameClient.Runtime.evaluate({
 					expression: `(() => {
           const normalize = (value) => String(value || '')
@@ -9426,6 +9491,7 @@ async function readChatgptConversationContextWithClient(
 				targetContext,
 				messages.length,
 				deepResearchFrameUrls,
+				options,
 			);
 			const normalizedMessages = messages.map(({ role, text }) => ({ role, text }));
 			for (const artifact of deepResearchArtifacts) {
@@ -9576,12 +9642,18 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
 		() =>
 			withChatgptTimeout(
 				client.Runtime.evaluate({
-					expression: `(() => {
+					expression: `(async () => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const isVisible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
+      };
+      const artifactTitle = (button) => {
+        const ariaLabel = normalize(button.getAttribute('aria-label') || '');
+        const previewMatch = ariaLabel.match(/^Open preview of\\s+(.+)$/i);
+        const downloadMatch = ariaLabel.match(/^Download\\s+(.+)$/i);
+        return normalize(previewMatch?.[1] || downloadMatch?.[1] || button.textContent || ariaLabel || '');
       };
       const collect = () => {
         const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
@@ -9594,6 +9666,8 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
                 roleNode?.getAttribute('data-message-author-role') ||
 	            roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
 	            roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
                 section.getAttribute('data-message-author-role') ||
                 section.getAttribute('data-turn') ||
                 '',
@@ -9612,7 +9686,7 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
               messageId: entry.messageId || null,
               messageIndex: entry.messageIndex,
               buttonIndex,
-              title: normalize(button.textContent || button.getAttribute('aria-label') || '') || null,
+              title: artifactTitle(button) || null,
             }))
             .filter((button) => {
               const title = normalize(button.title || '');
@@ -9623,10 +9697,27 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
           return buttons;
         });
       };
-      // The caller has already established conversation-surface readiness.
-      // Repeating this layout-forcing full-DOM scan can monopolize a large
-      // conversation renderer, so collect the ready surface exactly once.
-      return collect();
+      let probes = collect();
+      // Readiness must use the same visibility, title, and textdoc exclusions
+      // as collection. An ineligible control must not hide a late-mounted file.
+      if (probes.length === 0) {
+        await new Promise((resolve) => {
+          let settled = false;
+          const finish = () => {
+            if (settled) return;
+            settled = true;
+            observer.disconnect();
+            resolve(undefined);
+          };
+          const observer = new MutationObserver(() => {
+            probes = collect();
+            if (probes.length > 0) finish();
+          });
+          observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+          setTimeout(finish, 5_000);
+        });
+      }
+      return probes;
     })()`,
 					awaitPromise: true,
 					returnByValue: true,
@@ -9677,6 +9768,8 @@ async function readVisibleChatgptImageArtifactProbesWithClient(
               roleNode?.getAttribute('data-message-author-role') ||
 	          roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
 	          roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+              section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+              section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
               section.getAttribute('data-message-author-role') ||
               section.getAttribute('data-turn') ||
               '',
@@ -9831,6 +9924,10 @@ async function readVisibleChatgptConversationFilesWithClient(
         }
         return null;
       };
+      const previewName = (node) => {
+        const ariaLabel = normalize(node.getAttribute?.('aria-label') || '');
+        return normalize(ariaLabel.match(/^Open preview of\\s+(.+)$/i)?.[1] || '');
+      };
       const collect = () => {
         const items = [];
         const nodes = Array.from(
@@ -9843,10 +9940,17 @@ async function readVisibleChatgptConversationFilesWithClient(
           const section = node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)});
           const turnId = normalize(section?.getAttribute('data-turn-id') || '');
           const messageId = normalize(node.getAttribute('data-message-id') || '');
-          const tiles = Array.from(node.querySelectorAll('[role="group"][aria-label]'))
+          const legacyTiles = Array.from(node.querySelectorAll('[role="group"][aria-label]'))
             .filter((tile) => tile.querySelector('button[aria-label], a[aria-label], button, a'));
+          const semanticPreviewControls = Array.from(
+            node.querySelectorAll('button[aria-label^="Open preview of "]'),
+          ).filter((button) => !legacyTiles.some((tile) => tile.contains(button)));
+          const tiles = [...legacyTiles, ...semanticPreviewControls];
           tiles.forEach((tile, tileIndex) => {
+            const semanticName = previewName(tile);
             const name = normalize(
+              semanticName ||
+              previewName(tile.querySelector('button[aria-label^="Open preview of "]')) ||
               tile.getAttribute('aria-label') ||
               tile.querySelector('button[aria-label], a[aria-label]')?.getAttribute('aria-label') ||
               '',
@@ -9868,9 +9972,34 @@ async function readVisibleChatgptConversationFilesWithClient(
         });
         return items;
       };
+		const hasUserFileControl = () => Array.from(
+			document.querySelectorAll(
+				${JSON.stringify(`${CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR} ${CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR}`)},
+			),
+		)
+			.filter((node) => !node.parentElement?.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}))
+			.some((node) => Boolean(
+				node.querySelector('button[aria-label^="Open preview of "], [role="group"][aria-label]'),
+			));
 		// Conversation-surface readiness is established by the caller. Repeating
-		// this full-DOM scan can monopolize a large conversation's renderer after
-		// the outer CDP deadline has fired, so collect the ready surface once.
+		// Message readiness can precede late-mounted upload tiles. Wait without a
+		// reload/navigation and collect the full ready surface exactly once.
+		if (!hasUserFileControl()) {
+			await new Promise((resolve) => {
+				let settled = false;
+				const finish = () => {
+					if (settled) return;
+					settled = true;
+					observer.disconnect();
+					resolve(undefined);
+				};
+				const observer = new MutationObserver(() => {
+					if (hasUserFileControl()) finish();
+				});
+				observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+				setTimeout(finish, 5_000);
+			});
+		}
 		return collect();
 	})()`,
 			awaitPromise: true,
@@ -12059,6 +12188,68 @@ async function configureChatgptDownloadBehaviorWithClient(
 	}
 }
 
+async function dispatchChatgptArtifactPointerInput(
+	client: ChromeClient,
+	point: { x: number; y: number },
+	options?: BrowserProviderListOptions,
+): Promise<void> {
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({ type: "mouseMoved", x: point.x, y: point.y });
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		buttons: 1,
+		clickCount: 1,
+	});
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		buttons: 0,
+		clickCount: 1,
+	});
+}
+
+async function clickTaggedChatgptDownloadControlWithClient(
+	client: ChromeClient,
+	options?: BrowserProviderListOptions,
+): Promise<boolean> {
+	recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+	const result = await client.Runtime.evaluate({
+		expression: `(() => {
+      const target = document.querySelector(${JSON.stringify(`[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`)});
+      if (!(target instanceof HTMLElement)) {
+        return { ok: false, reason: 'Download target missing before click' };
+      }
+      target.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = target.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return { ok: false, reason: 'Download target is not visible before click' };
+      }
+      return {
+        ok: true,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    })()`,
+		returnByValue: true,
+	});
+	const point = isRecord(result.result?.value) ? result.result.value : null;
+	if (point?.ok !== true || typeof point.x !== "number" || typeof point.y !== "number") {
+		return false;
+	}
+	await dispatchChatgptArtifactPointerInput(client, { x: point.x, y: point.y }, options);
+	return true;
+}
+
+export const clickTaggedChatgptDownloadControlWithClientForTest =
+	clickTaggedChatgptDownloadControlWithClient;
+
 async function tagChatgptArtifactButtonWithClient(
 	client: ChromeClient,
 	artifact: ConversationArtifact,
@@ -12083,6 +12274,12 @@ async function tagChatgptArtifactButtonWithClient(
           const rect = node.getBoundingClientRect();
           return rect.width > 0 && rect.height > 0;
         };
+        const artifactTitle = (node) => {
+          const ariaLabel = normalize(node.getAttribute('aria-label') || '');
+          const previewMatch = ariaLabel.match(/^Open preview of\\s+(.+)$/i);
+          const downloadMatch = ariaLabel.match(/^Download\\s+(.+)$/i);
+          return normalize(previewMatch?.[1] || downloadMatch?.[1] || node.textContent || ariaLabel || '').toLowerCase();
+        };
         document.querySelectorAll('[' + attr + ']').forEach((node) => node.removeAttribute(attr));
         const expectedTitle = normalize(${JSON.stringify(artifact.title)}).toLowerCase();
         const expectedMessageId = normalize(${JSON.stringify(artifact.messageId ?? null)});
@@ -12101,6 +12298,8 @@ async function tagChatgptArtifactButtonWithClient(
                 roleNode?.getAttribute('data-message-author-role') ||
 	            roleNode?.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
 	            roleNode?.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-content-search-unit-key')?.split(':').at(-1) ||
+                section.getAttribute('data-chatgpt-search-unit-key')?.split(':').at(-1) ||
                 section.getAttribute('data-message-author-role') ||
                 section.getAttribute('data-turn') ||
                 '',
@@ -12120,7 +12319,7 @@ async function tagChatgptArtifactButtonWithClient(
                 messageId: root.messageId,
                 messageIndex: root.messageIndex,
                 buttonIndex,
-                title: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('download') || '').toLowerCase(),
+                title: artifactTitle(node) || normalize(node.getAttribute('download') || '').toLowerCase(),
                 href: '',
               }));
             const anchors = Array.from(root.section.querySelectorAll('a[href]'))
@@ -12226,18 +12425,25 @@ async function clickChatgptViewerDownloadButtonWithClient(
           '',
         );
         const controls = Array.from(document.querySelectorAll('button, [role="button"], a'))
-          .filter((node) => isVisible(node) && node.getAttribute(taggedAttr) !== 'true')
+          .filter((node) => isVisible(node) && node.getAttribute(taggedAttr) !== 'true' &&
+            !node.closest?.(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((node) => ({ node, label: labelFor(node) }));
         const download = controls.find((entry) => /^Download(?: file)?$/i.test(entry.label));
-        if (!download?.node || typeof download.node.click !== 'function') {
+        if (!(download?.node instanceof HTMLElement)) {
           return { ok: false, labels: controls.map((entry) => entry.label).filter(Boolean).slice(0, 20) };
         }
-        download.node.click();
-        return { ok: true, label: download.label };
+        download.node.scrollIntoView({ block: 'center', inline: 'center' });
+        const rect = download.node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return { ok: false };
+        return { ok: true, label: download.label, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
       })()`,
 			returnByValue: true,
 		});
-		if (isRecord(result.result?.value) && result.result.value.ok === true) {
+		if (
+			isRecord(result.result?.value) && result.result.value.ok === true &&
+			typeof result.result.value.x === "number" && typeof result.result.value.y === "number"
+		) {
+			await dispatchChatgptArtifactPointerInput(client, { x: result.result.value.x, y: result.result.value.y }, options);
 			recordBrowserScrapeProviderAction(options, "chatgpt.clickArtifactViewerDownload");
 			const matchedLabel = normalizeUiText(
 				typeof result.result.value.label === "string" ? result.result.value.label : null,
@@ -12405,35 +12611,42 @@ export const validateChatgptDeepResearchExportFileForTest = validateChatgptDeepR
 
 async function waitForChatgptDownloadedFile(
 	destDir: string,
+	baseline: ChatgptDownloadDirectorySnapshot,
+	expectedName: string,
 	timeoutMs = 20_000,
 ): Promise<string | null> {
 	const deadline = Date.now() + timeoutMs;
 	let lastPath: string | null = null;
-	let lastSize = -1;
-	let stableCount = 0;
+	let lastFingerprint: string | null = null;
 	while (Date.now() < deadline) {
-		const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
-		const completed = entries
-			.filter(
-				(entry) =>
-					entry.isFile() && !entry.name.endsWith(".crdownload") && !entry.name.endsWith(".tmp"),
-			)
-			.map((entry) => entry.name);
-		if (completed.length > 0) {
-			const candidateName = completed.sort()[0];
-			if (!candidateName) continue;
-			const candidatePath = path.join(destDir, candidateName);
-			const stat = await fs.stat(candidatePath).catch(() => null);
-			if (stat) {
-				if (candidatePath === lastPath && stat.size === lastSize) {
-					stableCount += 1;
-				} else {
-					lastPath = candidatePath;
-					lastSize = stat.size;
-					stableCount = 0;
+		const current = await snapshotChatgptDownloadDirectory(destDir);
+		const fresh = Array.from(current.entries()).filter(
+			([name, fingerprint]) => baseline.get(name) !== fingerprint,
+		);
+		if (fresh.length > 1) {
+			throw new Error("chatgpt_artifact_download_ambiguous: multiple fresh browser downloads");
+		}
+		const candidate = fresh[0];
+		if (candidate) {
+			const [name, fingerprint] = candidate;
+			if (path.extname(expectedName)) {
+				const identity = classifyChatgptFileNameIdentity(name, expectedName);
+				if (identity !== "exactMatch" && identity !== "collisionSuffixMatch") {
+					throw new Error(
+						"chatgpt_artifact_download_identity_mismatch: fresh download does not match selected artifact",
+					);
 				}
-				if (stableCount >= 1) return candidatePath;
 			}
+			const candidatePath = path.join(destDir, name);
+			const stat = await fs.stat(candidatePath).catch(() => null);
+			if (stat && stat.size > 0 && candidatePath === lastPath && fingerprint === lastFingerprint) {
+				return candidatePath;
+			}
+			lastPath = candidatePath;
+			lastFingerprint = fingerprint;
+		} else {
+			lastPath = null;
+			lastFingerprint = null;
 		}
 		await sleep(250);
 	}
@@ -12532,6 +12745,7 @@ async function materializeChatgptDeepResearchExportWithClient(
 	artifact: ConversationArtifact,
 	destDir: string,
 	targetContext?: { host: string; port: number; targetId?: string | null },
+	options?: BrowserProviderListOptions,
 ): Promise<FileRef | null> {
 	const exportVariant =
 		typeof artifact.metadata?.exportVariant === "string" ? artifact.metadata.exportVariant : null;
@@ -12587,6 +12801,12 @@ async function materializeChatgptDeepResearchExportWithClient(
 			if (!frameClient) continue;
 			try {
 				await frameClient.Runtime.enable();
+				await annotateClientMutationContext(
+					frameClient,
+					options,
+					"provider:chatgpt:deep-research-export",
+					targetId,
+				);
 				const clicked = await frameClient.Runtime.evaluate({
 					expression: buildChatgptDeepResearchExportControlExpression(exportLabel),
 					returnByValue: true,
@@ -12764,6 +12984,7 @@ async function materializeChatgptConversationArtifactWithClient(
 					artifact,
 					destDir,
 					targetContext,
+					options,
 				);
 			}
 			if (artifact.kind === "document" && typeof artifact.metadata?.contentText === "string") {
@@ -12824,21 +13045,10 @@ async function materializeChatgptConversationArtifactWithClient(
 				if (!readyButton) {
 					return null;
 				}
+				const downloadBaseline = await snapshotChatgptDownloadDirectory(destDir);
 				await armDownloadCapture(client.Runtime, { stateKey: CHATGPT_DOWNLOAD_CAPTURE_STATE_KEY });
-				recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
 				recordBrowserScrapeProviderAction(options, "chatgpt.clickArtifactDownload");
-				const clickResult = await client.Runtime.evaluate({
-					expression: `(() => {
-            const target = document.querySelector(${JSON.stringify(`[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`)});
-            if (!(target instanceof HTMLElement)) {
-              return { ok: false, reason: 'Download target missing before click' };
-            }
-            target.click();
-            return { ok: true };
-          })()`,
-					returnByValue: true,
-				});
-				if (!isRecord(clickResult.result?.value) || clickResult.result.value.ok !== true) {
+				if (!(await clickTaggedChatgptDownloadControlWithClient(client, options))) {
 					return null;
 				}
 				const capture = await waitForDownloadCapture(client.Runtime, {
@@ -12866,6 +13076,8 @@ async function materializeChatgptConversationArtifactWithClient(
 				recordBrowserScrapeDownloadAttempt(options);
 				const downloadedPath = await waitForChatgptDownloadedFile(
 					destDir,
+					downloadBaseline,
+					sanitizeChatgptArtifactFileName(artifact.title),
 					CHATGPT_ARTIFACT_BROWSER_DOWNLOAD_TIMEOUT_MS,
 				);
 				if (downloadedPath) {
@@ -12996,6 +13208,9 @@ async function materializeChatgptConversationArtifactWithClient(
 		},
 	);
 }
+
+export const materializeChatgptConversationArtifactWithClientForTest =
+	materializeChatgptConversationArtifactWithClient;
 
 type ChatgptPromptWorkbenchConfig = {
 	chatgptMode?: "chat" | "work" | null;

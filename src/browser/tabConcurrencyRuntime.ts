@@ -100,17 +100,6 @@ export function createBrowserTabConcurrencyRuntime(
 	options: { storageRoot?: string; now?: () => Date } = {},
 ): BrowserTabConcurrencyRuntime {
 	const mode = userConfig.browser?.tabConcurrencyMode ?? "serialized";
-	if (mode === "serialized") {
-		return {
-			mode,
-			enabled: false,
-			storageRoot: null,
-			registry: null,
-			ledger: null,
-			readStatus: async () => emptyStatus(mode),
-		};
-	}
-
 	const storageRoot =
 		options.storageRoot ?? path.join(getAuracallHomeDir(), "browser-coordination");
 	const registry = createFileBackedBrowserTabLeaseRegistry({
@@ -121,7 +110,7 @@ export function createBrowserTabConcurrencyRuntime(
 	});
 	return {
 		mode,
-		enabled: true,
+		enabled: mode === "tab-affinity",
 		storageRoot,
 		registry,
 		ledger,
@@ -141,7 +130,7 @@ export function createBrowserTabConcurrencyRuntime(
 			const rejectionEvents = events.filter((event) => event.type === "admission-rejected");
 			return {
 				mode,
-				enabled: true,
+				enabled: mode === "tab-affinity",
 				storageRoot,
 				leaseCount: leases.length,
 				fencedLeaseCount: fencedLeases.length,
@@ -255,40 +244,6 @@ export function createBrowserTabConcurrencyRuntime(
 	};
 }
 
-function emptyStatus(mode: BrowserTabConcurrencyMode): BrowserTabConcurrencyStatus {
-	return {
-		mode,
-		enabled: false,
-		storageRoot: null,
-		leaseCount: 0,
-		fencedLeaseCount: 0,
-		interactionCount: 0,
-		activeInteractionCount: 0,
-		providerWarningEventCount: 0,
-		providerWarnings: {
-			active: 0,
-			indefinite: 0,
-			cooldown: 0,
-			classifications: {},
-			maximumCooldownRemainingMs: 0,
-		},
-		admissionRejections: { total: 0, latestReason: null, reasons: {} },
-		aggregateUsage: {
-			activeChats: 0,
-			chatsLastHour: 0,
-			chatsLastDay: 0,
-			interactionsLastMinute: 0,
-		},
-		leaseStates: { active: 0, idle: 0, retiring: 0, released: 0, lost: 0 },
-		workloads: { conversations: 0, newConversations: 0, liveFollow: 0, ephemeral: 0 },
-		attention: { expiredIdle: 0, outcomeUnknown: 0, restartUnverified: 0 },
-		bindingLifetimes: [],
-		targetActions: emptyActionCounts(),
-		targetActionsByWorkload: emptyTargetActionsByWorkload(),
-		retirements: { closed: 0, alreadyMissing: 0, preserved: 0 },
-	};
-}
-
 function emptyActionCounts(): BrowserTabActionCounts {
 	return {
 		targetCreations: 0,
@@ -297,15 +252,6 @@ function emptyActionCounts(): BrowserTabActionCounts {
 		reloads: 0,
 		focuses: 0,
 		closes: 0,
-	};
-}
-
-function emptyTargetActionsByWorkload(): BrowserTabConcurrencyStatus["targetActionsByWorkload"] {
-	return {
-		conversations: emptyActionCounts(),
-		newConversations: emptyActionCounts(),
-		liveFollow: emptyActionCounts(),
-		ephemeral: emptyActionCounts(),
 	};
 }
 

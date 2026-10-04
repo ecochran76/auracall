@@ -17,7 +17,7 @@ import {
   type ProviderSessionProof,
 } from './providerSessionAuthority.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
-import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
+import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource, resolveProviderTrafficGovernor } from './mutationAudit.js';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import {
   detectGrokSignedInIdentity,
@@ -4017,7 +4017,7 @@ export function createGrokAdapter(): Pick<
         let normalized = status.identity;
         if (!normalized && !status.guestAuthCta) {
           const serializedScripts = targetId
-            ? await readGrokSerializedIdentityScriptsForTarget(host, port, targetId)
+            ? await readGrokSerializedIdentityScriptsForTarget(host, port, targetId, options)
             : await readGrokSerializedIdentityScriptsWithRetry(client.Runtime);
           normalized = extractGrokIdentityFromSerializedScripts(serializedScripts);
         }
@@ -5740,6 +5740,7 @@ async function connectToGrokTab(
   if (options?.tabTargetId && port) {
     const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    await annotateClientMutationContext(client, options, 'provider:grok', options.tabTargetId);
     setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
     return {
       client,
@@ -5795,7 +5796,7 @@ async function connectToGrokTab(
     }
     const client = await connectToChromeTarget({ host, port: resolvedPort, target: requestedTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-    annotateClientMutationContext(client, options, 'provider:grok');
+    await annotateClientMutationContext(client, options, 'provider:grok', requestedTargetId);
     setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
     return { client, targetId: requestedTargetId, shouldClose: false, host, port: resolvedPort, usedExisting: true };
   }
@@ -5816,6 +5817,11 @@ async function connectToGrokTab(
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
+      providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+      providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+      providerTrafficRequired:
+        options?.providerTrafficRequired === true ||
+        resolveProviderTrafficGovernor(options) !== undefined,
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab'),
     });
     targetInfo = opened.target ?? undefined;
@@ -5835,6 +5841,11 @@ async function connectToGrokTab(
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
+      providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+      providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+      providerTrafficRequired:
+        options?.providerTrafficRequired === true ||
+        resolveProviderTrafficGovernor(options) !== undefined,
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab-fallback'),
     });
     targetInfo = opened.target ?? undefined;
@@ -5847,7 +5858,7 @@ async function connectToGrokTab(
   }
   const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  annotateClientMutationContext(client, options, 'provider:grok');
+  await annotateClientMutationContext(client, options, 'provider:grok', targetId);
   setClientSuppressFocus(client, tabPolicy.suppressFocus);
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
 }
@@ -7495,6 +7506,7 @@ async function connectToGrokProjectTab(
   if (options?.tabTargetId && port) {
     const client = await CDP({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', options.tabTargetId);
     return {
       client,
       targetId: options.tabTargetId,
@@ -7526,6 +7538,7 @@ async function connectToGrokProjectTab(
     if (resolvedTargetId && resolvedPort) {
       const client = await CDP({ host, port: resolvedPort, target: resolvedTargetId });
       await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+      await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', resolvedTargetId);
       return {
         client,
         targetId: resolvedTargetId,
@@ -7569,6 +7582,11 @@ async function connectToGrokProjectTab(
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
       mutationAudit: resolveMutationAudit(options),
+      providerTrafficGovernor: resolveProviderTrafficGovernor(options),
+      providerTrafficAuthorityFactory: options?.providerTrafficAuthorityFactory,
+      providerTrafficRequired:
+        options?.providerTrafficRequired === true ||
+        resolveProviderTrafficGovernor(options) !== undefined,
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-project-tab'),
     });
     targetInfo = opened.target ?? undefined;
@@ -7581,7 +7599,7 @@ async function connectToGrokProjectTab(
   }
   const client = await CDP({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  annotateClientMutationContext(client as ChromeClient, options, 'provider:grok');
+  await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', targetId);
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
 }
 
@@ -10254,10 +10272,12 @@ async function readGrokSerializedIdentityScriptsForTarget(
   host: string,
   port: number,
   targetId: string,
+  options?: BrowserProviderListOptions,
 ): Promise<string[]> {
   const client = await connectToChromeTarget({ host, port, target: targetId });
   try {
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    await annotateClientMutationContext(client, options, 'provider:grok', targetId);
     return await readGrokSerializedIdentityScriptsWithRetry(client.Runtime);
   } finally {
     await client.close().catch(() => undefined);

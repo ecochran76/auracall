@@ -132,6 +132,25 @@ describe("account mirror cache persistence", () => {
 			);
 			await persistence.writeSnapshot(baseRecord);
 
+			await expect(cacheStore.readAccountMirrorSnapshot(context)).resolves.toMatchObject({
+				items: {
+					metadataEvidence: {
+						providerIndexEpoch: {
+							object: "account_mirror_provider_index_epoch",
+							version: 1,
+							provider: "chatgpt",
+							runtimeProfileId: "default",
+							browserProfileId: "default",
+							observedAt: "2026-04-29T12:00:10.000Z",
+							coverage: { conversations: 1, projects: 1 },
+							epochId: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+							identityScopeHash: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+							indexFingerprint: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+						},
+					},
+				},
+			});
+
 			const sameProfileState = await persistence.readState({
 				provider: "chatgpt",
 				runtimeProfileId: "default",
@@ -185,6 +204,24 @@ describe("account mirror cache persistence", () => {
 							indexSource: "project-conversations",
 							indexRank: 0,
 							conversationFingerprint: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+							changeFrontierState: {
+								object: "account_mirror_conversation_work_state",
+								version: 1,
+								action: null,
+								outcome: "pending",
+								assetAvailability: "unknown",
+								conversationKey: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+								epochId: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+								indexFingerprint: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+								physicalActivity: {
+									targetsCreated: 0,
+									navigations: 0,
+									reloads: 0,
+									snapshotRefreshes: 0,
+									artifactResolutions: 0,
+									downloads: 0,
+								},
+							},
 						},
 					},
 				],
@@ -197,6 +234,223 @@ describe("account mirror cache persistence", () => {
 			});
 			await expect(cacheStore.readAccountMirrorMedia(context)).resolves.toMatchObject({
 				items: [{ id: "media_1", title: "Generated image", mediaType: "image" }],
+			});
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("round-trips same-epoch work and rolls physical counters at the next epoch", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-frontier-state-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheStore = createCacheStore("dual");
+		const persistence = createAccountMirrorPersistence({ config: {}, cacheStore });
+		const context: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "ecochran76@gmail.com",
+		};
+		try {
+			await persistence.writeSnapshot(baseRecord);
+			const firstRead = await cacheStore.readConversations(context);
+			const first = firstRead.items[0];
+			if (!first) throw new Error("Expected persisted conversation.");
+			const metadata = first.metadata ?? {};
+			const workState = metadata.changeFrontierState;
+			if (!workState || typeof workState !== "object" || Array.isArray(workState)) {
+				throw new Error("Expected versioned change-frontier state.");
+			}
+			await cacheStore.writeConversations(context, [
+				{
+					...first,
+					metadata: {
+						...metadata,
+						changeFrontierState: {
+							...workState,
+							action: "visit_once",
+							outcome: "complete",
+							assetAvailability: "available",
+							checkpointedAt: "2026-04-29T12:00:11.000Z",
+							physicalActivity: {
+								targetsCreated: 1,
+								navigations: 1,
+								reloads: 0,
+								snapshotRefreshes: 1,
+								artifactResolutions: 1,
+								downloads: 1,
+							},
+						},
+					},
+				},
+			]);
+
+			await persistence.writeSnapshot(baseRecord);
+			await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+				items: [
+					{
+						metadata: {
+							changeFrontierState: {
+								action: "visit_once",
+								outcome: "complete",
+								assetAvailability: "available",
+								physicalActivity: { navigations: 1, downloads: 1 },
+							},
+						},
+					},
+				],
+			});
+
+			await persistence.writeSnapshot({
+				...baseRecord,
+				requestId: "acctmirror_next_epoch",
+				startedAt: "2026-04-29T13:00:00.000Z",
+				completedAt: "2026-04-29T13:00:10.000Z",
+			});
+			await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+				items: [
+					{
+						metadata: {
+							changeFrontierState: {
+								action: null,
+								outcome: "pending",
+								assetAvailability: "available",
+								physicalActivity: { navigations: 0, downloads: 0 },
+								lifetimePhysicalActivity: { navigations: 1, downloads: 1 },
+							},
+						},
+					},
+				],
+			});
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("checkpoints a matching visit bundle into durable physical work state", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-visit-bundle-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheStore = createCacheStore("dual");
+		const persistence = createAccountMirrorPersistence({ config: {}, cacheStore });
+		const context: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "ecochran76@gmail.com",
+		};
+		try {
+			await persistence.writeSnapshot(baseRecord);
+			const snapshot = await cacheStore.readAccountMirrorSnapshot(context);
+			const epochId = snapshot.items?.metadataEvidence?.providerIndexEpoch?.epochId;
+			if (!epochId) throw new Error("Expected persisted provider index epoch.");
+
+			await persistence.writeSnapshot({
+				...baseRecord,
+				visitBundles: [
+					{
+						object: "account_mirror_conversation_visit_bundle",
+						version: 1,
+						conversationId: "conv_1",
+						freshnessEpoch: epochId,
+						detail: {
+							observed: true,
+							complete: true,
+							messageCount: 3,
+							fingerprint: "sha256:detail-visit",
+						},
+						artifacts: [],
+						files: [],
+						route: { state: "routeable" },
+						physicalVisit: {
+							object: "account_mirror_physical_visit_receipt",
+							version: 1,
+							targetsCreated: 1,
+							navigations: 1,
+							reloads: 0,
+						},
+					},
+				],
+			});
+
+			await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+				items: [
+					{
+						metadata: {
+							changeFrontierState: {
+								action: "visit_once",
+								outcome: "complete",
+								detailFingerprint: "sha256:detail-visit",
+								physicalActivity: {
+									targetsCreated: 1,
+									navigations: 1,
+									reloads: 0,
+									snapshotRefreshes: 1,
+								},
+							},
+						},
+					},
+				],
+			});
+		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("checkpoints non-visit planner decisions for resume without route work", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-frontier-plan-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheStore = createCacheStore("dual");
+		const persistence = createAccountMirrorPersistence({ config: {}, cacheStore });
+		const context: ProviderCacheContext = {
+			provider: "chatgpt",
+			userConfig: {} as ProviderCacheContext["userConfig"],
+			listOptions: {},
+			identityKey: "ecochran76@gmail.com",
+		};
+		try {
+			await persistence.writeSnapshot(baseRecord);
+			const first = await cacheStore.readConversations(context);
+			const state = first.items[0]?.metadata?.changeFrontierState as
+				| { epochId?: string; conversationKey?: string }
+				| undefined;
+			if (!state?.epochId || !state.conversationKey) throw new Error("Expected frontier state.");
+
+			await persistence.writeSnapshot({
+				...baseRecord,
+				metadataEvidence: {
+					...baseRecord.metadataEvidence,
+					changeFrontierPlan: {
+						object: "account_mirror_change_frontier_plan",
+						version: 1,
+						epochId: state.epochId,
+						resumeAfterConversationKey: null,
+						checkpointFound: true,
+						decisions: [
+							{
+								conversationKey: state.conversationKey,
+								action: "skip",
+								reason: "unchanged_complete",
+								checkpointKey: state.conversationKey,
+							},
+						],
+						counts: { skip: 1, visit_once: 0, materialize_retained: 0, defer: 0 },
+					},
+				},
+			});
+
+			await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+				items: [
+					{
+						metadata: {
+							changeFrontierState: {
+								action: "skip",
+								outcome: "complete",
+								checkpointedAt: baseRecord.completedAt,
+								physicalActivity: { navigations: 0, snapshotRefreshes: 0 },
+							},
+						},
+					},
+				],
 			});
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
@@ -460,6 +714,16 @@ describe("account mirror cache persistence", () => {
 					routeabilityState: "routeable",
 					messageCount: 4,
 					artifactCount: 1,
+					frontierState: {
+						action: "materialize_retained",
+						outcome: "complete",
+						assetAvailability: "available",
+						retryNotBefore: null,
+						checkpointedAt: "2026-05-23T16:00:01.000Z",
+						artifactResolutions: 2,
+						downloads: 1,
+						duplicates: 1,
+					},
 				},
 			});
 			const missingWithoutUpsert = await updateConversationEvidence?.({
@@ -515,6 +779,16 @@ describe("account mirror cache persistence", () => {
 								"conversation-not-found-or-unavailable: exact fallback response returned status 404",
 							messageCount: 4,
 							artifactCount: 1,
+							changeFrontierState: {
+								action: "materialize_retained",
+								outcome: "complete",
+								assetAvailability: "available",
+								checkpointedAt: "2026-05-23T16:00:01.000Z",
+								physicalActivity: {
+									artifactResolutions: 2,
+									downloads: 1,
+								},
+							},
 						},
 					},
 					{

@@ -118,6 +118,15 @@ Current upgrade backlog:
 - lessons review: [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-lessons-review-2026-03-30.md)
 - Aura-Call-only workflow work: [auracall-browser-onboarding-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/auracall-browser-onboarding-backlog.md)
 
+Owned Chrome lifecycle state is generation-bound. A launched instance is
+identified by its managed browser profile plus PID, DevTools port, and
+`launchedAt`. Child exit, explicit shutdown, and signal-driven shutdown retire
+only that exact registry generation; a delayed callback cannot delete a newer
+replacement's owner, operation, or lease. Registry mutation uses a short
+cross-process file lock so matching and deletion remain atomic with replacement
+registration. Liveness pruning remains the recovery path for abrupt exits that
+cannot deliver a child event.
+
 Current DOM-drift extraction priorities live in the 2026-03-28 section of
 [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md):
 - `navigateAndSettle(...)`
@@ -139,12 +148,13 @@ Current active extraction plan:
 ## Experimental tab-concurrency execution
 
 `browser.tabConcurrencyMode` resolves to `serialized` unless an operator or
-test explicitly selects `tab-affinity`. The serialized default constructs no
-tab registry or aggregate interaction ledger. Explicit affinity currently
-constructs shared file-backed coordination state under
-`~/.auracall/browser-coordination`, exposes read-only status through
-`BrowserAutomationClient.getTabConcurrencyStatus()`, and routes ChatGPT prompt
-execution through exact-tab admission and ownership.
+test explicitly selects `tab-affinity`. Both modes construct shared file-backed
+provider-traffic safety state under `~/.auracall/browser-coordination`, expose
+read-only status through `BrowserAutomationClient.getTabConcurrencyStatus()`,
+and require exact-tab admission and ownership for configured provider clients.
+Serialized mode still disables concurrent tab-affinity execution; its registry
+and interaction ledger exist so provider traffic cannot bypass persisted
+admission merely by using the compatibility execution mode.
 
 The status projection is intentionally aggregate and content-free. In addition
 to total/fenced leases and interaction/warning counts, it reports active
@@ -161,10 +171,13 @@ The API exposes that same projection as `/status.tabConcurrency`. Browser Ops
 renders it in the read-only **Browser Tab Concurrency** panel, while
 `auracall api ops-browser-status --port <port>` and MCP
 `api_ops_browser_status` verify the dashboard contract and retain the same
-status payload. The immediate rollback is to set
+status payload. The projection reports affinity whenever the root or any
+resolved AuraCall runtime profile selects affinity because all such profiles
+share the same user-scoped registry and ledger. The immediate rollback is to set
 `browser.tabConcurrencyMode` to `serialized` in the affected AuraCall runtime
 profile and restart the AuraCall service. Serialized mode reports
-`enabled=false` and creates no registry, ledger, or affinity-maintenance owner.
+`enabled=false` and creates no affinity-maintenance owner, but retains the
+registry and ledger as authoritative traffic-safety state.
 
 For a guarded rollout, use the append-only soak receipt helper:
 

@@ -997,6 +997,41 @@ describe("http responses adapter", () => {
 		expect(resolveTabAffinityMaintenanceIntervalMs({ userConfig, disabled: true })).toBe(0);
 	});
 
+	it("reports aggregate tab-affinity status for a nested AuraCall runtime profile", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-http-tab-status-"));
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const server = await createResponsesHttpServer(
+			{ host: "127.0.0.1", port: 0, tabAffinityMaintenanceIntervalMs: 0 },
+			{
+				config: {
+					model: "gpt-5.2",
+					browser: { target: "chatgpt", tabConcurrencyMode: "serialized" },
+					profiles: {
+						"wsl-chrome-3": {
+							browser: { tabConcurrencyMode: "tab-affinity" },
+						},
+					},
+				} as never,
+			},
+		);
+
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+			expect(response.status).toBe(200);
+			await expect(response.json()).resolves.toMatchObject({
+				tabConcurrency: {
+					mode: "tab-affinity",
+					enabled: true,
+					leaseCount: 0,
+					interactionCount: 0,
+				},
+			});
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("accepts direct response attachments and stores them as uploadable step artifacts", async () => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-http-responses-attachments-"),
@@ -8529,6 +8564,7 @@ describe("http responses adapter", () => {
 				completion: {
 					id: "acctmirror_diagnostics_1",
 					status: "running",
+					providerTrafficOutcome: "active",
 					phase: "backfill_history",
 					passCount: 2,
 					latestLifecycleEvent: {

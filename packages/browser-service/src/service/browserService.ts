@@ -92,7 +92,7 @@ export class BrowserService {
         port = undefined;
       }
     }
-    if (!port && options.ensurePort) {
+    if (!port) {
       options.abortSignal?.throwIfAborted();
       const userDataDir =
         this.resolvedConfig.manualLoginProfileDir ??
@@ -127,6 +127,9 @@ export class BrowserService {
         throw new Error(
           `Managed browser profile ${userDataDir} is already owned by Chrome process ${managedProfileOwner.pid ?? initialOwner.pid ?? 'unknown'}, but no responsive DevTools endpoint could be attributed. Refusing to launch a second Chrome process for the same managed browser profile.`,
         );
+      }
+      if (!options.ensurePort) {
+        return { host, port, launched: false };
       }
       const profileName = this.resolvedConfig.chromeProfile ?? 'Default';
       const url = options.launchUrl ?? 'about:blank';

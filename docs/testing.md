@@ -1,4 +1,68 @@
+- Installed ChatGPT session-custody/incremental control (opt-in, already run):
+  `docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent
+  JSON bind canonical PR 176 to one verified ZIP download and a cached repeat
+  with zero downloads/CDP/observed requests. This direct service control does
+  not establish archive publication or autonomous scheduler acceptance.
+
+- ChatGPT product materialization replay (provider-free, synthetic bytes and CDP transport):
+  `pnpm vitest run tests/browser/chatgptMaterializationReplay.test.ts`.
+  Exercises recorded DOM discovery/tagging, product selection and native-file
+  verification, cache/manifest writing, normal Regenerate controls, and precise
+  failure for mismatched or ambiguous downloads. A real Retry must stop without
+  reload, navigation, or pointer input. No provider requests or browser launch.
+
 # Testing quickstart
+
+- ChatGPT materialization surface and recoverability states (provider-free):
+  `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/catalogService.test.ts tests/runtime.historyMaterializationService.test.ts`.
+  This proves late asset readiness is scoped to assistant/user turns rather
+  than any matching page control, and distinguishes downloadable, repair-prompt
+  candidate, metadata-only, terminally unavailable, and materialized entries.
+  It also proves modern search-unit roots can supply their own assistant/user
+  role instead of requiring a separate descendant role node.
+  It does not launch a browser, download an asset, or send a repair prompt.
+
+- Account-mirror provider-traffic planning and phase attribution
+  (provider-free):
+  `pnpm vitest run tests/accountMirror/providerTrafficPlan.test.ts tests/browser-service/providerTrafficGovernor.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
+  This preserves the sanitized Issue #151 baseline, fails unexplained
+  top-level navigation and phase-budget overages, and proves that account-
+  mirror bootstrap, index, and detail adapter work inherits immutable traffic
+  phase plus privacy-bounded work attribution. It also reconciles completed
+  governor actions with phase-attributed CDP counters and proves budget
+  exhaustion stops before underlying admission. It does not launch a browser
+  or contact ChatGPT.
+
+- Account-mirror local materialization actionability (provider-free):
+  `pnpm vitest run tests/accountMirror/completionService.test.ts -t "requires positive local backlog evidence|does not queue raw missing assets"`.
+  This proves that implicit steady-follow materialization requires positive
+  locally retrievable missing-asset evidence; merely unknown/deferred backlog
+  evidence performs no job creation or provider work. Explicit full-sweep
+  requests preserve their separately requested fallback.
+
+- Provider traffic authority in serialized and affinity modes (provider-free):
+  `pnpm vitest run tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser-service/providerTrafficStructural.test.ts`.
+  This proves serialized execution retains its non-affinity behavior while
+  configured provider clients still acquire exact durable leases, persist
+  admission before target reuse or in-page effects, and release client-owned
+  authority exactly once. A required target creation with no exact lease fails
+  before `CDP.New`; explicit pre-lease acquisition remains the only target-ID
+  bootstrap exception. It does not launch a browser or contact a provider.
+
+- ChatGPT inline-file prompt commitment (provider-free):
+  `pnpm vitest run tests/browser/promptComposer.test.ts tests/browser/sessionRunner.test.ts`.
+  This proves committed-turn extraction preserves rich-composer `<br>`
+  boundaries, treats only a terminal presentation ellipsis as equivalent,
+  rejects added authored text, and reports a newly committed in-conversation
+  turn with a cleared composer as `effect_observed` even when text verification
+  still fails. It does not submit a provider prompt or retry a terminal session.
+
+- ChatGPT connected-app selection reliability (provider-free):
+  `pnpm vitest run tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptEcosystemMention.test.ts`.
+  This proves manifest-known app rows remain on the connected-app path when
+  current menu markup omits legacy app markers, while drawer filtering must
+  produce an exact inline `app://connector_...` object before Send. It does not
+  submit a provider prompt or prove a codex-wake dispatch.
 
 - Provider-interaction lifecycle clock ordering (provider-free):
   `pnpm vitest run tests/browser-service/ledgerInteractionGovernor.test.ts`.
@@ -102,6 +166,13 @@
   This proves an explicit one-pass ceiling requests managed-browser cleanup and
   ordinary indefinite live follow retains its existing ownership policy.
 
+- Bounded managed-browser lease-retirement regression (provider-free):
+  `pnpm vitest run tests/browser/configuredChatgptTabMaintenance.test.ts tests/accountMirror/refreshService.test.ts tests/runtime.historyMaterializationService.test.ts`.
+  This proves successful exact ChatGPT browser shutdown retires settled idle
+  crawler and materialization leases through the shared registry state machine.
+  Active, in-flight, outcome-unknown, identity-ambiguous, and unrelated leases
+  remain fenced; the test does not launch a browser or contact ChatGPT.
+
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
 - Browser launch plan contract (provider-free):
   `pnpm vitest run tests/browser/browserLaunchPlan.test.ts tests/browser/browserLaunchPlanStructure.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/configModel.test.ts`.
@@ -144,9 +215,10 @@
 - ChatGPT Chat/Work composer boundary:
   - normal browser runs default to Chat; Work requires
     `--browser-chatgpt-mode work`
-  - an established conversation with no rendered mode control may qualify as
-    Chat only when its exact visible, enabled ChatGPT prompt editor is present
-    and the active current-route conversation has no exact `Work` badge
+  - an established conversation, or the exact `/` root after its bounded
+    mode-control hydration wait, may qualify as Chat without a rendered mode
+    control only when its exact visible, enabled ChatGPT prompt editor is
+    present and the active current-route conversation has no exact `Work` badge
   - `[data-animated-slider-trigger=true]` is model/thinking UI, not a mode
     discriminator; ordinary Chat may expose it with text such as `High`
   - established Work requires positive proof from the visible active
@@ -265,6 +337,11 @@
     before Send. It then uses the shared assistant-response lifecycle so tool
     and app-security approval gates are detected and exposed. Provider/live
     behavior remains unaccepted until separately authorized
+  - connected apps use the open composer tool drawer, not the developer-app
+    `@mention` picker: type the exact connector name into the focused composer,
+    activate the filtered row once, and require the resulting non-editable
+    `[app-mention-name]` object to expose an `app://connector_...` identity
+    before adding prompt text or allowing Send
   - issue-6 fixtures in `tests/browser/chatgptDeveloperAppLifecycle.test.ts`
     cross the real adapter -> shared runBrowserMode -> remote response/P45
     seam with hermetic transport and fail-closed launcher mocks. They prove
@@ -563,7 +640,9 @@
         persisted browser guard, so a successful clear cannot leave browser
         submission blocked by stale cooldown data
       - omitted `--max-passes` means unbounded live follow; `--max-passes`
-        is only a debug/test cap
+        is only a debug/test cap and must preserve the exact completion
+        operation id through configured tab affinity and provider-traffic
+        governance
       - ChatGPT metadata-only collection should retain conversation-history
         metadata titles when a virtualized sidebar anchor has no usable text;
         `tests/browser/chatgptAdapter.test.ts` guards the read-only fallback and
@@ -637,8 +716,22 @@
       - ChatGPT conversation navigation must not call `Page.navigate` when the
         attached target already has the canonical requested URL and its
         route/document/conversation predicates are ready; physical navigation,
-        reload, and their fallbacks must cross the shared interaction governor
-        immediately before mutation
+        reload, reused-target routing, and their fallbacks must cross the
+        provider traffic governor immediately before mutation. The governor
+        verifies exact runtime/profile/workload/operation/tab-lease attribution,
+        completes admission and awaited start recording before effect, and
+        settles physical evidence before probing for a visible provider warning
+      - installed traffic acceptance should attach a continuous passive
+        direct-CDP observer before the bounded pass, reconcile AuraCall's
+        explicit navigation count with top-level document/navigation events,
+        retain subframes and hydration requests separately, and keep the
+        observer attached through the final delayed-warning probe; the observer
+        must not click, reload, navigate, dismiss, or retry
+      - raw target creation is not provider work yet because no target ID exists
+        to lease; every `openChromeTarget` caller must therefore provide an
+        explicit `pre-lease-target-acquisition` authority with an operation ID
+        and reason, and the acquired target must immediately enter its owning
+        lease coordinator
       - the scheduler is disabled unless
         `--account-mirror-scheduler-interval-ms <ms>` is set
       - without `--account-mirror-scheduler-execute`, scheduler passes are
@@ -2207,6 +2300,12 @@
 - Provider-free connected-capability coverage: `pnpm vitest run tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptEcosystemMention.test.ts tests/browser/chatgptPromptAdapter.test.ts tests/workbenchCapabilities.test.ts tests/runtime.configuredExecutor.test.ts`. The fixtures must prove stable-ID and exact-label resolution for an unlisted future app, bounded missing/ambiguous/disconnected/unverified failures, an empty conversation-bound composer without navigation, exact pill revalidation immediately before Send, and requested-versus-observed receipt projection. Keep the installed ChatGPT acceptance separate and bounded to one already-connected app on its retained tab; do not refresh, navigate, connect, or approve access as part of that acceptance.
 - ChatGPT existing-conversation tool state is now an inspected runtime surface, not just a click side effect: browser runs persist the actual selected add-on in session metadata as `browser.runtime.composerTool` (for example `web search`) and its bounded requested-versus-observed identity as `browser.runtime.composerCapability`. Final ChatGPT browser session metadata also persists the normalized `conversationId` alongside `tabUrl`, which makes prompt-matched acceptance/debug lookups reliable.
 - ChatGPT live browser work now carries a persisted profile-scoped guard under `~/.auracall/cache/providers/chatgpt/__runtime__/rate-limit-<profile>.json`: mutating ChatGPT llmservice CRUD operations are spaced apart automatically, ChatGPT browser-mode prompt runs consult the same guard before sending another live write, and both paths now also enforce a rolling per-profile write budget before ChatGPT has a chance to surface a visible `Too many requests` dialog. If the live UI still does expose a `Too many requests` / `...too quickly` failure, later ChatGPT live CRUD or browser-mode calls fail fast on that cooldown instead of continuing to hammer the account from fresh CLI processes.
+- Provider-free ChatGPT terminal rate-limit reconciliation:
+  `pnpm vitest run tests/browser/chatgptRateLimitReconciliation.test.ts tests/browser/chatgptRateLimitGuard.test.ts tests/browser/browserModeExports.test.ts`.
+  This proves bounded delayed detection on the leased and sibling same-endpoint
+  targets, exclusion of unrelated targets, sibling-client cleanup, persisted
+  browser-profile cooldown, and explicit non-retryability for observed and
+  uncertain provider effects. It does not send a provider request.
 - ChatGPT context/artifact read paths now also have local dialog recovery inside the provider adapter itself: if ChatGPT throws a visible rate-limit modal during `conversations context get` or `conversations artifacts fetch`, Aura-Call dismisses that modal, pauses briefly, and retries once before letting the higher-level persisted guard take over.
 - Remaining Grok breadth work after the acceptance bar is archived in `docs/dev/plans/legacy-archive/0024-2026-04-08-grok-remaining-crud-plan.md`. Conversation-scoped file read/list/cache parity is now live for both project and non-project conversations via `auracall conversations files list <conversationId> --target grok [--project-id <id>]`; any resumed mutation follow-up should treat that archive note as background only.
 - Interactive browser onboarding: `pnpm tsx bin/auracall.ts wizard` (preferred first-run path; detects candidate browser/profile sources, writes a browser-profile-backed `~/.auracall/config.json` entry using `browserFamilies.<name>` + `profiles.<name>.browserFamily`, then hands off to the normal setup/login/verification flow). On WSL, prefer the WSL Chrome choice first and keep that primary setup on the Aura-Call `default` profile; treat Windows Chrome as an advanced/manual-debug path in a separate named profile until a live DevTools endpoint is proven.
@@ -3168,3 +3267,5 @@
     unchanged.
 - If you are debugging a raw direct-CDP setup instead of Aura-Call’s integrated Windows path, you can still pin `AURACALL_BROWSER_PORT` / `AURACALL_BROWSER_DEBUG_PORT` and use firewall hints from `scripts/test-browser.ts`. That is now a fallback/debug workflow, not the primary Windows setup.
 - Scoped browser runs can be smoke-tested by passing `--project-id` / `--conversation-id` to a browser command; they should not change default config behavior.
+
+Viewer download scope regression: `pnpm vitest run tests/browser/chatgptViewerDownloadScope.test.ts`. Executes the real helper evaluation with captured inline-card shapes and synthetic DOM; no provider calls.

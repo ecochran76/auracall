@@ -1,0 +1,6574 @@
+{
+  "schemaVersion": 1,
+  "kind": "account-mirror-cdp-capture",
+  "startedAt": "2026-09-30T14:08:45.386Z",
+  "completedAt": "2026-09-30T14:09:26.066Z",
+  "scope": {
+    "provider": "chatgpt",
+    "runtimeProfile": "wsl-chrome-3",
+    "managedBrowserProfile": "wsl-chrome-3/chatgpt",
+    "requestedPhase": "detail-inventory",
+    "mode": "materialize-retained",
+    "maxConversations": 1,
+    "maxPasses": 1,
+    "scheduler": "isolated-disabled"
+  },
+  "targets": {
+    "before": 13,
+    "after": 0
+  },
+  "warning": null,
+  "run": {
+    "status": "running",
+    "startedAt": "2026-09-30T14:08:07.736Z",
+    "completedAt": null,
+    "attemptCount": 1,
+    "error": null,
+    "message": "History materialization job is running.",
+    "metrics": null,
+    "candidateFunnel": null,
+    "snapshotRefresh": null,
+    "manifest": [],
+    "scrapeTelemetry": null
+  },
+  "metrics": {
+    "eventCount": 494,
+    "requestCount": 239,
+    "navigationCount": 1,
+    "routeCounts": [
+      {
+        "route": "GET /backend-api/gizmos/:project/conversations",
+        "count": 16
+      },
+      {
+        "route": "GET /backend-api/automations",
+        "count": 6
+      },
+      {
+        "route": "GET /backend-api/celsius/ws/user",
+        "count": 6
+      },
+      {
+        "route": "GET /backend-api/pins",
+        "count": 6
+      },
+      {
+        "route": "POST /ces/v1/rgstr",
+        "count": 6
+      },
+      {
+        "route": "GET /backend-api/pages",
+        "count": 4
+      },
+      {
+        "route": "GET /backend-api/spaces/v2",
+        "count": 4
+      },
+      {
+        "route": "OPTIONS /v1/initialize",
+        "count": 4
+      },
+      {
+        "route": "POST /backend-api/conversation/:conversation",
+        "count": 4
+      },
+      {
+        "route": "POST /v1/initialize",
+        "count": 4
+      },
+      {
+        "route": "GET /backend-api/accounts/check/v4-2023-04-27",
+        "count": 3
+      },
+      {
+        "route": "GET /backend-api/conversations",
+        "count": 3
+      },
+      {
+        "route": "GET /backend-api/pins/pages",
+        "count": 3
+      },
+      {
+        "route": "GET /backend-api/system_hints",
+        "count": 3
+      },
+      {
+        "route": "GET /backend-api/wham/tasks/list",
+        "count": 3
+      },
+      {
+        "route": "GET /backend-api/aip/connectors/:connector",
+        "count": 2
+      },
+      {
+        "route": "GET /backend-api/amphora/notifications",
+        "count": 2
+      },
+      {
+        "route": "GET /backend-api/conversation/:uuid",
+        "count": 2
+      },
+      {
+        "route": "GET /backend-api/ps/connectors/by-template",
+        "count": 2
+      },
+      {
+        "route": "GET /backend-api/settings/user",
+        "count": 2
+      },
+      {
+        "route": "GET /cdn/assets/async/860969.fe06f4556b.js",
+        "count": 2
+      },
+      {
+        "route": "GET /cdn/assets/o.c8df492e0b.svg",
+        "count": 2
+      },
+      {
+        "route": "POST /backend-api/conversations/batch",
+        "count": 2
+      },
+      {
+        "route": "GET /avatars/ec.png",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/accounts/optimized/check",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/aip/connectors/:connector/link",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/aip/first-party/eligibility",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/files/:file/mounted/capabilities",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/gizmos/:project/sidebar",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/hazelnuts",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/me",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/models",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/profiles/me",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/ps/plugins/canonical-app/:app",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/ps/plugins/installed",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/settings/is_adult",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/tbo",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/tbo/primary",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/tpp/default-tab-recommendation",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/tpp/models/",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/user_granular_consent",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/user_segments/codex_surface_usage",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/wham/accounts/check",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/wham/github/connections",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/wham/sites/access",
+        "count": 1
+      },
+      {
+        "route": "GET /backend-api/wham/usage",
+        "count": 1
+      },
+      {
+        "route": "GET /c/:conversation",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn-cgi/challenge-platform/h/b/scripts/jsd/d76008a69eab/api.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn-cgi/challenge-platform/h/b/scripts/jsd/d76008a69eab/main.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn-cgi/challenge-platform/scripts/jsd/api.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn-cgi/challenge-platform/scripts/jsd/main.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/112463.bedb59db99.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/117596.9a08815d3d.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/138120.6f678df771.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/165329.b42db7b514.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/191014.852c73bd47.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/203611.13152a568b.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/220420.a85d76d5de.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/228716.a1d5e55a2a.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/250201.94b0197904.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/257053.c45dff6c24.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/263425.4ebf0b299f.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/307780.d2c84e8706.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/309956.5e8b5887f7.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/336670.c3dc82e36e.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/352175.00459a605f.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/385910.aeffdd7622.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/398393.00b1e37992.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/42763.8ecd90f55e.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/483451.ac1fa70e03.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/484101.b670262435.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/52650.37a11b6b1b.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/538990.14d8c53187.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/633146.c6681baa0b.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/652487.617cd5f803.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/687836.1ad95cc52a.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/691449.36d4719cfd.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/708781.c3a37ed5c6.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/736644.b0acd308c0.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/813573.6b5936a562.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/815181.e20501a567.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/830572.383f37ad63.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/854234.6969ba1d21.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/85824.e16aa51615.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/858350.9cace18184.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/860004.b83ea08966.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/862078.02b0dca966.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/878879.03122a5073.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/886701.83c7bac22d.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/908190.314710993e.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/965865.b0c1ee7a7b.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/97193.e58693f09d.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/999382.7e7eabe615.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/106537.4a0bc1df26.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/124926.a996ba93a1.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/127635.a9ee256675.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/131201.cfcdbd2be0.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/14919.fcf1d97f0f.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/200952.6fd14c2019.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/234825.d884b3441b.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/258588.a3c48b4afc.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/258588.af6647b173.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/298094.ebac6ad9d2.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/319710.e1307d59d1.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/321183.bf4d3bb68e.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/32194.0b3c7d5e28.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/334958.7c567b5593.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/334958.c28a1f0121.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/365438.6a616d0205.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/370910.13a31126c9.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/37828.690c1d7eac.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/39322.82b4bf2267.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/39322.b12c08c345.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/403927.dfd6eb20e7.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/428816.ffb2204c61.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/449230.59c7ddaf55.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/449230.ec23679a4f.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/460389.ddfcb9db51.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/489892.680f34abbc.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/489892.cbc22ad903.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/527494.9f727862d3.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/545146.3210fc4a51.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/566496.dc91d75233.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/566787.5c43e0f76d.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/566787.ec23679a4f.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/569504.6bb81e0ccb.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/574897.178e58cfdf.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/599123.d8dd926216.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/631391.60664a577a.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/631391.ad5433ce8b.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/636520.33147c513e.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/640096.4ef98fa728.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/686618.16e8677349.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/720131.e03dd14a29.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/720578.ac42736101.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/741929.c01ed5a4c1.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/74731.85f395f126.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/748714.40c7924e27.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/762981.cde091c374.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/77589.2a4c333370.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/793042.f065783f66.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/813988.05d57fa378.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/813988.4c8cb4673f.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/820116.088f2b22bc.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/820116.4755d9bf54.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/828552.196a63ece8.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/860148.30ad88f5be.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/860148.e410b35ef9.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/866500.332c267f94.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/896231.7ee3c79e7c.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/915989.3554622c9c.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/926548.a8bb59415e.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/926548.bfc0e3b1dc.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/928351.87df344d3b.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/939122.9ffdd62fb4.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/939122.bc10a3722b.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/955284.be2a4290c8.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/95818.e15fc7ebe2.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/95818.fed56cd892.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/976600.59a99b4ae9.css",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/976600.6e5ba6e2ac.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/async/986102.d352957ddf.js",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/favicon.6a33781f61.svg",
+        "count": 1
+      },
+      {
+        "route": "GET /cdn/assets/manifest-254272d0.js",
+        "count": 1
+      },
+      {
+        "route": "GET /deployments/dil/v13/runner.html",
+        "count": 1
+      },
+      {
+        "route": "POST /backend-api/aip/connectors/links/list_accessible",
+        "count": 1
+      },
+      {
+        "route": "POST /backend-api/amphora/clear_settings_cache",
+        "count": 1
+      },
+      {
+        "route": "POST /backend-api/ps/apps/batch",
+        "count": 1
+      },
+      {
+        "route": "POST /backend-api/sentinel/chat-requirements/finalize",
+        "count": 1
+      },
+      {
+        "route": "POST /backend-api/sentinel/chat-requirements/prepare",
+        "count": 1
+      },
+      {
+        "route": "POST /cdn-cgi/challenge-platform/h/b/jsd/oneshot/:challenge/:attempt.5419587695489048:1790773225:m4ZZcbPRsMbX6cAEo7hPy9dtYcahP2ee0FbZ1Q6oblk/jsdapi-fd7v7c",
+        "count": 1
+      }
+    ]
+  },
+  "events": [
+    {
+      "at": "2026-09-30T14:08:45.450Z",
+      "elapsedMs": 65,
+      "kind": "cdp.target.attached",
+      "targetKey": "3027a4a24bcc",
+      "route": "/c/:conversation",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.455Z",
+      "elapsedMs": 69,
+      "kind": "cdp.target.attached",
+      "targetKey": "5c439fed7780",
+      "route": "/c/:conversation",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.458Z",
+      "elapsedMs": 72,
+      "kind": "cdp.target.attached",
+      "targetKey": "6399de340239",
+      "route": "/c/:conversation",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.461Z",
+      "elapsedMs": 75,
+      "kind": "cdp.target.attached",
+      "targetKey": "b9ac6b82ae3b",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.468Z",
+      "elapsedMs": 82,
+      "kind": "cdp.target.attached",
+      "targetKey": "c8b24f09de31",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.470Z",
+      "elapsedMs": 84,
+      "kind": "cdp.target.attached",
+      "targetKey": "1bd30ca1f321",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.474Z",
+      "elapsedMs": 88,
+      "kind": "cdp.target.attached",
+      "targetKey": "df67225997ae",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.477Z",
+      "elapsedMs": 91,
+      "kind": "cdp.target.attached",
+      "targetKey": "fcd9492ceb82",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.480Z",
+      "elapsedMs": 94,
+      "kind": "cdp.target.attached",
+      "targetKey": "8ce79bdee85e",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.483Z",
+      "elapsedMs": 97,
+      "kind": "cdp.target.attached",
+      "targetKey": "82dd2b6e78af",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.485Z",
+      "elapsedMs": 99,
+      "kind": "cdp.target.attached",
+      "targetKey": "2b6b1c400581",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.487Z",
+      "elapsedMs": 102,
+      "kind": "cdp.target.attached",
+      "targetKey": "a8fe20c689aa",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.490Z",
+      "elapsedMs": 104,
+      "kind": "cdp.target.attached",
+      "targetKey": "7fcce7940d92",
+      "route": "/",
+      "cohort": "initial"
+    },
+    {
+      "at": "2026-09-30T14:08:45.490Z",
+      "elapsedMs": 104,
+      "kind": "capture.started",
+      "targetCount": 13
+    },
+    {
+      "at": "2026-09-30T14:08:45.701Z",
+      "elapsedMs": 315,
+      "kind": "materialization-run.started",
+      "refreshSnapshot": false,
+      "maxItems": 1,
+      "reused": true
+    },
+    {
+      "at": "2026-09-30T14:08:45.856Z",
+      "elapsedMs": 470,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "57e72b4b3d03",
+      "method": null,
+      "route": "/backend-api/conversations",
+      "status": 200,
+      "resourceType": "Other",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:46.882Z",
+      "elapsedMs": 1496,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "69ffdb75e9ad",
+      "method": "GET",
+      "route": "/cdn/assets/async/860969.fe06f4556b.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:46.885Z",
+      "elapsedMs": 1499,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "69ffdb75e9ad",
+      "method": "GET",
+      "route": "/cdn/assets/async/860969.fe06f4556b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:49.648Z",
+      "elapsedMs": 4262,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "723c7d0739a1",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:49.819Z",
+      "elapsedMs": 4433,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "723c7d0739a1",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:50.598Z",
+      "elapsedMs": 5212,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5d8587f63d8c",
+      "method": null,
+      "route": "/backend-api/tbo/primary",
+      "status": 200,
+      "resourceType": "Other",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:50.641Z",
+      "elapsedMs": 5255,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0bc926f8522c",
+      "method": "GET",
+      "route": "/cdn/assets/o.c8df492e0b.svg",
+      "resourceType": "Image",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.642Z",
+      "elapsedMs": 5256,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0bc926f8522c",
+      "method": "GET",
+      "route": "/cdn/assets/o.c8df492e0b.svg",
+      "status": 200,
+      "resourceType": "Image",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:50.664Z",
+      "elapsedMs": 5278,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "d6bcfabfa838",
+      "method": "GET",
+      "route": "/backend-api/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.664Z",
+      "elapsedMs": 5278,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "adc302364799",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.665Z",
+      "elapsedMs": 5279,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "2f527d94ec48",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.665Z",
+      "elapsedMs": 5279,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "60b234abce5a",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.666Z",
+      "elapsedMs": 5280,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "7d22e33e85c2",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.666Z",
+      "elapsedMs": 5280,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "ea097160596d",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.666Z",
+      "elapsedMs": 5280,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "882739c00afc",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.667Z",
+      "elapsedMs": 5281,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "3db1d160ee6b",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.667Z",
+      "elapsedMs": 5281,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "70f480da7e40",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.667Z",
+      "elapsedMs": 5281,
+      "kind": "cdp.network.request",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "1edc9da29417",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:50.982Z",
+      "elapsedMs": 5596,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "adc302364799",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:50.986Z",
+      "elapsedMs": 5600,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "1edc9da29417",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:50.995Z",
+      "elapsedMs": 5609,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "882739c00afc",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:50.998Z",
+      "elapsedMs": 5612,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "3db1d160ee6b",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:51.000Z",
+      "elapsedMs": 5614,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "70f480da7e40",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:51.001Z",
+      "elapsedMs": 5615,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "60b234abce5a",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:51.015Z",
+      "elapsedMs": 5629,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "7d22e33e85c2",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:51.024Z",
+      "elapsedMs": 5638,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "2f527d94ec48",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:51.181Z",
+      "elapsedMs": 5795,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "ea097160596d",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:52.530Z",
+      "elapsedMs": 7144,
+      "kind": "cdp.network.response",
+      "targetKey": "c8b24f09de31",
+      "requestKey": "d6bcfabfa838",
+      "method": "GET",
+      "route": "/backend-api/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:58.209Z",
+      "elapsedMs": 12823,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d176222d918d",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:58.209Z",
+      "elapsedMs": 12823,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ea930bd9b126",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:08:58.297Z",
+      "elapsedMs": 12911,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ea930bd9b126",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "status": 202,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:08:58.402Z",
+      "elapsedMs": 13016,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d176222d918d",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "status": 202,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.649Z",
+      "elapsedMs": 19263,
+      "kind": "cdp.network.request",
+      "targetKey": "2b6b1c400581",
+      "requestKey": "3c99bab4f8e1",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:04.649Z",
+      "elapsedMs": 19263,
+      "kind": "cdp.network.request",
+      "targetKey": "a8fe20c689aa",
+      "requestKey": "33ac2944d460",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:04.650Z",
+      "elapsedMs": 19264,
+      "kind": "cdp.network.request",
+      "targetKey": "7fcce7940d92",
+      "requestKey": "d8dfb2ef7483",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:04.651Z",
+      "elapsedMs": 19265,
+      "kind": "cdp.network.request",
+      "targetKey": "82dd2b6e78af",
+      "requestKey": "27c403281dd3",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:04.654Z",
+      "elapsedMs": 19268,
+      "kind": "cdp.network.request",
+      "targetKey": "6399de340239",
+      "requestKey": "4a31dac4f5bd",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:04.657Z",
+      "elapsedMs": 19271,
+      "kind": "cdp.network.request",
+      "targetKey": "2b6b1c400581",
+      "requestKey": "b4fd2adb0380",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "resourceType": "Other",
+      "initiatorType": "preflight"
+    },
+    {
+      "at": "2026-09-30T14:09:04.681Z",
+      "elapsedMs": 19295,
+      "kind": "cdp.network.request",
+      "targetKey": "a8fe20c689aa",
+      "requestKey": "5a078eb9042e",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "resourceType": "Other",
+      "initiatorType": "preflight"
+    },
+    {
+      "at": "2026-09-30T14:09:04.693Z",
+      "elapsedMs": 19307,
+      "kind": "cdp.network.request",
+      "targetKey": "7fcce7940d92",
+      "requestKey": "7b0977f63653",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "resourceType": "Other",
+      "initiatorType": "preflight"
+    },
+    {
+      "at": "2026-09-30T14:09:04.704Z",
+      "elapsedMs": 19318,
+      "kind": "cdp.network.request",
+      "targetKey": "82dd2b6e78af",
+      "requestKey": "ceac08c7a9f4",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "resourceType": "Other",
+      "initiatorType": "preflight"
+    },
+    {
+      "at": "2026-09-30T14:09:04.851Z",
+      "elapsedMs": 19465,
+      "kind": "cdp.network.response",
+      "targetKey": "6399de340239",
+      "requestKey": "4a31dac4f5bd",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "status": 202,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.868Z",
+      "elapsedMs": 19482,
+      "kind": "cdp.network.response",
+      "targetKey": "a8fe20c689aa",
+      "requestKey": "5a078eb9042e",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "status": 200,
+      "resourceType": "Preflight",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.868Z",
+      "elapsedMs": 19482,
+      "kind": "cdp.network.response",
+      "targetKey": "82dd2b6e78af",
+      "requestKey": "ceac08c7a9f4",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "status": 200,
+      "resourceType": "Preflight",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.869Z",
+      "elapsedMs": 19483,
+      "kind": "cdp.network.response",
+      "targetKey": "2b6b1c400581",
+      "requestKey": "b4fd2adb0380",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "status": 200,
+      "resourceType": "Preflight",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.870Z",
+      "elapsedMs": 19484,
+      "kind": "cdp.network.response",
+      "targetKey": "7fcce7940d92",
+      "requestKey": "7b0977f63653",
+      "method": "OPTIONS",
+      "route": "/v1/initialize",
+      "status": 200,
+      "resourceType": "Preflight",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.946Z",
+      "elapsedMs": 19560,
+      "kind": "cdp.network.response",
+      "targetKey": "82dd2b6e78af",
+      "requestKey": "27c403281dd3",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "status": 204,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.952Z",
+      "elapsedMs": 19566,
+      "kind": "cdp.network.response",
+      "targetKey": "a8fe20c689aa",
+      "requestKey": "33ac2944d460",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "status": 204,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.968Z",
+      "elapsedMs": 19582,
+      "kind": "cdp.network.response",
+      "targetKey": "7fcce7940d92",
+      "requestKey": "d8dfb2ef7483",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "status": 204,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:04.976Z",
+      "elapsedMs": 19590,
+      "kind": "cdp.network.response",
+      "targetKey": "2b6b1c400581",
+      "requestKey": "3c99bab4f8e1",
+      "method": "POST",
+      "route": "/v1/initialize",
+      "status": 204,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:07.168Z",
+      "elapsedMs": 21782,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "23178bebb5e0",
+      "method": "GET",
+      "route": "/c/:conversation",
+      "resourceType": "Document",
+      "initiatorType": "other"
+    },
+    {
+      "at": "2026-09-30T14:09:07.904Z",
+      "elapsedMs": 22518,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "23178bebb5e0",
+      "method": "GET",
+      "route": "/c/:conversation",
+      "status": 200,
+      "resourceType": "Document",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:07.929Z",
+      "elapsedMs": 22543,
+      "kind": "cdp.page.navigated",
+      "targetKey": "3027a4a24bcc",
+      "route": "/c/:conversation"
+    },
+    {
+      "at": "2026-09-30T14:09:07.940Z",
+      "elapsedMs": 22554,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c5b3b5007a5d",
+      "method": "GET",
+      "route": "/cdn/assets/886701.83c7bac22d.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "other"
+    },
+    {
+      "at": "2026-09-30T14:09:07.941Z",
+      "elapsedMs": 22555,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "29d6544edaa6",
+      "method": "GET",
+      "route": "/cdn/assets/manifest-254272d0.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.941Z",
+      "elapsedMs": 22555,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e4a2753b18d6",
+      "method": "GET",
+      "route": "/cdn/assets/908190.314710993e.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.942Z",
+      "elapsedMs": 22556,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "807a4f06dcca",
+      "method": "GET",
+      "route": "/cdn/assets/633146.c6681baa0b.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.942Z",
+      "elapsedMs": 22556,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7d1b45ab24b6",
+      "method": "GET",
+      "route": "/cdn/assets/385910.aeffdd7622.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.943Z",
+      "elapsedMs": 22557,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b7f1be34bcc1",
+      "method": "GET",
+      "route": "/cdn/assets/736644.b0acd308c0.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.943Z",
+      "elapsedMs": 22557,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "abe5243361fd",
+      "method": "GET",
+      "route": "/cdn/assets/538990.14d8c53187.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.943Z",
+      "elapsedMs": 22557,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e0daae77f6b6",
+      "method": "GET",
+      "route": "/cdn/assets/652487.617cd5f803.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.944Z",
+      "elapsedMs": 22558,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3d5fa1a233ec",
+      "method": "GET",
+      "route": "/cdn/assets/687836.1ad95cc52a.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.944Z",
+      "elapsedMs": 22558,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "04974a9c7358",
+      "method": "GET",
+      "route": "/cdn/assets/42763.8ecd90f55e.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.945Z",
+      "elapsedMs": 22559,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "82267f101b0d",
+      "method": "GET",
+      "route": "/cdn/assets/708781.c3a37ed5c6.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.945Z",
+      "elapsedMs": 22559,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1cc8aa306337",
+      "method": "GET",
+      "route": "/cdn/assets/691449.36d4719cfd.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.946Z",
+      "elapsedMs": 22560,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f924191f644a",
+      "method": "GET",
+      "route": "/cdn/assets/860004.b83ea08966.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.946Z",
+      "elapsedMs": 22560,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9c111eb67460",
+      "method": "GET",
+      "route": "/cdn/assets/203611.13152a568b.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.946Z",
+      "elapsedMs": 22560,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a26c0c7afba8",
+      "method": "GET",
+      "route": "/cdn/assets/112463.bedb59db99.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.947Z",
+      "elapsedMs": 22561,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bd2b15b52e30",
+      "method": "GET",
+      "route": "/cdn/assets/965865.b0c1ee7a7b.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.947Z",
+      "elapsedMs": 22561,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2cad4ebf5e86",
+      "method": "GET",
+      "route": "/cdn/assets/336670.c3dc82e36e.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.947Z",
+      "elapsedMs": 22561,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3126fdfc277d",
+      "method": "GET",
+      "route": "/cdn/assets/85824.e16aa51615.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.948Z",
+      "elapsedMs": 22562,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "791f75c50f7b",
+      "method": "GET",
+      "route": "/cdn/assets/813573.6b5936a562.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.948Z",
+      "elapsedMs": 22562,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7ed41d1e2d1f",
+      "method": "GET",
+      "route": "/cdn/assets/352175.00459a605f.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.948Z",
+      "elapsedMs": 22562,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "29d8282ff446",
+      "method": "GET",
+      "route": "/cdn/assets/191014.852c73bd47.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.949Z",
+      "elapsedMs": 22563,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e089a4a72a67",
+      "method": "GET",
+      "route": "/cdn/assets/257053.c45dff6c24.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.949Z",
+      "elapsedMs": 22563,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3e1c3ff79e8c",
+      "method": "GET",
+      "route": "/cdn/assets/878879.03122a5073.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.949Z",
+      "elapsedMs": 22563,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4d69c95ee1e0",
+      "method": "GET",
+      "route": "/cdn/assets/309956.5e8b5887f7.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.950Z",
+      "elapsedMs": 22564,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "01a52c5da773",
+      "method": "GET",
+      "route": "/cdn/assets/117596.9a08815d3d.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.950Z",
+      "elapsedMs": 22564,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a7b7cdbc264b",
+      "method": "GET",
+      "route": "/cdn/assets/165329.b42db7b514.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.950Z",
+      "elapsedMs": 22564,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "33fef5b935b4",
+      "method": "GET",
+      "route": "/cdn/assets/220420.a85d76d5de.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.950Z",
+      "elapsedMs": 22564,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "740198d30416",
+      "method": "GET",
+      "route": "/cdn/assets/830572.383f37ad63.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.951Z",
+      "elapsedMs": 22565,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3d4ffa1eb970",
+      "method": "GET",
+      "route": "/cdn/assets/862078.02b0dca966.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.951Z",
+      "elapsedMs": 22565,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ce25b50342c9",
+      "method": "GET",
+      "route": "/cdn/assets/854234.6969ba1d21.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.951Z",
+      "elapsedMs": 22565,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4a267d7e48b3",
+      "method": "GET",
+      "route": "/cdn/assets/398393.00b1e37992.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.952Z",
+      "elapsedMs": 22566,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3c44eb7c0cde",
+      "method": "GET",
+      "route": "/cdn/assets/228716.a1d5e55a2a.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.952Z",
+      "elapsedMs": 22566,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4321ecab8726",
+      "method": "GET",
+      "route": "/cdn/assets/858350.9cace18184.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.952Z",
+      "elapsedMs": 22566,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5c61a3b29a49",
+      "method": "GET",
+      "route": "/cdn/assets/307780.d2c84e8706.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.953Z",
+      "elapsedMs": 22567,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7545d8713eb9",
+      "method": "GET",
+      "route": "/cdn/assets/263425.4ebf0b299f.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.953Z",
+      "elapsedMs": 22567,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cede40edc3b7",
+      "method": "GET",
+      "route": "/cdn/assets/250201.94b0197904.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.953Z",
+      "elapsedMs": 22567,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d89b57da82f7",
+      "method": "GET",
+      "route": "/cdn/assets/138120.6f678df771.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.954Z",
+      "elapsedMs": 22568,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "76dfaaf60390",
+      "method": "GET",
+      "route": "/cdn/assets/815181.e20501a567.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.954Z",
+      "elapsedMs": 22568,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "15b2c01db872",
+      "method": "GET",
+      "route": "/cdn/assets/484101.b670262435.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.954Z",
+      "elapsedMs": 22568,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "eddfc9af9fda",
+      "method": "GET",
+      "route": "/cdn/assets/97193.e58693f09d.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.955Z",
+      "elapsedMs": 22569,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e8c2f418bdcc",
+      "method": "GET",
+      "route": "/cdn/assets/52650.37a11b6b1b.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.955Z",
+      "elapsedMs": 22569,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "dc3a9ab41758",
+      "method": "GET",
+      "route": "/cdn/assets/483451.ac1fa70e03.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.955Z",
+      "elapsedMs": 22569,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0578c6ed82e7",
+      "method": "GET",
+      "route": "/cdn/assets/999382.7e7eabe615.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:07.957Z",
+      "elapsedMs": 22571,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c5b3b5007a5d",
+      "method": "GET",
+      "route": "/cdn/assets/886701.83c7bac22d.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.009Z",
+      "elapsedMs": 22623,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e4a2753b18d6",
+      "method": "GET",
+      "route": "/cdn/assets/908190.314710993e.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.011Z",
+      "elapsedMs": 22625,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "29d6544edaa6",
+      "method": "GET",
+      "route": "/cdn/assets/manifest-254272d0.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.036Z",
+      "elapsedMs": 22650,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b7f1be34bcc1",
+      "method": "GET",
+      "route": "/cdn/assets/736644.b0acd308c0.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.038Z",
+      "elapsedMs": 22652,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "abe5243361fd",
+      "method": "GET",
+      "route": "/cdn/assets/538990.14d8c53187.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.039Z",
+      "elapsedMs": 22653,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "807a4f06dcca",
+      "method": "GET",
+      "route": "/cdn/assets/633146.c6681baa0b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.042Z",
+      "elapsedMs": 22656,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3d5fa1a233ec",
+      "method": "GET",
+      "route": "/cdn/assets/687836.1ad95cc52a.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.043Z",
+      "elapsedMs": 22657,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "04974a9c7358",
+      "method": "GET",
+      "route": "/cdn/assets/42763.8ecd90f55e.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.044Z",
+      "elapsedMs": 22658,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e0daae77f6b6",
+      "method": "GET",
+      "route": "/cdn/assets/652487.617cd5f803.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.046Z",
+      "elapsedMs": 22660,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9c111eb67460",
+      "method": "GET",
+      "route": "/cdn/assets/203611.13152a568b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.052Z",
+      "elapsedMs": 22666,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1cc8aa306337",
+      "method": "GET",
+      "route": "/cdn/assets/691449.36d4719cfd.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.054Z",
+      "elapsedMs": 22668,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f924191f644a",
+      "method": "GET",
+      "route": "/cdn/assets/860004.b83ea08966.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.056Z",
+      "elapsedMs": 22670,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3126fdfc277d",
+      "method": "GET",
+      "route": "/cdn/assets/85824.e16aa51615.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.057Z",
+      "elapsedMs": 22671,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "82267f101b0d",
+      "method": "GET",
+      "route": "/cdn/assets/708781.c3a37ed5c6.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.058Z",
+      "elapsedMs": 22672,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a26c0c7afba8",
+      "method": "GET",
+      "route": "/cdn/assets/112463.bedb59db99.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.060Z",
+      "elapsedMs": 22674,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "791f75c50f7b",
+      "method": "GET",
+      "route": "/cdn/assets/813573.6b5936a562.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.062Z",
+      "elapsedMs": 22676,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bd2b15b52e30",
+      "method": "GET",
+      "route": "/cdn/assets/965865.b0c1ee7a7b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.074Z",
+      "elapsedMs": 22688,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2cad4ebf5e86",
+      "method": "GET",
+      "route": "/cdn/assets/336670.c3dc82e36e.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.075Z",
+      "elapsedMs": 22689,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7ed41d1e2d1f",
+      "method": "GET",
+      "route": "/cdn/assets/352175.00459a605f.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.078Z",
+      "elapsedMs": 22692,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "29d8282ff446",
+      "method": "GET",
+      "route": "/cdn/assets/191014.852c73bd47.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.079Z",
+      "elapsedMs": 22693,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e089a4a72a67",
+      "method": "GET",
+      "route": "/cdn/assets/257053.c45dff6c24.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.080Z",
+      "elapsedMs": 22694,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3e1c3ff79e8c",
+      "method": "GET",
+      "route": "/cdn/assets/878879.03122a5073.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.081Z",
+      "elapsedMs": 22695,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4d69c95ee1e0",
+      "method": "GET",
+      "route": "/cdn/assets/309956.5e8b5887f7.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.083Z",
+      "elapsedMs": 22697,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ce25b50342c9",
+      "method": "GET",
+      "route": "/cdn/assets/854234.6969ba1d21.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.084Z",
+      "elapsedMs": 22698,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a7b7cdbc264b",
+      "method": "GET",
+      "route": "/cdn/assets/165329.b42db7b514.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.085Z",
+      "elapsedMs": 22699,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "33fef5b935b4",
+      "method": "GET",
+      "route": "/cdn/assets/220420.a85d76d5de.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.086Z",
+      "elapsedMs": 22700,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "740198d30416",
+      "method": "GET",
+      "route": "/cdn/assets/830572.383f37ad63.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.087Z",
+      "elapsedMs": 22701,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3d4ffa1eb970",
+      "method": "GET",
+      "route": "/cdn/assets/862078.02b0dca966.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.088Z",
+      "elapsedMs": 22702,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3c44eb7c0cde",
+      "method": "GET",
+      "route": "/cdn/assets/228716.a1d5e55a2a.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.090Z",
+      "elapsedMs": 22704,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5c61a3b29a49",
+      "method": "GET",
+      "route": "/cdn/assets/307780.d2c84e8706.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.091Z",
+      "elapsedMs": 22705,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d89b57da82f7",
+      "method": "GET",
+      "route": "/cdn/assets/138120.6f678df771.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.092Z",
+      "elapsedMs": 22706,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7545d8713eb9",
+      "method": "GET",
+      "route": "/cdn/assets/263425.4ebf0b299f.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.095Z",
+      "elapsedMs": 22709,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "15b2c01db872",
+      "method": "GET",
+      "route": "/cdn/assets/484101.b670262435.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.096Z",
+      "elapsedMs": 22710,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4a267d7e48b3",
+      "method": "GET",
+      "route": "/cdn/assets/398393.00b1e37992.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.097Z",
+      "elapsedMs": 22711,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cede40edc3b7",
+      "method": "GET",
+      "route": "/cdn/assets/250201.94b0197904.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.100Z",
+      "elapsedMs": 22714,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "eddfc9af9fda",
+      "method": "GET",
+      "route": "/cdn/assets/97193.e58693f09d.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.106Z",
+      "elapsedMs": 22720,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "01a52c5da773",
+      "method": "GET",
+      "route": "/cdn/assets/117596.9a08815d3d.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.108Z",
+      "elapsedMs": 22722,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e8c2f418bdcc",
+      "method": "GET",
+      "route": "/cdn/assets/52650.37a11b6b1b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.109Z",
+      "elapsedMs": 22723,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "76dfaaf60390",
+      "method": "GET",
+      "route": "/cdn/assets/815181.e20501a567.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.112Z",
+      "elapsedMs": 22726,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0578c6ed82e7",
+      "method": "GET",
+      "route": "/cdn/assets/999382.7e7eabe615.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.118Z",
+      "elapsedMs": 22732,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4321ecab8726",
+      "method": "GET",
+      "route": "/cdn/assets/858350.9cace18184.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:08.123Z",
+      "elapsedMs": 22737,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "dc3a9ab41758",
+      "method": "GET",
+      "route": "/cdn/assets/483451.ac1fa70e03.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.030Z",
+      "elapsedMs": 23644,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7d1b45ab24b6",
+      "method": "GET",
+      "route": "/cdn/assets/385910.aeffdd7622.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.447Z",
+      "elapsedMs": 24061,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5739bc56a067",
+      "method": "GET",
+      "route": "/cdn/assets/async/741929.c01ed5a4c1.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.448Z",
+      "elapsedMs": 24062,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3db49a0cd9c2",
+      "method": "GET",
+      "route": "/cdn/assets/async/866500.332c267f94.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.458Z",
+      "elapsedMs": 24072,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5739bc56a067",
+      "method": "GET",
+      "route": "/cdn/assets/async/741929.c01ed5a4c1.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.459Z",
+      "elapsedMs": 24073,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3db49a0cd9c2",
+      "method": "GET",
+      "route": "/cdn/assets/async/866500.332c267f94.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.592Z",
+      "elapsedMs": 24206,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d08d91bfe108",
+      "method": "GET",
+      "route": "/backend-api/wham/accounts/check",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.593Z",
+      "elapsedMs": 24207,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "18cbe821a565",
+      "method": "GET",
+      "route": "/backend-api/accounts/check/v4-2023-04-27",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.616Z",
+      "elapsedMs": 24230,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "027c1f45353d",
+      "method": "GET",
+      "route": "/cdn/assets/async/636520.33147c513e.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.655Z",
+      "elapsedMs": 24269,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "027c1f45353d",
+      "method": "GET",
+      "route": "/cdn/assets/async/636520.33147c513e.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.736Z",
+      "elapsedMs": 24350,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "885d0b866b63",
+      "method": "GET",
+      "route": "/cdn/assets/async/569504.6bb81e0ccb.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.737Z",
+      "elapsedMs": 24351,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "62505f3b2aae",
+      "method": "GET",
+      "route": "/cdn/assets/async/599123.d8dd926216.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.737Z",
+      "elapsedMs": 24351,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7b72b242fe4f",
+      "method": "GET",
+      "route": "/cdn/assets/async/896231.7ee3c79e7c.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.738Z",
+      "elapsedMs": 24352,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4181e18fd705",
+      "method": "GET",
+      "route": "/cdn/assets/async/74731.85f395f126.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.739Z",
+      "elapsedMs": 24353,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c0f44a064b72",
+      "method": "GET",
+      "route": "/backend-api/tpp/default-tab-recommendation",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.739Z",
+      "elapsedMs": 24353,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "66a50b171012",
+      "method": "GET",
+      "route": "/backend-api/accounts/check/v4-2023-04-27",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.739Z",
+      "elapsedMs": 24353,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d8641f4aa2d4",
+      "method": "GET",
+      "route": "/backend-api/accounts/optimized/check",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.740Z",
+      "elapsedMs": 24354,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "545b3146f686",
+      "method": "GET",
+      "route": "/backend-api/settings/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.740Z",
+      "elapsedMs": 24354,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0838a70bdd28",
+      "method": "GET",
+      "route": "/cdn-cgi/challenge-platform/scripts/jsd/api.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.744Z",
+      "elapsedMs": 24358,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "885d0b866b63",
+      "method": "GET",
+      "route": "/cdn/assets/async/569504.6bb81e0ccb.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.749Z",
+      "elapsedMs": 24363,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5685e921d608",
+      "method": "GET",
+      "route": "/cdn/assets/async/319710.e1307d59d1.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.749Z",
+      "elapsedMs": 24363,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "62505f3b2aae",
+      "method": "GET",
+      "route": "/cdn/assets/async/599123.d8dd926216.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.750Z",
+      "elapsedMs": 24364,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4181e18fd705",
+      "method": "GET",
+      "route": "/cdn/assets/async/74731.85f395f126.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.756Z",
+      "elapsedMs": 24370,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "62e93414b22b",
+      "method": "GET",
+      "route": "/cdn/assets/async/574897.178e58cfdf.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.756Z",
+      "elapsedMs": 24370,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7b72b242fe4f",
+      "method": "GET",
+      "route": "/cdn/assets/async/896231.7ee3c79e7c.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.758Z",
+      "elapsedMs": 24372,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c89dba494c49",
+      "method": "GET",
+      "route": "/cdn/assets/async/428816.ffb2204c61.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.764Z",
+      "elapsedMs": 24378,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9fccb7076010",
+      "method": "GET",
+      "route": "/cdn/assets/async/14919.fcf1d97f0f.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.775Z",
+      "elapsedMs": 24389,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d437f1b54a79",
+      "method": "GET",
+      "route": "/cdn/assets/async/365438.6a616d0205.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.775Z",
+      "elapsedMs": 24389,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0838a70bdd28",
+      "method": "GET",
+      "route": "/cdn-cgi/challenge-platform/h/b/scripts/jsd/d76008a69eab/api.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:09.778Z",
+      "elapsedMs": 24392,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "242eeffd6099",
+      "method": "GET",
+      "route": "/cdn/assets/async/545146.3210fc4a51.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.788Z",
+      "elapsedMs": 24402,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bddb18742abc",
+      "method": "GET",
+      "route": "/backend-api/models",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:09.789Z",
+      "elapsedMs": 24403,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5685e921d608",
+      "method": "GET",
+      "route": "/cdn/assets/async/319710.e1307d59d1.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.803Z",
+      "elapsedMs": 24417,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c89dba494c49",
+      "method": "GET",
+      "route": "/cdn/assets/async/428816.ffb2204c61.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:09.804Z",
+      "elapsedMs": 24418,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "62e93414b22b",
+      "method": "GET",
+      "route": "/cdn/assets/async/574897.178e58cfdf.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.872Z",
+      "elapsedMs": 25486,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d32459d81c03",
+      "method": "GET",
+      "route": "/cdn/assets/async/762981.cde091c374.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.873Z",
+      "elapsedMs": 25487,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0637d26c645d",
+      "method": "GET",
+      "route": "/cdn/assets/async/370910.13a31126c9.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.873Z",
+      "elapsedMs": 25487,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "35a1e047610f",
+      "method": "GET",
+      "route": "/cdn/assets/async/131201.cfcdbd2be0.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.874Z",
+      "elapsedMs": 25488,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "45d8f1daf444",
+      "method": "GET",
+      "route": "/cdn/assets/async/928351.87df344d3b.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.874Z",
+      "elapsedMs": 25488,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "93f5859a46f6",
+      "method": "GET",
+      "route": "/cdn/assets/async/200952.6fd14c2019.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.875Z",
+      "elapsedMs": 25489,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "02616f156cc9",
+      "method": "GET",
+      "route": "/cdn/assets/async/640096.4ef98fa728.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.875Z",
+      "elapsedMs": 25489,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d5f7bd067247",
+      "method": "GET",
+      "route": "/cdn/assets/async/976600.59a99b4ae9.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.875Z",
+      "elapsedMs": 25489,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "decd19f71a49",
+      "method": "GET",
+      "route": "/cdn/assets/async/976600.6e5ba6e2ac.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.876Z",
+      "elapsedMs": 25490,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cfe3af3352ef",
+      "method": "GET",
+      "route": "/cdn/assets/async/939122.9ffdd62fb4.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.876Z",
+      "elapsedMs": 25490,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9197c3b27985",
+      "method": "GET",
+      "route": "/cdn/assets/async/939122.bc10a3722b.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.877Z",
+      "elapsedMs": 25491,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "88d016892b34",
+      "method": "GET",
+      "route": "/cdn/assets/async/460389.ddfcb9db51.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.877Z",
+      "elapsedMs": 25491,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9dc4c57c50c3",
+      "method": "GET",
+      "route": "/cdn/assets/async/449230.ec23679a4f.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.877Z",
+      "elapsedMs": 25491,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3f994ea622ae",
+      "method": "GET",
+      "route": "/cdn/assets/async/449230.59c7ddaf55.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.878Z",
+      "elapsedMs": 25492,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f60c0ec745d7",
+      "method": "GET",
+      "route": "/cdn/assets/async/298094.ebac6ad9d2.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.878Z",
+      "elapsedMs": 25492,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5c8f34672814",
+      "method": "GET",
+      "route": "/cdn/assets/async/566787.ec23679a4f.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.878Z",
+      "elapsedMs": 25492,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "657b72b2a947",
+      "method": "GET",
+      "route": "/cdn/assets/async/566787.5c43e0f76d.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.879Z",
+      "elapsedMs": 25493,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f13147b58a0d",
+      "method": "GET",
+      "route": "/cdn/assets/async/258588.af6647b173.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.879Z",
+      "elapsedMs": 25493,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "08c6039c359a",
+      "method": "GET",
+      "route": "/cdn/assets/async/258588.a3c48b4afc.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.879Z",
+      "elapsedMs": 25493,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e24574948e67",
+      "method": "GET",
+      "route": "/cdn/assets/async/566496.dc91d75233.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.880Z",
+      "elapsedMs": 25494,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0092e9dfc255",
+      "method": "GET",
+      "route": "/backend-api/aip/connectors/:connector/link",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.880Z",
+      "elapsedMs": 25494,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d0640a964fb9",
+      "method": "GET",
+      "route": "/backend-api/wham/github/connections",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.881Z",
+      "elapsedMs": 25495,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b418da639f38",
+      "method": "GET",
+      "route": "/backend-api/aip/connectors/:connector",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.881Z",
+      "elapsedMs": 25495,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cb324a521d6b",
+      "method": "GET",
+      "route": "/backend-api/ps/connectors/by-template",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.882Z",
+      "elapsedMs": 25496,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "de3801521031",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.882Z",
+      "elapsedMs": 25496,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1d8b82073d5e",
+      "method": "GET",
+      "route": "/backend-api/aip/first-party/eligibility",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.882Z",
+      "elapsedMs": 25496,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "38d834003eed",
+      "method": "GET",
+      "route": "/backend-api/wham/sites/access",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.883Z",
+      "elapsedMs": 25497,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c665af2f746b",
+      "method": "GET",
+      "route": "/backend-api/ps/plugins/installed",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.883Z",
+      "elapsedMs": 25497,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1cc29849327f",
+      "method": "GET",
+      "route": "/backend-api/wham/tasks/list",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.883Z",
+      "elapsedMs": 25497,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "88b220523a53",
+      "method": "GET",
+      "route": "/backend-api/tbo",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.884Z",
+      "elapsedMs": 25498,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "470d4f8d068d",
+      "method": "GET",
+      "route": "/backend-api/me",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.884Z",
+      "elapsedMs": 25498,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "18cf7f75e408",
+      "method": "GET",
+      "route": "/backend-api/wham/usage",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.884Z",
+      "elapsedMs": 25498,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "18f0d99813eb",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.885Z",
+      "elapsedMs": 25499,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4764cddc5f2e",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.885Z",
+      "elapsedMs": 25499,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b50cb4bef845",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.886Z",
+      "elapsedMs": 25500,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5716fadeb326",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.886Z",
+      "elapsedMs": 25500,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cf0ec3463b82",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.887Z",
+      "elapsedMs": 25501,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "460613af8458",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.887Z",
+      "elapsedMs": 25501,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d55c5a6140c3",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/sidebar",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.887Z",
+      "elapsedMs": 25501,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fdf720c55736",
+      "method": "POST",
+      "route": "/backend-api/conversations/batch",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.888Z",
+      "elapsedMs": 25502,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "896479ab44a3",
+      "method": "POST",
+      "route": "/backend-api/conversation/:conversation",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.888Z",
+      "elapsedMs": 25502,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bae04fcc7f9c",
+      "method": "GET",
+      "route": "/backend-api/settings/is_adult",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.889Z",
+      "elapsedMs": 25503,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4f4f144ef9cf",
+      "method": "GET",
+      "route": "/backend-api/system_hints",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.889Z",
+      "elapsedMs": 25503,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "36ee86de4aa8",
+      "method": "GET",
+      "route": "/backend-api/system_hints",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.889Z",
+      "elapsedMs": 25503,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a448ca779751",
+      "method": "GET",
+      "route": "/cdn/assets/async/986102.d352957ddf.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.890Z",
+      "elapsedMs": 25504,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "246cb8018bec",
+      "method": "GET",
+      "route": "/cdn/assets/async/793042.f065783f66.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.890Z",
+      "elapsedMs": 25504,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bb8e428c0e08",
+      "method": "GET",
+      "route": "/cdn/assets/async/686618.16e8677349.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.890Z",
+      "elapsedMs": 25504,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "730f12cb5b68",
+      "method": "GET",
+      "route": "/cdn/assets/async/955284.be2a4290c8.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.891Z",
+      "elapsedMs": 25505,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f5d53325ac3d",
+      "method": "GET",
+      "route": "/cdn/assets/async/489892.cbc22ad903.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.891Z",
+      "elapsedMs": 25505,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "646e4a870f88",
+      "method": "GET",
+      "route": "/cdn/assets/async/489892.680f34abbc.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.891Z",
+      "elapsedMs": 25505,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ade88ebf1587",
+      "method": "GET",
+      "route": "/cdn/assets/async/926548.a8bb59415e.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.892Z",
+      "elapsedMs": 25506,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "058d35f801d0",
+      "method": "GET",
+      "route": "/cdn/assets/async/926548.bfc0e3b1dc.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.898Z",
+      "elapsedMs": 25512,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9b7f14c9aa96",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.900Z",
+      "elapsedMs": 25514,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d4400c0342d0",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.900Z",
+      "elapsedMs": 25514,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3d749c4d9860",
+      "method": "GET",
+      "route": "/backend-api/tpp/models/",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.900Z",
+      "elapsedMs": 25514,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cd1c871d9822",
+      "method": "POST",
+      "route": "/backend-api/conversation/:conversation",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.900Z",
+      "elapsedMs": 25514,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d364a83551a4",
+      "method": "GET",
+      "route": "/backend-api/conversation/:uuid",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.901Z",
+      "elapsedMs": 25515,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "140ab4a58a32",
+      "method": "POST",
+      "route": "/backend-api/conversation/:conversation",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.901Z",
+      "elapsedMs": 25515,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d5f7bd067247",
+      "method": "GET",
+      "route": "/cdn/assets/async/976600.59a99b4ae9.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.902Z",
+      "elapsedMs": 25516,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cfe3af3352ef",
+      "method": "GET",
+      "route": "/cdn/assets/async/939122.9ffdd62fb4.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.903Z",
+      "elapsedMs": 25517,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f13147b58a0d",
+      "method": "GET",
+      "route": "/cdn/assets/async/258588.af6647b173.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.904Z",
+      "elapsedMs": 25518,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5c8f34672814",
+      "method": "GET",
+      "route": "/cdn/assets/async/566787.ec23679a4f.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.905Z",
+      "elapsedMs": 25519,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9dc4c57c50c3",
+      "method": "GET",
+      "route": "/cdn/assets/async/449230.ec23679a4f.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.939Z",
+      "elapsedMs": 25553,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f5d53325ac3d",
+      "method": "GET",
+      "route": "/cdn/assets/async/489892.cbc22ad903.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.940Z",
+      "elapsedMs": 25554,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ade88ebf1587",
+      "method": "GET",
+      "route": "/cdn/assets/async/926548.a8bb59415e.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.942Z",
+      "elapsedMs": 25556,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0838a70bdd28",
+      "method": "GET",
+      "route": "/cdn-cgi/challenge-platform/h/b/scripts/jsd/d76008a69eab/api.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.944Z",
+      "elapsedMs": 25558,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9fccb7076010",
+      "method": "GET",
+      "route": "/cdn/assets/async/14919.fcf1d97f0f.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.945Z",
+      "elapsedMs": 25559,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "242eeffd6099",
+      "method": "GET",
+      "route": "/cdn/assets/async/545146.3210fc4a51.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.947Z",
+      "elapsedMs": 25561,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d437f1b54a79",
+      "method": "GET",
+      "route": "/cdn/assets/async/365438.6a616d0205.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.948Z",
+      "elapsedMs": 25562,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d32459d81c03",
+      "method": "GET",
+      "route": "/cdn/assets/async/762981.cde091c374.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.996Z",
+      "elapsedMs": 25610,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c0f44a064b72",
+      "method": "GET",
+      "route": "/backend-api/tpp/default-tab-recommendation",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.996Z",
+      "elapsedMs": 25610,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "18cbe821a565",
+      "method": "GET",
+      "route": "/backend-api/accounts/check/v4-2023-04-27",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.997Z",
+      "elapsedMs": 25611,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d08d91bfe108",
+      "method": "GET",
+      "route": "/backend-api/wham/accounts/check",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.997Z",
+      "elapsedMs": 25611,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d8641f4aa2d4",
+      "method": "GET",
+      "route": "/backend-api/accounts/optimized/check",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.998Z",
+      "elapsedMs": 25612,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "545b3146f686",
+      "method": "GET",
+      "route": "/backend-api/settings/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.999Z",
+      "elapsedMs": 25613,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "66a50b171012",
+      "method": "GET",
+      "route": "/backend-api/accounts/check/v4-2023-04-27",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.002Z",
+      "elapsedMs": 25616,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9f1822e6c9c0",
+      "method": "POST",
+      "route": "/backend-api/sentinel/chat-requirements/prepare",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.006Z",
+      "elapsedMs": 25620,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "35a1e047610f",
+      "method": "GET",
+      "route": "/cdn/assets/async/131201.cfcdbd2be0.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.007Z",
+      "elapsedMs": 25621,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0637d26c645d",
+      "method": "GET",
+      "route": "/cdn/assets/async/370910.13a31126c9.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.008Z",
+      "elapsedMs": 25622,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "45d8f1daf444",
+      "method": "GET",
+      "route": "/cdn/assets/async/928351.87df344d3b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.009Z",
+      "elapsedMs": 25623,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "93f5859a46f6",
+      "method": "GET",
+      "route": "/cdn/assets/async/200952.6fd14c2019.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.010Z",
+      "elapsedMs": 25624,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "decd19f71a49",
+      "method": "GET",
+      "route": "/cdn/assets/async/976600.6e5ba6e2ac.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.012Z",
+      "elapsedMs": 25626,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "02616f156cc9",
+      "method": "GET",
+      "route": "/cdn/assets/async/640096.4ef98fa728.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.014Z",
+      "elapsedMs": 25628,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9197c3b27985",
+      "method": "GET",
+      "route": "/cdn/assets/async/939122.bc10a3722b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.015Z",
+      "elapsedMs": 25629,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e24574948e67",
+      "method": "GET",
+      "route": "/cdn/assets/async/566496.dc91d75233.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.016Z",
+      "elapsedMs": 25630,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "08c6039c359a",
+      "method": "GET",
+      "route": "/cdn/assets/async/258588.a3c48b4afc.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.017Z",
+      "elapsedMs": 25631,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f60c0ec745d7",
+      "method": "GET",
+      "route": "/cdn/assets/async/298094.ebac6ad9d2.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.018Z",
+      "elapsedMs": 25633,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bddb18742abc",
+      "method": "GET",
+      "route": "/backend-api/models",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.019Z",
+      "elapsedMs": 25633,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "657b72b2a947",
+      "method": "GET",
+      "route": "/cdn/assets/async/566787.5c43e0f76d.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.020Z",
+      "elapsedMs": 25634,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3f994ea622ae",
+      "method": "GET",
+      "route": "/cdn/assets/async/449230.59c7ddaf55.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.021Z",
+      "elapsedMs": 25635,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "88d016892b34",
+      "method": "GET",
+      "route": "/cdn/assets/async/460389.ddfcb9db51.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.022Z",
+      "elapsedMs": 25636,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cb324a521d6b",
+      "method": "GET",
+      "route": "/backend-api/ps/connectors/by-template",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.023Z",
+      "elapsedMs": 25637,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0092e9dfc255",
+      "method": "GET",
+      "route": "/backend-api/aip/connectors/:connector/link",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.023Z",
+      "elapsedMs": 25637,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fbdb9a759eb0",
+      "method": "GET",
+      "route": "/backend-api/pins/pages",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.024Z",
+      "elapsedMs": 25638,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4764cddc5f2e",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.024Z",
+      "elapsedMs": 25638,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "470d4f8d068d",
+      "method": "GET",
+      "route": "/backend-api/me",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.025Z",
+      "elapsedMs": 25639,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "18f0d99813eb",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.025Z",
+      "elapsedMs": 25639,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c665af2f746b",
+      "method": "GET",
+      "route": "/backend-api/ps/plugins/installed",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.025Z",
+      "elapsedMs": 25639,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bae04fcc7f9c",
+      "method": "GET",
+      "route": "/backend-api/settings/is_adult",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.026Z",
+      "elapsedMs": 25640,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "38d834003eed",
+      "method": "GET",
+      "route": "/backend-api/wham/sites/access",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.026Z",
+      "elapsedMs": 25640,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "36ee86de4aa8",
+      "method": "GET",
+      "route": "/backend-api/system_hints",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.027Z",
+      "elapsedMs": 25641,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1cc29849327f",
+      "method": "GET",
+      "route": "/backend-api/wham/tasks/list",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.027Z",
+      "elapsedMs": 25641,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1d8b82073d5e",
+      "method": "GET",
+      "route": "/backend-api/aip/first-party/eligibility",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.027Z",
+      "elapsedMs": 25641,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5716fadeb326",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.078Z",
+      "elapsedMs": 25692,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5b4614c6683d",
+      "method": "GET",
+      "route": "/cdn/assets/async/32194.0b3c7d5e28.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.080Z",
+      "elapsedMs": 25694,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4f4f144ef9cf",
+      "method": "GET",
+      "route": "/backend-api/system_hints",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.149Z",
+      "elapsedMs": 25763,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d51e0b1b1ba1",
+      "method": "POST",
+      "route": "/backend-api/conversation/:conversation",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.228Z",
+      "elapsedMs": 25842,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "de3801521031",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.229Z",
+      "elapsedMs": 25843,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a448ca779751",
+      "method": "GET",
+      "route": "/cdn/assets/async/986102.d352957ddf.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.230Z",
+      "elapsedMs": 25844,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "246cb8018bec",
+      "method": "GET",
+      "route": "/cdn/assets/async/793042.f065783f66.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.242Z",
+      "elapsedMs": 25856,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "730f12cb5b68",
+      "method": "GET",
+      "route": "/cdn/assets/async/955284.be2a4290c8.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.244Z",
+      "elapsedMs": 25858,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "18cf7f75e408",
+      "method": "GET",
+      "route": "/backend-api/wham/usage",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.244Z",
+      "elapsedMs": 25858,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bb8e428c0e08",
+      "method": "GET",
+      "route": "/cdn/assets/async/686618.16e8677349.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.245Z",
+      "elapsedMs": 25859,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "058d35f801d0",
+      "method": "GET",
+      "route": "/cdn/assets/async/926548.bfc0e3b1dc.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.246Z",
+      "elapsedMs": 25860,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "646e4a870f88",
+      "method": "GET",
+      "route": "/cdn/assets/async/489892.680f34abbc.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.274Z",
+      "elapsedMs": 25888,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d4400c0342d0",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "status": 202,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.287Z",
+      "elapsedMs": 25901,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9b7f14c9aa96",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "status": 202,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.299Z",
+      "elapsedMs": 25913,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "460613af8458",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.299Z",
+      "elapsedMs": 25913,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d0640a964fb9",
+      "method": "GET",
+      "route": "/backend-api/wham/github/connections",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.299Z",
+      "elapsedMs": 25913,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cf0ec3463b82",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.300Z",
+      "elapsedMs": 25914,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b418da639f38",
+      "method": "GET",
+      "route": "/backend-api/aip/connectors/:connector",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.300Z",
+      "elapsedMs": 25914,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fdf720c55736",
+      "method": "POST",
+      "route": "/backend-api/conversations/batch",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.302Z",
+      "elapsedMs": 25916,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5b4614c6683d",
+      "method": "GET",
+      "route": "/cdn/assets/async/32194.0b3c7d5e28.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.303Z",
+      "elapsedMs": 25917,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3d749c4d9860",
+      "method": "GET",
+      "route": "/backend-api/tpp/models/",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.315Z",
+      "elapsedMs": 25929,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "9f1822e6c9c0",
+      "method": "POST",
+      "route": "/backend-api/sentinel/chat-requirements/prepare",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.315Z",
+      "elapsedMs": 25929,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "88b220523a53",
+      "method": "GET",
+      "route": "/backend-api/tbo",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.338Z",
+      "elapsedMs": 25952,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fbdb9a759eb0",
+      "method": "GET",
+      "route": "/backend-api/pins/pages",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.375Z",
+      "elapsedMs": 25989,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b50cb4bef845",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.380Z",
+      "elapsedMs": 25994,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f32f76adcf8b",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.381Z",
+      "elapsedMs": 25995,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e0726303ce03",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.543Z",
+      "elapsedMs": 26157,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7be1933382ff",
+      "method": "GET",
+      "route": "/cdn/assets/async/527494.9f727862d3.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.544Z",
+      "elapsedMs": 26158,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a2a7fcba533c",
+      "method": "GET",
+      "route": "/cdn/assets/async/915989.3554622c9c.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.544Z",
+      "elapsedMs": 26158,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d50c804902e8",
+      "method": "GET",
+      "route": "/cdn/assets/async/77589.2a4c333370.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.544Z",
+      "elapsedMs": 26158,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bfbf6e87f438",
+      "method": "GET",
+      "route": "/cdn/assets/async/321183.bf4d3bb68e.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.545Z",
+      "elapsedMs": 26159,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "886c99f30f54",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.545Z",
+      "elapsedMs": 26159,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4b62c6db17bd",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.546Z",
+      "elapsedMs": 26160,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "eada3a5df735",
+      "method": "GET",
+      "route": "/backend-api/user_segments/codex_surface_usage",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.546Z",
+      "elapsedMs": 26160,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1d6b07d8f057",
+      "method": "GET",
+      "route": "/backend-api/tbo/primary",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.563Z",
+      "elapsedMs": 26177,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "679cd67e3ffa",
+      "method": "GET",
+      "route": "/backend-api/profiles/me",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.575Z",
+      "elapsedMs": 26189,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5cb175bb9fcc",
+      "method": "GET",
+      "route": "/cdn-cgi/challenge-platform/scripts/jsd/main.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:11.671Z",
+      "elapsedMs": 26285,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "269c59ecdf82",
+      "method": "GET",
+      "route": "/cdn/assets/async/127635.a9ee256675.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.671Z",
+      "elapsedMs": 26286,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2ab297c428b1",
+      "method": "GET",
+      "route": "/cdn/assets/async/748714.40c7924e27.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.672Z",
+      "elapsedMs": 26286,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b2def3ad8c64",
+      "method": "GET",
+      "route": "/cdn/assets/async/106537.4a0bc1df26.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.672Z",
+      "elapsedMs": 26286,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7dad49d97554",
+      "method": "GET",
+      "route": "/cdn/assets/async/95818.fed56cd892.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.673Z",
+      "elapsedMs": 26287,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "13ea7ff27867",
+      "method": "GET",
+      "route": "/cdn/assets/async/95818.e15fc7ebe2.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.673Z",
+      "elapsedMs": 26287,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "aee019dfface",
+      "method": "GET",
+      "route": "/cdn/assets/async/720578.ac42736101.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.673Z",
+      "elapsedMs": 26287,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "643074135588",
+      "method": "GET",
+      "route": "/backend-api/ps/plugins/canonical-app/:app",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.674Z",
+      "elapsedMs": 26288,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2396d3eb0932",
+      "method": "GET",
+      "route": "/backend-api/system_hints",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.674Z",
+      "elapsedMs": 26288,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7b5292a008e0",
+      "method": "GET",
+      "route": "/cdn/assets/async/403927.dfd6eb20e7.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.674Z",
+      "elapsedMs": 26288,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6dcfa1628418",
+      "method": "GET",
+      "route": "/cdn/assets/async/124926.a996ba93a1.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.675Z",
+      "elapsedMs": 26289,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3cc46f057b39",
+      "method": "GET",
+      "route": "/cdn/assets/async/37828.690c1d7eac.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.675Z",
+      "elapsedMs": 26289,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c89012a29398",
+      "method": "GET",
+      "route": "/cdn/assets/async/720131.e03dd14a29.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.675Z",
+      "elapsedMs": 26289,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cb641f64a15c",
+      "method": "GET",
+      "route": "/cdn/assets/async/828552.196a63ece8.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.676Z",
+      "elapsedMs": 26290,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b36d51bfc22a",
+      "method": "GET",
+      "route": "/cdn/assets/async/860148.30ad88f5be.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.676Z",
+      "elapsedMs": 26290,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c4a51f9aacf3",
+      "method": "GET",
+      "route": "/cdn/assets/async/860148.e410b35ef9.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.676Z",
+      "elapsedMs": 26290,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1d84f79292a8",
+      "method": "GET",
+      "route": "/cdn/assets/async/39322.82b4bf2267.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.677Z",
+      "elapsedMs": 26291,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a0a658da470c",
+      "method": "GET",
+      "route": "/cdn/assets/async/39322.b12c08c345.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.698Z",
+      "elapsedMs": 26312,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c6c85675fdd7",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.698Z",
+      "elapsedMs": 26312,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7dad49d97554",
+      "method": "GET",
+      "route": "/cdn/assets/async/95818.fed56cd892.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.728Z",
+      "elapsedMs": 26342,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b36d51bfc22a",
+      "method": "GET",
+      "route": "/cdn/assets/async/860148.30ad88f5be.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.763Z",
+      "elapsedMs": 26377,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1d84f79292a8",
+      "method": "GET",
+      "route": "/cdn/assets/async/39322.82b4bf2267.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.822Z",
+      "elapsedMs": 26436,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cd1c871d9822",
+      "method": "POST",
+      "route": "/backend-api/conversation/:conversation",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.822Z",
+      "elapsedMs": 26436,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7be1933382ff",
+      "method": "GET",
+      "route": "/cdn/assets/async/527494.9f727862d3.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.828Z",
+      "elapsedMs": 26442,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d364a83551a4",
+      "method": "GET",
+      "route": "/backend-api/conversation/:uuid",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.847Z",
+      "elapsedMs": 26461,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f32f76adcf8b",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.849Z",
+      "elapsedMs": 26463,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a2a7fcba533c",
+      "method": "GET",
+      "route": "/cdn/assets/async/915989.3554622c9c.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.850Z",
+      "elapsedMs": 26464,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d50c804902e8",
+      "method": "GET",
+      "route": "/cdn/assets/async/77589.2a4c333370.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.852Z",
+      "elapsedMs": 26466,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bfbf6e87f438",
+      "method": "GET",
+      "route": "/cdn/assets/async/321183.bf4d3bb68e.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.853Z",
+      "elapsedMs": 26467,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5cb175bb9fcc",
+      "method": "GET",
+      "route": "/cdn-cgi/challenge-platform/h/b/scripts/jsd/d76008a69eab/main.js",
+      "resourceType": "Script",
+      "initiatorType": "parser"
+    },
+    {
+      "at": "2026-09-30T14:09:11.853Z",
+      "elapsedMs": 26467,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2ab297c428b1",
+      "method": "GET",
+      "route": "/cdn/assets/async/748714.40c7924e27.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.854Z",
+      "elapsedMs": 26468,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "269c59ecdf82",
+      "method": "GET",
+      "route": "/cdn/assets/async/127635.a9ee256675.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.855Z",
+      "elapsedMs": 26469,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d51e0b1b1ba1",
+      "method": "POST",
+      "route": "/backend-api/conversation/:conversation",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.856Z",
+      "elapsedMs": 26470,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b2def3ad8c64",
+      "method": "GET",
+      "route": "/cdn/assets/async/106537.4a0bc1df26.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.857Z",
+      "elapsedMs": 26471,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "13ea7ff27867",
+      "method": "GET",
+      "route": "/cdn/assets/async/95818.e15fc7ebe2.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.858Z",
+      "elapsedMs": 26472,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d55c5a6140c3",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/sidebar",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.858Z",
+      "elapsedMs": 26472,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "aee019dfface",
+      "method": "GET",
+      "route": "/cdn/assets/async/720578.ac42736101.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.869Z",
+      "elapsedMs": 26483,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7b5292a008e0",
+      "method": "GET",
+      "route": "/cdn/assets/async/403927.dfd6eb20e7.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.870Z",
+      "elapsedMs": 26484,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "cb641f64a15c",
+      "method": "GET",
+      "route": "/cdn/assets/async/828552.196a63ece8.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.871Z",
+      "elapsedMs": 26485,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a0a658da470c",
+      "method": "GET",
+      "route": "/cdn/assets/async/39322.b12c08c345.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.872Z",
+      "elapsedMs": 26486,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6dcfa1628418",
+      "method": "GET",
+      "route": "/cdn/assets/async/124926.a996ba93a1.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.873Z",
+      "elapsedMs": 26487,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c89012a29398",
+      "method": "GET",
+      "route": "/cdn/assets/async/720131.e03dd14a29.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.874Z",
+      "elapsedMs": 26488,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "eada3a5df735",
+      "method": "GET",
+      "route": "/backend-api/user_segments/codex_surface_usage",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.874Z",
+      "elapsedMs": 26488,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "679cd67e3ffa",
+      "method": "GET",
+      "route": "/backend-api/profiles/me",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.878Z",
+      "elapsedMs": 26492,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "3cc46f057b39",
+      "method": "GET",
+      "route": "/cdn/assets/async/37828.690c1d7eac.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.879Z",
+      "elapsedMs": 26493,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "886c99f30f54",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.904Z",
+      "elapsedMs": 26518,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c4a51f9aacf3",
+      "method": "GET",
+      "route": "/cdn/assets/async/860148.e410b35ef9.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.933Z",
+      "elapsedMs": 26547,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6379186b04da",
+      "method": "POST",
+      "route": "/backend-api/sentinel/chat-requirements/finalize",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.934Z",
+      "elapsedMs": 26548,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4b62c6db17bd",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.934Z",
+      "elapsedMs": 26548,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "643074135588",
+      "method": "GET",
+      "route": "/backend-api/ps/plugins/canonical-app/:app",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.942Z",
+      "elapsedMs": 26556,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2654aadfe892",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.942Z",
+      "elapsedMs": 26556,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fbca09d4cf38",
+      "method": "GET",
+      "route": "/backend-api/amphora/notifications",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.945Z",
+      "elapsedMs": 26559,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e0726303ce03",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.137Z",
+      "elapsedMs": 26751,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d735038b0d0c",
+      "method": "GET",
+      "route": "/deployments/dil/v13/runner.html",
+      "resourceType": "Document",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.147Z",
+      "elapsedMs": 26761,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c6c85675fdd7",
+      "method": "POST",
+      "route": "/ces/v1/rgstr",
+      "status": 202,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.201Z",
+      "elapsedMs": 26815,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5cb175bb9fcc",
+      "method": "GET",
+      "route": "/cdn-cgi/challenge-platform/h/b/scripts/jsd/d76008a69eab/main.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.202Z",
+      "elapsedMs": 26816,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "1d6b07d8f057",
+      "method": "GET",
+      "route": "/backend-api/tbo/primary",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.206Z",
+      "elapsedMs": 26820,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7e135b918665",
+      "method": "GET",
+      "route": "/cdn/assets/async/631391.ad5433ce8b.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.206Z",
+      "elapsedMs": 26820,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "30dee759a5a4",
+      "method": "GET",
+      "route": "/cdn/assets/async/631391.60664a577a.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.212Z",
+      "elapsedMs": 26826,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d735038b0d0c",
+      "method": "GET",
+      "route": "/deployments/dil/v13/runner.html",
+      "status": 200,
+      "resourceType": "Document",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.242Z",
+      "elapsedMs": 26856,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "7e135b918665",
+      "method": "GET",
+      "route": "/cdn/assets/async/631391.ad5433ce8b.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.306Z",
+      "elapsedMs": 26920,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6dc9ae0f75b0",
+      "method": "GET",
+      "route": "/backend-api/conversation/:uuid",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.307Z",
+      "elapsedMs": 26921,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fbca09d4cf38",
+      "method": "GET",
+      "route": "/backend-api/amphora/notifications",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.307Z",
+      "elapsedMs": 26921,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2654aadfe892",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.339Z",
+      "elapsedMs": 26953,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "11447ae19d31",
+      "method": "GET",
+      "route": "/cdn/assets/async/820116.4755d9bf54.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.339Z",
+      "elapsedMs": 26953,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d9af58e205c1",
+      "method": "GET",
+      "route": "/cdn/assets/async/820116.088f2b22bc.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.379Z",
+      "elapsedMs": 26993,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "30dee759a5a4",
+      "method": "GET",
+      "route": "/cdn/assets/async/631391.60664a577a.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.386Z",
+      "elapsedMs": 27000,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "11447ae19d31",
+      "method": "GET",
+      "route": "/cdn/assets/async/820116.4755d9bf54.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.391Z",
+      "elapsedMs": 27005,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fac8bbf37758",
+      "method": "POST",
+      "route": "/backend-api/ps/apps/batch",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.514Z",
+      "elapsedMs": 27128,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "33383524bb84",
+      "method": "GET",
+      "route": "/avatars/ec.png",
+      "resourceType": "Image",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.554Z",
+      "elapsedMs": 27168,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5cecb747b068",
+      "method": "POST",
+      "route": "/cdn-cgi/challenge-platform/h/b/jsd/oneshot/:challenge/:attempt.5419587695489048:1790773225:m4ZZcbPRsMbX6cAEo7hPy9dtYcahP2ee0FbZ1Q6oblk/jsdapi-fd7v7c",
+      "resourceType": "XHR",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.556Z",
+      "elapsedMs": 27170,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d9af58e205c1",
+      "method": "GET",
+      "route": "/cdn/assets/async/820116.088f2b22bc.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.559Z",
+      "elapsedMs": 27173,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2396d3eb0932",
+      "method": "GET",
+      "route": "/backend-api/system_hints",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.576Z",
+      "elapsedMs": 27190,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6a64cb39c1ac",
+      "method": "GET",
+      "route": "/backend-api/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.577Z",
+      "elapsedMs": 27191,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6b93c5bb3b56",
+      "method": "GET",
+      "route": "/backend-api/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.577Z",
+      "elapsedMs": 27191,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c90fb7a32ba9",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.578Z",
+      "elapsedMs": 27192,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5690f5750f93",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.578Z",
+      "elapsedMs": 27192,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a17e74260761",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.579Z",
+      "elapsedMs": 27193,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2208a51a2fed",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.579Z",
+      "elapsedMs": 27193,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "8307c8a167ca",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.579Z",
+      "elapsedMs": 27193,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "913a62345b11",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.580Z",
+      "elapsedMs": 27194,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bb61ec5bc6cd",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.580Z",
+      "elapsedMs": 27194,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "59d2b7699597",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.580Z",
+      "elapsedMs": 27194,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "8210db6d1adb",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.581Z",
+      "elapsedMs": 27195,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "91d7b8e95786",
+      "method": "POST",
+      "route": "/backend-api/conversations/batch",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.582Z",
+      "elapsedMs": 27196,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6379186b04da",
+      "method": "POST",
+      "route": "/backend-api/sentinel/chat-requirements/finalize",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.596Z",
+      "elapsedMs": 27210,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "fac8bbf37758",
+      "method": "POST",
+      "route": "/backend-api/ps/apps/batch",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.644Z",
+      "elapsedMs": 27258,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "62ece68f1737",
+      "method": "GET",
+      "route": "/cdn/assets/o.c8df492e0b.svg",
+      "resourceType": "Image",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.647Z",
+      "elapsedMs": 27261,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "11923a553a9b",
+      "method": "GET",
+      "route": "/cdn/assets/async/334958.c28a1f0121.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.647Z",
+      "elapsedMs": 27261,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4e0abcc6398b",
+      "method": "GET",
+      "route": "/cdn/assets/async/334958.7c567b5593.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.659Z",
+      "elapsedMs": 27273,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "62ece68f1737",
+      "method": "GET",
+      "route": "/cdn/assets/o.c8df492e0b.svg",
+      "status": 200,
+      "resourceType": "Image",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.666Z",
+      "elapsedMs": 27280,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5cecb747b068",
+      "method": "POST",
+      "route": "/cdn-cgi/challenge-platform/h/b/jsd/oneshot/:challenge/:attempt.5419587695489048:1790773225:m4ZZcbPRsMbX6cAEo7hPy9dtYcahP2ee0FbZ1Q6oblk/jsdapi-fd7v7c",
+      "status": 200,
+      "resourceType": "XHR",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.686Z",
+      "elapsedMs": 27300,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "11923a553a9b",
+      "method": "GET",
+      "route": "/cdn/assets/async/334958.c28a1f0121.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.693Z",
+      "elapsedMs": 27307,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4e0abcc6398b",
+      "method": "GET",
+      "route": "/cdn/assets/async/334958.7c567b5593.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.721Z",
+      "elapsedMs": 27335,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "33383524bb84",
+      "method": "GET",
+      "route": "/avatars/ec.png",
+      "status": 200,
+      "resourceType": "Image",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.744Z",
+      "elapsedMs": 27358,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6717e98b1e6b",
+      "method": "GET",
+      "route": "/cdn/assets/async/234825.d884b3441b.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.761Z",
+      "elapsedMs": 27375,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0dfa10b80893",
+      "method": "GET",
+      "route": "/cdn/assets/favicon.6a33781f61.svg",
+      "resourceType": "Other",
+      "initiatorType": "other"
+    },
+    {
+      "at": "2026-09-30T14:09:12.786Z",
+      "elapsedMs": 27400,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6717e98b1e6b",
+      "method": "GET",
+      "route": "/cdn/assets/async/234825.d884b3441b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.791Z",
+      "elapsedMs": 27405,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4bd3a7eed289",
+      "method": "GET",
+      "route": "/cdn/assets/async/813988.05d57fa378.css",
+      "resourceType": "Stylesheet",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.791Z",
+      "elapsedMs": 27405,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a809dad556f0",
+      "method": "GET",
+      "route": "/cdn/assets/async/813988.4c8cb4673f.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.793Z",
+      "elapsedMs": 27407,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4bd3a7eed289",
+      "method": "GET",
+      "route": "/cdn/assets/async/813988.05d57fa378.css",
+      "status": 200,
+      "resourceType": "Stylesheet",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.840Z",
+      "elapsedMs": 27454,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a809dad556f0",
+      "method": "GET",
+      "route": "/cdn/assets/async/813988.4c8cb4673f.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.843Z",
+      "elapsedMs": 27457,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "0dfa10b80893",
+      "method": "GET",
+      "route": "/cdn/assets/favicon.6a33781f61.svg",
+      "status": 200,
+      "resourceType": "Other",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.850Z",
+      "elapsedMs": 27464,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6dc9ae0f75b0",
+      "method": "GET",
+      "route": "/backend-api/conversation/:uuid",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.883Z",
+      "elapsedMs": 27497,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c90fb7a32ba9",
+      "method": "GET",
+      "route": "/backend-api/pins",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.885Z",
+      "elapsedMs": 27499,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5690f5750f93",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.945Z",
+      "elapsedMs": 27559,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bb61ec5bc6cd",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.947Z",
+      "elapsedMs": 27561,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "a17e74260761",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.948Z",
+      "elapsedMs": 27562,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "59d2b7699597",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.948Z",
+      "elapsedMs": 27562,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "913a62345b11",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.949Z",
+      "elapsedMs": 27563,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "2208a51a2fed",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.953Z",
+      "elapsedMs": 27567,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "8307c8a167ca",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.986Z",
+      "elapsedMs": 27600,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e905b22124ac",
+      "method": "POST",
+      "route": "/backend-api/amphora/clear_settings_cache",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.986Z",
+      "elapsedMs": 27600,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "70347186ffc7",
+      "method": "GET",
+      "route": "/backend-api/amphora/notifications",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.987Z",
+      "elapsedMs": 27601,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6a64cb39c1ac",
+      "method": "GET",
+      "route": "/backend-api/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.257Z",
+      "elapsedMs": 26871,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "805a8d85af3f",
+      "method": "GET",
+      "route": "/backend-api/files/:file/mounted/capabilities",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.258Z",
+      "elapsedMs": 26872,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "abe1945e1362",
+      "method": "GET",
+      "route": "/backend-api/accounts/check/v4-2023-04-27",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.258Z",
+      "elapsedMs": 26872,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "619ad35afe7f",
+      "method": "GET",
+      "route": "/backend-api/hazelnuts",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.259Z",
+      "elapsedMs": 26873,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bbd7a5688f9d",
+      "method": "GET",
+      "route": "/backend-api/user_granular_consent",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.267Z",
+      "elapsedMs": 26881,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "8210db6d1adb",
+      "method": "GET",
+      "route": "/backend-api/gizmos/:project/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.275Z",
+      "elapsedMs": 26889,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e905b22124ac",
+      "method": "POST",
+      "route": "/backend-api/amphora/clear_settings_cache",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.285Z",
+      "elapsedMs": 26899,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4bfd8df3bba9",
+      "method": "GET",
+      "route": "/backend-api/settings/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.296Z",
+      "elapsedMs": 26911,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d54970848219",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.297Z",
+      "elapsedMs": 26911,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f1aac46f0b86",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.298Z",
+      "elapsedMs": 26912,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b4709bcb86fc",
+      "method": "GET",
+      "route": "/backend-api/aip/connectors/:connector",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.298Z",
+      "elapsedMs": 26912,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "780d3e046368",
+      "method": "GET",
+      "route": "/backend-api/ps/connectors/by-template",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.298Z",
+      "elapsedMs": 26912,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5d125bfaf69e",
+      "method": "POST",
+      "route": "/backend-api/aip/connectors/links/list_accessible",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:10.683Z",
+      "elapsedMs": 25297,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "70347186ffc7",
+      "method": "GET",
+      "route": "/backend-api/amphora/notifications",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.744Z",
+      "elapsedMs": 25358,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "780d3e046368",
+      "method": "GET",
+      "route": "/backend-api/ps/connectors/by-template",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.810Z",
+      "elapsedMs": 25424,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "bbd7a5688f9d",
+      "method": "GET",
+      "route": "/backend-api/user_granular_consent",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.827Z",
+      "elapsedMs": 25441,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d54970848219",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.833Z",
+      "elapsedMs": 25447,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "b4709bcb86fc",
+      "method": "GET",
+      "route": "/backend-api/aip/connectors/:connector",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.836Z",
+      "elapsedMs": 25450,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "619ad35afe7f",
+      "method": "GET",
+      "route": "/backend-api/hazelnuts",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.886Z",
+      "elapsedMs": 25500,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "4bfd8df3bba9",
+      "method": "GET",
+      "route": "/backend-api/settings/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.903Z",
+      "elapsedMs": 25517,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "5d125bfaf69e",
+      "method": "POST",
+      "route": "/backend-api/aip/connectors/links/list_accessible",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.972Z",
+      "elapsedMs": 25586,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "abe1945e1362",
+      "method": "GET",
+      "route": "/backend-api/accounts/check/v4-2023-04-27",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:10.994Z",
+      "elapsedMs": 25608,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "f1aac46f0b86",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.048Z",
+      "elapsedMs": 25662,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "805a8d85af3f",
+      "method": "GET",
+      "route": "/backend-api/files/:file/mounted/capabilities",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.168Z",
+      "elapsedMs": 25782,
+      "kind": "cdp.network.request",
+      "targetKey": "5c439fed7780",
+      "requestKey": "be410b24dc02",
+      "method": "GET",
+      "route": "/backend-api/pins/pages",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:11.262Z",
+      "elapsedMs": 25876,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "91d7b8e95786",
+      "method": "POST",
+      "route": "/backend-api/conversations/batch",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:11.411Z",
+      "elapsedMs": 26025,
+      "kind": "cdp.network.response",
+      "targetKey": "5c439fed7780",
+      "requestKey": "be410b24dc02",
+      "method": "GET",
+      "route": "/backend-api/pins/pages",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.166Z",
+      "elapsedMs": 26780,
+      "kind": "cdp.network.request",
+      "targetKey": "fcd9492ceb82",
+      "requestKey": "368062b756a4",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.230Z",
+      "elapsedMs": 26844,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ccea19195493",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.230Z",
+      "elapsedMs": 26844,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e94926d388e4",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.256Z",
+      "elapsedMs": 26870,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "6b93c5bb3b56",
+      "method": "GET",
+      "route": "/backend-api/conversations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.339Z",
+      "elapsedMs": 26953,
+      "kind": "cdp.network.response",
+      "targetKey": "fcd9492ceb82",
+      "requestKey": "368062b756a4",
+      "method": "GET",
+      "route": "/backend-api/celsius/ws/user",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.430Z",
+      "elapsedMs": 27045,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "ccea19195493",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.526Z",
+      "elapsedMs": 27140,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e94926d388e4",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.569Z",
+      "elapsedMs": 27183,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "709203239453",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.569Z",
+      "elapsedMs": 27183,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d08ad43fc1ff",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.721Z",
+      "elapsedMs": 27335,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "709203239453",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.723Z",
+      "elapsedMs": 27337,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e5d03c17ddb6",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.730Z",
+      "elapsedMs": 27344,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "d08ad43fc1ff",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.732Z",
+      "elapsedMs": 27346,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c9bfa064a3a7",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:12.862Z",
+      "elapsedMs": 27476,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "e5d03c17ddb6",
+      "method": "GET",
+      "route": "/backend-api/spaces/v2",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:12.885Z",
+      "elapsedMs": 27499,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "c9bfa064a3a7",
+      "method": "GET",
+      "route": "/backend-api/pages",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:13.605Z",
+      "elapsedMs": 28219,
+      "kind": "cdp.network.request",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "001667058f3d",
+      "method": "GET",
+      "route": "/cdn/assets/async/860969.fe06f4556b.js",
+      "resourceType": "Script",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:13.610Z",
+      "elapsedMs": 28224,
+      "kind": "cdp.network.response",
+      "targetKey": "3027a4a24bcc",
+      "requestKey": "001667058f3d",
+      "method": "GET",
+      "route": "/cdn/assets/async/860969.fe06f4556b.js",
+      "status": 200,
+      "resourceType": "Script",
+      "fromDiskCache": true,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:14.167Z",
+      "elapsedMs": 28781,
+      "kind": "cdp.network.request",
+      "targetKey": "5c439fed7780",
+      "requestKey": "c601f5fa9d0c",
+      "method": "GET",
+      "route": "/backend-api/wham/tasks/list",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:14.359Z",
+      "elapsedMs": 28973,
+      "kind": "cdp.network.response",
+      "targetKey": "5c439fed7780",
+      "requestKey": "c601f5fa9d0c",
+      "method": "GET",
+      "route": "/backend-api/wham/tasks/list",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:15.167Z",
+      "elapsedMs": 29781,
+      "kind": "cdp.network.request",
+      "targetKey": "b9ac6b82ae3b",
+      "requestKey": "9917e06410de",
+      "method": "GET",
+      "route": "/backend-api/wham/tasks/list",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:15.167Z",
+      "elapsedMs": 29781,
+      "kind": "cdp.network.request",
+      "targetKey": "fcd9492ceb82",
+      "requestKey": "c4d9c4e2b720",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:15.167Z",
+      "elapsedMs": 29781,
+      "kind": "cdp.network.request",
+      "targetKey": "fcd9492ceb82",
+      "requestKey": "e7ffe6ee264f",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:15.394Z",
+      "elapsedMs": 30008,
+      "kind": "cdp.network.response",
+      "targetKey": "b9ac6b82ae3b",
+      "requestKey": "9917e06410de",
+      "method": "GET",
+      "route": "/backend-api/wham/tasks/list",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:15.404Z",
+      "elapsedMs": 30018,
+      "kind": "cdp.network.response",
+      "targetKey": "fcd9492ceb82",
+      "requestKey": "c4d9c4e2b720",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:15.434Z",
+      "elapsedMs": 30048,
+      "kind": "cdp.network.response",
+      "targetKey": "fcd9492ceb82",
+      "requestKey": "e7ffe6ee264f",
+      "method": "GET",
+      "route": "/backend-api/automations",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:20.167Z",
+      "elapsedMs": 34781,
+      "kind": "cdp.network.request",
+      "targetKey": "df67225997ae",
+      "requestKey": "7443a0c24d88",
+      "method": "GET",
+      "route": "/backend-api/pins/pages",
+      "resourceType": "Fetch",
+      "initiatorType": "script"
+    },
+    {
+      "at": "2026-09-30T14:09:20.540Z",
+      "elapsedMs": 35154,
+      "kind": "cdp.network.response",
+      "targetKey": "df67225997ae",
+      "requestKey": "7443a0c24d88",
+      "method": "GET",
+      "route": "/backend-api/pins/pages",
+      "status": 200,
+      "resourceType": "Fetch",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "at": "2026-09-30T14:09:25.887Z",
+      "elapsedMs": 40501,
+      "kind": "capture.failed",
+      "message": "fetch failed"
+    },
+    {
+      "at": "2026-09-30T14:09:26.061Z",
+      "elapsedMs": 40675,
+      "kind": "development-run.cancel.failed",
+      "message": "409: {\"error\":{\"message\":\"History materialization job hmj_31367ba8546b4eaca20a3a27bf931e8d is running; only queued jobs can be cancelled before provider work starts.\",\"type\":\"conflict_error\"}}"
+    }
+  ]
+}

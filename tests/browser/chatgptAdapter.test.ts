@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { runInNewContext } from "node:vm";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
@@ -21,6 +22,7 @@ import {
 	classifyChatgptPostPayloadRouteForTest,
 	classifyChatgptRuntimeEvaluationFailureForTest,
 	clickChatgptViewerDownloadButtonWithClientForTest,
+	clickTaggedChatgptDownloadControlWithClientForTest,
 	closeChatgptTabConnectionForTest,
 	createChatgptAdapter,
 	downloadChatgptConversationFilesWithClientForTest,
@@ -69,7 +71,6 @@ import {
 	recordChatgptTargetNavigationForTest,
 	recordChatgptTargetSessionForTest,
 	recoverVisibleChatgptBlockingSurfaceWithClientForTest,
-	runWithChatgptAbortBoundConnectionForTest,
 	resolveChatgptCanvasArtifactContentText,
 	resolveChatgptConversationUrl,
 	resolveChatgptDownloadUrlFromJson,
@@ -79,6 +80,7 @@ import {
 	resolveChatgptProjectSettingsCommitLabelsForTest,
 	resolveChatgptProjectSourceUploadActionLabelsForTest,
 	resolveChatgptProjectUrl,
+	runWithChatgptAbortBoundConnectionForTest,
 	selectChatgptDownloadFailure,
 	serializeChatgptGridRowsToCsv,
 	summarizeChatgptDownloadJsonShape,
@@ -778,6 +780,51 @@ describe("ensureChatgptConversationSurfaceReadyForRead", () => {
 });
 
 describe("clickChatgptViewerDownloadButtonWithClient", () => {
+	test("activates a visible viewer download with trusted input rather than DOM click", async () => {
+		class ViewerControl {
+			textContent = "Download file";
+			ownerDocument = {
+				defaultView: { getComputedStyle: () => ({ display: "block", visibility: "visible" }) },
+			};
+			getAttribute(name: string) {
+				return name === "aria-label" ? "Download file" : null;
+			}
+			getBoundingClientRect() {
+				return { left: 10, top: 20, width: 100, height: 30 };
+			}
+			scrollIntoView() {}
+			click() {
+				throw new Error("untrusted viewer activation");
+			}
+		}
+		const control = new ViewerControl();
+		const dispatchMouseEvent = vi.fn(async (_event: unknown) => undefined);
+		const evaluate = async ({ expression }: { expression: string }) => ({
+			result: {
+				value: runInNewContext(expression, {
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					Element: ViewerControl,
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					HTMLElement: ViewerControl,
+					document: { querySelectorAll: () => [control] },
+				}),
+			},
+		});
+		await expect(
+			clickChatgptViewerDownloadButtonWithClientForTest({
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Runtime: { evaluate },
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Input: { dispatchMouseEvent },
+			} as never),
+		).resolves.toBe(true);
+		expect(dispatchMouseEvent.mock.calls.map(([event]) => event)).toEqual([
+			{ type: "mouseMoved", x: 60, y: 35 },
+			{ type: "mousePressed", x: 60, y: 35, button: "left", buttons: 1, clickCount: 1 },
+			{ type: "mouseReleased", x: 60, y: 35, button: "left", buttons: 0, clickCount: 1 },
+		]);
+	});
+
 	test("clicks the viewer pane Download control after artifact activation opens a preview", async () => {
 		const telemetry = createBrowserScrapeTelemetryRecorder();
 		const evaluate = vi.fn(async (input: { expression?: string; returnByValue?: boolean }) => {
@@ -785,11 +832,15 @@ describe("clickChatgptViewerDownloadButtonWithClient", () => {
 			expect(input.expression).toContain("aria-label");
 			expect(input.expression).toContain("Download");
 			expect(input.expression).toContain("data-auracall-chatgpt-download-button");
-			return { result: { value: { ok: true, label: "Download" } } };
+			return { result: { value: { ok: true, label: "Download", x: 60, y: 35 } } };
 		});
 		const clicked = await clickChatgptViewerDownloadButtonWithClientForTest(
-			// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
-			{ Runtime: { evaluate } } as never,
+			{
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Runtime: { evaluate },
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Input: { dispatchMouseEvent: vi.fn(async () => undefined) },
+			} as never,
 			{ scrapeTelemetry: telemetry },
 		);
 
@@ -806,13 +857,17 @@ describe("clickChatgptViewerDownloadButtonWithClient", () => {
 		const evaluate = vi.fn(async (input: { expression?: string; returnByValue?: boolean }) => {
 			expect(input.returnByValue).toBe(true);
 			expect(input.expression).toContain("/^Download(?: file)?$/i");
-			return { result: { value: { ok: true, label: "Download file" } } };
+			return { result: { value: { ok: true, label: "Download file", x: 60, y: 35 } } };
 		});
 
 		await expect(
 			clickChatgptViewerDownloadButtonWithClientForTest(
-				// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
-				{ Runtime: { evaluate } } as never,
+				{
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					Runtime: { evaluate },
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					Input: { dispatchMouseEvent: vi.fn(async () => undefined) },
+				} as never,
 				{ scrapeTelemetry: telemetry },
 			),
 		).resolves.toBe(true);
@@ -823,6 +878,7 @@ describe("clickChatgptViewerDownloadButtonWithClient", () => {
 		});
 	});
 });
+
 
 describe("extractChatgptArtifactFileNameFromUri", () => {
 	test("normalizes sandbox basenames for visible behavior-button matching", () => {
@@ -1976,6 +2032,20 @@ describe("downloadChatgptConversationFilesWithClient", () => {
 });
 
 describe("beforeChatgptBrowserInteraction", () => {
+	test("does not double-admit an action owned by the provider traffic governor", async () => {
+		const beforeInteraction = vi.fn(async () => undefined);
+
+		await beforeChatgptBrowserInteractionForTest(
+			{
+				interactionGovernor: { beforeInteraction },
+				providerTrafficGovernor: { attribution: {} as never, begin: vi.fn() },
+			},
+			"renavigation",
+		);
+
+		expect(beforeInteraction).not.toHaveBeenCalled();
+	});
+
 	test("does not reapply conversation-read pacing inside a scoped provider session", async () => {
 		const beforeInteraction = vi.fn(async () => undefined);
 		const scrapeTelemetry = createBrowserScrapeTelemetryRecorder();
@@ -2486,6 +2556,19 @@ describe("classifyChatgptBlockingSurfaceProbe", () => {
 		});
 	});
 
+	test.each([
+		"Regenerate",
+		"Regenerate response",
+		"Continue generating",
+	])("does not classify the normal %s control as a failed turn", (buttonLabel) => {
+		expect(
+			classifyChatgptBlockingSurfaceProbe({
+				text: "Completed proposal with generated files",
+				buttonLabels: [buttonLabel],
+			}),
+		).toBeNull();
+	});
+
 	test("classifies retry affordances on failed chat turns", () => {
 		expect(
 			classifyChatgptBlockingSurfaceProbe({
@@ -2554,6 +2637,31 @@ describe("isRetryableConnectionError", () => {
 });
 
 describe("readChatgptConversationPayloadWithClient", () => {
+	test("does not force a second route visit for account-mirror payload fallback", async () => {
+		const client = {
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Runtime: {
+				evaluate: vi.fn(async () => ({
+					result: { value: { ok: false, status: 404, body: "{}" } },
+				})),
+			},
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Network: { enable: vi.fn() },
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Page: { enable: vi.fn(), navigate: vi.fn() },
+		};
+
+		await expect(
+			readChatgptConversationPayloadWithClient(client as never, "conversation-single", null, {
+				allowNavigation: true,
+				accountMirrorInventory: true,
+				accountMirrorSingleConversationVisit: true,
+			}),
+		).resolves.toBeNull();
+		expect(client.Network.enable).not.toHaveBeenCalled();
+		expect(client.Page.navigate).not.toHaveBeenCalled();
+	});
+
 	test("reacquires the exact payload from ChatGPT home through one route-bound fallback", async () => {
 		vi.useFakeTimers();
 		try {
@@ -2957,7 +3065,7 @@ describe("readChatgptConversationPayloadWithClient", () => {
 					reload: vi.fn(),
 				},
 			};
-			annotateClientMutationContext(
+			await annotateClientMutationContext(
 				client as never,
 				{
 					mutationAudit: (record) => {
@@ -3208,7 +3316,7 @@ describe("readChatgptConversationPayloadWithClient", () => {
 				reload: vi.fn(),
 			},
 		};
-		annotateClientMutationContext(
+		await annotateClientMutationContext(
 			client as never,
 			{
 				mutationAudit: (record) => {
@@ -3291,6 +3399,28 @@ describe("readChatgptConversationPayloadWithClient", () => {
 });
 
 describe("recoverVisibleChatgptBlockingSurfaceWithClient", () => {
+	test("does not reload a blocking surface during an account-mirror single visit", async () => {
+		const client = {
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Page: { enable: vi.fn(), reload: vi.fn() },
+			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+			Runtime: { evaluate: vi.fn() },
+		};
+
+		await expect(
+			recoverVisibleChatgptBlockingSurfaceWithClientForTest(
+				client as never,
+				{
+					kind: "transient-error",
+					summary: "Something went wrong while loading the conversation.",
+					selector: null,
+				},
+				{ allowNavigation: true, accountMirrorSingleConversationVisit: true },
+			),
+		).resolves.toMatchObject({ action: "reload-page", outcome: "skipped" });
+		expect(client.Page.reload).not.toHaveBeenCalled();
+	});
+
 	test("skips reload recovery when preserveActiveTab is set", async () => {
 		const client = {
 			// biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
@@ -3780,10 +3910,7 @@ describe("normalizeChatgptConversationLinkProbes", () => {
 			"utf8",
 		);
 		const start = source.indexOf("async function scrapeChatgptConversations(");
-		const end = source.indexOf(
-			"export function normalizeChatgptConversationHistoryLimit",
-			start,
-		);
+		const end = source.indexOf("export function normalizeChatgptConversationHistoryLimit", start);
 		const scraper = source.slice(start, end);
 
 		expect(start).toBeGreaterThanOrEqual(0);
@@ -4049,6 +4176,77 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		).resolves.toEqual([]);
 		expect(evaluate).toHaveBeenCalledTimes(1);
 		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(1);
+		expect(expression).toContain('button[aria-label^="Open preview of "]');
+		expect(expression).toContain("/^Open preview of\\s+(.+)$/i");
+		expect(expression).toContain("hasUserFileControl");
+		expect(expression).toContain('[data-message-author-role=\\"user\\"]');
+	});
+
+	test.each([
+		"hidden",
+		"empty",
+		"textdoc",
+	])("waits past an ineligible %s control for the recorded ZIP shape", async (kind) => {
+		let mounted = false;
+		let observed = false;
+		class FixtureElement {
+			constructor(private readonly control: boolean) {}
+			getAttribute(name: string) {
+				if (name === "data-content-search-unit-key") return "fallback-turn-4:2:assistant";
+				if (name === "aria-label")
+					return mounted || kind !== "empty"
+						? "Download Bailey_FY27_Proposal_With_Figures.zip"
+						: "";
+				return null;
+			}
+			get textContent() {
+				return mounted ? "Bailey_FY27_Proposal_With_Figures.zip" : "";
+			}
+			getBoundingClientRect() {
+				return { width: !mounted && kind === "hidden" ? 0 : 80, height: 24 };
+			}
+			closest() {
+				return !mounted && kind === "textdoc" ? this : null;
+			}
+			querySelector() {
+				return this.control ? null : control;
+			}
+			querySelectorAll() {
+				return [control];
+			}
+		}
+		const control = new FixtureElement(true);
+		const root = new FixtureElement(false);
+		const evaluate = async ({ expression }: { expression: string }) => ({
+			result: {
+				value: await runInNewContext(expression, {
+					// biome-ignore lint/style/useNamingConvention: Browser global name.
+					Element: FixtureElement,
+					document: { querySelectorAll: () => [root], documentElement: root },
+					// biome-ignore lint/style/useNamingConvention: Browser global name.
+					MutationObserver: class {
+						constructor(private readonly callback: () => void) {}
+						observe() {
+							observed = true;
+							queueMicrotask(() => {
+								mounted = true;
+								this.callback();
+							});
+						}
+						disconnect() {}
+					},
+					setTimeout: () => 1,
+				}),
+			},
+		});
+		const probes = await readVisibleChatgptDownloadArtifactProbesWithClientForTest(
+			// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
+			{ Runtime: { evaluate } } as never,
+		);
+		expect(observed).toBe(true);
+		expect(probes).toMatchObject([
+			{ title: "Bailey_FY27_Proposal_With_Figures.zip", messageIndex: 0, buttonIndex: 0 },
+		]);
 	});
 
 	test("bounds a stalled visible download artifact probe and records its pending operation", async () => {
@@ -4096,7 +4294,7 @@ describe("normalizeChatgptConversationFileProbes", () => {
 		}
 	});
 
-	test("collects visible download artifact probes from the ready DOM only once", async () => {
+	test("evaluates visible download artifact readiness with the collection predicate", async () => {
 		let expression = "";
 		const evaluate = vi.fn(async (input: { expression?: string }) => {
 			expression = input.expression ?? "";
@@ -4110,8 +4308,17 @@ describe("normalizeChatgptConversationFileProbes", () => {
 			),
 		).resolves.toEqual([]);
 		expect(evaluate).toHaveBeenCalledTimes(1);
-		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(1);
+		expect(expression.match(/\bcollect\(\)/g) ?? []).toHaveLength(2);
 		expect(expression).not.toContain("for (let attempt = 0; attempt < 20");
+		expect(expression).toContain("Open preview of");
+		expect(expression).toContain("previewMatch?.[1]");
+		expect(expression).toContain("MutationObserver");
+		expect(expression).toContain("setTimeout(finish, 5_000)");
+		expect(expression).toContain("downloadMatch?.[1]");
+		expect(expression).toContain("if (probes.length === 0)");
+		expect(expression).toContain("role !== 'assistant'");
+		expect(expression).toContain("section.getAttribute('data-content-search-unit-key')");
+		expect(expression).toContain("section.getAttribute('data-chatgpt-search-unit-key')");
 	});
 
 	test("emits stable conversation file refs from user-turn probes", () => {
@@ -4551,6 +4758,49 @@ describe("extractChatgptConversationArtifactsFromPayload", () => {
 });
 
 describe("normalizeChatgptConversationDownloadArtifactProbes", () => {
+	test("activates the tagged live download control with a trusted CDP pointer sequence", async () => {
+		const evaluate = vi.fn(async (_input: { expression?: string }) => ({
+			result: { value: { ok: true, x: 412.5, y: 287.25 } },
+		}));
+		const dispatchMouseEvent = vi.fn(async () => undefined);
+
+		await expect(
+			clickTaggedChatgptDownloadControlWithClientForTest(
+				// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
+				{ Runtime: { evaluate }, Input: { dispatchMouseEvent } } as never,
+			),
+		).resolves.toBe(true);
+
+		expect(evaluate).toHaveBeenCalledTimes(1);
+		expect(evaluate.mock.calls[0]?.[0].expression).toContain(
+			"target.scrollIntoView({ block: 'center', inline: 'center' })",
+		);
+		expect(evaluate.mock.calls[0]?.[0].expression).not.toContain("target.click()");
+		expect(dispatchMouseEvent.mock.calls).toEqual([
+			[{ type: "mouseMoved", x: 412.5, y: 287.25 }],
+			[
+				{
+					type: "mousePressed",
+					x: 412.5,
+					y: 287.25,
+					button: "left",
+					buttons: 1,
+					clickCount: 1,
+				},
+			],
+			[
+				{
+					type: "mouseReleased",
+					x: 412.5,
+					y: 287.25,
+					button: "left",
+					buttons: 0,
+					clickCount: 1,
+				},
+			],
+		]);
+	});
+
 	test("normalizes visible behavior-button downloads into synthetic artifacts", () => {
 		expect(
 			normalizeChatgptConversationDownloadArtifactProbes([
@@ -4686,6 +4936,7 @@ describe("mergeChatgptConversationArtifacts", () => {
 				messageId: "assist-dom-1",
 				metadata: {
 					liveControlState: "available",
+					recoverabilityState: "downloadable_now",
 					liveControlUri: "chatgpt://download-button/turn-1/0",
 					liveControlArtifactId: "download-dom:turn-1:0",
 					turnId: "turn-1",
@@ -4745,6 +4996,7 @@ describe("ChatGPT payload live-control reconciliation", () => {
 			metadata: {
 				liveControlState: "missing",
 				liveControlReason: "missing_live_control",
+				recoverabilityState: "repair_prompt_candidate",
 			},
 		});
 	});
@@ -4773,6 +5025,7 @@ describe("ChatGPT payload live-control reconciliation", () => {
 		expect(result[0]?.metadata).toMatchObject({
 			liveControlState: "missing",
 			liveControlReason: "missing_live_control",
+			recoverabilityState: "repair_prompt_candidate",
 		});
 		expect(result[1]?.id).toBe("download-dom:wrong-turn:0");
 	});

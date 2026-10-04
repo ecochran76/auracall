@@ -25,8 +25,11 @@ import {
 	type AccountMirrorCatalogService,
 	createAccountMirrorCatalogService,
 } from "../accountMirror/catalogService.js";
+import { getDefaultAccountMirrorPolitenessPolicy } from "../accountMirror/politePolicy.js";
+import { createAccountMirrorProviderTrafficWorkKey } from "../accountMirror/providerTrafficPlan.js";
 import { accountMirrorIdentityKeysMatch } from "../accountMirror/tenantBinding.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import { retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown } from "../browser/configuredChatgptTabMaintenance.js";
 import { DEFAULT_CONVERSATION_CONTEXT_TIMEOUT_MS } from "../browser/llmService/llmService.js";
 import { createLlmService } from "../browser/llmService/providers/index.js";
 import type { ConversationContextReadReceipt } from "../browser/providers/cache.js";
@@ -152,11 +155,20 @@ export interface HistoryMaterializationManifestEntry {
 	size: number | null;
 	materializationMethod: string | null;
 	reason: string | null;
+	assetAvailability?: "available" | "unavailable" | "unknown";
 	failureKind?: "provider_unavailable" | "retrieval_failed" | null;
 	retryable?: boolean | null;
+	recoverabilityState?: HistoryMaterializationRecoverabilityState;
 	archiveItemId: string | null;
 	assetRoute: string | null;
 }
+
+export type HistoryMaterializationRecoverabilityState =
+	| "downloadable_now"
+	| "repair_prompt_candidate"
+	| "metadata_only"
+	| "terminally_unavailable"
+	| "materialized";
 
 export interface HistoryMaterializationTarget {
 	provider: ProviderId;
@@ -556,6 +568,7 @@ export interface HistoryMaterializationServiceDeps {
 		config: ResolvedUserConfig | Record<string, unknown>,
 		request: HistoryMaterializationCreateRequest,
 	) => Promise<void>;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown?: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 	materializeConversation?: (
 		target: HistoryMaterializationTarget,
 		request: HistoryMaterializationCreateRequest,
@@ -892,6 +905,9 @@ export function createHistoryMaterializationService(
 		: null;
 	const cleanupManagedBrowser =
 		deps.cleanupManagedBrowser ?? cleanupHistoryMaterializationManagedBrowser;
+	const retireIdleChatgptLeasesAfterManagedBrowserShutdown =
+		deps.retireIdleChatgptLeasesAfterManagedBrowserShutdown ??
+		retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
 	let queue = Promise.resolve();
 	const scheduledJobIds = new Set<string>();
 	const providerWorkContexts = new Map<string, HistoryMaterializationProviderWorkContext>();
@@ -1220,16 +1236,22 @@ export function createHistoryMaterializationService(
 					} finally {
 						if (cleanupBrowserBackedProviderWork) {
 							await cleanupManagedBrowser(deps.config, running.request);
+							await reconcileStoppedHistoryMaterializationChatgptLeases({
+								config: deps.config,
+								request: running.request,
+								retireIdleChatgptLeasesAfterManagedBrowserShutdown,
+							});
 						}
 						await releaseHistoryMaterializationBrowserOperations(browserOperations);
 					}
 				});
+				const availabilityResult = withExplicitAssetAvailability(materializationResult);
 				const result: HistoryMaterializationResult = {
-					...materializationResult,
-					status: resolveHistoryMaterializationJobResultStatus(materializationResult),
+					...availabilityResult,
+					status: resolveHistoryMaterializationJobResultStatus(availabilityResult),
 					providerSessionProof:
 						providerWorkContext(running.id, running.request).providerSessionProofSummary ??
-						materializationResult.providerSessionProof ??
+						availabilityResult.providerSessionProof ??
 						null,
 				};
 				if (historyMaterializationResultHasProviderGuard(result)) {
@@ -1413,6 +1435,11 @@ export function createHistoryMaterializationService(
 			if (browserOperations) {
 				try {
 					await cleanupManagedBrowser(deps.config, job.request);
+					await reconcileStoppedHistoryMaterializationChatgptLeases({
+						config: deps.config,
+						request: job.request,
+						retireIdleChatgptLeasesAfterManagedBrowserShutdown,
+					});
 				} finally {
 					await releaseHistoryMaterializationBrowserOperations(browserOperations);
 				}
@@ -1905,6 +1932,7 @@ async function materializeProjectSources(input: {
 				)?.items ?? [])
 			: [];
 	applyArchiveLinks(entries, archiveItems);
+	applyRecoverabilityStates(entries);
 	const generatedAt = input.now().toISOString();
 	const metrics = summarizeEntries(entries, 1);
 	const status = resolveHistoryMaterializationResultStatus(metrics);
@@ -2201,6 +2229,7 @@ async function materializeAccountLibraryCatalogItem(input: {
 				)?.items ?? [])
 			: [];
 	applyArchiveLinks(entries, archiveItems);
+	applyRecoverabilityStates(entries);
 	const generatedAt = input.now().toISOString();
 	const metrics = summarizeEntries(entries, 0);
 	const status = resolveHistoryMaterializationResultStatus(metrics);
@@ -3564,6 +3593,7 @@ async function materializeMatchedMediaGeneration(input: {
 		response.artifacts.map((artifact) => historyEntryFromMediaArtifact(artifact)),
 	);
 	applyArchiveLinks(entries, archiveItems);
+	applyRecoverabilityStates(entries);
 	const generatedAt = input.now().toISOString();
 	const metrics = summarizeEntries(entries, 1);
 	return {
@@ -3833,9 +3863,11 @@ async function refreshConversationSnapshotTarget(input: {
 				: undefined,
 		},
 	);
+	const trafficOptions = createHistoryMaterializationTrafficOptions(input.target.conversationId, 1);
 	const listOptions = {
 		...resolveHistoryMaterializationProviderListOptions(input.target),
 		...(input.interactionGovernor ? { interactionGovernor: input.interactionGovernor } : {}),
+		...trafficOptions,
 		onProviderSessionProof: input.onProviderSessionProof,
 	};
 	let contextReadReceipt: ConversationContextReadReceipt | null = null;
@@ -4000,13 +4032,37 @@ function evidenceFromMaterializationResult(
 		(entry) => entry.status === "materialized",
 	).length;
 	const duplicateAliasCount = result.entries.filter((entry) => entry.status === "duplicate").length;
+	const unavailableCount = result.entries.filter(
+		(entry) =>
+			entry.assetAvailability === "unavailable" || entry.failureKind === "provider_unavailable",
+	).length;
+	const completedCount = materializedCount + duplicateAliasCount;
+	const terminal = entryCount > 0 && unavailableCount === entryCount;
+	const complete = entryCount > 0 && completedCount === entryCount;
+	const deferredRetryNotBefore =
+		!terminal && !complete
+			? new Date(
+					Date.parse(result.generatedAt) +
+						(result.target
+							? getDefaultAccountMirrorPolitenessPolicy(result.target.provider)
+									.failureBaseCooldownMs
+							: 2 * 60_000),
+				).toISOString()
+			: null;
 	return {
 		manifestObservedAt: result.generatedAt,
 		materializedAt: materializedCount > 0 ? result.generatedAt : undefined,
-		assetCompleteness:
-			entryCount > 0 && materializedCount + duplicateAliasCount === entryCount
-				? "complete"
-				: undefined,
+		assetCompleteness: complete ? "complete" : undefined,
+		frontierState: {
+			action: "materialize_retained",
+			outcome: terminal ? "terminal" : complete ? "complete" : "deferred",
+			assetAvailability: terminal ? "unavailable" : complete ? "available" : "unknown",
+			retryNotBefore: deferredRetryNotBefore,
+			checkpointedAt: result.generatedAt,
+			artifactResolutions: entryCount,
+			downloads: materializedCount,
+			duplicates: duplicateAliasCount,
+		},
 	};
 }
 
@@ -4160,6 +4216,10 @@ async function materializeConversationTarget(input: {
 	const listOptions = {
 		...resolveHistoryMaterializationProviderListOptions(input.target),
 		...(input.interactionGovernor ? { interactionGovernor: input.interactionGovernor } : {}),
+		...createHistoryMaterializationTrafficOptions(
+			input.target.conversationId,
+			Math.max(1, selectedKinds.length),
+		),
 		scrapeTelemetry,
 		useProviderSession: true,
 		keepProviderSessionOpen: true,
@@ -4197,6 +4257,7 @@ async function materializeConversationTarget(input: {
 							listOptions,
 							contextTimeoutMs: input.contextTimeoutMs,
 							refresh: refreshMaterializationSource,
+							force: input.request.force === true,
 							maxItems: remaining,
 							excludeArtifact,
 						},
@@ -4303,6 +4364,7 @@ async function materializeConversationTarget(input: {
 					)?.items ?? [])
 				: [];
 		applyArchiveLinks(entries, archiveItems);
+		applyRecoverabilityStates(entries);
 		const generatedAt = input.now().toISOString();
 		const metrics = summarizeEntries(entries, 1);
 		return {
@@ -4326,6 +4388,40 @@ async function materializeConversationTarget(input: {
 	} finally {
 		await listOptions.providerSession?.close();
 		await scrapeTelemetryProgressWrite;
+	}
+}
+
+export function classifyHistoryMaterializationEntryRecoverability(
+	entry: HistoryMaterializationManifestEntry,
+): HistoryMaterializationRecoverabilityState {
+	if (
+		(entry.status === "materialized" || entry.status === "duplicate") &&
+		Boolean(entry.localPath || entry.checksumSha256 || entry.assetRoute)
+	) {
+		return "materialized";
+	}
+	if (entry.reason === "missing_live_control") {
+		return "repair_prompt_candidate";
+	}
+	if (
+		entry.assetAvailability === "unavailable" ||
+		entry.failureKind === "provider_unavailable"
+	) {
+		return "terminally_unavailable";
+	}
+	if (
+		(entry.failureKind === "retrieval_failed" && entry.retryable === true) ||
+		entry.retryable === true ||
+		(entry.status !== "failed" && Boolean(entry.remoteUrl && entry.providerId))
+	) {
+		return "downloadable_now";
+	}
+	return "metadata_only";
+}
+
+function applyRecoverabilityStates(entries: HistoryMaterializationManifestEntry[]): void {
+	for (const entry of entries) {
+		entry.recoverabilityState = classifyHistoryMaterializationEntryRecoverability(entry);
 	}
 }
 
@@ -5335,6 +5431,7 @@ async function materializedAccountLibraryFileFamilySignatures(input: {
 }
 
 function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEntry): boolean {
+	if (entry.assetAvailability === "unavailable") return true;
 	if (entry.status !== "failed" && entry.status !== "skipped") return false;
 	if (
 		!isVolatileProviderAssetLocation(entry.remoteUrl) &&
@@ -5343,6 +5440,9 @@ function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEn
 		return false;
 	}
 	const reason = entry.reason?.trim().toLowerCase() ?? "";
+	// Account Library rows are persistent provider inventory. A missing DOM row
+	// is a retrieval failure, not proof that the underlying file is gone.
+	if (reason.includes("library_row_not_found")) return false;
 	if (!reason) return true;
 	return (
 		reason.includes("expired") ||
@@ -5353,6 +5453,28 @@ function isConfirmedVolatileMissingEntry(entry: HistoryMaterializationManifestEn
 		reason.includes("tile_not_found") ||
 		reason.includes("archive_linkage_missing")
 	);
+}
+
+function withExplicitAssetAvailability(
+	result: HistoryMaterializationResult,
+): HistoryMaterializationResult {
+	return {
+		...result,
+		entries: result.entries.map((entry) => {
+			if (entry.status === "materialized" || entry.status === "duplicate") {
+				return { ...entry, assetAvailability: "available" as const };
+			}
+			if (isConfirmedVolatileMissingEntry(entry)) {
+				return {
+					...entry,
+					assetAvailability: "unavailable" as const,
+					failureKind: entry.failureKind ?? "provider_unavailable",
+					retryable: entry.retryable ?? false,
+				};
+			}
+			return { ...entry, assetAvailability: "unknown" as const };
+		}),
+	};
 }
 
 function isVolatileProviderAssetLocation(value: string | null | undefined): boolean {
@@ -6196,6 +6318,36 @@ export function resolveHistoryMaterializationProviderListOptions(
 	};
 }
 
+export function createHistoryMaterializationTrafficOptions(
+	conversationId: string,
+	inPageActionLimit: number,
+): Pick<
+	BrowserProviderListOptions,
+	"providerTrafficContext" | "accountMirrorProviderTrafficPlan" | "accountMirrorSingleConversationVisit"
+> {
+	const workKey = createAccountMirrorProviderTrafficWorkKey("materialization", conversationId);
+	return {
+		accountMirrorSingleConversationVisit: true,
+		providerTrafficContext: {
+			trafficPhase: "materialization",
+			workKey,
+		},
+		accountMirrorProviderTrafficPlan: {
+			object: "account_mirror_provider_traffic_plan",
+			version: 1,
+			budgets: [
+				{ phase: "materialization", kind: "page_navigate", workKey, limit: 1 },
+				{
+					phase: "materialization",
+					kind: "in_page_action",
+					workKey,
+					limit: Math.max(1, Math.floor(inPageActionLimit)),
+				},
+			],
+		},
+	};
+}
+
 function resolveHistoryMaterializationConfiguredUrl(
 	target: HistoryMaterializationTarget,
 	providerConversationUrl: string | undefined,
@@ -6705,6 +6857,32 @@ async function cleanupHistoryMaterializationManagedBrowser(
 		if (primaryPid) pids.add(primaryPid);
 		if (pids.size === 0) continue;
 		await terminateHistoryMaterializationManagedBrowserPids([...pids]).catch(() => undefined);
+		const remainingPrimaryPid = await findChromePidUsingUserDataDir(managedProfileDir).catch(
+			() => null,
+		);
+		const remainingPids = await findHistoryMaterializationManagedBrowserPids(managedProfileDir);
+		if (remainingPrimaryPid) remainingPids.add(remainingPrimaryPid);
+		if (remainingPids.size > 0) {
+			throw new Error(
+				`Managed browser profile remained owned by PID ${[...remainingPids].sort((a, b) => a - b)[0]} after bounded cleanup.`,
+			);
+		}
+	}
+}
+
+async function reconcileStoppedHistoryMaterializationChatgptLeases(input: {
+	config: ResolvedUserConfig | Record<string, unknown>;
+	request: HistoryMaterializationCreateRequest;
+	retireIdleChatgptLeasesAfterManagedBrowserShutdown: typeof retireConfiguredChatgptIdleLeasesAfterManagedBrowserShutdown;
+}): Promise<void> {
+	const target = resolveHistoryMaterializationBrowserOperationTarget(input.config, input.request);
+	if (!target || target.provider !== "chatgpt" || !input.request.runtimeProfile) return;
+	for (const managedBrowserProfile of target.managedProfileDirs) {
+		await input.retireIdleChatgptLeasesAfterManagedBrowserShutdown({
+			userConfig: input.config,
+			runtimeProfileId: input.request.runtimeProfile,
+			managedBrowserProfile,
+		});
 	}
 }
 

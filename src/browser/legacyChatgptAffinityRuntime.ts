@@ -25,6 +25,7 @@ export interface LegacyChatgptLeasedTarget {
 	port: number;
 	targetId: string;
 	targetUrl: string;
+	providerTrafficGovernor: NonNullable<BrowserRunOptions["providerTrafficGovernor"]>;
 }
 
 export async function runLegacyChatgptWithConfiguredAffinity(input: {
@@ -75,6 +76,9 @@ export async function runLegacyChatgptWithConfiguredAffinity(input: {
 			if (!options.tabTargetId || !options.host || !options.port) {
 				throw new Error("Legacy ChatGPT affinity did not receive an exact leased target.");
 			}
+			if (!options.providerTrafficGovernor) {
+				throw new Error("Legacy ChatGPT affinity did not receive provider traffic authority.");
+			}
 			const targetUrl = promptInput.conversationId
 				? resolveChatgptConversationUrl(
 						promptInput.conversationId,
@@ -86,6 +90,7 @@ export async function runLegacyChatgptWithConfiguredAffinity(input: {
 				port: options.port,
 				targetId: options.tabTargetId,
 				targetUrl,
+				providerTrafficGovernor: options.providerTrafficGovernor,
 			});
 			legacyResultRef.current = legacyResult;
 			return {
@@ -101,8 +106,12 @@ export async function runLegacyChatgptWithConfiguredAffinity(input: {
 			input.resolveServiceTarget ?? ((options) => browserService.resolveServiceTarget(options)),
 		openTarget:
 			input.openTarget ??
-			(async ({ host, port, url }) => {
-				const target = await openChromeTarget(port, url, host);
+			(async ({ host, port, url, operationId }) => {
+				const target = await openChromeTarget(port, url, host, undefined, {
+					kind: "pre-lease-target-acquisition",
+					operationId,
+					reason: "legacy ChatGPT prompt lease acquisition",
+				});
 				const targetId = typeof target === "string" ? target : target.id;
 				if (!targetId) throw new Error("Legacy ChatGPT target creation returned no target ID.");
 				return { targetId, url };

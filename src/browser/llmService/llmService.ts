@@ -6,6 +6,7 @@ import {
 	type BrowserInteractionGovernor,
 	createBrowserInteractionGovernor,
 } from "../../../packages/browser-service/src/service/interactionGovernor.js";
+import { createInMemoryBrowserMutationLog } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from "../../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../../config.js";
@@ -29,6 +30,7 @@ import {
 	resolveChatgptRateLimitCooldownMs,
 	writeChatgptRateLimitGuardState,
 } from "../chatgptRateLimitGuard.js";
+import { createConfiguredProviderTrafficAuthorityFactory } from "../configuredProviderTrafficAuthority.js";
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
 import { recordLibraryInventoryStage } from "../libraryInventoryDiagnostics.js";
 import {
@@ -486,6 +488,34 @@ function artifactTitleSpecificityScore(value: string): number {
 	return score;
 }
 
+async function findReusableConversationArtifact(
+	artifact: ConversationArtifact,
+	files: FileRef[],
+): Promise<FileRef | null> {
+	const candidate = files.find(
+		(file) =>
+			file.id === artifact.id &&
+			file.name === artifact.title &&
+			file.remoteUrl === artifact.uri &&
+			file.source === "conversation",
+	);
+	if (!candidate?.localPath) return null;
+	try {
+		const stat = await fs.stat(candidate.localPath);
+		if (
+			!stat.isFile() ||
+			stat.size === 0 ||
+			(candidate.size !== undefined && stat.size !== candidate.size)
+		)
+			return null;
+		const checksumSha256 = await calculateSha256(candidate.localPath);
+		if (candidate.checksumSha256 && checksumSha256 !== candidate.checksumSha256) return null;
+		return { ...candidate, size: stat.size, checksumSha256 };
+	} catch {
+		return null;
+	}
+}
+
 function normalizeArtifactFetchError(error: unknown): string {
 	if (error instanceof Error && error.message.trim()) {
 		return error.message.trim();
@@ -886,7 +916,11 @@ export abstract class LlmService {
 		};
 		const providerSessionExpectation =
 			this.providerSessionAuthority.resolveExpectation(providerSessionContext);
-		return {
+		const mutationAudit =
+			overrides.mutationAudit ??
+			this.browserService.getMutationAuditSink?.() ??
+			createInMemoryBrowserMutationLog().record;
+		const resolvedOptions: BrowserProviderListOptions = {
 			...overrides,
 			port,
 			host,
@@ -895,10 +929,11 @@ export abstract class LlmService {
 				overrides.tabTargetId ?? (attachResolvedServiceTab ? target?.tab?.targetId : undefined),
 			tabUrl: overrides.tabUrl ?? (attachResolvedServiceTab ? target?.tab?.url : undefined),
 			browserService: this.browserService,
-			mutationAudit: overrides.mutationAudit ?? this.browserService.getMutationAuditSink?.(),
+			mutationAudit,
 			mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
 			interactionGovernor:
 				overrides.interactionGovernor ?? this.resolveBrowserInteractionGovernor(overrides),
+			providerTrafficRequired: true,
 			providerSessionAuthorization: {
 				authority: this.providerSessionAuthority,
 				context: providerSessionContext,
@@ -910,6 +945,21 @@ export abstract class LlmService {
 				},
 			},
 		};
+		if (!resolvedOptions.providerTrafficGovernor) {
+			const managedBrowserProfile = providerSessionContext.managedBrowserProfile?.trim();
+			if (managedBrowserProfile) {
+				resolvedOptions.providerTrafficAuthorityFactory =
+					overrides.providerTrafficAuthorityFactory ??
+					createConfiguredProviderTrafficAuthorityFactory({
+						userConfig: this.userConfig,
+						mutationAudit,
+						provider: this.providerId,
+						managedBrowserProfile,
+						baseOptions: resolvedOptions,
+					});
+			}
+		}
+		return resolvedOptions;
 	}
 
 	async getProviderSessionProof(
@@ -919,11 +969,18 @@ export abstract class LlmService {
 			throw new Error(`Provider-session observation is not supported for ${this.providerId}.`);
 		}
 		const listOptions = await this.buildListOptions(overrides, { ensurePort: true });
-		const observation = await this.provider.getUserIdentity(listOptions);
-		return assertProviderSessionAuthorization(
-			listOptions.providerSessionAuthorization,
-			observation,
-		);
+		try {
+			const observation = await this.provider.getUserIdentity(listOptions);
+			return assertProviderSessionAuthorization(
+				listOptions.providerSessionAuthorization,
+				observation,
+			);
+		} finally {
+			// This method returns a proof, so a newly retained session has no caller owner.
+			if (listOptions.providerSession !== overrides.providerSession) {
+				await closeScopedProviderSession(listOptions);
+			}
+		}
 	}
 
 	private resolveBrowserInteractionGovernor(
@@ -1850,6 +1907,7 @@ export abstract class LlmService {
 			listOptions?: BrowserProviderListOptions;
 			contextTimeoutMs?: number;
 			refresh?: boolean;
+			force?: boolean;
 			maxItems?: number | null;
 			excludeArtifact?: (
 				artifact: ConversationArtifact,
@@ -1876,6 +1934,7 @@ export abstract class LlmService {
 			const context = await this.getConversationContext(conversationId, {
 				projectId: options?.projectId,
 				refresh: options?.refresh ?? true,
+				allowCacheFallback: false,
 				timeoutMs: options?.contextTimeoutMs,
 				listOptions,
 			});
@@ -1903,7 +1962,7 @@ export abstract class LlmService {
 					(artifact) => !isChatgptArtifactMissingLiveControl(artifact),
 				),
 			);
-			const artifacts = limitItems(artifactCandidates, options?.maxItems);
+			let artifacts = artifactCandidates;
 			if (listOptions.useProviderSession === true) {
 				listOptions.skipFeatureSignature = true;
 				if (listOptions.preserveInteractionGovernorForProviderSession !== true) {
@@ -1962,6 +2021,23 @@ export abstract class LlmService {
 				listOptions,
 				"llmService.materializeConversationArtifacts.beginTransfers",
 			);
+
+			const reusable = new Map<string, FileRef>();
+			if (options?.force !== true) {
+				for (const artifact of artifacts) {
+					const file = await findReusableConversationArtifact(artifact, existing.items);
+					if (file) reusable.set(artifact.id, file);
+				}
+			}
+			const transfers = new Set(
+				limitItems(
+					artifacts.filter((artifact) => !reusable.has(artifact.id)),
+					options?.maxItems,
+				).map((artifact) => artifact.id),
+			);
+			artifacts = artifacts.filter(
+				(artifact) => reusable.has(artifact.id) || transfers.has(artifact.id),
+			);
 			const merged = new Map(existing.items.map((item) => [item.id, item]));
 			const materialized: FileRef[] = [];
 			const manifestEntries: ConversationArtifactFetchManifestEntry[] = [];
@@ -1970,6 +2046,30 @@ export abstract class LlmService {
 					listOptions,
 					"llmService.materializeConversationArtifacts.transferCandidate",
 				);
+				const cachedFile = reusable.get(artifact.id);
+				if (cachedFile) {
+					recordBrowserScrapeProviderAction(
+						listOptions,
+						"llmService.materializeConversationArtifacts.reuseVerifiedCache",
+					);
+					materialized.push(cachedFile);
+					merged.set(cachedFile.id, cachedFile);
+					manifestEntries.push({
+						artifactId: artifact.id,
+						title: artifact.title,
+						kind: artifact.kind,
+						uri: artifact.uri ?? null,
+						status: "materialized",
+						fileId: cachedFile.id,
+						fileName: cachedFile.name,
+						localPath: cachedFile.localPath,
+						remoteUrl: cachedFile.remoteUrl ?? artifact.uri ?? null,
+						mimeType: cachedFile.mimeType,
+						size: cachedFile.size,
+						materializationMethod: "cached-provider-file",
+					});
+					continue;
+				}
 				const artifactDir = path.join(
 					attachmentsDir,
 					sanitizeArtifactPathSegment(
@@ -2016,6 +2116,9 @@ export abstract class LlmService {
 							status: "skipped",
 						});
 						continue;
+					}
+					if (file.localPath && (await fs.stat(file.localPath).catch(() => null))?.isFile()) {
+						file.checksumSha256 = await calculateSha256(file.localPath);
 					}
 					materialized.push(file);
 					merged.set(file.id, file);
@@ -2712,6 +2815,7 @@ export abstract class LlmService {
 		let lastStage = "preflight:buildListOptions";
 		let abortError: ConversationContextReadError | null = null;
 		let listOptions: BrowserProviderListOptions = providedListOptions ?? {};
+		let scopedListOptions: BrowserProviderListOptions | undefined;
 		let cacheContext = await this.resolveCacheContext(
 			{ ...listOptions, skipFeatureSignature: true },
 			{ detect: false, prompt: false },
@@ -2812,7 +2916,7 @@ export abstract class LlmService {
 							),
 							controller.signal,
 						);
-			const scopedListOptions: BrowserProviderListOptions = {
+			scopedListOptions = {
 				...listOptions,
 				abortSignal: controller.signal,
 				scrapeTelemetry: telemetry,
@@ -2905,6 +3009,10 @@ export abstract class LlmService {
 			}
 			throw terminalError;
 		} finally {
+			// The provider retains on the deadline-scoped copy; return custody to its caller.
+			if (listOptions.useProviderSession === true && scopedListOptions) {
+				listOptions.providerSession = scopedListOptions.providerSession;
+			}
 			cancelTimer(deadlineTimer);
 			callerSignal?.removeEventListener("abort", onCallerAbort);
 			telemetry.onUpdate = originalTelemetryUpdate;

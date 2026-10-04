@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 describe("browser tab concurrency runtime", () => {
-	test("keeps serialized mode as the no-storage default", async () => {
+	test("keeps serialized execution while enabling durable traffic safety stores", async () => {
 		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-tab-runtime-"));
 		try {
 			setAuracallHomeDirOverrideForTest(directory);
@@ -21,16 +21,18 @@ describe("browser tab concurrency runtime", () => {
 			expect(runtime).toMatchObject({
 				mode: "serialized",
 				enabled: false,
-				registry: null,
-				ledger: null,
+				storageRoot: path.join(directory, "browser-coordination"),
 			});
-			await expect(access(path.join(directory, "browser-coordination"))).rejects.toThrow();
+			expect(runtime.registry).not.toBeNull();
+			expect(runtime.ledger).not.toBeNull();
+			await runtime.readStatus();
+			await expect(access(path.join(directory, "browser-coordination"))).resolves.toBeUndefined();
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}
 	});
 
-	test("constructs shared durable coordination stores only for explicit affinity mode", async () => {
+	test("enables tab affinity only for explicit affinity mode", async () => {
 		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-tab-runtime-"));
 		try {
 			setAuracallHomeDirOverrideForTest(directory);

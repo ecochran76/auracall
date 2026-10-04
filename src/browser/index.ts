@@ -9,7 +9,10 @@ import {
 	createFileBackedBrowserOperationDispatcher,
 	formatBrowserOperationBusyResult,
 } from "../../packages/browser-service/src/service/operationDispatcher.js";
+import { createInMemoryBrowserMutationLog } from "../../packages/browser-service/src/service/mutationDispatcher.js";
+import type { ProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import type { ResolvedUserConfig } from "../config.js";
 import { BrowserAutomationError } from "../oracle/errors.js";
 import { formatElapsed } from "../oracle/format.js";
 import type { ThinkingTimeLevel } from "../oracle/types.js";
@@ -57,7 +60,6 @@ import {
 } from "./actions/thinkingTime.js";
 import {
 	appendChatgptMutationRecord,
-	appendChatgptRateLimitDetection,
 	CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
 	CHATGPT_MUTATION_MAX_WEIGHT,
 	CHATGPT_MUTATION_WINDOW_MS,
@@ -69,10 +71,14 @@ import {
 	isChatgptRateLimitMessage,
 	pruneChatgptRateLimitDetectionHistory,
 	readChatgptRateLimitGuardState,
-	resolveChatgptRateLimitCooldownMs,
+	recordChatgptRateLimitDetection,
 	resolveChatgptRateLimitProfileName,
 	writeChatgptRateLimitGuardState,
 } from "./chatgptRateLimitGuard.js";
+import {
+	type ChatgptRateLimitReconciliationResult,
+	reconcileChatgptRateLimitTargets,
+} from "./chatgptRateLimitReconciliation.js";
 import {
 	buildWslFirewallHint,
 	closeRemoteChromeTarget,
@@ -81,6 +87,7 @@ import {
 	connectToRemoteChrome,
 	hideChromeWindow,
 	launchChrome,
+	listChromeTargets,
 	openChromeTarget,
 	registerTerminationHooks,
 	reuseRunningChromeProfile,
@@ -94,6 +101,7 @@ import {
 	INPUT_SELECTORS,
 } from "./constants.js";
 import { syncCookies } from "./cookies.js";
+import { createConfiguredProviderTrafficAuthorityFactory } from "./configuredProviderTrafficAuthority.js";
 import {
 	captureBrowserPostmortemSnapshot,
 	logBrowserPostmortemSnapshot,
@@ -101,6 +109,10 @@ import {
 	persistBrowserPostmortemRecord,
 } from "./domDebug.js";
 import { recordBrowserOperationQueueObservation } from "./operationQueueObservations.js";
+import {
+	annotateClientMutationContext,
+	resolveProviderTrafficGovernor,
+} from "./providers/mutationAudit.js";
 import {
 	BrowserObservationLeaseExpiredError,
 	type BrowserResponseProgressEvidence,
@@ -272,6 +284,52 @@ function promptRequestsJsonObject(promptText: string): boolean {
 
 const DEFAULT_JSON_OBJECT_COMPLETION_TIMEOUT_MS = 600_000;
 const MAX_JSON_OBJECT_CONTINUE_CLICKS = 3;
+
+async function attachBrowserRunProviderTraffic(input: {
+	client: ChromeClient;
+	options: BrowserRunOptions;
+	provider: "chatgpt" | "gemini" | "grok";
+	managedBrowserProfile: string;
+	targetId: string;
+}): Promise<void> {
+	const mutationAudit = createInMemoryBrowserMutationLog().record;
+	if (input.options.providerTrafficGovernor) {
+		await annotateClientMutationContext(
+			input.client,
+			{
+				providerTrafficGovernor: input.options.providerTrafficGovernor,
+				providerTrafficRequired: true,
+				mutationAudit,
+			},
+			`provider:${input.provider}:browser-run`,
+			input.targetId,
+		);
+		return;
+	}
+	const userConfig =
+		input.options.tabAffinityUserConfig ??
+		({
+			auracallProfile: input.options.config?.auracallProfileName ?? "default",
+			browser: { tabConcurrencyMode: "serialized" },
+		} as ResolvedUserConfig);
+	const factory = createConfiguredProviderTrafficAuthorityFactory({
+		userConfig,
+		mutationAudit,
+		provider: input.provider,
+		managedBrowserProfile: input.managedBrowserProfile,
+		baseOptions: { abortSignal: input.options.abortSignal },
+	});
+	await annotateClientMutationContext(
+		input.client,
+		{
+			providerTrafficAuthorityFactory: factory,
+			providerTrafficRequired: true,
+			mutationAudit,
+		},
+		`provider:${input.provider}:browser-run`,
+		input.targetId,
+	);
+}
 
 function extractParseableJsonObjectText(text: string): string | null {
 	const trimmed = text.trim();
@@ -1471,8 +1529,10 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 	Runtime?: ChromeClient["Runtime"] | null;
 	managedProfileDir?: string | null;
 	effectState?: "pre_effect" | "effect_observed" | "unknown";
+	detectedRateLimit?: ChatgptRateLimitReconciliationResult | null;
 }): Promise<Error> {
-	let reason = extractChatgptRateLimitSummary(options.error.message);
+	let reason =
+		options.detectedRateLimit?.reason ?? extractChatgptRateLimitSummary(options.error.message);
 	if (!reason && options.Runtime) {
 		const surface = await detectVisibleChatgptBlockingSurface(options.Runtime).catch(() => null);
 		if (surface?.kind === "rate-limit") {
@@ -1482,59 +1542,48 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 	if (!reason && !isChatgptRateLimitMessage(options.error.message)) {
 		return options.error;
 	}
-	if (!shouldWriteChatgptRateLimitCooldown(options.effectState)) {
+	const rateLimitAfterPossibleEffect =
+		options.effectState === "effect_observed" || options.effectState === "unknown";
+	const profile = resolveChatgptBrowserGuardProfileName(options.config, options.managedProfileDir);
+	const recorded = await recordChatgptRateLimitDetection({
+		profileName: profile,
+		managedProfileDir: options.managedProfileDir ?? options.config.manualLoginProfileDir ?? null,
+		managedProfileRoot: options.config.managedProfileRoot ?? null,
+		action: options.action,
+		reason,
+	});
+	const cooldownUntil = recorded.cooldownUntil as number;
+	options.logger(
+		`[browser] ChatGPT rate limit detected; cooling down until ${new Date(cooldownUntil).toISOString()}.`,
+	);
+	if (rateLimitAfterPossibleEffect) {
+		const effectState = options.effectState ?? "unknown";
+		const effectDescription =
+			effectState === "effect_observed"
+				? "after the provider effect was observed"
+				: "after the provider effect became uncertain";
 		return new BrowserAutomationError(
-			`ChatGPT showed a rate-limit surface after the provider effect was observed while ${options.action}; reconcile the existing conversation before any retry.`,
+			`ChatGPT showed a rate-limit surface ${effectDescription} while ${options.action}; reconcile the existing conversation before any retry.`,
 			{
 				stage: "provider-effect-reconciliation",
 				code: "rate-limit-after-effect",
-				effectState: "effect_observed",
+				effectState,
 				retrySafe: false,
 				reason: reason ?? options.error.message,
+				cooldownUntil,
+				rateLimitEvidence: options.detectedRateLimit
+					? {
+							targetId: options.detectedRateLimit.targetId,
+							url: options.detectedRateLimit.url,
+							source: options.detectedRateLimit.source,
+							attempt: options.detectedRateLimit.attempt,
+							isCurrentTarget: options.detectedRateLimit.isCurrentTarget,
+						}
+					: undefined,
 			},
 			options.error,
 		);
 	}
-	const now = Date.now();
-	const profile = resolveChatgptBrowserGuardProfileName(options.config, options.managedProfileDir);
-	const current = await readChatgptRateLimitGuardState({
-		profileName: profile,
-		managedProfileDir: options.managedProfileDir ?? options.config.manualLoginProfileDir ?? null,
-		managedProfileRoot: options.config.managedProfileRoot ?? null,
-	});
-	const cooldownUntil = now + resolveChatgptRateLimitCooldownMs(current, now);
-	const recentMutations = appendChatgptMutationRecord(
-		current?.recentMutations ?? current?.recentMutationAts,
-		options.action,
-		now,
-		CHATGPT_MUTATION_WINDOW_MS,
-	);
-	await writeChatgptRateLimitGuardState(
-		{
-			provider: "chatgpt",
-			profile,
-			updatedAt: now,
-			lastMutationAt: now,
-			recentMutations,
-			recentMutationAts: recentMutations.map((entry) => entry.at),
-			recentRateLimitDetectionAts: appendChatgptRateLimitDetection(
-				current?.recentRateLimitDetectionAts,
-				now,
-			),
-			cooldownDetectedAt: now,
-			cooldownUntil,
-			cooldownReason: reason ?? undefined,
-			cooldownAction: options.action,
-		},
-		{
-			profileName: profile,
-			managedProfileDir: options.managedProfileDir ?? options.config.manualLoginProfileDir ?? null,
-			managedProfileRoot: options.config.managedProfileRoot ?? null,
-		},
-	);
-	options.logger(
-		`[browser] ChatGPT rate limit detected; cooling down until ${new Date(cooldownUntil).toISOString()}.`,
-	);
 	const detail = reason ? ` ${reason}` : "";
 	return new Error(
 		`ChatGPT rate limit detected while ${options.action}; cooling down until ${new Date(
@@ -1545,9 +1594,9 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 }
 
 function shouldWriteChatgptRateLimitCooldown(
-	effectState: "pre_effect" | "effect_observed" | "unknown" | undefined,
+	_effectState: "pre_effect" | "effect_observed" | "unknown" | undefined,
 ): boolean {
-	return effectState !== "effect_observed";
+	return true;
 }
 
 function readProviderEffectState(
@@ -1561,6 +1610,94 @@ function readProviderEffectState(
 	return effectState === "pre_effect" || effectState === "effect_observed" || effectState === "unknown"
 		? effectState
 		: fallback;
+}
+
+function isHandledChatgptRateLimitAfterEffect(error: unknown): boolean {
+	return (
+		error instanceof BrowserAutomationError &&
+		(error.details as { code?: unknown } | undefined)?.code === "rate-limit-after-effect"
+	);
+}
+
+const CHATGPT_RATE_LIMIT_TERMINAL_RECONCILIATION_ATTEMPTS = 3;
+const CHATGPT_RATE_LIMIT_TERMINAL_RECONCILIATION_INTERVAL_MS = 350;
+const CHATGPT_RATE_LIMIT_TERMINAL_RECONCILIATION_STAGE_TIMEOUT_MS = 750;
+
+async function reconcileRemoteChatgptRateLimit(options: {
+	host: string;
+	port: number;
+	currentTargetId?: string | null;
+	currentRuntime?: ChromeClient["Runtime"] | null;
+	logger: BrowserLogger;
+	attempts?: number;
+	intervalMs?: number;
+	stageTimeoutMs?: number;
+	listTargets?: typeof listChromeTargets;
+	connectTarget?: typeof connectToChromeTarget;
+	detectSurface?: typeof detectVisibleChatgptBlockingSurface;
+	wait?: typeof delay;
+}): Promise<ChatgptRateLimitReconciliationResult | null> {
+	const attempts = options.attempts ?? CHATGPT_RATE_LIMIT_TERMINAL_RECONCILIATION_ATTEMPTS;
+	const intervalMs = options.intervalMs ?? CHATGPT_RATE_LIMIT_TERMINAL_RECONCILIATION_INTERVAL_MS;
+	const stageTimeoutMs =
+		options.stageTimeoutMs ?? CHATGPT_RATE_LIMIT_TERMINAL_RECONCILIATION_STAGE_TIMEOUT_MS;
+	const listTargetsForEndpoint = options.listTargets ?? listChromeTargets;
+	const connectTarget = options.connectTarget ?? connectToChromeTarget;
+	const detectSurface = options.detectSurface ?? detectVisibleChatgptBlockingSurface;
+	const wait = options.wait ?? delay;
+	return reconcileChatgptRateLimitTargets({
+		currentTargetId: options.currentTargetId,
+		attempts,
+		intervalMs,
+		listTargets: () =>
+			withTimeout(
+				listTargetsForEndpoint(options.port, options.host, options.logger),
+				stageTimeoutMs,
+				"Timed out listing ChatGPT targets during rate-limit reconciliation.",
+			),
+		inspectTarget: async (target) => {
+			if (target.id === options.currentTargetId && options.currentRuntime) {
+				const surface = await withTimeout(
+					detectSurface(options.currentRuntime),
+					stageTimeoutMs,
+					"Timed out inspecting the leased ChatGPT target for a rate limit.",
+				);
+				return surface?.kind === "rate-limit"
+					? { reason: surface.summary, source: String(surface.details?.source ?? "leased-target") }
+					: null;
+			}
+
+			const targetClient = await connectTarget({
+				host: options.host,
+				port: options.port,
+				target: target.id,
+				logger: options.logger,
+				timeoutMs: stageTimeoutMs,
+			});
+			try {
+				await withTimeout(
+					targetClient.Runtime.enable(),
+					stageTimeoutMs,
+					"Timed out enabling a sibling ChatGPT target during rate-limit reconciliation.",
+				);
+				const surface = await withTimeout(
+					detectSurface(targetClient.Runtime),
+					stageTimeoutMs,
+					"Timed out inspecting a sibling ChatGPT target for a rate limit.",
+				);
+				return surface?.kind === "rate-limit"
+					? { reason: surface.summary, source: String(surface.details?.source ?? "sibling-target") }
+					: null;
+			} finally {
+				await withTimeout(
+					targetClient.close(),
+					stageTimeoutMs,
+					"Timed out closing a sibling ChatGPT rate-limit inspection client.",
+				).catch(() => undefined);
+			}
+		},
+		wait,
+	}).catch(() => null);
 }
 
 function createWindowsManagedProfileRetryReset(options: {
@@ -1686,7 +1823,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			userConfig: options.tabAffinityUserConfig,
 			browserOptions: options,
 			resolvedConfig: config,
-			runLeased: ({ host, port, targetId, targetUrl }) =>
+			runLeased: ({ host, port, targetId, targetUrl, providerTrafficGovernor }) =>
 				runRemoteBrowserMode(
 					promptText,
 					attachments,
@@ -1699,6 +1836,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 					{
 						...options,
 						tabAffinity: { host, port, targetId },
+						providerTrafficGovernor,
 						tabAffinityUserConfig: undefined,
 						skipBrowserExecutionOperation: true,
 					},
@@ -2000,7 +2138,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	const openDedicatedPromptTarget = async (): Promise<
 		Awaited<ReturnType<typeof connectToChromeTarget>>
 	> => {
-		const openedTarget = await openChromeTarget(chrome.port, "about:blank", chromeHost, logger);
+		const openedTarget = await openChromeTarget(chrome.port, "about:blank", chromeHost, logger, {
+			kind: "pre-lease-target-acquisition",
+			operationId:
+				browserOperation?.operation.id ??
+				options.browserOperationOwnerCommand ??
+				"browser-run-pre-lease-target",
+			reason: "dedicated ChatGPT browser-run target acquisition",
+		});
 		const targetId = resolveChromeTargetIdForBrowserRun(openedTarget);
 		lastTargetId = targetId;
 		lastUrl = openedTarget.url ?? "about:blank";
@@ -2011,6 +2156,13 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			target: targetId,
 			logger,
 			abortSignal: options.abortSignal,
+		});
+		await attachBrowserRunProviderTraffic({
+			client: dedicatedClient,
+			options,
+			provider: "chatgpt",
+			managedBrowserProfile: userDataDir,
+			targetId,
 		});
 		logger("Connected to Chrome DevTools protocol");
 		await emitRuntimeHint();
@@ -2820,6 +2972,25 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				});
 			}
 			const durationMs = Date.now() - startedAt;
+			const terminalRateLimit = await reconcileRemoteChatgptRateLimit({
+				host: chromeHost,
+				port: chrome.port,
+				currentTargetId: lastTargetId,
+				currentRuntime: runtimeForGuard,
+				logger,
+			});
+			if (terminalRateLimit) {
+				throw await handleChatgptBrowserRateLimitFailure({
+					config,
+					logger,
+					error: new Error(terminalRateLimit.reason),
+					action: "browserRun",
+					Runtime: runtimeForGuard,
+					managedProfileDir: userDataDir,
+					effectState: "effect_observed",
+					detectedRateLimit: terminalRateLimit,
+				});
+			}
 			await noteChatgptBrowserMutationSuccess(config, userDataDir).catch(() => undefined);
 			return {
 				answerText: "",
@@ -2941,6 +3112,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 				logger,
 				assistantResponseBoundary,
 				{
+					providerTrafficGovernor: resolveProviderTrafficGovernor(client),
 					onPassiveDomProbe: async () => {
 						await recordTargetBoundPassiveObservation({
 							state: "thinking",
@@ -3165,6 +3337,25 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		const durationMs = Date.now() - startedAt;
 		const answerChars = answerText.length;
 		const answerTokens = estimateTokenCount(answerMarkdown);
+		const terminalRateLimit = await reconcileRemoteChatgptRateLimit({
+			host: chromeHost,
+			port: chrome.port,
+			currentTargetId: lastTargetId,
+			currentRuntime: runtimeForGuard,
+			logger,
+		});
+		if (terminalRateLimit) {
+			throw await handleChatgptBrowserRateLimitFailure({
+				config,
+				logger,
+				error: new Error(terminalRateLimit.reason),
+				action: "browserRun",
+				Runtime: runtimeForGuard,
+				managedProfileDir: userDataDir,
+				effectState: "effect_observed",
+				detectedRateLimit: terminalRateLimit,
+			});
+		}
 		await noteChatgptBrowserMutationSuccess(config, userDataDir).catch(() => undefined);
 		return {
 			answerText,
@@ -3204,7 +3395,19 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			throw options.abortSignal.reason;
 		}
 		const normalizedError = error instanceof Error ? error : new Error(String(error));
-		if (shouldPreserveBrowserForObservationExpiry(normalizedError)) {
+		const observedEffectState = readProviderEffectState(normalizedError, providerEffectState);
+		const alreadyHandledRateLimit = isHandledChatgptRateLimitAfterEffect(normalizedError);
+		const detectedRateLimit =
+			alreadyHandledRateLimit || observedEffectState === "pre_effect"
+				? null
+				: await reconcileRemoteChatgptRateLimit({
+						host: chromeHost,
+						port: chrome.port,
+						currentTargetId: lastTargetId,
+						currentRuntime: runtimeForGuard,
+						logger,
+					});
+		if (!detectedRateLimit && shouldPreserveBrowserForObservationExpiry(normalizedError)) {
 			preserveBrowserOnError = true;
 			stopThinkingMonitor?.();
 			await emitRuntimeHint();
@@ -3213,15 +3416,18 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			);
 			throw normalizedError;
 		}
-		const guardedError = await handleChatgptBrowserRateLimitFailure({
-			config,
-			logger,
-			error: normalizedError,
-			action: "browserRun",
-			Runtime: runtimeForGuard,
-			managedProfileDir: userDataDir,
-			effectState: readProviderEffectState(normalizedError, providerEffectState),
-		});
+		const guardedError = alreadyHandledRateLimit
+			? normalizedError
+			: await handleChatgptBrowserRateLimitFailure({
+					config,
+					logger,
+					error: normalizedError,
+					action: "browserRun",
+					Runtime: runtimeForGuard,
+					managedProfileDir: userDataDir,
+					effectState: observedEffectState,
+					detectedRateLimit,
+				});
 		stopThinkingMonitor?.();
 		const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(guardedError);
 		connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
@@ -3557,18 +3763,51 @@ async function runRemoteBrowserMode(
 	};
 
 	try {
+		const remoteManagedBrowserProfile =
+			config.providerSessionAuthorization?.context.managedBrowserProfile ??
+			resolveBrowserLaunchPlan({ source: { kind: "session-config", config } }).managedBrowserProfile
+				.directory;
+		const remoteMutationAudit = createInMemoryBrowserMutationLog().record;
+		const remoteTrafficFactory = options.providerTrafficGovernor
+			? undefined
+			: createConfiguredProviderTrafficAuthorityFactory({
+					userConfig:
+						options.tabAffinityUserConfig ??
+						({
+							auracallProfile: config.auracallProfileName ?? "default",
+							browser: { tabConcurrencyMode: "serialized" },
+						} as ResolvedUserConfig),
+					mutationAudit: remoteMutationAudit,
+					provider: "chatgpt",
+					managedBrowserProfile: remoteManagedBrowserProfile,
+					baseOptions: { abortSignal: options.abortSignal },
+				});
 		const connection = await connectToRemoteChrome(host, port, logger, config.url, {
 			exactTargetId: options.tabAffinity?.targetId,
 			compatibleHosts: resolveCompatibleHostsForUrl(config.url),
 			serviceTabLimit: config.serviceTabLimit ?? undefined,
 			blankTabLimit: config.blankTabLimit ?? undefined,
 			collapseDisposableWindows: config.collapseDisposableWindows,
+			mutationAudit: remoteMutationAudit,
+			providerTrafficGovernor: options.providerTrafficGovernor,
+			providerTrafficAuthorityFactory: remoteTrafficFactory,
+			providerTrafficRequired: true,
 		});
 		client = connection.client;
 		remoteTargetId = connection.targetId ?? null;
 		connectedHost = connection.host;
 		connectedPort = connection.port;
 		disposeRemoteTransport = connection.dispose ?? null;
+		if (!remoteTargetId) {
+			throw new Error("Remote ChatGPT browser run requires an exact target ID.");
+		}
+		await attachBrowserRunProviderTraffic({
+			client,
+			options,
+			provider: "chatgpt",
+			managedBrowserProfile: remoteManagedBrowserProfile,
+			targetId: remoteTargetId,
+		});
 		await emitRuntimeHint();
 		const markConnectionLost = () => {
 			connectionClosedUnexpectedly = true;
@@ -3986,6 +4225,25 @@ async function runRemoteBrowserMode(
 			(chatgptDeepResearchPlanAction === "edit" && chatgptDeepResearchStage === "auto-started")
 		) {
 			const durationMs = Date.now() - startedAt;
+			const terminalRateLimit = await reconcileRemoteChatgptRateLimit({
+				host: connectedHost,
+				port: connectedPort,
+				currentTargetId: remoteTargetId,
+				currentRuntime: runtimeForGuard,
+				logger,
+			});
+			if (terminalRateLimit) {
+				throw await handleChatgptBrowserRateLimitFailure({
+					config,
+					logger,
+					error: new Error(terminalRateLimit.reason),
+					action: "remoteBrowserRun",
+					Runtime: runtimeForGuard,
+					managedProfileDir: config.manualLoginProfileDir ?? null,
+					effectState: "effect_observed",
+					detectedRateLimit: terminalRateLimit,
+				});
+			}
 			await noteChatgptBrowserMutationSuccess(config, config.manualLoginProfileDir ?? null).catch(
 				() => undefined,
 			);
@@ -4108,6 +4366,7 @@ async function runRemoteBrowserMode(
 			logger,
 			assistantResponseBoundary,
 			{
+				providerTrafficGovernor: resolveProviderTrafficGovernor(client),
 				onPassiveDomProbe: async () => {
 					recordBrowserPassiveObservation(passiveObservations, {
 						state: "thinking",
@@ -4282,6 +4541,25 @@ async function runRemoteBrowserMode(
 		const answerChars = answerText.length;
 		const answerTokens = estimateTokenCount(answerMarkdown);
 		await refreshTerminalIdentity();
+		const terminalRateLimit = await reconcileRemoteChatgptRateLimit({
+			host: connectedHost,
+			port: connectedPort,
+			currentTargetId: remoteTargetId,
+			currentRuntime: runtimeForGuard,
+			logger,
+		});
+		if (terminalRateLimit) {
+			throw await handleChatgptBrowserRateLimitFailure({
+				config,
+				logger,
+				error: new Error(terminalRateLimit.reason),
+				action: "remoteBrowserRun",
+				Runtime: runtimeForGuard,
+				managedProfileDir: config.manualLoginProfileDir ?? null,
+				effectState: "effect_observed",
+				detectedRateLimit: terminalRateLimit,
+			});
+		}
 		await noteChatgptBrowserMutationSuccess(config, config.manualLoginProfileDir ?? null).catch(
 			() => undefined,
 		);
@@ -4322,15 +4600,36 @@ async function runRemoteBrowserMode(
 	} catch (error) {
 		const normalizedError = error instanceof Error ? error : new Error(String(error));
 		const observedEffectState = readProviderEffectState(normalizedError, providerEffectState);
-		const guardedError = await handleChatgptBrowserRateLimitFailure({
-			config,
-			logger,
-			error: normalizedError,
-			action: "remoteBrowserRun",
-			Runtime: runtimeForGuard,
-			managedProfileDir: config.manualLoginProfileDir ?? null,
-			effectState: observedEffectState,
-		});
+		const alreadyHandledRateLimit = isHandledChatgptRateLimitAfterEffect(normalizedError);
+		const detectedRateLimit =
+			alreadyHandledRateLimit || observedEffectState === "pre_effect"
+				? null
+				: await reconcileRemoteChatgptRateLimit({
+						host: connectedHost,
+						port: connectedPort,
+						currentTargetId: remoteTargetId,
+						currentRuntime: runtimeForGuard,
+						logger,
+					});
+		if (detectedRateLimit) {
+			logger(
+				`[browser] ChatGPT rate-limit surface found during terminal reconciliation on ${
+					detectedRateLimit.isCurrentTarget ? "the leased target" : "a sibling target"
+				} (attempt ${detectedRateLimit.attempt}).`,
+			);
+		}
+		const guardedError = alreadyHandledRateLimit
+			? normalizedError
+			: await handleChatgptBrowserRateLimitFailure({
+					config,
+					logger,
+					error: normalizedError,
+					action: "remoteBrowserRun",
+					Runtime: runtimeForGuard,
+					managedProfileDir: config.manualLoginProfileDir ?? null,
+					effectState: observedEffectState,
+					detectedRateLimit,
+				});
 		await refreshTerminalIdentity();
 		stopThinkingMonitor?.();
 		const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(guardedError);
@@ -4693,6 +4992,7 @@ async function waitForAssistantResponseWithReload(
 	logger: BrowserLogger,
 	responseBoundary?: AssistantResponseBoundary,
 	options: {
+		providerTrafficGovernor?: ProviderTrafficGovernor;
 		onResponseIncoming?: () => void | Promise<void>;
 		onPassiveDomProbe?: () => void | Promise<void>;
 		onProgress?: (progress: BrowserResponseProgressEvidence) => void | Promise<void>;
@@ -4768,6 +5068,7 @@ async function waitForAssistantResponseWithReload(
 				url: conversationUrl,
 				timeoutMs: 45_000,
 				mutationSource: "legacy:chatgpt:assistant-response-retry-navigation",
+				providerTrafficGovernor: options.providerTrafficGovernor,
 			},
 		);
 		if (!settled.ok) {
@@ -5619,6 +5920,9 @@ export function shouldWriteChatgptRateLimitCooldownForTest(
 ): boolean {
 	return shouldWriteChatgptRateLimitCooldown(effectState);
 }
+
+export const handleChatgptBrowserRateLimitFailureForTest = handleChatgptBrowserRateLimitFailure;
+export const reconcileRemoteChatgptRateLimitForTest = reconcileRemoteChatgptRateLimit;
 
 export function readProviderEffectStateForTest(
 	error: unknown,

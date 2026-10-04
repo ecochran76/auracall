@@ -2,6 +2,7 @@ import path from 'node:path';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import {
   launchChrome as launchChromeCore,
+  listChromeTargets,
   registerTerminationHooks,
   hideChromeWindow,
   wasChromeLaunchedByAuracall,
@@ -38,6 +39,7 @@ export async function launchChrome(
 }
 
 export {
+  listChromeTargets,
   registerTerminationHooks,
   hideChromeWindow,
   wasChromeLaunchedByAuracall,

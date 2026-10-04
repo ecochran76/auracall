@@ -100,7 +100,10 @@ auracall capabilities --target grok --entrypoint grok-imagine --discovery-action
 # ChatGPT discovery accepts current drawer rows without requiring tabindex and
 # reports selected inline tools only from the active composer form. Connected
 # app results expose metadata.selection.stableId and exactLabel for use as the
-# durable composerTool request value.
+# durable composerTool request value. Connected apps are selected by typing the
+# exact label while the drawer is open and activating the filtered row. The
+# resulting inline object must expose an app://connector_... identity;
+# arbitrary label-only rows remain untrusted.
 
 # Guarded ChatGPT Skill lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 skills list \
@@ -679,6 +682,53 @@ Terminology note:
   from the visible index row or ChatGPT's local conversation-history metadata;
   a virtualized or textless sidebar row does not by itself reduce the cached
   title to the provider conversation UUID.
+  Each snapshot also records a versioned `providerIndexEpoch`, and each cached
+  conversation carries versioned `changeFrontierState`. These records use
+  hashed identity/conversation scope keys, preserve explicit asset availability
+  (`available`, `unavailable`, or `unknown`), and distinguish current-epoch
+  physical browser activity from lifetime totals. Rewriting the same epoch
+  preserves its checkpoint and counters; the next epoch rolls those counters
+  into lifetime totals and returns the row to pending planning. Existing or
+  malformed cache rows migrate conservatively to pending work with unknown
+  availability and zero physical counters.
+  Changed-frontier planning is deterministic and provider-free: each row
+  becomes exactly one of `skip`, `visit_once`, `materialize_retained`, or
+  `defer`. Active guards, identity mismatches, and future retry horizons defer;
+  terminal provider/volatile absence skips; changed index evidence visits once;
+  and only current retained detail plus manifest evidence can materialize
+  missing assets without a route visit. Resume checkpoints use the hashed
+  conversation key; an absent checkpoint safely restarts the bounded plan.
+  For steady live follow, this plan is authoritative once a cached row has
+  migrated work state. Changed rows alone enter the detail reader; retained-
+  asset rows proceed directly to materialization; complete, terminal, guarded,
+  and retry-delayed rows do not enter route work. Legacy rows use the prior
+  freshness selector for one migration pass, while explicit full sweeps retain
+  their existing all-row semantics. Non-visit decisions are checkpointed with
+  the epoch so interruption does not reset completed work.
+  A selected ChatGPT detail row produces one `ConversationVisitBundle` that
+  carries detail completeness, a sanitized detail fingerprint, artifact/file
+  references, route evidence, and its own physical target/navigation/reload
+  receipt. Account-mirror reads prohibit the forced payload-route fallback,
+  transient-surface reload, and conversation reopen after that route visit.
+  More than one recorded navigation for a row fails closed. Matching-epoch
+  bundles checkpoint their action, outcome, fingerprint, and physical counters
+  into durable work state; stale-epoch bundles are ignored.
+  A durable detail fingerprint also marks that conversation as eligible for
+  retained-snapshot materialization. Completion combines those retained rows
+  with rows visited in the current pass, so asset work consumes cached detail
+  and manifest evidence without reopening or refreshing the conversation.
+  Materialization checkpoints the aggregate row outcome and physical artifact
+  resolution/download counters. Per-entry availability remains authoritative:
+  confirmed missing volatile uploads are `unavailable`, while an unresolved
+  persistent Library row remains `unknown`; a mixed result therefore stays
+  deferred rather than falsely making the whole conversation terminal.
+  Deferred materialization records the provider-specific failure cooldown as
+  its retry-not-before boundary and cannot immediately re-enter the frontier.
+  When an explicitly bounded pass shuts down its exact managed browser,
+  AuraCall also retires settled idle ChatGPT tab leases in that same AuraCall
+  runtime profile, managed browser profile, service, and tenant scope as
+  `already-missing`. Active, in-flight, outcome-unknown, or unrelated leases
+  remain fenced for operator reconciliation rather than being force-released.
   Cache reconciliation also preserves an existing readable title when a later
   weak observation contains only that conversation UUID. Operators can use an
   explicit read-only `conversations --include-history --history-limit <n>
@@ -758,8 +808,26 @@ Terminology note:
   asset transfer failure makes both the result and durable job `failed`, even
   when another selected asset materializes. Synthetic terminal routeability
   placeholders and provider-guard evidence retain their dedicated semantics;
-  they are not reclassified as ordinary transfer failures. A completion-owned
-  failed job with zero verified materializations blocks its live-follow
+  they are not reclassified as ordinary transfer failures.
+  Detailed materialization results also expose per-entry `assetAvailability`:
+  `available` for materialized or duplicate local assets, `unavailable` for a
+  confirmed missing volatile provider asset, and `unknown` when failure does
+  not prove terminal absence. Confirmed volatile misses default to
+  `failureKind: "provider_unavailable"` and `retryable: false`. A persistent
+  ChatGPT Library `library_row_not_found` lookup remains `unknown`; a missing
+  rendered Library row is not evidence that the provider file ceased to exist.
+  Legacy jobs without this field retain their original reason-based terminal
+  compatibility.
+  New results also expose `recoverabilityState` so operator action is not
+  inferred from an empty download result: `downloadable_now` identifies a
+  concrete retrievable control, `repair_prompt_candidate` preserves a payload
+  asset whose live control is missing, `metadata_only` records inventory that
+  has no current retrieval path, `terminally_unavailable` requires explicit
+  provider-unavailable evidence, and `materialized` identifies verified local
+  output. A repair-prompt candidate is diagnostic only; AuraCall does not send
+  a repair prompt automatically.
+
+  A completion-owned failed job with zero verified materializations blocks its live-follow
   operation before another provider pass; inspect and correct the
   materialization or account/browser condition, then start a fresh bounded
   operation rather than relying on automatic retry. When the same failed job
@@ -865,6 +933,17 @@ Terminology note:
   snapshot refresh. Scrape telemetry records these boundaries as
   `llmService.materializeConversationFiles.reuseRefreshedCache` and
   `llmService.materializeConversationFiles.reuseRefreshedContext`.
+  Current ChatGPT conversation assets are discovered from semantic
+  `Open preview of <filename>` controls as well as legacy behavior-button and
+  upload-tile markup. The preview control supplies asset identity; an adjacent
+  `Download file` button is an action, not a filename. Discovery and
+  materialization preserve the same turn/message/index identity so an
+  unrelated download control cannot satisfy the request.
+  The bounded late-control wait is scoped to the relevant assistant or user
+  turn. A preview/download control elsewhere on the page cannot end readiness
+  for the selected asset surface. Current search-unit markup may carry the
+  assistant/user role on the selected root itself; AuraCall reads role evidence
+  from both that root and its nested role node.
   ChatGPT `files-download` JSON may supply a signed URL as the JSON string
   itself, a recognized shallow URL field, or one `data`/`result` wrapper.
   Parsing a URL is not materialization proof: AuraCall still requires the
@@ -951,7 +1030,9 @@ Terminology note:
   on the configured local API. The command returns an id immediately; the
   service backfills history until no more history is detected, then stays in
   steady follow and periodically crawls for new content. `--max-passes` is a
-  debug cap, not the default. `auracall api mirror-completion-status <id>`
+  debug cap, not the default; it does not disable the selected runtime's tab
+  affinity, traffic governor, lease accounting, or warning hard stops.
+  `auracall api mirror-completion-status <id>`
   polls a bounded mode, phase, next-attempt, count, materialization-outcome,
   and latest-lifecycle projection without refreshing materialization state.
   Use the authenticated HTTP route with `?detail=full` for a one-off full
@@ -998,6 +1079,20 @@ Terminology note:
   read, the current detail loop stops before another provider interaction and
   the matching account-mirror target immediately projects the same cooldown;
   completion and scheduler work remain ineligible until that boundary.
+  Leased ChatGPT prompt, utility, live-follow, and materialization navigation
+  now share one provider-traffic lifecycle: exact lease ownership, persisted
+  admission/start, physical mutation settlement, and a visible warning probe.
+  A detected `Too many requests` surface writes both provider-interaction
+  warning evidence and the managed browser profile cooldown before later work
+  can proceed. The warning evidence includes a versioned classifier, sanitized
+  visible summary, source target class, first observation time, open-page count,
+  and a capped preceding interaction timeline with timing deltas and cumulative
+  navigation/reload/read counts. It excludes URLs, provider identifiers,
+  operation IDs, lease IDs, account data, headers, cookies, and content.
+  Account-mirror refresh evidence also publishes current-epoch changed-frontier
+  action counts, physical visits/navigation/reloads, snapshot refreshes,
+  artifact resolutions, downloads, duplicates, deferred rows, and a bounded
+  amplification ratio.
   Real ChatGPT rate-limit detections retain a bounded 24-hour history per
   browser profile and escalate from 5 to 15 and 45 minutes, capped at six
   hours, so repeated provider limits cannot settle into a fixed short retry
@@ -1006,6 +1101,12 @@ Terminology note:
   cooldown expires, Account Mirror closes that warning tab and records one new
   bounded cooldown instead of creating a manual-clear guard. It never clicks or
   dismisses the provider warning.
+  Browser prompt runs also perform a bounded terminal census after a possible
+  provider effect. A delayed `Too many requests` surface on the leased or a
+  sibling ChatGPT tab on the same browser endpoint records the shared browser
+  profile cooldown before the lease is released. Post-effect detections remain
+  non-retryable and never resubmit the prompt; the census does not navigate,
+  click, dismiss, or close provider tabs.
   Full-sweep completion refreshes use a longer collector timeout than ordinary
   refreshes so conservative provider pacing has room to finish a bounded pass;
   ChatGPT identity discovery uses the same 240-second browser-work allowance as
@@ -1393,9 +1494,10 @@ Terminology note:
     inventory, linked/authentication state, and current composer visibility.
     An installed app is not reported as currently invocable unless it is
     selectable in the active Chat/Work menu or has an active link. Selectable
-    apps use `invocationMode = composer_mention`; ChatGPT represents the choice
-    as an inline `ecosystemMention` pill and submits the matching `plugin:...`
-    system hint with the prompt. Each observed app includes a
+    apps use `invocationMode = composer_mention`; AuraCall opens the composer
+    tool drawer, types the exact connector name to filter it, activates the
+    matching row, and verifies the resulting inline object by its
+    `app://connector_...` path before prompt text is added. Each observed app includes a
     `metadata.selection` contract with its stable ID, exact label, connection
     state, and provider-identity verification. This inventory is derived from
     exact visible provider rows, so newly visible apps do not require an
@@ -2141,7 +2243,16 @@ ownership, retires expired idle tabs, and revisits lost leases until target
 absence or an exact post-close census releases them. An uncertain provider
 outcome remains durable no-retry evidence even after its tab lease retires.
 The API enables this maintenance owner when affinity is selected either at the
-root or by any resolved AuraCall runtime profile.
+root or by any resolved AuraCall runtime profile. Its aggregate
+`/status.tabConcurrency` projection uses the same effective-mode rule, so a
+serialized root does not hide shared affinity coordination selected by a
+nested AuraCall runtime profile.
+Serialized mode now also retains the same durable tab-lease and provider-
+interaction safety stores used for traffic admission. It remains
+concurrency-disabled (`enabled=false`); the stores exist so configured ChatGPT,
+Gemini, and Grok browser actions cannot fall back to un-attributed provider
+traffic. If AuraCall cannot establish the exact managed browser profile and tab
+lease, it stops before the physical action.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
 For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:
