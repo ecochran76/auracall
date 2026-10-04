@@ -52685,3 +52685,8 @@ PR188 installed with exact collector parity. Before another provider control, lo
 ## 2026-10-04 | Issue165 context identity deadline diagnosis
 
 Public context-read regression reproduced an indefinitely pending auth-session evaluation and then a pending fallback evaluation. Both now have ten-second host/CDP deadlines and named pending-operation telemetry. 273 focused tests and typecheck passed; scoped lint is clean. These defects are confirmed locally; causality for the installed slowdown and installed acceptance remain open. See notes/2026-10-04-plan0386-context-identity-deadline.md.
+
+
+## 2026-10-04 | Issue165 installed context deadline control
+
+PR199 installed at exact canonical d564943b3 with four module hashes matching. One bounded owned completion passed identity and then failed context with retry at readVisibleCanvasProbes; neither identity timeout fired. No successful refresh or materialization. All six completions and global scheduler paused, browser absence verified, API restarted PID439. Prior live slowdown causality remains open. See notes/2026-10-04-plan0386-pr199-installed-test.json.

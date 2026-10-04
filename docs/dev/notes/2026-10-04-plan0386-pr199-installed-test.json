@@ -1,0 +1,154 @@
+{
+  "sourceCommit": "d564943b30389eef614d8a66529fd3bf4ac3fa63",
+  "pr": "https://github.com/ecochran76/auracall/pull/199",
+  "status": "IDENTITY_PASSED_CONTEXT_FAILED_RETRY",
+  "livePassesThisSlice": 1,
+  "startedAt": "2026-10-04T23:49:27.479Z",
+  "pausedAt": "2026-10-04T23:54:21.528Z",
+  "installHashes": [
+    {
+      "file": "dist/src/browser/providers/chatgptAdapter.js",
+      "sha256": "f4edd058c20f46f3ccee2af67f7bcee49369ef39d36831c2ba298e2048005469",
+      "match": true
+    },
+    {
+      "file": "dist/src/accountMirror/refreshService.js",
+      "sha256": "21ed4cc765011718532b2d9d6922ebf9c200a25214b924ff5fc8329785bc9e8f",
+      "match": true
+    },
+    {
+      "file": "dist/src/accountMirror/configuredLiveFollowAffinity.js",
+      "sha256": "1e3651196068b5d1ecf681738011bf9c8ce0d39c761cb58967b4d38003902977",
+      "match": true
+    },
+    {
+      "file": "dist/packages/browser-service/src/manualLogin.js",
+      "sha256": "a551c00424ebb5ad5838f87a930db39c1d805d0bc53e6d8b9d859feb7b89df94",
+      "match": true
+    }
+  ],
+  "collectorDiagnostics": [
+    {
+      "stage": "identity",
+      "event": "started",
+      "providerCallTimeoutMs": 360000,
+      "observedAt": "2026-10-04T23:49:32.577Z"
+    },
+    {
+      "stage": "identity",
+      "event": "completed",
+      "elapsedMs": 146867.429852,
+      "providerCallTimeoutMs": 360000,
+      "observedAt": "2026-10-04T23:51:45.803Z"
+    },
+    {
+      "stage": "conversation-context",
+      "event": "started",
+      "conversationId": "6abbb283-29f4-83ea-9cf7-79141ea79853",
+      "providerCallTimeoutMs": 360000,
+      "observedAt": "2026-10-04T23:51:45.808Z"
+    },
+    {
+      "stage": "conversation-context",
+      "event": "failed",
+      "conversationId": "6abbb283-29f4-83ea-9cf7-79141ea79853",
+      "elapsedMs": 119702.369507,
+      "providerCallTimeoutMs": 360000,
+      "detail": "readChatgptConversationContext:6abbb283-29f4-83ea-9cf7-79141ea79853: retry",
+      "observedAt": "2026-10-04T23:53:34.595Z"
+    }
+  ],
+  "contextReadReceipt": {
+    "object": "conversation_context_read_receipt",
+    "version": 1,
+    "provider": "chatgpt",
+    "accountScopeHash": "b0dcd4777bb1242c",
+    "conversationId": "6abbb283-29f4-83ea-9cf7-79141ea79853",
+    "outcome": "failed",
+    "timeoutMs": 360000,
+    "elapsedMs": 108038,
+    "attemptCount": 1,
+    "lastStage": "provider:chatgpt.readVisibleCanvasProbes",
+    "pendingOperation": null,
+    "completedAt": "2026-10-04T23:53:33.970Z",
+    "errorCode": "Error"
+  },
+  "identityMatched": true,
+  "providerGuard": {
+    "state": "clear",
+    "kind": null,
+    "summary": null,
+    "detectedAt": null,
+    "clearedAt": null,
+    "cooldownUntil": null,
+    "url": null,
+    "action": null
+  },
+  "completion": {
+    "id": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+    "status": "paused",
+    "passCount": 1,
+    "lastRefresh": null
+  },
+  "schedulerPaused": true,
+  "completionMetrics": {
+    "total": 5117,
+    "active": 6,
+    "queued": 0,
+    "running": 0,
+    "idle_waiting": 0,
+    "paused": 6,
+    "completed": 80,
+    "blocked": 760,
+    "failed": 4218,
+    "cancelled": 53
+  },
+  "activeCompletions": [
+    {
+      "id": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+      "status": "paused",
+      "passCount": 1
+    },
+    {
+      "id": "acctmirror_completion_84251b28-12d9-4d5f-9bdc-3c77bd9eade0",
+      "status": "paused",
+      "passCount": 61
+    },
+    {
+      "id": "acctmirror_completion_bc68cd94-3f8e-4c2d-bd40-fc4299a5e591",
+      "status": "paused",
+      "passCount": 2
+    },
+    {
+      "id": "acctmirror_completion_65de7626-9aaf-4585-8224-601bee2cada4",
+      "status": "paused",
+      "passCount": 34
+    },
+    {
+      "id": "acctmirror_completion_2e50553f-5641-4482-a214-9ae2150ba3cb",
+      "status": "paused",
+      "passCount": 0
+    },
+    {
+      "id": "acctmirror_completion_dad4f08c-a59e-4183-91b5-b0b7c445c40a",
+      "status": "paused",
+      "passCount": 0
+    }
+  ],
+  "leaseStates": {
+    "active": 0,
+    "idle": 1,
+    "retiring": 0,
+    "released": 237,
+    "lost": 0
+  },
+  "browserAbsence": {
+    "at": "2026-10-04T23:54:35.858Z",
+    "proof": true
+  },
+  "finalApi": {
+    "pid": 439,
+    "active": true
+  },
+  "causalConclusion": "Both identity deadline defects are fixed locally. This live run passed identity and later failed with retry; the earlier slowdown cause remains unproven. No successful refresh or materialization acceptance."
+}
