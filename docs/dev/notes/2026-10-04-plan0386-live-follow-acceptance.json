@@ -1,0 +1,65 @@
+{
+  "sourceCommit": "866d1cd74cae34d165b261b8842c7d3ee70e8486",
+  "worker": {
+    "jobId": "hmj_9fa5382a07a7423ca13cdccb3b2a62fd",
+    "status": "succeeded",
+    "archiveHttpStatus": 200,
+    "size": 183246,
+    "sha256": "88a11545071c98f40838e2115e92524608bf11eb8dfc15e2a46436805efe0362",
+    "verifiedAt": "2026-10-04T19:52:30.518Z"
+  },
+  "automaticSelection": {
+    "requestId": "acctmirror_dc660381-fc52-4f07-b341-7a8d007c2e96",
+    "status": "succeeded",
+    "identity": "match",
+    "counts": {
+      "skip": 1,
+      "visit_once": 18,
+      "materialize_retained": 6,
+      "defer": 0
+    },
+    "skipReasons": [
+      "unchanged_complete"
+    ],
+    "actualDetailReads": 1,
+    "requests": 515,
+    "documents": 3,
+    "warnings": [],
+    "coverage": "after passive attachment; initial startup excluded"
+  },
+  "scheduler": {
+    "state": "scheduled",
+    "paused": false,
+    "lastWakeReason": "operator-resume",
+    "intervalMs": 600000,
+    "completionId": "acctmirror_completion_6600823e-7ed2-47d3-93f0-4ea36e864e1a",
+    "otherTargetsRemainPaused": true,
+    "runnerResumeRepair": {
+      "pr": 190,
+      "mergeCommit": "866d1cd74cae34d165b261b8842c7d3ee70e8486",
+      "regression": "real HTTP paused startup then resume: red before, green after; preserves operator pauses and repeated-resume idempotency",
+      "installedHashParity": true
+    }
+  },
+  "remoteDesktop": {
+    "display": ":923",
+    "apiPid": 44386,
+    "authorityConfigured": true,
+    "coldBrowserDisplayAcceptance": "not proven"
+  },
+  "rdp": {
+    "pr": 183,
+    "mergeCommit": "52f8fd38d6e88d4ab45ba5c87100211dddb74e0e",
+    "state": "MERGED"
+  },
+  "firstAutonomousPass": {
+    "status": "failed",
+    "completionId": "acctmirror_completion_6600823e-7ed2-47d3-93f0-4ea36e864e1a",
+    "processPid": 44386,
+    "passCount": 0,
+    "error": "Live-follow browser startup returned multiple compatible unowned targets.",
+    "observedAt": "2026-10-04T20:06:41.186Z",
+    "compatiblePageCount": 3,
+    "interpretation": "Runner activation is repaired; cold-start target custody remains unaccepted. No ambiguous tab was adopted."
+  }
+}
