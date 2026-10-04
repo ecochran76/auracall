@@ -1,3 +1,13 @@
+## 2026-10-03 | Issue 165 identity-proof session custody
+
+A provider-free adapter replay reproduces target-owned on the read following
+identity proof. The proof retained a session on private copied options, leaving
+its lease inaccessible to the caller. Cleanup now releases only newly created
+proof sessions; caller sessions remain borrowed. Historical lease timing fits
+this cause, but the original exception was not retained. Repair cycle 4 local
+continuation; scheduler paused and Gate D open. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-proof-session-custody.md`.
+
 ## 2026-10-03 | Issue 165 failed-refresh materialization guard
 
 Repair cycle 4 local diagnosis reproduced a fresh context failure falling back

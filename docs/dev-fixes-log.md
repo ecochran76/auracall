@@ -1,3 +1,11 @@
+## 2026-10-03 | Identity proof must retain session ownership
+
+A proof-only method cannot retain a newly created browser session on private
+copied options and return only the proof. That strands the target lease and
+makes the next read fail with target-owned. Close newly retained sessions in
+finally on success or identity conflict; preserve sessions supplied by callers.
+Real adapter/coordination-store replay catches the leak without provider calls.
+
 ## 2026-10-03 | Preserve failed artifact-context refreshes
 
 A cached conversation may be useful for reading after a provider failure, but

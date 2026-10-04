@@ -116,6 +116,14 @@ did not run. Scheduler remains paused. See
 `docs/dev/notes/2026-10-03-plan0386-installed-cache-control.md`. Earlier details:
 `docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md`.
 
+Repair cycle 4 source continuation: PR #173 stops failed fresh context reads
+before cached-control materialization. A real identity-proof/adapter replay
+then reproduced a stranded private session and target-owned on the next read.
+New proof sessions are now closed; borrowed caller sessions remain owned.
+Historical lease timing fits this explanation, but the original exception was
+not retained. No seventh provider probe at this source checkpoint. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-proof-session-custody.md`.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal
