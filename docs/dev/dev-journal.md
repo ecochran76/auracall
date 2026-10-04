@@ -52680,3 +52680,8 @@ Full collector regression exposed requested detail recovery bypassing changed/un
 ## 2026-10-04 | Issue165 same-epoch partial asset checkpoint
 
 PR188 installed with exact collector parity. Before another provider control, local regression reproduced completed detail skipping four known missing assets in the same epoch. Shortcut now requires zero missing assets; retained materialization remains eligible. Scheduler paused; installed automatic selection and resume remain open. See notes/2026-10-04-plan0386-partial-completion-frontier.md.
+
+
+## 2026-10-04 | Issue165 context identity deadline diagnosis
+
+Public context-read regression reproduced an indefinitely pending auth-session evaluation and then a pending fallback evaluation. Both now have ten-second host/CDP deadlines and named pending-operation telemetry. 273 focused tests and typecheck passed; scoped lint is clean. These defects are confirmed locally; causality for the installed slowdown and installed acceptance remain open. See notes/2026-10-04-plan0386-context-identity-deadline.md.

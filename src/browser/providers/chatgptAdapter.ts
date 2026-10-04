@@ -5918,14 +5918,27 @@ async function waitForCreateProjectDialogReady(
 
 export async function readChatgptUserIdentity(
 	client: ChromeClient,
+	options?: BrowserProviderListOptions,
 ): Promise<ProviderUserIdentity | null> {
 	let authSessionProbe: ChatgptAuthSessionProbe | null = null;
 	for (let attempt = 0; attempt < 5; attempt += 1) {
-		const authSessionResult = await client.Runtime.evaluate({
-			expression: buildChatgptAuthSessionIdentityExpression(),
-			awaitPromise: true,
-			returnByValue: true,
-		});
+		recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+		recordBrowserScrapeProviderAction(options, "chatgpt.readAuthSessionIdentity");
+		const authSessionResult = await withBrowserScrapePendingOperation(
+			options,
+			"provider:chatgpt.readAuthSessionIdentity",
+			() =>
+				withChatgptTimeout(
+					client.Runtime.evaluate({
+						expression: buildChatgptAuthSessionIdentityExpression(),
+						awaitPromise: true,
+						returnByValue: true,
+						timeout: 10_000,
+					}),
+					10_000,
+					"Timed out reading ChatGPT auth-session identity after 10000ms.",
+				),
+		);
 		const candidate =
 			(authSessionResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null;
 		if (normalizeChatgptAuthSessionIdentity(candidate)) {
@@ -5937,10 +5950,22 @@ export async function readChatgptUserIdentity(
 		}
 	}
 
-	const fallbackResult = await client.Runtime.evaluate({
-		expression: buildChatgptFallbackIdentityExpression(),
-		returnByValue: true,
-	});
+	recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+	recordBrowserScrapeProviderAction(options, "chatgpt.readFallbackIdentity");
+	const fallbackResult = await withBrowserScrapePendingOperation(
+		options,
+		"provider:chatgpt.readFallbackIdentity",
+		() =>
+			withChatgptTimeout(
+				client.Runtime.evaluate({
+					expression: buildChatgptFallbackIdentityExpression(),
+					returnByValue: true,
+					timeout: 10_000,
+				}),
+				10_000,
+				"Timed out reading ChatGPT fallback identity after 10000ms.",
+			),
+	);
 	const fallbackProbe =
 		(fallbackResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null;
 	const mergeRecord = <T extends Record<string, unknown>>(
@@ -5970,7 +5995,7 @@ async function assertChatgptExpectedIdentity(
 	}
 	assertProviderSessionAuthorization(
 		options.providerSessionAuthorization,
-		await readChatgptUserIdentity(client),
+		await readChatgptUserIdentity(client, options),
 		{
 			browserTargetId:
 				options.tabTargetId ?? options.providerSessionAuthorization.context.browserTargetId ?? null,
@@ -13562,7 +13587,7 @@ export function createChatgptAdapter(): Pick<
 				if (options?.tabLifecycle === "dispose-new") {
 					await waitForChatgptDisposableRootComposer(client);
 				}
-				return readChatgptUserIdentity(client);
+				return readChatgptUserIdentity(client, options);
 			});
 		},
 		async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {

@@ -1,3 +1,9 @@
+- ChatGPT context identity deadlines (provider-free):
+  `pnpm vitest run tests/browser/chatgptContextReadDeadline.test.ts`.
+  The real context reader rejects stalled auth-session and fallback identity
+  evaluations after ten seconds. Responsive missing identity still fails closed.
+  This transport-fault replay does not prove live slowdown causality.
+
 - Owned-page ChatGPT account-mirror warning checks (provider-free):
   `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/configuredLiveFollowAffinity.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
   Proves exact crawler propagation, no restored-tab census, visible-warning
