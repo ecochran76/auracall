@@ -1,3 +1,10 @@
+## 2026-10-04 | Scheduler resume must restore suppressed completion runners
+
+A server started with persisted scheduler pause loads active operations without
+launching runners. Restarting only the scheduler timer leaves those operations
+apparently active but inert. Reuse guarded, idempotent runnable-operation resume
+on scheduler resume; do not resume operator-paused or terminal operations.
+
 ## 2026-10-04 | Completed detail is not completed asset capture
 
 Do not let a same-epoch complete detail checkpoint bypass known missing local assets. The planner must preserve retained materialization eligibility until missing assets are reconciled, while keeping warning, identity and retry gates.

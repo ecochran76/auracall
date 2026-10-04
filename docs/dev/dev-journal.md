@@ -1,3 +1,11 @@
+## 2026-10-04 | Resume runners suppressed by paused startup
+
+The real HTTP paused-startup/resume regression failed with zero refresh calls.
+Scheduler resume now reactivates restored runnable completion runners when startup
+resumption is enabled. Explicit operator-paused targets remain paused, existing
+runners are idempotent, and provider resume guards remain enforced. Installed
+and autonomous acceptance remains pending; this source change alone is not proof.
+
 ## 2026-10-04 | RDP source integration validation
 
 Reconciled the retained launcher branch against current main, preserving
