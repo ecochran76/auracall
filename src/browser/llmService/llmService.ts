@@ -969,11 +969,18 @@ export abstract class LlmService {
 			throw new Error(`Provider-session observation is not supported for ${this.providerId}.`);
 		}
 		const listOptions = await this.buildListOptions(overrides, { ensurePort: true });
-		const observation = await this.provider.getUserIdentity(listOptions);
-		return assertProviderSessionAuthorization(
-			listOptions.providerSessionAuthorization,
-			observation,
-		);
+		try {
+			const observation = await this.provider.getUserIdentity(listOptions);
+			return assertProviderSessionAuthorization(
+				listOptions.providerSessionAuthorization,
+				observation,
+			);
+		} finally {
+			// This method returns a proof, so a newly retained session has no caller owner.
+			if (listOptions.providerSession !== overrides.providerSession) {
+				await closeScopedProviderSession(listOptions);
+			}
+		}
 	}
 
 	private resolveBrowserInteractionGovernor(
