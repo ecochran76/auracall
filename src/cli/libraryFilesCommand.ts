@@ -122,6 +122,7 @@ export async function listChatgptLibraryFilesForCli(
 				libraryInventoryLifecycle,
 				preserveActiveTab: true,
 				requireExistingTarget: true,
+				skipAccountFileCachePersistence: true,
 			});
 		} catch (error) {
 			recordLibraryInventoryCleanupPhase(lifecycleOptions, "read-rejected");

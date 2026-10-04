@@ -1,3 +1,16 @@
+- Installed ChatGPT session-custody/incremental control (opt-in, already run):
+  `docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent
+  JSON bind canonical PR 176 to one verified ZIP download and a cached repeat
+  with zero downloads/CDP/observed requests. This direct service control does
+  not establish archive publication or autonomous scheduler acceptance.
+
+- ChatGPT product materialization replay (provider-free, synthetic bytes and CDP transport):
+  `pnpm vitest run tests/browser/chatgptMaterializationReplay.test.ts`.
+  Exercises recorded DOM discovery/tagging, product selection and native-file
+  verification, cache/manifest writing, normal Regenerate controls, and precise
+  failure for mismatched or ambiguous downloads. A real Retry must stop without
+  reload, navigation, or pointer input. No provider requests or browser launch.
+
 # Testing quickstart
 
 - ChatGPT materialization surface and recoverability states (provider-free):
@@ -87,6 +100,10 @@
   settlement path. The timeline is capped at 32 closed-vocabulary events and
   contains no URL, target ID, account identity, managed browser profile, or
   provider content.
+  The exact CLI list options also skip account-file cache persistence after the
+  provider result. A pending-hook regression proves the returned inventory does
+  not enter cache-context resolution or cache write, while the adjacent default
+  listing fixture continues to prove general callers persist account files.
   The exact-target fixtures additionally prove adoption of an existing Library
   page through the production target-list dependency without target
   creation/closure, guaranteed lease settlement after post-acquisition setup
@@ -3250,3 +3267,5 @@
     unchanged.
 - If you are debugging a raw direct-CDP setup instead of Aura-Call’s integrated Windows path, you can still pin `AURACALL_BROWSER_PORT` / `AURACALL_BROWSER_DEBUG_PORT` and use firewall hints from `scripts/test-browser.ts`. That is now a fallback/debug workflow, not the primary Windows setup.
 - Scoped browser runs can be smoke-tested by passing `--project-id` / `--conversation-id` to a browser command; they should not change default config behavior.
+
+Viewer download scope regression: `pnpm vitest run tests/browser/chatgptViewerDownloadScope.test.ts`. Executes the real helper evaluation with captured inline-card shapes and synthetic DOM; no provider calls.

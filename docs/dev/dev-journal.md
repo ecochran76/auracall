@@ -1,3 +1,111 @@
+## 2026-10-04 | RDP source integration validation
+
+Reconciled the retained launcher branch against current main, preserving
+canonical CDP endpoint precedence and bounded exact-handoff readiness. All
+21 launcher tests, typecheck, build, scoped lint, plan audit and diff check
+against canonical main pass. Issue 182 owns source integration. This does
+not claim installed viewer/input acceptance or resume the scheduler.
+
+## 2026-10-04 | Installed unchanged archive worker control
+
+Real job hmj_bbe8bf40e3b444c894622837e23307cb skipped an already readable ZIP after one
+attempt; zero transfers/failures, no provider proof or scrape telemetry,
+scheduler paused. Three focused worker tests pass. Positive new-asset worker
+and autonomous frontier acceptance remain open. Evidence:
+`docs/dev/notes/2026-10-04-plan0386-unchanged-worker-control.md`.
+
+## 2026-10-04 | Verified-cache archive publication
+
+Published both checksum-verified cached assets through the installed history
+archive upsert, with no provider call or fabricated job ID. Local field and
+availability agreement plus stable repeated IDs pass. API readback timed out
+at five and 45 seconds; host load reached 116.61 and Git execution stalled.
+Queued-worker/autonomous acceptance stays open and scheduler remains paused.
+Evidence: `docs/dev/notes/2026-10-04-plan0386-cache-archive-reconciliation.md`.
+After operator reboot, authenticated API lookup and HTTP 200 asset download
+match the ZIP checksum/size. Host load is 3.03; publication/readback accepted.
+Queued-worker acceptance remains open, scheduler paused, no provider calls.
+
+## 2026-10-04 | PR 120 canonical conflict reconciliation
+
+Merged current canonical main into the existing Library cache-bypass branch.
+Resolved five additive documentation conflicts by preserving current canonical
+history and P73/P55 records; all source changes merged without conflict.
+Primary validation: 68 focused tests, typecheck, plan audit and scoped lint pass.
+The CLI-only opt-out remains explicit; general account-file persistence is
+unchanged. No installed/browser/provider control ran in this reconciliation.
+
+## 2026-10-03 | Repository reconciliation after PR 177
+
+Root returned to canonical main with .tmp/ preserved. Removed 32 clean,
+integrated, unowned worktrees and pruned eight missing registrations; all
+branches remain. Preserved dirty issue107-scope, conflicting PR 120, installed
+canonical checkpoint and published the root P222 source branch in a dedicated
+worktree. No runtime/provider effect. Evidence and remaining integration gates:
+`docs/dev/notes/2026-10-03-repository-reconciliation.md` (issue 178).
+
+## 2026-10-03 | Issue 165 renewed control verifies ZIP and cached repeat
+
+Installed canonical PR 176 (500619f6e) with matching service bytes. Renewed
+control 1 / historical probe 9 succeeded: PDF reused, correct ZIP captured once
+with valid CRC and retained checksum. Cached repeat had zero downloads, CDP
+calls and observed requests. Browser processes, listener and owned leases are
+cleared; scheduler paused. Gate D still requires archive projection agreement:
+exact filename/checksum archive queries returned no row. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent JSON.
+
+## 2026-10-03 | Issue 165 fifth control stopped, facade regression corrected
+
+Final installed control still timed out before ZIP download, despite a successful
+fresh read. Browser processes and owned leases are released. Five repair cycles
+are consumed; no additional provider attempt ran. The base-service test missed
+a ChatgptService utility wrapper copy. The regression now exercises the actual
+facade; it failed in 340 ms, then passed after explicit-target session custody
+was returned to its caller. This facade correction is source-only pending a
+renewed installed acceptance budget. Scheduler paused, Gate D open; see
+`docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
+
+## 2026-10-03 | Issue 165 context-session handoff, repair cycle 5
+
+Installed cycle 4 removed the read failure: fresh context succeeded in 11 seconds,
+but the ZIP timed out before download. Browser cleanup is empty and its lease
+released; no retry ran. A 32 ms local regression then reproduced loss of the
+read's retained session across deadline-scoped options. Session custody now
+returns to the caller, avoiding duplicate read admission and allowing transfer.
+Scheduler paused, Gate D open. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-context-session-handoff.md`.
+
+## 2026-10-03 | Issue 165 identity-proof session custody
+
+A provider-free adapter replay reproduces target-owned on the read following
+identity proof. The proof retained a session on private copied options, leaving
+its lease inaccessible to the caller. Cleanup now releases only newly created
+proof sessions; caller sessions remain borrowed. Historical lease timing fits
+this cause, but the original exception was not retained. Repair cycle 4 local
+continuation; scheduler paused and Gate D open. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-proof-session-custody.md`.
+
+## 2026-10-03 | Issue 165 failed-refresh materialization guard
+
+Repair cycle 4 local diagnosis reproduced a fresh context failure falling back
+silently to cached download controls. Artifact materialization now requires its
+requested context refresh to succeed; explicit refresh=false still permits cache
+use. The regression failed in 48 ms before the fix. All 171 focused tests, typecheck,
+build, scoped Biome, and plan audit pass. This prevents stale control
+attempts and preserves the original read error; it does not establish the cause
+of the installed target read failure. No new provider probe or installation ran;
+scheduler remains paused and Gate D remains open.
+
+## 2026-10-03 | Plan 0386 bounded live-follow repair
+
+Recovered full persisted evidence: the previous empty monitoring result hid
+a skipped `regenerate response` entry and two internal reload/reopen actions.
+Reproduced and repaired normal-control misclassification and stale-file false
+success. Production materialization now carries the single-visit contract and
+stops on real blockers without recovery effects. Seven product replay cases
+exercise discovery through manifest writing with isolated transport. Resumed
+goal permits at most five installed controls; none consumed yet. Evidence:
+`docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md`.
 ## 2026-10-03 | p221 actual-client readiness repair
 
 Implemented bounded retained-handoff resolution for an initially converging RDP
@@ -50,6 +158,38 @@ typecheck pass. Gate D remains open; no install or live retry. Evidence:
   `docs/dev/notes/2026-10-02-issue163-worktree-reconciliation.md`.
 - P53 now projects paused-ref custody; P85 records the canonical trusted-pointer
   integration while leaving Gate D open. No install or provider effect ran.
+## 2026-09-28 | Plan 0362 planning-audit wiring reconciliation
+
+- The active-only planning audit reported exactly two unbaselined findings:
+  open Plan 0362 was absent from `ROADMAP.md` and `RUNBOOK.md`.
+- Added canonical links and a concise current-state projection without changing
+  plan state, priority, scope, issue state, implementation, or live systems.
+
+## 2026-09-28 | Issue 107 Library CLI cache persistence bypass
+
+- Correct installed diagnostics on canonical `fe6375955` entered
+  `dom-inventory` at `12:53:15.143` and `service-cache-context` at
+  `12:53:15.166`; the provider inventory therefore completed in about 23
+  milliseconds. The CLI requested abort at `12:54:05.757`, then entered
+  `service-cache-write` and settled affinity by `12:54:06.377`.
+- `LlmService.refreshAccountFilesCache` unconditionally joined cache identity
+  resolution and persistence after the provider result. The exact CLI now sets
+  `skipAccountFileCachePersistence` and receives normalized provider files
+  before either cache hook. No other caller sets the option.
+- A red-before-green provider-free regression used a successful provider with
+  pending cache-context and cache-write hooks. It initially returned the
+  `cache-hooks-pending` sentinel, then returned the provider files immediately
+  with neither hook called after the fix. The existing default persistence
+  fixture remains green.
+- No deadline changed. No installed command, browser/provider access, retry,
+  refresh, navigation, target creation, attachment, prompt, or Send ran during
+  provider-free validation.
+- After commit `9cebdc9c3`, one user-runtime install and one read-only
+  `wsl-chrome-3` Library acceptance ran. It exited in 2.37 seconds with
+  `complete: false` and zero usable files, so the prior cache-persistence hang
+  did not recur but full issue acceptance did not pass. The reduced output did
+  not retain `incompleteReason`; no retry ran. Live GitHub readback currently
+  reports issue 107 closed, and this lane did not mutate tracker state.
 
 ## 2026-09-28 | Issue 107 Library lifecycle diagnostics
 
@@ -52372,3 +52512,23 @@ Chat repair integrated. Inventory complete at 11. Blank-tab readiness fix instal
 - No warning, CAPTCHA, prompt, reload, or retry occurred. Exact PID cleanup left
   no managed-profile process or listener and zero non-released leases. The
   scheduler remains paused. Installed product-path acceptance is still pending.
+
+## 2026-10-03 — Plan 0386 cycle 2 (#165)
+
+Cycle 1 failed with a selected-PDF/downloaded-PPTX mismatch. Deterministic viewer-helper regression reproduced a page-wide inline-card click. Source excludes conversation controls; installed counter 1/5 and incremental acceptance remain open. See notes/2026-10-03-plan0386-cycle2-viewer-scope.md.
+
+## 2026-10-03 — Plan 0386 installed cycle 2 (#165)
+
+Tab replacement restored identity, but installed control 2/5 failed on transfer-target responsiveness and cleanup. Main browser exited; exact GPU and on-device-model subprocesses remain with SIGKILL pending. No further browser launch is authorized by this evidence. See notes/2026-10-03-plan0386-cycle2-runtime-receipt.md.
+
+## 2026-10-03 — Plan 0386 post-reboot control (#165)
+
+Operator reboot cleared prior stuck browser children. Installed control 3/5 succeeded in 32 seconds: correct selected PDF, independent checksum/header verification, six trusted CDP mouse events, no recorded reload/navigation and clean exact-profile process census. Scheduler remains paused; ZIP and incremental acceptance remain open. See notes/2026-10-03-plan0386-post-reboot-control.md.
+
+## 2026-10-03 — Plan 0386 ZIP and unchanged-work repair (#165)
+
+Installed ZIP control 4 matched the successful agentic checksum and CRC. Control 5 revealed force=false redownloads unchanged assets. A prematurely queued control overlapped the ZIP window; cancellation returned 409, so isolated traffic acceptance is withheld. Real service regression now proves cache reuse, one new asset within one-transfer budget, force and corruption/missing-file recovery. No further live control; scheduler paused. See notes/2026-10-03-plan0386-zip-and-unchanged-repair.md.
+
+## 2026-10-03 — Plan0386 canonical cache install and cycle 3 (#165)
+
+PR171 merged and exact canonical commit installed with service parity. Reconciled five-repair-cycle authority separately from six historical probes. One serialized installed scenario verified PDF cache reuse but unresolved ZIP hit outer timeout, before the unchanged repeat. Browser cleanup census empty; scheduler paused. Provider-free stalled-scenario diagnosis is next. See notes/2026-10-03-plan0386-installed-cache-control.md.

@@ -1,3 +1,54 @@
+## 2026-10-03 | Installed session reuse removes duplicate materialization work
+
+Canonical PR 176's real ChatGPT service path captured the unresolved ZIP once
+through three trusted CDP mouse events on the retained read session. The cached
+repeat verified both files with zero downloads, CDP calls or observed requests.
+Preserve manifest snapshots per pass and keep direct cache proof separate from
+archive publication and autonomous scheduler acceptance.
+
+## 2026-10-03 | Test session custody through the actual provider service
+
+A base-service regression can miss copies introduced by the provider facade.
+Exercise createLlmService with the installed tab-affinity topology. Explicit-
+target utility wrappers must return retained-session custody to a session-enabled
+caller, just as deadline-scoped reads do. Preserve provider pacing and test
+session reuse and exactly-once close across every load-bearing copy boundary.
+
+## 2026-10-03 | Return deadline-scoped context session custody
+
+Fresh context reads copy options to scope their deadline. Synchronize retained
+provider-session ownership back to the session-enabled caller in finally,
+including an aborted session's removal. Otherwise the next artifact transfer
+loses the session and incurs duplicate read admission or target ownership
+conflicts. Preserve the real governor; fix session reuse rather than cooldowns.
+
+## 2026-10-03 | Identity proof must retain session ownership
+
+A proof-only method cannot retain a newly created browser session on private
+copied options and return only the proof. That strands the target lease and
+makes the next read fail with target-owned. Close newly retained sessions in
+finally on success or identity conflict; preserve sessions supplied by callers.
+Real adapter/coordination-store replay catches the leak without provider calls.
+
+## 2026-10-03 | Preserve failed artifact-context refreshes
+
+A cached conversation may be useful for reading after a provider failure, but
+artifact materialization must not silently use its download controls after a
+requested fresh read fails. Disable context fallback at the materialization
+call site, preserving explicit refresh=false cache use. A real LlmService and
+JsonCacheStore regression proves the failed read rejects before any transfer.
+The earlier installed stall also involved a manually preserved interaction
+governor; this guard does not prove the underlying CDP failure or cooldown cause.
+
+## 2026-10-03 | Materialization blockers and fresh download attribution
+
+Regenerate/Continue generating labels alone do not prove a failed turn;
+require independent failure text before recovery. Single-visit materialization
+stops on blockers before recovery effects. Direct and preview-pane Download actions share trusted pointer input.
+Match native downloads to a pre-click
+filesystem baseline and selected filename; reject mismatched/ambiguous fresh
+files. The compact job-monitoring projection intentionally drops entries and
+telemetry: use full persisted evidence for diagnosis and acceptance.
 ## 2026-10-03 | Retained RDP readiness convergence
 
 A real p221 client run returned converging before the same handoff later became
@@ -20,6 +71,13 @@ or excluded as textdoc. Presence alone must not settle generated-file readiness.
 Use the same collection predicate for readiness and returned probes; executable
 fixtures reproduce premature empty results and the later eligible ZIP mount.
 Issue #165; Plan 0386 acceptance remains open.
+- 2026-09-28: A read-only provider result should not be masked by unrelated
+  local persistence when the caller needs only a one-shot inventory. Installed
+  stage timestamps proved ChatGPT Library DOM inventory completed in about 23
+  milliseconds, then account-cache context resolution held the result for
+  about 50.6 seconds. Give the exact CLI call an explicit cache-persistence
+  opt-out and return normalized provider files before either cache hook; keep
+  Account Mirror and general list callers on the default persistent path.
 
 - 2026-09-28: When nested browser deadlines keep masking the owner of a wait,
   stop widening budgets and emit one privacy-bounded lifecycle receipt through
@@ -24026,3 +24084,11 @@ cleanup failure are not collapsed into a generic error.
   no candidates before any manifest or transfer existed.
 - Preserve this terminal result and diagnose discovery provider-free rather
   than spending another live attempt on the activation hypothesis alone.
+
+## 2026-10-03 — Viewer download scope (#165)
+
+Generic ChatGPT `Download file` labels also occur in inline conversation cards. Viewer transfer must exclude conversation-turn descendants before matching generic download labels. A real helper/VM regression reproduced the wrong card click; keep filename verification as a separate guard.
+
+## 2026-10-03 — Avoid unchanged artifact redownloads (#165)
+
+The artifact loop read attachments but never reused them. Check exact current artifact ID/name/URI and local integrity before transfer; apply transfer limits after reuse and pass explicit force separately from context refresh. A repeated real-service regression reproduces the old duplicate and proves unchanged repeats, one added artifact, force, missing files and same-size corruption. Installed incremental acceptance remains pending.

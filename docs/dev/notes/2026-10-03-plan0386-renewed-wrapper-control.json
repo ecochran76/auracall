@@ -1,0 +1,251 @@
+{
+  "object": "plan0386_installed_incremental_control_receipt",
+  "version": 1,
+  "authority": "Operator ok go renewed one install and bounded control after the original five-cycle loop.",
+  "renewedControl": 1,
+  "historicalProbe": 9,
+  "canonicalCommit": "500619f6e785b5f14fdf0e1edd29a9d1fdc152da",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "identity": {
+    "verdict": "match",
+    "email": "eric.cochran@soylei.com"
+  },
+  "conversationId": "6ab6d340-89e4-83ea-9990-d8fb278993e6",
+  "options": {
+    "force": false,
+    "maxNewTransfers": 1,
+    "firstContextRefresh": true,
+    "repeatContextRefresh": false,
+    "singleVisit": true,
+    "preserveGovernor": true,
+    "abortBoundMs": 120000
+  },
+  "startedAt": "2026-10-04T02:04:39.310Z",
+  "completedAt": "2026-10-04T02:05:18.204Z",
+  "status": "succeeded",
+  "proofTelemetry": {
+    "providerActions": {
+      "chatgpt.connectTab.start": 1,
+      "chatgpt.connectExistingTarget": 1,
+      "chatgpt.navigateUrl": 1,
+      "chatgpt.retainScopedTarget": 1
+    },
+    "cdpCalls": {
+      "Target.attachToTarget": 1,
+      "Page.enable": 1,
+      "Runtime.enable": 1,
+      "Page.navigate": 1
+    },
+    "candidates": {},
+    "pendingOperation": null,
+    "downloads": {
+      "attempted": 0,
+      "succeeded": 0,
+      "failed": 0
+    },
+    "notes": [
+      "chatgpt.target.attach:7da71db5d508",
+      "chatgpt.target.retain:7da71db5d508"
+    ]
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "files": [
+        {
+          "id": "download-dom:message-1:0",
+          "name": "2026-05-31-21-06 2021-07-13 Shailja Goyal Ketal acrylate acssuschemeng.1c02931.pdf",
+          "size": 2132164,
+          "sha256": "d5b9b70647bb6ed38c83431ee2476501a4cd33f333203df8713b64828378cf08"
+        },
+        {
+          "id": "download-dom:message-8:0",
+          "name": "Bailey_FY27_Proposal_With_Figures.zip",
+          "size": 1721645,
+          "sha256": "c463e95ddac8fc739d5f5865986d63a33add63ff87696ec57a06be43bf8a46dc"
+        }
+      ],
+      "manifestEntries": [
+        {
+          "artifactId": "download-dom:message-1:0",
+          "status": "materialized",
+          "fileName": "2026-05-31-21-06 2021-07-13 Shailja Goyal Ketal acrylate acssuschemeng.1c02931.pdf",
+          "size": 2132164,
+          "mimeType": "application/pdf",
+          "materializationMethod": "cached-provider-file"
+        },
+        {
+          "artifactId": "download-dom:message-8:0",
+          "status": "materialized",
+          "fileName": "Bailey_FY27_Proposal_With_Figures.zip",
+          "size": 1721645,
+          "mimeType": "application/zip",
+          "materializationMethod": "download-button"
+        }
+      ],
+      "telemetry": {
+        "providerActions": {
+          "llmService.materializeConversationArtifacts": 1,
+          "llmService.getConversationContext": 1,
+          "chatgpt.connectTab.start": 2,
+          "chatgpt.connectExistingTarget": 1,
+          "chatgpt.retainScopedTarget": 1,
+          "chatgpt.skipSameRouteNavigation": 2,
+          "chatgpt.skipPayloadRouteFallback.singleVisit": 1,
+          "chatgpt.waitPostPayloadReadiness": 1,
+          "chatgpt.postPayloadReadiness.succeeded.v1": 1,
+          "chatgpt.readConversationMessages": 1,
+          "chatgpt.readVisibleConversationFiles": 1,
+          "chatgpt.readVisibleDownloadArtifactProbes": 1,
+          "chatgpt.readVisibleImageArtifactProbes": 1,
+          "chatgpt.readVisibleCanvasProbes": 1,
+          "llmService.materializeConversationArtifacts.prepareCache": 1,
+          "llmService.materializeConversationArtifacts.readExisting": 1,
+          "llmService.materializeConversationArtifacts.beginTransfers": 1,
+          "llmService.materializeConversationArtifacts.transferCandidate": 2,
+          "llmService.materializeConversationArtifacts.reuseVerifiedCache": 1,
+          "llmService.materializeConversationArtifacts.invokeProvider": 1,
+          "chatgpt.materializeArtifact.start": 1,
+          "chatgpt.skipScopedInteractionGovernor": 1,
+          "chatgpt.reuseScopedTarget": 1,
+          "chatgpt.materializeArtifact.connected": 1,
+          "chatgpt.clickArtifactDownload": 1,
+          "llmService.materializeConversationArtifacts.settleCandidateSession": 1
+        },
+        "cdpCalls": {
+          "Target.attachToTarget": 1,
+          "Page.enable": 1,
+          "Runtime.enable": 1,
+          "Runtime.evaluate": 28,
+          "Browser.setDownloadBehavior": 1,
+          "Input.dispatchMouseEvent": 3
+        },
+        "candidates": {
+          "chatgpt.payloadArtifacts": 0,
+          "chatgpt.visibleFiles": 8,
+          "chatgpt.domDownloadArtifacts": 10,
+          "chatgpt.domImageArtifacts": 0,
+          "chatgpt.canvasProbes": 0,
+          "chatgpt.mergedArtifacts": 10,
+          "llmService.materializeConversationArtifacts.artifacts": 2
+        },
+        "pendingOperation": null,
+        "downloads": {
+          "attempted": 1,
+          "succeeded": 1,
+          "failed": 0
+        },
+        "notes": [
+          "chatgpt.target.attach:7da71db5d508",
+          "chatgpt.target.retain:7da71db5d508",
+          "chatgpt.target.reuse:7da71db5d508"
+        ]
+      },
+      "observedPageTargetTraffic": {
+        "requests": 176,
+        "documentRequests": 1
+      }
+    },
+    {
+      "pass": 2,
+      "files": [
+        {
+          "id": "download-dom:message-1:0",
+          "name": "2026-05-31-21-06 2021-07-13 Shailja Goyal Ketal acrylate acssuschemeng.1c02931.pdf",
+          "size": 2132164,
+          "sha256": "d5b9b70647bb6ed38c83431ee2476501a4cd33f333203df8713b64828378cf08"
+        },
+        {
+          "id": "download-dom:message-8:0",
+          "name": "Bailey_FY27_Proposal_With_Figures.zip",
+          "size": 1721645,
+          "sha256": "c463e95ddac8fc739d5f5865986d63a33add63ff87696ec57a06be43bf8a46dc"
+        }
+      ],
+      "manifestEntries": [
+        {
+          "artifactId": "download-dom:message-1:0",
+          "status": "materialized",
+          "fileName": "2026-05-31-21-06 2021-07-13 Shailja Goyal Ketal acrylate acssuschemeng.1c02931.pdf",
+          "size": 2132164,
+          "mimeType": "application/pdf",
+          "materializationMethod": "cached-provider-file"
+        },
+        {
+          "artifactId": "download-dom:message-8:0",
+          "status": "materialized",
+          "fileName": "Bailey_FY27_Proposal_With_Figures.zip",
+          "size": 1721645,
+          "mimeType": "application/zip",
+          "materializationMethod": "cached-provider-file"
+        }
+      ],
+      "telemetry": {
+        "providerActions": {
+          "llmService.materializeConversationArtifacts": 1,
+          "llmService.materializeConversationArtifacts.prepareCache": 1,
+          "llmService.materializeConversationArtifacts.readExisting": 1,
+          "llmService.materializeConversationArtifacts.beginTransfers": 1,
+          "llmService.materializeConversationArtifacts.transferCandidate": 2,
+          "llmService.materializeConversationArtifacts.reuseVerifiedCache": 2
+        },
+        "cdpCalls": {},
+        "candidates": {
+          "llmService.materializeConversationArtifacts.artifacts": 2
+        },
+        "pendingOperation": null,
+        "downloads": {
+          "attempted": 0,
+          "succeeded": 0,
+          "failed": 0
+        },
+        "notes": []
+      },
+      "observedPageTargetTraffic": {
+        "requests": 0,
+        "documentRequests": 0
+      }
+    }
+  ],
+  "observedPageTargetTraffic": {
+    "requests": 226,
+    "documentRequests": 2
+  },
+  "warningObservation": {
+    "coverage": "Visible alerts/dialogs, verification iframes and verification page title",
+    "startedBefore": "identity proof",
+    "postTerminalWindowMs": 5000,
+    "observations": []
+  },
+  "installedHashes": {
+    "llmService.js": "74d0da25cf51aad5d43aedcdd28a73e7ba0dfdcdde430ff01a0946e66858e3b0",
+    "chatgptService.js": "eb0fae94f573bb91544af7c85d93e5e52aea2fc8cd1f2c0bb67674d99c5cb1cd"
+  },
+  "cleanup": {
+    "exactBrowserProcessCount": 0,
+    "endpointListening": false,
+    "leaseStates": {
+      "a913d497-8dc3-40d1-881d-aee5537ebbeb": "released",
+      "f7f4211d-4168-43ab-9516-4864b99e4dfc": "released"
+    },
+    "scheduler": "paused",
+    "foregroundActive": false
+  },
+  "zipIntegrity": {
+    "signatureHex": "504b0304",
+    "crcValid": true,
+    "entryCount": 1
+  },
+  "archiveProjection": {
+    "matchingGeneratedArtifactCount": 0,
+    "matchingChecksumCount": 0,
+    "publicationPerformed": false
+  },
+  "acceptance": {
+    "selectedFileAndManifest": "accepted",
+    "cachedRepeatNoProviderWork": "accepted",
+    "gateD": "open",
+    "remaining": "Provider-generated archive projection is absent; queued history-job and autonomous scheduler acceptance are not established."
+  }
+}

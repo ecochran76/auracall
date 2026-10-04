@@ -77,6 +77,7 @@ export interface BrowserProviderListOptions {
 	preserveInteractionGovernorForProviderSession?: boolean;
 	disableProviderMutationRetry?: boolean;
 	disableAccountFileListRetry?: boolean;
+	skipAccountFileCachePersistence?: boolean;
 	providerSessionAuthorization?: ProviderSessionAuthorization;
 	onProviderSessionProof?: (proof: ProviderSessionProof) => void;
 	skipFeatureSignature?: boolean;

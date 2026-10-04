@@ -780,6 +780,51 @@ describe("ensureChatgptConversationSurfaceReadyForRead", () => {
 });
 
 describe("clickChatgptViewerDownloadButtonWithClient", () => {
+	test("activates a visible viewer download with trusted input rather than DOM click", async () => {
+		class ViewerControl {
+			textContent = "Download file";
+			ownerDocument = {
+				defaultView: { getComputedStyle: () => ({ display: "block", visibility: "visible" }) },
+			};
+			getAttribute(name: string) {
+				return name === "aria-label" ? "Download file" : null;
+			}
+			getBoundingClientRect() {
+				return { left: 10, top: 20, width: 100, height: 30 };
+			}
+			scrollIntoView() {}
+			click() {
+				throw new Error("untrusted viewer activation");
+			}
+		}
+		const control = new ViewerControl();
+		const dispatchMouseEvent = vi.fn(async (_event: unknown) => undefined);
+		const evaluate = async ({ expression }: { expression: string }) => ({
+			result: {
+				value: runInNewContext(expression, {
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					Element: ViewerControl,
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					HTMLElement: ViewerControl,
+					document: { querySelectorAll: () => [control] },
+				}),
+			},
+		});
+		await expect(
+			clickChatgptViewerDownloadButtonWithClientForTest({
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Runtime: { evaluate },
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Input: { dispatchMouseEvent },
+			} as never),
+		).resolves.toBe(true);
+		expect(dispatchMouseEvent.mock.calls.map(([event]) => event)).toEqual([
+			{ type: "mouseMoved", x: 60, y: 35 },
+			{ type: "mousePressed", x: 60, y: 35, button: "left", buttons: 1, clickCount: 1 },
+			{ type: "mouseReleased", x: 60, y: 35, button: "left", buttons: 0, clickCount: 1 },
+		]);
+	});
+
 	test("clicks the viewer pane Download control after artifact activation opens a preview", async () => {
 		const telemetry = createBrowserScrapeTelemetryRecorder();
 		const evaluate = vi.fn(async (input: { expression?: string; returnByValue?: boolean }) => {
@@ -787,11 +832,15 @@ describe("clickChatgptViewerDownloadButtonWithClient", () => {
 			expect(input.expression).toContain("aria-label");
 			expect(input.expression).toContain("Download");
 			expect(input.expression).toContain("data-auracall-chatgpt-download-button");
-			return { result: { value: { ok: true, label: "Download" } } };
+			return { result: { value: { ok: true, label: "Download", x: 60, y: 35 } } };
 		});
 		const clicked = await clickChatgptViewerDownloadButtonWithClientForTest(
-			// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
-			{ Runtime: { evaluate } } as never,
+			{
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Runtime: { evaluate },
+				// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+				Input: { dispatchMouseEvent: vi.fn(async () => undefined) },
+			} as never,
 			{ scrapeTelemetry: telemetry },
 		);
 
@@ -808,13 +857,17 @@ describe("clickChatgptViewerDownloadButtonWithClient", () => {
 		const evaluate = vi.fn(async (input: { expression?: string; returnByValue?: boolean }) => {
 			expect(input.returnByValue).toBe(true);
 			expect(input.expression).toContain("/^Download(?: file)?$/i");
-			return { result: { value: { ok: true, label: "Download file" } } };
+			return { result: { value: { ok: true, label: "Download file", x: 60, y: 35 } } };
 		});
 
 		await expect(
 			clickChatgptViewerDownloadButtonWithClientForTest(
-				// biome-ignore lint/style/useNamingConvention: CDP domain names are protocol-defined.
-				{ Runtime: { evaluate } } as never,
+				{
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					Runtime: { evaluate },
+					// biome-ignore lint/style/useNamingConvention: Browser and CDP names are protocol-defined.
+					Input: { dispatchMouseEvent: vi.fn(async () => undefined) },
+				} as never,
 				{ scrapeTelemetry: telemetry },
 			),
 		).resolves.toBe(true);
@@ -825,6 +878,7 @@ describe("clickChatgptViewerDownloadButtonWithClient", () => {
 		});
 	});
 });
+
 
 describe("extractChatgptArtifactFileNameFromUri", () => {
 	test("normalizes sandbox basenames for visible behavior-button matching", () => {
@@ -2500,6 +2554,19 @@ describe("classifyChatgptBlockingSurfaceProbe", () => {
 			kind: "connection-failed",
 			summary: "Server connection failed.",
 		});
+	});
+
+	test.each([
+		"Regenerate",
+		"Regenerate response",
+		"Continue generating",
+	])("does not classify the normal %s control as a failed turn", (buttonLabel) => {
+		expect(
+			classifyChatgptBlockingSurfaceProbe({
+				text: "Completed proposal with generated files",
+				buttonLabels: [buttonLabel],
+			}),
+		).toBeNull();
 	});
 
 	test("classifies retry affordances on failed chat turns", () => {

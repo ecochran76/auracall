@@ -711,7 +711,14 @@ export function classifyChatgptBlockingSurfaceProbe(
 	const retryAffordance = buttonLabels.find((label) =>
 		/^(retry|try again|regenerate|regenerate response|continue generating)$/.test(label),
 	);
-	if (retryAffordance) {
+	// Regenerate and Continue generating are also ordinary successful-turn
+	// controls. They require independent failure text before recovery may spend
+	// another navigation; Retry/Try again remain explicit failure actions.
+	const hasFailureText =
+		/server connection failed|connection failed|connection lost|network error|failed to connect|unable to connect|something went wrong|an error occurred|message could not be generated|please try again|failed to /i.test(
+			[text, ariaLabel].filter(Boolean).join(" "),
+		);
+	if (retryAffordance && (/^(retry|try again)$/.test(retryAffordance) || hasFailureText)) {
 		return {
 			kind: "retry-affordance",
 			summary: retryAffordance,
@@ -1261,7 +1268,10 @@ async function withChatgptBlockingSurfaceRecovery<T>(
 	};
 	const runRecoverySequence = async (match: ChatgptBlockingSurfaceMatch): Promise<void> => {
 		lastRecoveryActions = [];
-		if (isChatgptAccountMirrorHardStop(match, options?.providerOptions)) {
+		if (
+			isChatgptAccountMirrorHardStop(match, options?.providerOptions) ||
+			options?.providerOptions?.accountMirrorSingleConversationVisit === true
+		) {
 			throw createChatgptBlockingSurfaceError(action, match);
 		}
 		await beforeChatgptBrowserInteraction(options?.providerOptions, "provider-recovery");
@@ -12178,6 +12188,33 @@ async function configureChatgptDownloadBehaviorWithClient(
 	}
 }
 
+async function dispatchChatgptArtifactPointerInput(
+	client: ChromeClient,
+	point: { x: number; y: number },
+	options?: BrowserProviderListOptions,
+): Promise<void> {
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({ type: "mouseMoved", x: point.x, y: point.y });
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({
+		type: "mousePressed",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		buttons: 1,
+		clickCount: 1,
+	});
+	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
+	await client.Input.dispatchMouseEvent({
+		type: "mouseReleased",
+		x: point.x,
+		y: point.y,
+		button: "left",
+		buttons: 0,
+		clickCount: 1,
+	});
+}
+
 async function clickTaggedChatgptDownloadControlWithClient(
 	client: ChromeClient,
 	options?: BrowserProviderListOptions,
@@ -12206,26 +12243,7 @@ async function clickTaggedChatgptDownloadControlWithClient(
 	if (point?.ok !== true || typeof point.x !== "number" || typeof point.y !== "number") {
 		return false;
 	}
-	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
-	await client.Input.dispatchMouseEvent({ type: "mouseMoved", x: point.x, y: point.y });
-	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
-	await client.Input.dispatchMouseEvent({
-		type: "mousePressed",
-		x: point.x,
-		y: point.y,
-		button: "left",
-		buttons: 1,
-		clickCount: 1,
-	});
-	recordBrowserScrapeCdpCall(options, "Input.dispatchMouseEvent");
-	await client.Input.dispatchMouseEvent({
-		type: "mouseReleased",
-		x: point.x,
-		y: point.y,
-		button: "left",
-		buttons: 0,
-		clickCount: 1,
-	});
+	await dispatchChatgptArtifactPointerInput(client, { x: point.x, y: point.y }, options);
 	return true;
 }
 
@@ -12407,18 +12425,25 @@ async function clickChatgptViewerDownloadButtonWithClient(
           '',
         );
         const controls = Array.from(document.querySelectorAll('button, [role="button"], a'))
-          .filter((node) => isVisible(node) && node.getAttribute(taggedAttr) !== 'true')
+          .filter((node) => isVisible(node) && node.getAttribute(taggedAttr) !== 'true' &&
+            !node.closest?.(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((node) => ({ node, label: labelFor(node) }));
         const download = controls.find((entry) => /^Download(?: file)?$/i.test(entry.label));
-        if (!download?.node || typeof download.node.click !== 'function') {
+        if (!(download?.node instanceof HTMLElement)) {
           return { ok: false, labels: controls.map((entry) => entry.label).filter(Boolean).slice(0, 20) };
         }
-        download.node.click();
-        return { ok: true, label: download.label };
+        download.node.scrollIntoView({ block: 'center', inline: 'center' });
+        const rect = download.node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return { ok: false };
+        return { ok: true, label: download.label, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
       })()`,
 			returnByValue: true,
 		});
-		if (isRecord(result.result?.value) && result.result.value.ok === true) {
+		if (
+			isRecord(result.result?.value) && result.result.value.ok === true &&
+			typeof result.result.value.x === "number" && typeof result.result.value.y === "number"
+		) {
+			await dispatchChatgptArtifactPointerInput(client, { x: result.result.value.x, y: result.result.value.y }, options);
 			recordBrowserScrapeProviderAction(options, "chatgpt.clickArtifactViewerDownload");
 			const matchedLabel = normalizeUiText(
 				typeof result.result.value.label === "string" ? result.result.value.label : null,
@@ -12586,35 +12611,42 @@ export const validateChatgptDeepResearchExportFileForTest = validateChatgptDeepR
 
 async function waitForChatgptDownloadedFile(
 	destDir: string,
+	baseline: ChatgptDownloadDirectorySnapshot,
+	expectedName: string,
 	timeoutMs = 20_000,
 ): Promise<string | null> {
 	const deadline = Date.now() + timeoutMs;
 	let lastPath: string | null = null;
-	let lastSize = -1;
-	let stableCount = 0;
+	let lastFingerprint: string | null = null;
 	while (Date.now() < deadline) {
-		const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
-		const completed = entries
-			.filter(
-				(entry) =>
-					entry.isFile() && !entry.name.endsWith(".crdownload") && !entry.name.endsWith(".tmp"),
-			)
-			.map((entry) => entry.name);
-		if (completed.length > 0) {
-			const candidateName = completed.sort()[0];
-			if (!candidateName) continue;
-			const candidatePath = path.join(destDir, candidateName);
-			const stat = await fs.stat(candidatePath).catch(() => null);
-			if (stat) {
-				if (candidatePath === lastPath && stat.size === lastSize) {
-					stableCount += 1;
-				} else {
-					lastPath = candidatePath;
-					lastSize = stat.size;
-					stableCount = 0;
+		const current = await snapshotChatgptDownloadDirectory(destDir);
+		const fresh = Array.from(current.entries()).filter(
+			([name, fingerprint]) => baseline.get(name) !== fingerprint,
+		);
+		if (fresh.length > 1) {
+			throw new Error("chatgpt_artifact_download_ambiguous: multiple fresh browser downloads");
+		}
+		const candidate = fresh[0];
+		if (candidate) {
+			const [name, fingerprint] = candidate;
+			if (path.extname(expectedName)) {
+				const identity = classifyChatgptFileNameIdentity(name, expectedName);
+				if (identity !== "exactMatch" && identity !== "collisionSuffixMatch") {
+					throw new Error(
+						"chatgpt_artifact_download_identity_mismatch: fresh download does not match selected artifact",
+					);
 				}
-				if (stableCount >= 1) return candidatePath;
 			}
+			const candidatePath = path.join(destDir, name);
+			const stat = await fs.stat(candidatePath).catch(() => null);
+			if (stat && stat.size > 0 && candidatePath === lastPath && fingerprint === lastFingerprint) {
+				return candidatePath;
+			}
+			lastPath = candidatePath;
+			lastFingerprint = fingerprint;
+		} else {
+			lastPath = null;
+			lastFingerprint = null;
 		}
 		await sleep(250);
 	}
@@ -13013,6 +13045,7 @@ async function materializeChatgptConversationArtifactWithClient(
 				if (!readyButton) {
 					return null;
 				}
+				const downloadBaseline = await snapshotChatgptDownloadDirectory(destDir);
 				await armDownloadCapture(client.Runtime, { stateKey: CHATGPT_DOWNLOAD_CAPTURE_STATE_KEY });
 				recordBrowserScrapeProviderAction(options, "chatgpt.clickArtifactDownload");
 				if (!(await clickTaggedChatgptDownloadControlWithClient(client, options))) {
@@ -13043,6 +13076,8 @@ async function materializeChatgptConversationArtifactWithClient(
 				recordBrowserScrapeDownloadAttempt(options);
 				const downloadedPath = await waitForChatgptDownloadedFile(
 					destDir,
+					downloadBaseline,
+					sanitizeChatgptArtifactFileName(artifact.title),
 					CHATGPT_ARTIFACT_BROWSER_DOWNLOAD_TIMEOUT_MS,
 				);
 				if (downloadedPath) {
@@ -13173,6 +13208,9 @@ async function materializeChatgptConversationArtifactWithClient(
 		},
 	);
 }
+
+export const materializeChatgptConversationArtifactWithClientForTest =
+	materializeChatgptConversationArtifactWithClient;
 
 type ChatgptPromptWorkbenchConfig = {
 	chatgptMode?: "chat" | "work" | null;
