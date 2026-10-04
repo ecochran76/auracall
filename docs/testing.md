@@ -3274,3 +3274,8 @@ Viewer download scope regression: `pnpm vitest run tests/browser/chatgptViewerDo
 ### Queued worker cache reuse and transfer limits
 
 The history materialization worker must accept two verified cached-provider-file entries plus one new transfer with maxItems=1, retain all three available assets, and account for one attempted transfer. Two new transfers under that limit must fail. Run the focused cases with pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "counts only new transfers". Cache reuse must not increment frontier download counts.
+
+
+### Partial materialization frontier
+
+A one-transfer batch with two reused assets and two uncached eligible assets must report one pending artifact. The worker must retain partial asset completeness and a deferred frontier checkpoint; a later unchanged pass must remain eligible for the pending retained assets. Run tests/browser/llmServiceFiles.test.ts and tests/runtime.historyMaterializationService.test.ts for focused selection and evidence coverage. Detailed local acceptance uses the durable job store because monitoring responses omit manifest entries and telemetry.

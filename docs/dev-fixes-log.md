@@ -24097,3 +24097,8 @@ The artifact loop read attachments but never reused them. Check exact current ar
 ## 2026-10-04 | Cached availability is not a new transfer
 
 ChatGPT materialization returns verified cached-provider-file assets alongside up to maxItems new transfers. Worker validation and frontier download/budget counters must exclude those reused assets. A normal queued worker exposed this mismatch after a successful PDF capture; preserve its failed job and captured bytes. Regression retains rejection of actual new-transfer overflow. See notes/2026-10-04-plan0386-worker-cache-accounting.md.
+
+
+## 2026-10-04 | Successful capped batches do not prove complete inventory
+
+A materialization batch can succeed with every returned entry available while eligible assets remain outside maxItems. Carry pending inventory counts from the LLM selection into frontier evidence; preserve partial/deferred status instead of marking the whole conversation complete. Monitoring job projections deliberately omit entries/manifests/telemetry; inspect the durable job for detailed local acceptance. See notes/2026-10-04-plan0386-partial-frontier.md.
