@@ -91,6 +91,27 @@ describe('manual login preflight stages', () => {
     ]);
   });
 
+  test('returns endpoint-only blank startup without touching a hung restored tab', async () => {
+    launchMocks.launchChrome.mockResolvedValueOnce({
+      host: '127.0.0.1', port: 45015, pid: 1234,
+      kill: vi.fn(async () => undefined),
+    });
+    launchMocks.openOrReuseChromeTarget.mockImplementationOnce(() => new Promise<never>(() => {}));
+    const result = await Promise.race([
+      launchManualLoginSession({
+        chromePath: '/opt/google/chrome/chrome', profileName: 'Default',
+        userDataDir: '/tmp/auracall/wsl-chrome-3/chatgpt', url: 'about:blank',
+        logger: () => undefined, baseConfig: DEFAULT_BROWSER_CONFIG as ResolvedBrowserConfig,
+        debugPortStrategy: 'auto',
+      }),
+      new Promise<'startup-stalled'>((resolve) => setTimeout(() => resolve('startup-stalled'), 100)),
+    ]);
+    const openedTab = launchMocks.openOrReuseChromeTarget.mock.calls.length;
+    launchMocks.openOrReuseChromeTarget.mockReset().mockResolvedValue(undefined);
+    expect(result).toMatchObject({ port: 45015, chrome: { pid: 1234 } });
+    expect(openedTab).toBe(0);
+  });
+
   test('reports DevTools readiness and login-tab opening after a successful launch', async () => {
     const stages: string[] = [];
     launchMocks.launchChrome.mockResolvedValueOnce({

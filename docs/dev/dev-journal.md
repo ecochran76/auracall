@@ -1,3 +1,14 @@
+## 2026-10-04 21:50 UTC | Plan0386 cold-start blocker reproduced
+
+PR194 merged and was installed from exact canonical SHA549ee0eae with four
+matching module hashes. Explicit resume created real wsl-chrome-3 runner
+328f88a8; the other five pauses remained intact. Pass2 stalled before crawler
+custody. A passive check found a responsive fresh blank and a frozen retained
+blank. Real launch-helper regression failed with startup-stalled before the
+blank endpoint-only repair. Pass2 was paused; scheduler cadence remains paused.
+This is the second bounded repair/review unit, not acceptance of refresh or
+materialization. Next: validate, integrate, install and resume only that runner.
+
 ## 2026-10-04 21:38 UTC | Plan0386 resume reconciliation source checkpoint
 
 The real HTTP regression failed before the fix (zero refresh calls after resume)

@@ -78,14 +78,19 @@ export async function launchManualLoginSession(options: {
     await hideChromeWindow(chrome, options.logger);
   }
 
-  options.onStage?.('browserLoginTabOpening');
-  await openLoginUrl(host, chrome.port, options.url, {
-    compatibleHosts: options.compatibleHosts,
-    serviceTabLimit: config.serviceTabLimit,
-    blankTabLimit: config.blankTabLimit,
-    collapseDisposableWindows: config.collapseDisposableWindows,
-    suppressFocus: config.hideWindow,
-  });
+  // Blank startup is endpoint-only. The launcher already opens a blank page;
+  // selecting a restored blank here can stall readiness before the caller
+  // establishes custody of its own target.
+  if (options.url !== 'about:blank') {
+    options.onStage?.('browserLoginTabOpening');
+    await openLoginUrl(host, chrome.port, options.url, {
+      compatibleHosts: options.compatibleHosts,
+      serviceTabLimit: config.serviceTabLimit,
+      blankTabLimit: config.blankTabLimit,
+      collapseDisposableWindows: config.collapseDisposableWindows,
+      suppressFocus: config.hideWindow,
+    });
+  }
   if (config.hideWindow && wasChromeLaunchedByAuracall(chrome)) {
     await hideChromeWindow(chrome, options.logger);
   }

@@ -980,6 +980,10 @@
         scheduler cadence; use all three controls for isolated
         provider/materialization proofs where only explicit commands should
         touch a browser
+      - endpoint-only `about:blank` cold launch must return after native launch
+        and DevTools readiness without selecting a restored blank page or
+        cleaning its stockpile. The caller then creates the admitted owned
+        crawler. Provider login URLs still open through the login helper.
       - persisted scheduler pause suppresses both startup runner restoration
         and configured live-follow reconciliation. Explicit scheduler resume
         restores runnable records and reconciles enabled missing subscriptions,

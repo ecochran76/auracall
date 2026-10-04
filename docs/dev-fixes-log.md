@@ -1,3 +1,13 @@
+## 2026-10-04 | Blank browser startup must not select a restored tab
+
+A live-follow cold launch requests about:blank so the caller can establish owned
+crawler custody afterward. The generic login helper nevertheless selected the
+last restored blank and awaited Page.enable, which stalled on a frozen restored
+tab despite a responsive new blank and browser transport. Endpoint-only blank
+startup now skips login-tab reuse and stockpile cleanup. Normal provider login
+URLs retain their opening behavior. A real launch-helper regression fails with a
+hung tab opener before the fix and resolves afterward without touching that tab.
+
 ## 2026-10-04 | Explicit scheduler resume must reconcile missing subscriptions
 
 Paused startup suppresses both runnable completion runners and configured
