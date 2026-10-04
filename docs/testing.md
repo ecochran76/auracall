@@ -3283,3 +3283,7 @@ A one-transfer batch with two reused assets and two uncached eligible assets mus
 - Fresh ChatGPT collector and scheduler failure contracts (focused, provider-free):
   `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/schedulerService.test.ts`.
   Exercises real-service cached fallback leakage and unexpected refresh failure receipts; does not prove installed navigation or scheduler resume.
+
+- Live-follow final warning lifecycle (focused, provider-free):
+  `pnpm vitest run tests/accountMirror/configuredLiveFollowAffinity.test.ts tests/accountMirror/refreshService.test.ts tests/browser-service/providerTrafficGovernor.test.ts`.
+  Exercises real configured completion after collector transport release and preserves late-warning/probe-failure stops. Live scheduler convergence remains a separate gate.

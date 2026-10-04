@@ -1,5 +1,6 @@
 import {
 	closeRemoteChromeTarget,
+	connectToChromeTarget,
 	listChromeTargets,
 	openChromeTarget,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
@@ -366,8 +367,28 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		},
 		completeSuccess: async () => {
 			// The visible blocking surface can arrive after the final action settles.
-			// Reuse that action's probe context once before declaring the pass clean.
-			await providerTrafficGovernor.checkWarning?.();
+			// Collection releases its read session; do not reuse that closed transport.
+			const leases = await runtime.registry?.list({ scope, states: ["active"] });
+			const lease = leases?.find((candidate) => candidate.leaseId === crawlerClaim.leaseId);
+			if (
+				!lease ||
+				lease.ownerOperationId !== input.operationId ||
+				lease.targetId !== crawler.lease.targetId ||
+				lease.revision !== crawlerClaim.revision
+			)
+				throw new Error("Live-follow crawler ownership changed before final warning check.");
+			const client = await connectToChromeTarget({
+				host: crawler.endpoint.host,
+				port: crawler.endpoint.port,
+				target: crawler.lease.targetId,
+				abortSignal: input.abortSignal,
+				timeoutMs: 10_000,
+			});
+			try {
+				await providerTrafficGovernor.checkWarning?.(client.Runtime);
+			} finally {
+				await client.close();
+			}
 			await finish("succeeded", "settled");
 		},
 		completeFailure: async (error) => {

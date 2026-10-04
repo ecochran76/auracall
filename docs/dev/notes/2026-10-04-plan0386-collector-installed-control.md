@@ -21,3 +21,14 @@ after the collector closes its provider session. This is the next local
 reproduction target; lifecycle repair and original live acceptance remain open.
 Private full receipt: /tmp/auracall-pr186-scheduler-live-pass-control.json.
 Scheduler remains paused. No repeat live control is justified before repair.
+
+## Local lifecycle repair
+
+The actual configured affinity completion regression reproduced CLOSED in 1.37
+seconds before the fix. Completion now validates current crawler ownership and
+opens a fresh CDP transport for that exact leased target, performs the existing
+warning check and closes the transport in finally. It does not navigate, create
+a target, retry a read, or suppress probe failures. Late visible warnings are
+persisted and still reject completion; probe failures also reject completion.
+47 focused/adjacent provider-free tests pass in 2.21 seconds without retries.
+Installed full-pass acceptance remains pending.

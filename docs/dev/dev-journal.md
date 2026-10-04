@@ -52552,3 +52552,8 @@ Installed partial-frontier worker acceptance succeeded: one new PDF, four cache 
 ## 2026-10-04 | Issue165 installed fresh-read acceptance
 
 PR186 installed with exact artifact parity. One paused scheduler control completed its fresh context read successfully in 116 seconds, then failed closed-WebSocket during completion. Current failure receipt now works. Source points to final warning probe reusing a closed provider-session context; local reproduction is next. Scheduler paused. See notes/2026-10-04-plan0386-collector-installed-control.md.
+
+
+## 2026-10-04 | Issue165 final warning lifecycle repair
+
+Real configured affinity regression reproduces CLOSED after collector transport release. Final warning check now uses a fresh read-only connection to the current exact leased target, preserving late-warning and probe-failure hard stops. 47 focused/adjacent tests pass; installed full-pass acceptance pending. See notes/2026-10-04-plan0386-collector-installed-control.md.
