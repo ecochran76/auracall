@@ -1,3 +1,11 @@
+## 2026-10-04 | Installed resume repair and cold-start custody gate
+
+PR 190 is merged and installed with exact build parity. Scheduler resume now
+starts the restored wsl-chrome-3 runner and preserves five other operator-paused
+completions. Its first automatic pass failed closed on three compatible unowned
+ChatGPT targets. Cold-start tab custody is the next acceptance gate; the goal
+remains open. See `docs/dev/notes/2026-10-04-plan0386-scheduler-resume-runner.md`.
+
 ## 2026-10-04 | Resume runners suppressed by paused startup
 
 The real HTTP paused-startup/resume regression failed with zero refresh calls.
