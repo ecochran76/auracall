@@ -52532,3 +52532,8 @@ Installed ZIP control 4 matched the successful agentic checksum and CRC. Control
 ## 2026-10-03 — Plan0386 canonical cache install and cycle 3 (#165)
 
 PR171 merged and exact canonical commit installed with service parity. Reconciled five-repair-cycle authority separately from six historical probes. One serialized installed scenario verified PDF cache reuse but unresolved ZIP hit outer timeout, before the unchanged repeat. Browser cleanup census empty; scheduler paused. Provider-free stalled-scenario diagnosis is next. See notes/2026-10-03-plan0386-installed-cache-control.md.
+
+
+## 2026-10-04 | Issue 165 queued-worker cache accounting
+
+Normal queued worker captured one new verified PDF but failed terminal validation because two verified cached assets were counted against maxItems=1. Reproduced locally and repaired validator, reconciliation budget, and frontier download accounting; 94 worker tests, 16 planner/metrics tests, and 80 frontier/completion tests passed; typecheck, build, scoped lint, and plan audit passed. Installed repaired acceptance and automatic frontier acceptance remain open; scheduler paused. See notes/2026-10-04-plan0386-worker-cache-accounting.md.

@@ -145,6 +145,21 @@ listener and lease cleanup. Gate D remains OPEN only for archive projection
 agreement and broader queued/scheduler acceptance is not inferred. Evidence:
 `docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent JSON.
 
+## Renewed scope | 2026-10-04
+
+The operator resumed the open goal with an additional 500K-token allowance:
+positive new-asset capture through the normal queued worker, automatic
+changed/unchanged handling, scheduler resume after acceptance, and integration
+of the retained RDP fixes. This renews work authority without resetting the
+original five-cycle/eight-probe history or renewed probe 9. Current source:
+RDP fixes merged through PR 183 at 52f8fd38d and installed byte-identically.
+Archive retrieval and unchanged archive-item worker skipping are accepted.
+The next control is one normal artifact job on the selected conversation,
+force=false, refreshSnapshot=false, maxItems=1 new-transfer budget, 120-second
+provider bound, passive warning/network observation and exact-owner cleanup.
+A failed/ambiguous control stops provider work pending local diagnosis.
+Scheduler stays paused until changed/unchanged frontier acceptance is proven.
+
 ## Observed Defect
 
 Three installed direct materialization controls against recent Bailey proposal
