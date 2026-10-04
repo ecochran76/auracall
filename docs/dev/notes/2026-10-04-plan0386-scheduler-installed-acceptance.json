@@ -1,0 +1,75 @@
+{
+  "sourceCommit": "530cdc808",
+  "status": "succeeded",
+  "startedAt": "2026-10-04T19:25:50.317Z",
+  "completedAt": "2026-10-04T19:27:55.367Z",
+  "requestId": "acctmirror_3c71c4f4-2f29-43ac-9ddc-2c9fda7c8432",
+  "provider": "chatgpt",
+  "runtimeProfileId": "wsl-chrome-3",
+  "action": "refresh-completed",
+  "identityVerdict": "match",
+  "observer": {
+    "requests": 526,
+    "documentRequests": 4,
+    "warnings": [],
+    "coverage": "after observer attachment, initial browser startup excluded"
+  },
+  "collectorProgress": {
+    "provider": "chatgpt",
+    "runtimeProfileId": "wsl-chrome-3",
+    "sweepMode": "steady_follow",
+    "phase": "complete",
+    "event": "completed",
+    "observedAt": "2026-10-04T19:27:55.162Z",
+    "projectsObserved": 0,
+    "conversationsObserved": 25,
+    "artifactsObserved": 10,
+    "filesObserved": 8,
+    "attachmentCursor": {
+      "nextProjectIndex": 0,
+      "nextConversationIndex": 1,
+      "detailReadLimit": 1,
+      "scannedProjects": 0,
+      "scannedConversations": 1,
+      "conversationDetail": null,
+      "yielded": true,
+      "yieldCause": {
+        "observedAt": "2026-10-04T19:25:54.429Z",
+        "ownerCommand": "account-mirror-refresh",
+        "kind": "provider-interaction-budget",
+        "operationClass": "account-mirror"
+      }
+    }
+  },
+  "frontierMetrics": {
+    "version": 1,
+    "indexRows": 316,
+    "actions": {
+      "skip": 0,
+      "visit_once": 1,
+      "materialize_retained": 0,
+      "defer": 0,
+      "unplanned": 315
+    },
+    "physical": {
+      "visits": 0,
+      "navigations": 1,
+      "reloads": 0,
+      "snapshotRefreshes": 1,
+      "artifactResolutions": 0,
+      "downloads": 0,
+      "duplicates": 0
+    },
+    "deferredRows": 0,
+    "amplification": {
+      "physicalActions": 2,
+      "perActionableRow": 2
+    }
+  },
+  "backpressure": {
+    "reason": "yielded-to-queued-work",
+    "message": "Mirror refresh yielded between detail reads because browser work queued behind it."
+  },
+  "schedulerResumed": false,
+  "automaticChangedUnchangedAcceptance": false
+}

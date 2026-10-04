@@ -1,3 +1,7 @@
+## 2026-10-04 | Detail recovery must respect changed/unchanged planning
+
+A steady-follow requested detail phase must not unconditionally reread retained partial assets or unchanged complete conversations. Apply the same planner as discovery, preserve original cached index rows rather than ID-placeholder titles, and align cursor evidence with filtered selection. Explicit full sweeps retain comprehensive semantics.
+
 ## 2026-10-04 | Final warning checks need live transport custody
 
 A collector releases its provider-session CDP connection before affinity completion. Reusing the last warning probe context then fails CLOSED even after a successful fresh read. Validate current lease ownership and attach a fresh read-only transport to the exact target for final warning inspection; close it afterward and preserve warning/probe failures.

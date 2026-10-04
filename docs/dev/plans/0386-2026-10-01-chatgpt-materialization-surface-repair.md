@@ -275,3 +275,11 @@ the objective. Scheduler resume remains a separate operator decision.
 ## Renewed-goal checkpoint: 2026-10-04 collector contract
 
 Normal queued-worker positive capture and installed partial frontier are proven. RDP source fixes merged in PR183. Automatic changed/unchanged handling and scheduler resume remain open. The paused scheduler control exposed fresh-read cache fallback and missing unexpected-failure receipts; local regressions pass, installed follow-up pending. Navigation timeout is not yet resolved. See ../notes/2026-10-04-plan0386-collector-fresh-read-contract.md.
+
+
+## 2026-10-04 requested detail frontier checkpoint
+
+Installed scheduler recovery succeeds after PR187. Full collector regression now
+reproduces and repairs requested detail-phase bypass of deterministic frontier
+selection. Explicit full_sweep remains comprehensive. Installed automatic
+selection and scheduler resume remain open. See ../notes/2026-10-04-plan0386-scheduler-installed-acceptance.md.

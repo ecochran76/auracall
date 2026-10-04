@@ -390,7 +390,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
-	test("makes the deterministic planner authoritative over legacy detail candidates", () => {
+	test("makes the deterministic planner authoritative over legacy detail candidates", async () => {
 		const conversations = [
 			{
 				id: "changed",
@@ -492,6 +492,98 @@ describe("ChatGPT account mirror metadata collector", () => {
 			["key-retained", "materialize_retained"],
 			["key-complete", "skip"],
 		]);
+		const getConversationContext = vi.fn(async (conversationId: string) => ({
+			provider: "chatgpt" as const,
+			conversationId,
+			messages: [],
+			files: [],
+			artifacts: [],
+		}));
+		const collector = createChatgptAccountMirrorMetadataCollector(
+			{
+				model: "gpt-5.2",
+				browser: {},
+				runtimeProfiles: {
+					default: {
+						browserProfile: "default",
+						defaultService: "chatgpt",
+						services: { chatgpt: { identity: { email: "ecochran76@gmail.com" } } },
+					},
+				},
+			} as never,
+			{
+				createClient: async () =>
+					({
+						getProviderSessionProof: async () =>
+							createCollectorProviderSessionProof("chatgpt", {
+								email: "ecochran76@gmail.com",
+								accountLevel: "Business",
+								source: "auth-session",
+							}),
+						listProjects: async () => [],
+						listConversations: async () => conversations,
+						listProjectFiles: async () => [],
+						listAccountFiles: async () => [],
+						listConversationFiles: async () => [],
+						getConversationContext,
+					}) as never,
+			},
+		);
+		const collected = await collector.collect({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			sweepMode: "steady_follow",
+			previousConversationFreshness: freshness,
+			previousConversationWorkStates: workStates,
+			limits: {
+				maxPageReadsPerCycle: 4,
+				maxConversationRowsPerCycle: 10,
+				maxArtifactRowsPerCycle: 10,
+				maxBrowserInteractionsPerMinute: 0,
+			},
+		});
+		expect(getConversationContext.mock.calls.map(([id]) => id)).toEqual(["changed"]);
+		expect(collected.evidence.changeFrontierPlan?.decisions.map(({ action }) => action)).toEqual([
+			"visit_once",
+			"materialize_retained",
+			"skip",
+		]);
+		getConversationContext.mockClear();
+
+		await collector.collect({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			expectedIdentityKey: "ecochran76@gmail.com",
+			sweepMode: "steady_follow",
+			requestedPhase: "detail-inventory",
+			previousConversationFreshness: freshness,
+			previousConversationWorkStates: workStates,
+			previousConversations: conversations,
+			previousEvidence: {
+				projectSampleIds: [],
+				attachmentInventory: {
+					nextProjectIndex: 0,
+					nextConversationIndex: 2,
+					detailReadLimit: 4,
+					scannedProjects: 0,
+					scannedConversations: 2,
+					yielded: true,
+					conversationDetail: null,
+				},
+				truncated: { projects: false, conversations: false, artifacts: false },
+				conversationFreshnessFrontier: {
+					selectedConversationIds: ["changed", "retained", "complete"],
+				},
+			} as never,
+			limits: {
+				maxPageReadsPerCycle: 4,
+				maxConversationRowsPerCycle: 10,
+				maxArtifactRowsPerCycle: 10,
+				maxBrowserInteractionsPerMinute: 0,
+			},
+		});
+		expect(getConversationContext.mock.calls.map(([id]) => id)).toEqual(["changed"]);
 	});
 
 	test("does not select metadata-only remote asset backlog for detail inventory", () => {
