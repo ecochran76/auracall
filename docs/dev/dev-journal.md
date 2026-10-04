@@ -1,3 +1,11 @@
+## 2026-10-04 | RDP source integration validation
+
+Reconciled the retained launcher branch against current main, preserving
+canonical CDP endpoint precedence and bounded exact-handoff readiness. All
+21 launcher tests, typecheck, build, scoped lint, plan audit and diff check
+against canonical main pass. Issue 182 owns source integration. This does
+not claim installed viewer/input acceptance or resume the scheduler.
+
 ## 2026-10-04 | Installed unchanged archive worker control
 
 Real job hmj_bbe8bf40e3b444c894622837e23307cb skipped an already readable ZIP after one
@@ -98,6 +106,28 @@ stops on real blockers without recovery effects. Seven product replay cases
 exercise discovery through manifest writing with isolated transport. Resumed
 goal permits at most five installed controls; none consumed yet. Evidence:
 `docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md`.
+## 2026-10-03 | p221 actual-client readiness repair
+
+Implemented bounded retained-handoff resolution for an initially converging RDP
+open. Initial build proof and operator URL remain attached to the original
+browser/handoff identity. All 21 launcher tests, typecheck and compilation passed. Compiled actual-client
+retest is pending the qualified p221 command publication; public viewer/input
+and Plan 0222 acceptance remain open.
+
+## 2026-10-03 | P222 canonical endpoint repair
+
+Repaired the task launcher to prefer canonical CDP endpoints and retain legacy
+host/port compatibility. Focused regression covers precedence, explicit default
+ports and invalid endpoint rejection. Typecheck/build and isolated p221 client
+acceptance are tracked in Agent Browser RUNBOOK.md; no AuraCall user runtime install.
+
+## 2026-10-03 | Agent Browser P222 canonical CDP regression checkpoint
+
+Actual isolated task launcher passed open readiness but managed browser inventory
+was absent. Agent Browser source repair is qualified, not installed. Expanded
+existing launcher test proves canonical cdpEndpoint fails current host/port parsing.
+Client repair remains pending at operator token-stop checkpoint. Task artifacts
+live under agent-browser-dev-p221/evidence/cargo-signal; no user runtime published.
 
 ## 2026-10-03 | Issue 165 artifact readiness parity
 

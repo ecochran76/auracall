@@ -20,6 +20,14 @@ path would use.
 
 ## Agent-browser hidden RDP ownership lane
 
+When remote-view opening reports `converging`, AuraCall resolves that exact
+retained handoff rather than repeating open. The readiness phase makes at most
+30 resolutions within the smaller of the configured job timeout and 60 seconds.
+It retains the initial matching build proof and handoff URL, rejects changed
+browser or handoff identity, and attaches only after opened/ready. Cancellation
+also interrupts readiness waits. Agent Browser must support `remote-view resolve`.
+
+
 `browserProfiles.<id>.agentBrowserRdp.enabled=true` moves process/display
 ownership to agent-browser while AuraCall retains the exact managed browser
 profile directory. The BrowserService launcher passes that AuraCall path via
@@ -866,3 +874,11 @@ Shared DevTools attachment is owned by
 
 - `pnpm tsx scripts/verify-grok-context-get.ts <conversationId> [projectId]`
   - Fetches conversation context through the Grok adapter path and prints message count.
+
+### Canonical CDP inventory
+
+The RDP launcher derives attachment host and port from canonical `cdpEndpoint`
+when present. It accepts HTTP(S) and WS(S) with an explicit positive port and
+rejects credentials, query strings and fragments. Invalid canonical endpoints
+fail closed. Older inventory with `cdpHost` and `cdpPort` remains supported.
+Focused source validation does not establish actual installed client success.

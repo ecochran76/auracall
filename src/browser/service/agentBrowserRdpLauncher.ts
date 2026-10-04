@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { setTimeout as sleep } from 'node:timers/promises';
 import {
   detectChromiumBrowserFamily,
   normalizeComparablePath,
@@ -263,6 +264,19 @@ function validateOpenedRemoteView(
       `agent-browser remote-view is not operator-visible (state=${String(operatorVisible?.state ?? 'missing')}).`,
     );
   }
+  validateRemoteViewBuild(data, plan);
+  const browserId = nonEmptyString(data.browserId) ?? nonEmptyString(operatorVisible.browserId);
+  if (!browserId) {
+    throw new Error('agent-browser remote-view returned no browser id.');
+  }
+  const handoffUrl = nonEmptyString(data.handoffUrl) ?? nonEmptyString(data.externalUrl);
+  if (!handoffUrl) {
+    throw new Error('agent-browser remote-view returned no durable handoff URL.');
+  }
+  return { browserId, handoffUrl };
+}
+
+function validateRemoteViewBuild(data: JsonRecord, plan: AgentBrowserRdpOpenPlan): void {
   const buildProof = isRecord(data.browserBuildProof) ? data.browserBuildProof : null;
   const requestedBuild = nonEmptyString(buildProof?.requestedBrowserBuild);
   const selectedBuild = nonEmptyString(buildProof?.selectedBrowserBuild);
@@ -281,15 +295,6 @@ function validateOpenedRemoteView(
       `agent-browser selected executable family ${actualFamily ?? 'unknown'} for ${plan.browserFamily} profile.`,
     );
   }
-  const browserId = nonEmptyString(data.browserId) ?? nonEmptyString(operatorVisible.browserId);
-  if (!browserId) {
-    throw new Error('agent-browser remote-view returned no browser id.');
-  }
-  const handoffUrl = nonEmptyString(data.handoffUrl) ?? nonEmptyString(data.externalUrl);
-  if (!handoffUrl) {
-    throw new Error('agent-browser remote-view returned no durable handoff URL.');
-  }
-  return { browserId, handoffUrl };
 }
 
 function browserRecords(data: unknown): JsonRecord[] {
@@ -324,6 +329,35 @@ function selectBrowserRecord(
   throw new Error('agent-browser browser inventory did not identify one exact opened browser.');
 }
 
+/** Resolve canonical CDP inventory first, retaining legacy host/port compatibility. */
+function resolveBrowserCdpConnection(browser: JsonRecord): { host: string; port: number } {
+  if (browser.cdpEndpoint !== undefined && browser.cdpEndpoint !== null) {
+    const endpoint = nonEmptyString(browser.cdpEndpoint);
+    try {
+      if (!endpoint) throw new Error('empty endpoint');
+      const parsed = new URL(endpoint);
+      // WHATWG URL removes default ports, so inspect the explicit authority too.
+      const authority = endpoint.match(/^(?:https?|wss?):\/\/([^/?#]+)/i)?.[1];
+      const explicitPort = authority?.match(/:(\d+)$/)?.[1];
+      const port = explicitPort ? Number(explicitPort) : 0;
+      if (!['http:', 'https:', 'ws:', 'wss:'].includes(parsed.protocol)
+        || !parsed.hostname || !Number.isInteger(port) || port <= 0 || port > 65535
+        || parsed.username || parsed.password || endpoint.includes('?') || endpoint.includes('#')) {
+        throw new Error('invalid endpoint');
+      }
+      const host = parsed.hostname.replace(/^\[|\]$/g, '');
+      return { host, port };
+    } catch {
+      throw new Error('agent-browser opened browser has an invalid canonical CDP endpoint in service inventory.');
+    }
+  }
+  const port = positiveInteger(browser.cdpPort);
+  if (!port || port > 65535) {
+    throw new Error('agent-browser opened browser has no responsive CDP port in service inventory.');
+  }
+  return { host: nonEmptyString(browser.cdpHost) ?? '127.0.0.1', port };
+}
+
 export async function launchAgentBrowserRdpSession(
   options: LaunchAgentBrowserRdpSessionOptions,
 ): Promise<AgentBrowserRdpLaunchResult> {
@@ -343,10 +377,35 @@ export async function launchAgentBrowserRdpSession(
     await runner(plan.executable, plan.openArgs, commandOptions),
     'agent-browser remote-view open',
   );
-  const opened = validateOpenedRemoteView(
-    responseData(openedEnvelope, 'agent-browser remote-view open'),
-    plan,
-  );
+  const initial = responseData(openedEnvelope, 'agent-browser remote-view open');
+  let ready = initial;
+  if (initial.status === 'converging') {
+    // Retain initial build custody and resolve only the already-created handoff.
+    validateRemoteViewBuild(initial, plan);
+    const browserId = nonEmptyString(initial.browserId);
+    const handoffId = nonEmptyString(initial.handoffId);
+    const handoffUrl = nonEmptyString(initial.handoffUrl) ?? nonEmptyString(initial.externalUrl);
+    if (!browserId || !handoffId || !/^[A-Za-z0-9_-]{1,128}$/.test(handoffId) || !handoffUrl) {
+      throw new Error('agent-browser converging response has no exact retained handoff identity.');
+    }
+    const deadline = Date.now() + Math.min(plan.jobTimeoutMs, 60_000);
+    for (let attempt = 0; attempt < 30 && Date.now() < deadline; attempt += 1) {
+      options.abortSignal?.throwIfAborted();
+      const envelope = parseCommandEnvelope(await runner(plan.executable,
+        ['--json', '--session', plan.session, 'remote-view', 'resolve', handoffId],
+        { ...commandOptions, timeoutMs: Math.max(1, deadline - Date.now()) }),
+      'agent-browser remote-view resolve');
+      const resolved = responseData(envelope, 'agent-browser remote-view resolve');
+      if (resolved.browserId !== browserId || resolved.handoffId !== handoffId) {
+        throw new Error('agent-browser remote-view resolution changed retained handoff identity.');
+      }
+      ready = { ...resolved, browserBuildProof: initial.browserBuildProof, handoffUrl };
+      if (resolved.status !== 'converging') break;
+      if (attempt < 29) await sleep(Math.min(1000, Math.max(0, deadline - Date.now())), undefined,
+        { signal: options.abortSignal });
+    }
+  }
+  const opened = validateOpenedRemoteView(ready, plan);
   options.abortSignal?.throwIfAborted();
   options.onStage?.('agentBrowserBrowserInventory');
   const inventoryEnvelope = parseCommandEnvelope(
@@ -354,11 +413,7 @@ export async function launchAgentBrowserRdpSession(
     'agent-browser service browsers',
   );
   const browser = selectBrowserRecord(inventoryEnvelope, opened.browserId, plan.session);
-  const port = positiveInteger(browser.cdpPort);
-  if (!port) {
-    throw new Error('agent-browser opened browser has no responsive CDP port in service inventory.');
-  }
-  const host = nonEmptyString(browser.cdpHost) ?? '127.0.0.1';
+  const { host, port } = resolveBrowserCdpConnection(browser);
   const pid = positiveInteger(browser.pid) ?? undefined;
   return {
     chrome: { host, port, ...(pid ? { pid } : {}) },
