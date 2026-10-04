@@ -1,3 +1,9 @@
+- Owned-page ChatGPT account-mirror warning checks (provider-free):
+  `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/configuredLiveFollowAffinity.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`.
+  Proves exact crawler propagation, no restored-tab census, visible-warning
+  cooldown, and a ten-second stalled-check deadline with transport cleanup.
+  These fixtures do not establish live refresh or materialization acceptance.
+
 - Installed ChatGPT session-custody/incremental control (opt-in, already run):
   `docs/dev/notes/2026-10-03-plan0386-renewed-wrapper-control.md` and adjacent
   JSON bind canonical PR 176 to one verified ZIP download and a cached repeat

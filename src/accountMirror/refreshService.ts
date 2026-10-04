@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
-	closeRemoteChromeTarget,
 	connectToChromeTarget,
 	listChromeTargets,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
@@ -186,6 +185,8 @@ export type AccountMirrorProviderGuardCensusInput = {
 	runtimeProfileId: string;
 	browserProfileId: string | null;
 	detectedAtMs: number;
+	ownedTarget?: { host: string; port: number; targetId: string };
+	abortSignal?: AbortSignal;
 };
 
 export type AccountMirrorProviderGuardCensus = (
@@ -506,7 +507,12 @@ export function createAccountMirrorRefreshService(input: {
 					runtimeProfileId,
 					browserProfileId: target.browserProfileId,
 					detectedAtMs: startedAt.getTime(),
-				}).catch(() => null);
+					ownedTarget: affinity?.tabAffinity,
+					abortSignal: collectorSignal,
+				}).catch((error) => {
+					if (provider === "chatgpt") throw error;
+					return null;
+				});
 				if (providerGuard) {
 					throw createProviderGuardError(providerGuard);
 				}
@@ -1682,10 +1688,38 @@ function formatEpochMs(value: number | null | undefined): string | null {
 export async function detectProviderGuardWithTargetCensus(
 	input: AccountMirrorProviderGuardCensusInput,
 ): Promise<AccountMirrorProviderGuardState | null> {
-	if (
-		(input.provider !== "gemini" && input.provider !== "chatgpt") ||
-		!isResolvedUserConfig(input.config)
-	) {
+	if (input.provider === "chatgpt") {
+		// The collector checks its loaded page when there is no pre-acquired crawler.
+		// Restored tabs are not evidence about the page this operation uses.
+		if (!input.ownedTarget) return null;
+		const abort = new AbortController();
+		const signal = input.abortSignal
+			? AbortSignal.any([input.abortSignal, abort.signal])
+			: abort.signal;
+		const probe = await withTimeout(
+			readVisibleChatgptRateLimitCensusProbe({
+				...input.ownedTarget,
+				abortSignal: signal,
+			}),
+			10_000,
+			`ChatGPT warning check timed out for owned tab ${input.ownedTarget.targetId}.`,
+			abort,
+		);
+		const rateLimit = classifyChatgptRateLimitCensusProbeForTest({
+			text: probe?.text,
+			ariaLabel: probe?.ariaLabel,
+			buttonLabels: probe?.buttonLabels,
+		});
+		return rateLimit
+			? writeChatgptRateLimitCensusGuard({
+					runtimeProfileId: input.runtimeProfileId,
+					detectedAtMs: input.detectedAtMs,
+					reason: rateLimit.reason,
+					url: null,
+				})
+			: null;
+	}
+	if (input.provider !== "gemini" || !isResolvedUserConfig(input.config)) {
 		return null;
 	}
 	const plan = resolveBrowserLaunchPlan({
@@ -1708,7 +1742,6 @@ export async function detectProviderGuardWithTargetCensus(
 			),
 	);
 	for (const { instance } of matchingInstances) {
-		const host = instance.host || "127.0.0.1";
 		const targets = await listChromeTargets(instance.port, instance.host || "127.0.0.1").catch(
 			() => [],
 		);
@@ -1734,45 +1767,10 @@ export async function detectProviderGuardWithTargetCensus(
 						action: "account-mirror-refresh:target-census",
 					};
 				}
-				continue;
-			}
-			if (!isChatgptProviderGuardCensusTarget(target.url ?? "")) {
-				continue;
-			}
-			const visibleWarning = await readVisibleChatgptRateLimitCensusProbe({
-				host,
-				port: instance.port,
-				targetId: target.id ?? null,
-			}).catch(() => null);
-			const rateLimit = classifyChatgptRateLimitCensusProbeForTest({
-				text: visibleWarning?.text ?? null,
-				ariaLabel: visibleWarning?.ariaLabel ?? null,
-				buttonLabels: visibleWarning?.buttonLabels ?? null,
-			});
-			if (rateLimit) {
-				return await writeChatgptRateLimitCensusGuard({
-					runtimeProfileId: input.runtimeProfileId,
-					detectedAtMs: input.detectedAtMs,
-					reason: rateLimit.reason,
-					url: target.url ?? null,
-					closeTarget: async () => {
-						const logger = Object.assign((_message: string) => {}, { verbose: false });
-						await closeRemoteChromeTarget(host, instance.port, target.id, logger);
-					},
-				});
 			}
 		}
 	}
 	return null;
-}
-
-function isChatgptProviderGuardCensusTarget(url: string): boolean {
-	try {
-		const hostname = new URL(url).hostname.toLowerCase();
-		return hostname === "chatgpt.com" || hostname.endsWith(".chatgpt.com");
-	} catch {
-		return /(^|\.)chatgpt\.com\b/i.test(url);
-	}
 }
 
 type ChatgptRateLimitCensusProbe = {
@@ -1805,7 +1803,7 @@ async function writeChatgptRateLimitCensusGuard(input: {
 	detectedAtMs: number;
 	reason: string;
 	url: string | null;
-	closeTarget: () => Promise<void>;
+	closeTarget?: () => Promise<void>;
 }): Promise<AccountMirrorProviderGuardState> {
 	const cooldownAction = "account-mirror-refresh:target-census-visible-warning";
 	const persistentWarningAction =
@@ -1814,8 +1812,9 @@ async function writeChatgptRateLimitCensusGuard(input: {
 		profileName: input.runtimeProfileId,
 	}).catch(() => null);
 	if (
-		previousState?.cooldownAction === cooldownAction ||
-		previousState?.cooldownAction === persistentWarningAction
+		input.closeTarget &&
+		(previousState?.cooldownAction === cooldownAction ||
+			previousState?.cooldownAction === persistentWarningAction)
 	) {
 		const previousDetectedAtMs = previousState.cooldownDetectedAt ?? input.detectedAtMs;
 		const previousCooldownUntilMs = previousState.cooldownUntil ?? input.detectedAtMs;
@@ -1901,6 +1900,7 @@ async function readVisibleChatgptRateLimitCensusProbe(input: {
 	host: string;
 	port: number;
 	targetId: string | null;
+	abortSignal?: AbortSignal;
 }): Promise<ChatgptRateLimitCensusProbe | null> {
 	if (!input.targetId) {
 		return null;
@@ -1909,8 +1909,15 @@ async function readVisibleChatgptRateLimitCensusProbe(input: {
 		host: input.host,
 		port: input.port,
 		target: input.targetId,
+		abortSignal: input.abortSignal,
+		timeoutMs: 10_000,
 	});
+	const closeOnAbort = () => {
+		void client.close().catch(() => undefined);
+	};
+	input.abortSignal?.addEventListener("abort", closeOnAbort, { once: true });
 	try {
+		input.abortSignal?.throwIfAborted();
 		const result = await client.Runtime.evaluate({
 			expression: `(() => {
   const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -1949,6 +1956,7 @@ async function readVisibleChatgptRateLimitCensusProbe(input: {
 				: [],
 		};
 	} finally {
+		input.abortSignal?.removeEventListener("abort", closeOnAbort);
 		await client.close().catch(() => undefined);
 	}
 }

@@ -1,3 +1,15 @@
+## 2026-10-04 | Warning checks belong to the operation's ChatGPT page
+
+Do not scan restored tabs before account-mirror collection. Inspect the exact
+crawler endpoint/target, with a ten-second deadline covering connection, DOM
+read, and transport close. An inconclusive probe fails rather than being treated
+as warning-free. Abort initiates transport cleanup. A visible warning persists
+cooldown without closing the owned page. Non-affinity collection checks the page
+it loads. Provider-free regressions prove no registry census, visible-warning
+stops, timeout reporting, and exact target propagation. This removes a demonstrated
+unbounded cross-tab dependency; it does not prove the cause of the earlier live
+refresh stall.
+
 ## 2026-10-04 | Blank browser startup must not select a restored tab
 
 A live-follow cold launch requests about:blank so the caller can establish owned

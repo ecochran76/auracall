@@ -196,3 +196,14 @@ filenames, sandbox action labels, `download-dom` rows, and archived `download`
 items must converge on the same decoded filename/source family before candidate
 selection. UI action wording such as `Open the ... PDF` must not make an
 already archived download look new.
+
+## ChatGPT warning-check scope
+
+An account-mirror refresh with a pre-acquired crawler checks only that exact
+ChatGPT tab before collection. It does not inspect restored tabs or close them.
+The connection, visible-warning read, and transport cleanup have a ten-second
+outer deadline. A failed or timed-out check fails the refresh with an explicit
+error; a visible rate-limit warning persists the normal cooldown and stops work.
+When no crawler has been pre-acquired, the collector checks the ChatGPT page it
+loads through the existing adapter guards. Persisted cooldowns remain effective.
+Gemini's account/captcha census is unchanged.

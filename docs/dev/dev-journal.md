@@ -1,3 +1,16 @@
+## 2026-10-04 | Owned-page ChatGPT warning check (#165)
+
+User narrowed the warning check to AuraCall's own loaded ChatGPT page. On
+fix/issue165-owned-page-warning, refresh passes exact crawler endpoint/target
+into the pre-collector guard, removes restored-tab scanning for ChatGPT, and
+bounds connection/read/close to ten seconds. Unknown checks fail the refresh;
+visible warnings still persist cooldown. No browser page is closed by this
+check. Without pre-acquired affinity, the collector retains its loaded-page
+checks. Gemini census behavior is preserved. Regression went red with a hung
+registry census, then green without any census call. Source validation: 105
+focused tests passed, typecheck and touched-file lint passed. No live pass or
+installed-runtime change in this slice; the earlier live stall remains unproven.
+
 ## 2026-10-04 22:04 UTC | Plan0386 budget-limited closeout
 
 PR194 and PR195 merged and were installed from canonical SHAe747154d4 with
