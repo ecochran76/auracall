@@ -1,3 +1,11 @@
+## 2026-10-04 | Installed unchanged archive worker control
+
+Real job hmj_bbe8bf40e3b444c894622837e23307cb skipped an already readable ZIP after one
+attempt; zero transfers/failures, no provider proof or scrape telemetry,
+scheduler paused. Three focused worker tests pass. Positive new-asset worker
+and autonomous frontier acceptance remain open. Evidence:
+`docs/dev/notes/2026-10-04-plan0386-unchanged-worker-control.md`.
+
 ## 2026-10-04 | Verified-cache archive publication
 
 Published both checksum-verified cached assets through the installed history
