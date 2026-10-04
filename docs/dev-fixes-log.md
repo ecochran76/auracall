@@ -1,3 +1,11 @@
+## 2026-10-03 | Installed session reuse removes duplicate materialization work
+
+Canonical PR 176's real ChatGPT service path captured the unresolved ZIP once
+through three trusted CDP mouse events on the retained read session. The cached
+repeat verified both files with zero downloads, CDP calls or observed requests.
+Preserve manifest snapshots per pass and keep direct cache proof separate from
+archive publication and autonomous scheduler acceptance.
+
 ## 2026-10-03 | Test session custody through the actual provider service
 
 A base-service regression can miss copies introduced by the provider facade.
