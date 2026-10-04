@@ -86,7 +86,10 @@ describe("ChatGPT account mirror metadata collector", () => {
 		projectId: undefined,
 		listOptions: accountMirrorTabLifecycle,
 	};
-	const accountMirrorContextOptions = (startMessageIndex = 0) => ({
+	const accountMirrorContextOptions = (startMessageIndex = 0, timeoutMs = 240000) => ({
+		allowCacheFallback: false,
+		retryAttempts: 0,
+		timeoutMs,
 		projectId: undefined,
 		refresh: true,
 		listOptions: {
@@ -2229,7 +2232,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 			expect(client.listConversationFiles).not.toHaveBeenCalled();
 			expect(client.getConversationContext).toHaveBeenCalledWith(
 				"conv_2",
-				accountMirrorContextOptions(),
+				accountMirrorContextOptions(0, 1),
 			);
 			const contextCall = client.getConversationContext.mock.calls[0] as unknown as [
 				string,

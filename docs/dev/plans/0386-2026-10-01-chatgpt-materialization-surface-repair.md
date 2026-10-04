@@ -270,3 +270,8 @@ visible assistant turn into an untyped root and yields a false empty result.
 Update this plan, active lane, dev journal, fixes log, testing/operator docs,
 and a sanitized durable acceptance note. A source-only repair does not close
 the objective. Scheduler resume remains a separate operator decision.
+
+
+## Renewed-goal checkpoint: 2026-10-04 collector contract
+
+Normal queued-worker positive capture and installed partial frontier are proven. RDP source fixes merged in PR183. Automatic changed/unchanged handling and scheduler resume remain open. The paused scheduler control exposed fresh-read cache fallback and missing unexpected-failure receipts; local regressions pass, installed follow-up pending. Navigation timeout is not yet resolved. See ../notes/2026-10-04-plan0386-collector-fresh-read-contract.md.

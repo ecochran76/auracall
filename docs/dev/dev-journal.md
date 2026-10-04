@@ -52542,3 +52542,8 @@ Normal queued worker captured one new verified PDF but failed terminal validatio
 ## 2026-10-04 | Issue165 positive queued capture and partial frontier
 
 Installed worker hmj_0861741c86544fba8c10c65b1fb28032 succeeded: one new PDF, three cache reuses, one successful transfer, exact file/manifest/archive agreement, matching identity. Monitoring API omits detailed entries; local durable job verification resolved the harness mismatch without another provider run. Persistence wrongly marked the capped inventory complete; successor repair propagates pending counts and records partial/deferred. 149 focused tests, typecheck, and scoped lint passed. Scheduler paused; installed frontier acceptance pending. See notes/2026-10-04-plan0386-partial-frontier.md.
+
+
+## 2026-10-04 | Issue165 collector fresh-read contract
+
+Installed partial-frontier worker acceptance succeeded: one new PDF, four cache reuses, four pending assets persisted partial/deferred. A single paused scheduler pass then timed out during navigation and failed with a closed WebSocket; stale dry-run receipt masked the failure. Two red-capable regressions repair cached fresh-read fallback and missing scheduler failure receipts; 132 focused tests pass. Navigation and scheduler resume remain open. See notes/2026-10-04-plan0386-collector-fresh-read-contract.md.

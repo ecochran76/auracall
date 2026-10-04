@@ -202,6 +202,7 @@ export class BrowserAutomationClient {
       cacheOnly?: boolean;
       allowCacheFallback?: boolean;
       timeoutMs?: number;
+      retryAttempts?: number;
       listOptions?: BrowserProviderListOptions;
     },
   ): Promise<ConversationContext> {

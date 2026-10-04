@@ -902,6 +902,26 @@ describe("account mirror scheduler pass service", () => {
 		});
 	});
 
+	test("records an unexpected refresh failure as the current scheduler pass", async () => {
+		const requestRefresh = vi.fn(async () => {
+			throw new Error("WebSocket is not open: readyState 3 (CLOSED)");
+		});
+		const service = createAccountMirrorSchedulerPassService({
+			registry: createAccountMirrorStatusRegistry({
+				config,
+				now: () => new Date("2026-10-04T18:49:09.623Z"),
+			}),
+			refreshService: { requestRefresh },
+			now: () => new Date("2026-10-04T18:51:04.659Z"),
+		});
+		await expect(service.runOnce({ dryRun: false })).resolves.toMatchObject({
+			mode: "execute",
+			action: "refresh-blocked",
+			selectedTarget: { provider: "chatgpt", runtimeProfileId: "default" },
+			error: { message: "WebSocket is not open: readyState 3 (CLOSED)", statusCode: 503 },
+		});
+	});
+
 	test("reports browser-work backpressure when routine refresh cannot acquire the dispatcher", async () => {
 		const requestRefresh = vi.fn(async () => createRefreshResult());
 		requestRefresh.mockRejectedValueOnce(

@@ -237,26 +237,31 @@ export function createAccountMirrorSchedulerPassService(input: {
 					error: null,
 				};
 			} catch (error) {
-				if (error instanceof AccountMirrorRefreshError) {
-					return {
-						object: "account_mirror_scheduler_pass",
-						mode: "execute",
-						action: "refresh-blocked",
-						startedAt: startedAt.toISOString(),
-						completedAt: now().toISOString(),
-						selectedTarget,
-						backpressure: deriveErrorBackpressure(error),
-						metrics,
-						refresh: null,
-						error: {
-							code: error.code,
-							statusCode: error.statusCode,
-							message: error.message,
-							details: error.details,
-						},
-					};
-				}
-				throw error;
+				const refreshError =
+					error instanceof AccountMirrorRefreshError
+						? error
+						: new AccountMirrorRefreshError(
+								503,
+								"account_mirror_refresh_failed",
+								error instanceof Error ? error.message : String(error),
+							);
+				return {
+					object: "account_mirror_scheduler_pass",
+					mode: "execute",
+					action: "refresh-blocked",
+					startedAt: startedAt.toISOString(),
+					completedAt: now().toISOString(),
+					selectedTarget,
+					backpressure: deriveErrorBackpressure(refreshError),
+					metrics,
+					refresh: null,
+					error: {
+						code: refreshError.code,
+						statusCode: refreshError.statusCode,
+						message: refreshError.message,
+						details: refreshError.details,
+					},
+				};
 			}
 		},
 	};
