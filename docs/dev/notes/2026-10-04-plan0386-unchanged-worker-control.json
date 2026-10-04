@@ -1,0 +1,21 @@
+{
+  "id": "hmj_bbe8bf40e3b444c894622837e23307cb",
+  "status": "skipped",
+  "attemptCount": 1,
+  "startedAt": "2026-10-04T17:42:10.629Z",
+  "completedAt": "2026-10-04T17:42:13.082Z",
+  "result": {
+    "status": "skipped",
+    "message": "Run archive item already has a readable local asset.",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "skipped": 1,
+      "failed": 0
+    }
+  },
+  "providerSessionProof": null,
+  "scrapeTelemetry": null,
+  "error": null,
+  "schedulerState": "paused"
+}
