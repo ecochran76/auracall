@@ -18,6 +18,32 @@
   `mode-not-found` result for desired Chat while the adjacent root desired-Work
   case remains fail-closed. No install, browser/provider effect, scheduler
   control, terminal-session retry, or GitHub Actions run occurred.
+## Turn 632 | 2026-09-28
+
+- Reconciled the active-only planning audit for open P55 / [Plan 0362](docs/dev/plans/0362-2026-09-27-declarative-chatgpt-agent-workflows.md)
+  by restoring its missing canonical ROADMAP and RUNBOOK wiring.
+- The repair preserves the plan's actual open state: issue 94 provenance is
+  integrated and installed-proven, while the remaining campaign outcomes and
+  combined installed acceptance are not claimed complete. No implementation,
+  issue, browser, provider, installed-runtime, or live-system state changed.
+
+## Turn 631 | 2026-09-28
+
+- Closed provider-free P73 / [Plan 0373](docs/dev/plans/0373-2026-09-28-library-cli-cache-persistence-bypass.md)
+  for reopened issue 107 from canonical `fe6375955`. Installed lifecycle
+  diagnostics proved the Library DOM inventory completed in about 23
+  milliseconds and local account-cache context resolution retained the result
+  for about 50.6 seconds.
+- The exact `library-files` CLI now opts out of account-file cache context and
+  persistence after its provider result. A red-before-green pending-hook
+  fixture proves the provider files return without either cache call; default
+  account-file listing continues to persist its cache.
+- No deadline, retry, exact-target, navigation, refresh, creation, disposal, or
+  settlement behavior changed. After local commit `9cebdc9c3`, one installed
+  read-only `wsl-chrome-3` acceptance terminated in 2.37 seconds without the
+  cache hang, but returned an incomplete zero-file inventory. No retry, prompt,
+  Send, or provider mutation ran. Full acceptance remains unresolved; live
+  GitHub readback currently reports issue 107 closed.
 
 ## Turn 630 | 2026-09-28
 

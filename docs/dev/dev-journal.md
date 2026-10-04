@@ -1,3 +1,12 @@
+## 2026-10-04 | PR 120 canonical conflict reconciliation
+
+Merged current canonical main into the existing Library cache-bypass branch.
+Resolved five additive documentation conflicts by preserving current canonical
+history and P73/P55 records; all source changes merged without conflict.
+Primary validation: 68 focused tests, typecheck, plan audit and scoped lint pass.
+The CLI-only opt-out remains explicit; general account-file persistence is
+unchanged. No installed/browser/provider control ran in this reconciliation.
+
 ## 2026-10-03 | Repository reconciliation after PR 177
 
 Root returned to canonical main with .tmp/ preserved. Removed 32 clean,
@@ -99,6 +108,38 @@ typecheck pass. Gate D remains open; no install or live retry. Evidence:
   `docs/dev/notes/2026-10-02-issue163-worktree-reconciliation.md`.
 - P53 now projects paused-ref custody; P85 records the canonical trusted-pointer
   integration while leaving Gate D open. No install or provider effect ran.
+## 2026-09-28 | Plan 0362 planning-audit wiring reconciliation
+
+- The active-only planning audit reported exactly two unbaselined findings:
+  open Plan 0362 was absent from `ROADMAP.md` and `RUNBOOK.md`.
+- Added canonical links and a concise current-state projection without changing
+  plan state, priority, scope, issue state, implementation, or live systems.
+
+## 2026-09-28 | Issue 107 Library CLI cache persistence bypass
+
+- Correct installed diagnostics on canonical `fe6375955` entered
+  `dom-inventory` at `12:53:15.143` and `service-cache-context` at
+  `12:53:15.166`; the provider inventory therefore completed in about 23
+  milliseconds. The CLI requested abort at `12:54:05.757`, then entered
+  `service-cache-write` and settled affinity by `12:54:06.377`.
+- `LlmService.refreshAccountFilesCache` unconditionally joined cache identity
+  resolution and persistence after the provider result. The exact CLI now sets
+  `skipAccountFileCachePersistence` and receives normalized provider files
+  before either cache hook. No other caller sets the option.
+- A red-before-green provider-free regression used a successful provider with
+  pending cache-context and cache-write hooks. It initially returned the
+  `cache-hooks-pending` sentinel, then returned the provider files immediately
+  with neither hook called after the fix. The existing default persistence
+  fixture remains green.
+- No deadline changed. No installed command, browser/provider access, retry,
+  refresh, navigation, target creation, attachment, prompt, or Send ran during
+  provider-free validation.
+- After commit `9cebdc9c3`, one user-runtime install and one read-only
+  `wsl-chrome-3` Library acceptance ran. It exited in 2.37 seconds with
+  `complete: false` and zero usable files, so the prior cache-persistence hang
+  did not recur but full issue acceptance did not pass. The reduced output did
+  not retain `incompleteReason`; no retry ran. Live GitHub readback currently
+  reports issue 107 closed, and this lane did not mutate tracker state.
 
 ## 2026-09-28 | Issue 107 Library lifecycle diagnostics
 

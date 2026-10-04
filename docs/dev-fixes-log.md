@@ -57,6 +57,13 @@ or excluded as textdoc. Presence alone must not settle generated-file readiness.
 Use the same collection predicate for readiness and returned probes; executable
 fixtures reproduce premature empty results and the later eligible ZIP mount.
 Issue #165; Plan 0386 acceptance remains open.
+- 2026-09-28: A read-only provider result should not be masked by unrelated
+  local persistence when the caller needs only a one-shot inventory. Installed
+  stage timestamps proved ChatGPT Library DOM inventory completed in about 23
+  milliseconds, then account-cache context resolution held the result for
+  about 50.6 seconds. Give the exact CLI call an explicit cache-persistence
+  opt-out and return normalized provider files before either cache hook; keep
+  Account Mirror and general list callers on the default persistent path.
 
 - 2026-09-28: When nested browser deadlines keep masking the owner of a wait,
   stop widening budgets and emit one privacy-bounded lifecycle receipt through
