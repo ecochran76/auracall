@@ -1,0 +1,200 @@
+{
+  "base_main": "9f651d766d06a570547406b5e81bf138f388fb34",
+  "issue": 178,
+  "removed_worktrees": [
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-chatgpt-selector-drift",
+      "head": "f6c53ca6cc840f72f0d29a2c6983aa4942b6fb58",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue100",
+      "head": "389bda3f92eb88a5843984555ee218286f654919",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107",
+      "head": "352b72bfa0243e6c17075b7160103146ae0a1c10",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-budget",
+      "head": "578fd73a5fa9d68aec7e805e0d6b61405d2ac556",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-client-cleanup",
+      "head": "a2f265f136550d32a55e2bde5965dd5811c272a3",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-diagnostics",
+      "head": "331c56fee50ab67284338ccb55117c8e82dc7f1b",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-inventory",
+      "head": "b2a29ab9c04fced65aeac7e9a047ffd46ed0c025",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-production",
+      "head": "7564973deeae51d1d4d7a6ce15424ed003b3dbc3",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-reopen",
+      "head": "6b4f041ee1862565fdf0c3fca9428f747f4f855c",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-retry",
+      "head": "75b30c0b6d9c9de5b9aa8d634882bab21b530ae8",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue107-session-close",
+      "head": "11507a9269d4146f03a07dbcf2154c7587cde842",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue110",
+      "head": "97d4e098808e00cb1606da3f56f8dc9d2291752a",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue123",
+      "head": "0a800e22de8af69c77842c33eefb666d3775ca65",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue125",
+      "head": "9f877adffe1ce3987fe6f2cf5bc6ec08e8b3fde4",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue138",
+      "head": "e0303b24a7a3e8370bb97b061ac10b03a031b05c",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue139",
+      "head": "bf28f6b797bd29eff209207704db63b34144173b",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue139-impl",
+      "head": "d7e355667cc1d47069756abdde94db29095989ca",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue146",
+      "head": "93972628624b8ea5b2420dade5891312ed49ffbb",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue148",
+      "head": "aa385d2e1d187499d836eb7ac09ca1f9365dd93b",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue151",
+      "head": "cb07bfca09f129d7093fb1458983ad6b3dbe5a4e",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue165",
+      "head": "98f60e0e870bcdb660b3513e839295a9f95ec2ac",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue93",
+      "head": "b59a4fb9c78bce1e214f933aa232422de5a3fa50",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue94",
+      "head": "2165d64b1b5aa068b32f60499b79384d380240f6",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue94-live",
+      "head": "5b65e16ff153670b009db7818461a20b659842e6",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue95",
+      "head": "cf84d0363bb1463e254a597c3bf62b9429021deb",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue96",
+      "head": "693008faa7d46a1b87cc6457236c3e4040124576",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue97",
+      "head": "2e31d9f6c0578b10aa05818860faf6f4e2992578",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-issue98",
+      "head": "e6ba35bc9c0c7127fa6e84394eaf3da9dfe7fcfe",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-materialization-surface",
+      "head": "b6130fc1f9dcc1b8bb25258fd3d8705b54c8ebd8",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-p359-workers/dispatcher-impact",
+      "head": "7e3dc8e9aa20f36d2b8fc31a935286b1dc6836d8",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-p359-workers/lease-contract",
+      "head": "7e3dc8e9aa20f36d2b8fc31a935286b1dc6836d8",
+      "removed": true,
+      "error": ""
+    },
+    {
+      "path": "/home/ecochran76/workspace.local/auracall-p359-workers/test-inventory",
+      "head": "7e3dc8e9aa20f36d2b8fc31a935286b1dc6836d8",
+      "removed": true,
+      "error": ""
+    }
+  ],
+  "missing_registrations_pruned": 8,
+  "branches_deleted": 0
+}
