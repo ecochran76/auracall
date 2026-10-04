@@ -131,3 +131,68 @@ describe("live-follow final warning transport", () => {
 		}
 	});
 });
+
+describe("configured cold-start custody", () => {
+	test("launches blank and reserves only its admitted crawler with restored pages present", async () => {
+		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
+		const runtimeModule = await import("../../src/browser/tabConcurrencyRuntime.js");
+		const { createInMemoryBrowserTabLeaseRegistry } = await import(
+			"../../packages/browser-service/src/service/tabLeaseRegistry.js"
+		);
+		const { BrowserService } = await import("../../src/browser/service/browserService.js");
+		const { createConfiguredLiveFollowAffinity } = await import(
+			"../../src/accountMirror/configuredLiveFollowAffinity.js"
+		);
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const resolveServiceTarget = vi.fn(async (request: { ensurePort: boolean }) =>
+			request.ensurePort
+				? {
+						host: "127.0.0.1",
+						port: 45011,
+						managedBrowserProfile: "/managed/chatgpt",
+						tabs: [
+							{ id: "restored-1", type: "page", url: "https://chatgpt.com/c/retained" },
+							{ id: "restored-2", type: "page", url: "https://chatgpt.com/c/retained" },
+							{ id: "startup-blank", type: "page", url: "about:blank" },
+						],
+					}
+				: { managedBrowserProfile: "/managed/chatgpt" },
+		);
+		vi.spyOn(BrowserService, "fromConfig").mockReturnValue({
+			resolveServiceTarget,
+			getMutationAuditSink: () => async () => undefined,
+		} as never);
+		vi.spyOn(runtimeModule, "createBrowserTabConcurrencyRuntime").mockReturnValue({
+			registry,
+			ledger: {},
+		} as never);
+		const open = vi
+			.spyOn(lifecycle, "openChromeTarget")
+			.mockResolvedValue({ id: "owned-crawler" } as never);
+		const close = vi.spyOn(lifecycle, "closeRemoteChromeTarget").mockResolvedValue(undefined);
+		try {
+			const affinity = await createConfiguredLiveFollowAffinity({
+				userConfig: {
+					auracallProfile: "runtime-1",
+					browser: { tabConcurrencyMode: "tab-affinity" },
+					profiles: {
+						"runtime-1": { services: { chatgpt: { identity: { accountId: "account-1" } } } },
+					},
+				} as never,
+				provider: "chatgpt",
+				runtimeProfileId: "runtime-1",
+				operationId: "cold-start",
+				maxBrowserInteractionsPerMinute: 12,
+			});
+			expect(resolveServiceTarget).toHaveBeenLastCalledWith(
+				expect.objectContaining({ configuredUrl: "about:blank", ensurePort: true }),
+			);
+			expect(affinity?.tabAffinity.targetId).toBe("owned-crawler");
+			expect(open).toHaveBeenCalledTimes(1);
+			expect(close).not.toHaveBeenCalled();
+			expect(await registry.list()).toHaveLength(1);
+		} finally {
+			vi.restoreAllMocks();
+		}
+	});
+});

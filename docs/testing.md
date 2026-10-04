@@ -3299,3 +3299,5 @@ A one-transfer batch with two reused assets and two uncached eligible assets mus
   Run `pnpm vitest run tests/accountMirror/changeFrontierPlanner.test.ts`.
 
 Scheduler paused-startup regression: `pnpm vitest run tests/http.responsesServer.test.ts -t "resumes restored runnable completions after paused startup"`. This exercises persisted runnable and operator-paused operations through the real HTTP resume endpoint, including repeated resume without duplicate refresh. It is provider-free; installed autonomous continuation requires separate live acceptance.
+
+Cold-start live follow launches blank and creates one admitted crawler target with explicit custody. Restored browser pages remain untouched; default reuse still rejects ambiguous unowned targets. Provider-free checks cover the real affinity factory/coordinator handoff, one target creation/lease, and traffic-budget denial before opening. Installed unattended acceptance remains a separate gate.

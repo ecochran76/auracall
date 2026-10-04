@@ -87,6 +87,49 @@ describe("live-follow crawler tab coordinator", () => {
 		expect(await registry.list()).toEqual([]);
 	});
 
+	test("creates one governed owned crawler without adopting or closing restored tabs", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const closeTarget = vi.fn();
+		const openTarget = vi.fn(async () => ({
+			targetId: "owned-crawler",
+			url: "https://chatgpt.com/",
+		}));
+		const settle = vi.fn(async () => undefined);
+		const begin = vi.fn(async () => ({ settle }));
+		const tab = await acquireLiveFollowCrawlerTab({
+			registry,
+			scope,
+			operationId: "restored-startup",
+			targetUrl: "https://chatgpt.com/",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			coldStartTargetPolicy: "create",
+			resolveExistingEndpoint: async () => null,
+			startBrowser: async () => ({
+				host: "127.0.0.1",
+				port: 45011,
+				managedBrowserProfile: scope.managedBrowserProfile,
+			}),
+			listTargets: async () => [
+				{ targetId: "restored-1", url: "https://chatgpt.com/c/retained" },
+				{ targetId: "restored-2", url: "https://chatgpt.com/c/retained" },
+				{ targetId: "startup-blank", url: "about:blank" },
+			],
+			preLeaseProviderTrafficGovernor: { begin } as never,
+			inspectTarget: vi.fn(),
+			openTarget,
+			closeTarget,
+		});
+		expect(tab.lease.targetId).toBe("owned-crawler");
+		expect(openTarget).toHaveBeenCalledTimes(1);
+		expect(begin).toHaveBeenCalledTimes(1);
+		expect(settle).toHaveBeenCalledWith(
+			expect.objectContaining({ outcome: "succeeded", targetId: "owned-crawler" }),
+		);
+		expect(closeTarget).not.toHaveBeenCalled();
+		expect(await registry.list()).toHaveLength(1);
+	});
+
 	test("closes and proves absence of one incompatible startup page before opening the crawler", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-after-blank",
@@ -179,7 +222,10 @@ describe("live-follow crawler tab coordinator", () => {
 		expect(openTarget).toHaveBeenCalledOnce();
 	});
 
-	test("rejects unplanned pre-lease target creation before opening a page", async () => {
+	test.each([
+		"existing",
+		"cold",
+	])("rejects unplanned pre-lease target creation for %s browser before opening a page", async (mode) => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const openTarget = vi.fn();
 		const begin = vi.fn(async () => {
@@ -194,12 +240,20 @@ describe("live-follow crawler tab coordinator", () => {
 				targetUrl: "https://chatgpt.com/",
 				idleTtlMs: 60_000,
 				absoluteTtlMs: 3_600_000,
-				resolveExistingEndpoint: async () => ({
+				coldStartTargetPolicy: "create",
+				resolveExistingEndpoint: async () =>
+					mode === "cold"
+						? null
+						: {
+								host: "127.0.0.1",
+								port: 45011,
+								managedBrowserProfile: scope.managedBrowserProfile,
+							},
+				startBrowser: async () => ({
 					host: "127.0.0.1",
 					port: 45011,
 					managedBrowserProfile: scope.managedBrowserProfile,
 				}),
-				startBrowser: vi.fn(),
 				inspectTarget: vi.fn(),
 				openTarget,
 				closeTarget: vi.fn(),

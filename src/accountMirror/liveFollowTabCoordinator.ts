@@ -35,6 +35,7 @@ export interface DedicatedBrowserTabInput {
 		endpoint: LiveFollowBrowserEndpoint,
 	) => Promise<Array<{ targetId: string; url: string }>>;
 	requireExistingTarget?: boolean;
+	coldStartTargetPolicy?: "adopt" | "create";
 	preLeaseProviderTrafficGovernor?: ProviderTrafficGovernor;
 	inspectTarget: (
 		endpoint: LiveFollowBrowserEndpoint,
@@ -330,6 +331,13 @@ async function prepareColdStartTarget(
 	input: DedicatedBrowserTabInput,
 	endpoint: LiveFollowBrowserEndpoint,
 ): Promise<{ targetId: string; url: string } | null> {
+	// A newly created target carries explicit custody even when Chromium restores other tabs.
+	if (input.coldStartTargetPolicy === "create") {
+		if (!input.preLeaseProviderTrafficGovernor) {
+			throw new Error("Owned cold-start target creation requires a provider traffic governor.");
+		}
+		return null;
+	}
 	if (!input.listTargets) return null;
 	const ownedTargetIds = new Set(
 		(await input.registry.list())
