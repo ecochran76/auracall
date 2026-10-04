@@ -1,3 +1,7 @@
+## 2026-10-04 | In-page identity fetch abort is not a CDP deadline
+
+A browser-side fetch AbortController cannot bound an unresponsive Runtime evaluation. ChatGPT auth-session and fallback identity evaluations now each have ten-second host/CDP deadlines and named pending operations. Real context-reader transport-fault regressions reproduce both missing deadlines. Missing or inconclusive identity still fails closed. This bounds two demonstrated defects; live slowdown causality remains unproven.
+
 ## 2026-10-04 | Warning checks belong to the operation's ChatGPT page
 
 Do not scan restored tabs before account-mirror collection. Inspect the exact
