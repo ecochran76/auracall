@@ -1,3 +1,13 @@
+## 2026-10-03 | Preserve failed artifact-context refreshes
+
+A cached conversation may be useful for reading after a provider failure, but
+artifact materialization must not silently use its download controls after a
+requested fresh read fails. Disable context fallback at the materialization
+call site, preserving explicit refresh=false cache use. A real LlmService and
+JsonCacheStore regression proves the failed read rejects before any transfer.
+The earlier installed stall also involved a manually preserved interaction
+governor; this guard does not prove the underlying CDP failure or cooldown cause.
+
 ## 2026-10-03 | Materialization blockers and fresh download attribution
 
 Regenerate/Continue generating labels alone do not prove a failed turn;

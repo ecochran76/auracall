@@ -1,3 +1,14 @@
+## 2026-10-03 | Issue 165 failed-refresh materialization guard
+
+Repair cycle 4 local diagnosis reproduced a fresh context failure falling back
+silently to cached download controls. Artifact materialization now requires its
+requested context refresh to succeed; explicit refresh=false still permits cache
+use. The regression failed in 48 ms before the fix. All 171 focused tests, typecheck,
+build, scoped Biome, and plan audit pass. This prevents stale control
+attempts and preserves the original read error; it does not establish the cause
+of the installed target read failure. No new provider probe or installation ran;
+scheduler remains paused and Gate D remains open.
+
 ## 2026-10-03 | Plan 0386 bounded live-follow repair
 
 Recovered full persisted evidence: the previous empty monitoring result hid

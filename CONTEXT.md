@@ -44,4 +44,4 @@ _Avoid_: Smoke, acceptance script
 A download action outside the conversation-turn cards, used after a selected artifact opens its preview. Generic inline `Download file` labels do not establish viewer authority.
 
 **Artifact cache reuse**:
-A local conversation attachment matching a currently discovered artifact ID, filename and URI. Readability, size and any retained checksum are checked before reuse. New transfer budget excludes reused artifacts; explicit force bypasses reuse. Context refresh alone does not force transfer.
+A local conversation attachment matching a currently discovered artifact ID, filename and URI. Readability, size and any retained checksum are checked before reuse. New transfer budget excludes reused artifacts; explicit force bypasses reuse. Context refresh alone does not force transfer. A requested fresh context read must succeed before artifact materialization; provider failure cannot silently authorize cached download controls. Explicit refresh=false can use cached context.

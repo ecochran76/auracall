@@ -1927,6 +1927,7 @@ export abstract class LlmService {
 			const context = await this.getConversationContext(conversationId, {
 				projectId: options?.projectId,
 				refresh: options?.refresh ?? true,
+				allowCacheFallback: false,
 				timeoutMs: options?.contextTimeoutMs,
 				listOptions,
 			});
