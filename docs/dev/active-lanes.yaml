@@ -1693,7 +1693,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 42d0b7c730b507cb77f537bad30c37598d070d3f
+    checkpoint: e747154d428b97ae25a624e9537d9ca1cb37ddf0
     remote_ref: refs/remotes/origin/fix/issue165-follow-continuation
     integration: merge
     work_items: [ecochran76/auracall#165]
@@ -1701,9 +1701,9 @@ lanes:
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: PR193 created an owned crawler and released the old lease, but normal refresh timed out; inherited bounded pass 1 settled stale-claim and no runnable wsl-chrome-3 completion exists.
-    validation_status: bounded-resumption-source-fix-live-pending
-    validation_ref: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    integration_receipt: 42d0b7c730b507cb77f537bad30c37598d070d3f
-    disposition: User resumed Plan0386 at 21:21 UTC for 500000 tokens and one hour with at most five live passes. Count inherited cadence as pass 1; scheduler is contained paused. Resume reconciliation regression reproduces missing subscription and source repair is under validation. Preserve other five operator pauses.
+    blocker: Budget-limited after three live passes; owned crawler and automatic completion runner creation proven, but fresh normal refresh and automatic materialization continuation remain unproven.
+    validation_status: installed-partial-budget-limited
+    validation_ref: docs/dev/notes/2026-10-04-plan0386-bounded-resumption-acceptance.json
+    integration_receipt: e747154d428b97ae25a624e9537d9ca1cb37ddf0
+    disposition: PR194 and PR195 merged and installed with canonical hash parity. Token budget reached 504761 of 500000 before full acceptance. Scheduler and packet-owned completion contained paused, other five pauses preserved, background drain restored, one retained idle lease fenced. No further live passes started.
     updated_at: 2026-10-04

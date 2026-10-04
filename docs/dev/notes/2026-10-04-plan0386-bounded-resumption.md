@@ -48,7 +48,10 @@ Strict native census at 21:41:39.464 UTC proved the exact wsl-chrome-3 managed
 browser absent after service stop. This does not replace PR193's earlier
 same-workload absence/release proof or claim that PR194 released an idle lease.
 
-Memory disposition remains pending until substantive closeout.
+Memory disposition at closeout: `unavailable` because narrow atlas discovery
+supplied no qualified destination manifest; runtime is healthy but no memory
+write was attempted. A machine-readable non-write receipt is preserved in the
+curated acceptance JSON.
 
 ## Demonstrated startup blocker | 21:47 UTC
 
@@ -60,3 +63,90 @@ helper selects the last matching blank and awaits Page.enable without a deadline
 although live-follow cold launch only needs the endpoint and later creates its
 own governed crawler. A provider-free real-helper regression is next; no further
 live pass is authorized without a bounded repair.
+
+## Second source checkpoint | 21:51 UTC
+
+PR195 https://github.com/ecochran76/auracall/pull/195 merged source commit
+`b20c907980a5417ac1707ddba74a8c1326f4d8e6` as canonical
+`e747154d428b97ae25a624e9537d9ca1cb37ddf0`. Real helper regression
+failed before repair and passed after; 37 focused startup/core/affinity/coordinator
+tests, typecheck, lint and production build passed. Both review axes found no
+accepted blocking finding for this narrow repair. It skips the login helper
+only for endpoint-only about:blank; provider login URLs retain their old path.
+
+Pass2 was explicitly paused at 21:48:24 UTC before custody or collector acceptance.
+API service stop completed; its owned browser group was gone and strict exact
+managed-directory absence proof returned true at 21:51:20.826. No fenced leases
+remain. Next pass3 resumes only the existing wsl-chrome-3 completion; scheduler
+cadence and other five paused completions remain contained.
+
+## Installed pass3 start | 21:53 UTC
+
+PR195 canonical runtime installed with five matching module hashes, including
+manualLogin. API PID62077 started with durable scheduler pause and six paused
+completions (the original five plus the packet-owned wsl-chrome-3 completion).
+Explicit resume of only `328f88a8` queued its runner; no scheduler resume was used.
+The runner is honoring persisted idle/backoff before physical work. This pass is
+counted conservatively even while waiting. Passes4–5 are unused.
+
+### Empty background-drain cadence containment
+
+Pass3's runner initially deferred to foreground pressure at 21:53:10 and
+21:54:10. The ordinary one-minute background drain runs at 21:54:07–21:54:10.738,
+colliding with that wake; current local claim metrics select zero runs, zero
+blocked and 289 not-ready, with no active foreground request or reservation.
+The primary temporarily paused only that empty periodic background-drain timer
+for this bounded proof, preserving foreground safeguards and scheduler pause.
+Restore its original unpaused state at packet closeout. This is runtime isolation,
+not a source safety-gate bypass or additional provider pass.
+
+### Prior capture evidence verified again
+
+At 21:57:33.697 UTC, read-only current cache/archive validation of prior successful
+job `hmj_9fa5382a07a7423ca13cdccb3b2a62fd` proved the exact positive-control PDF
+still present: 183246 bytes, SHA256
+`88a11545071c98f40838e2115e92524608bf11eb8dfc15e2a46436805efe0362`,
+local and archive hashes match, archive HTTP200. This is present cache parity
+for historical capture, not a new capture or fresh provider identity assertion.
+Pass3 preserves failure-backoff until 21:58:49.608 UTC rather than bypassing it.
+
+## Budget-limited closeout | 22:04 UTC
+
+The goal service marked this packet `budget_limited` at 504761/500000 tokens
+(2734 service-reported elapsed seconds). No new substantive work began afterward.
+Three of the maximum five live passes were used; no passes4–5 were initiated.
+The one-hour wall deadline was not reached. The full objective is not complete.
+
+Pass3 proved the installed startup repair: lease
+`002b46eb-cb83-4def-8c94-9d8996dd7723`, target
+`1C4DB5CB52EAF320100D2E9A940A3173`, created by API PID62077 after backoff
+at 21:58:49 UTC, with one creation and zero adoption/navigation/reload/focus/close
+counts. Passive root reads returned ready=complete and no visible verification,
+login or rate-warning indicators. No normal refresh completed, passCount stayed
+zero, and no automatic materialization job was created before budget stop.
+
+The pre-refresh guard census is a source-confirmed unbounded await risk: it probes
+all compatible page DOMs outside the collector timeout. Its exact contribution
+to this pass's stall is unproven. A sampled retained root was responsive, so do
+not claim every restored page is frozen or identify a definite blocking target.
+The late passive network observation counted two Fetch requests (GET1/POST1),
+zero document requests and zero observed HTTP/loading failures. Coverage excludes
+startup/prior requests; this is not total-traffic or zero-prompt proof.
+
+Containment: explicitly paused the packet-owned completion and confirmed all
+six completions paused, including the original five. Stopped the API-owned
+browser group to settle unbounded in-flight work. Strict exact-directory native
+census proved browser absent at 22:04:35.579 UTC. API restarted with durable
+scheduler pause; the temporary background-drain pause was restored to its
+original unpaused state. No restored page was individually adopted or removed;
+no prompt or Answer now action was issued. Root and repair-worktree pre-existing
+dirty files remain untouched. API PID80665 final readback reports scheduler paused, zero completion runners,
+six paused records, background drain unpaused, and one idle lease. That retained
+lease is fenced; let the normal same-workload absence recovery reconcile it on
+a later authorized resume.
+
+Next bounded packet: first locate the actual pre-collector blocking await with a
+red provider-free guard-census/cache-preflight regression, preserve unknown and
+warning fail-closed behavior, then resume only `328f88a8` under new budget/live
+bounds. Do not equate runner creation, old cache parity or prior identity evidence
+with completed normal refresh or automatic materialization acceptance.
