@@ -35,6 +35,15 @@ hash parity, and one normal resumed automatic pass. Terminal condition is an
 accepted automatic pass or a truthful guarded failure with the remaining gate
 recorded; a guarded failure does not complete the wider user goal.
 
+The PR 192 installed cadence control exposed a retained-lease gate before cold
+launch: stable scheduler workload custody remained idle after browser exit.
+Successor packet `fix/issue165-absent-crawler-recovery` requires strict native
+process absence proof and revision-fenced missing-target release before startup.
+Endpoint absence alone remains insufficient. Provider-free validation includes
+the real configured factory with a retained idle lease, presence/probe failures,
+and the original ambiguity, admission and warning guards. Installed automatic
+acceptance is still required; neither guarded failure completes the user goal.
+
 ## Current State
 
 PR #155 integrated the current semantic preview/download selector repair and

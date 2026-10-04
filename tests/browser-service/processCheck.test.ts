@@ -187,3 +187,21 @@ esac
     }
   }, 15_000);
 });
+
+
+describe('strict native browser absence proof', () => {
+  test.skipIf(process.platform === 'win32').each(['absent', 'present', 'failed', 'malformed'])('requires a successful process census: %s', async (outcome) => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-strict-census-'));
+    const fakePs = path.join(tempDir, 'ps');
+    const payload = outcome === 'absent' ? '123 /usr/bin/node unrelated' : outcome === 'present' ? '123 /opt/chrome --user-data-dir=/tmp/strict-profile' : 'not a process census';
+    const script = outcome === 'failed' ? '#!/bin/sh\nexit 1\n' : `#!/bin/sh\nprintf '%s\\n' '${payload}'\n`;
+    await writeFile(fakePs, script, 'utf8');
+    await chmod(fakePs, 0o755);
+    process.env.PATH = [tempDir, ORIGINAL_ENV.PATH].join(path.delimiter);
+    try {
+      const { verifyChromeProcessAbsent } = await import('../../packages/browser-service/src/processCheck.js');
+      if (outcome === 'failed' || outcome === 'malformed') await expect(verifyChromeProcessAbsent('/tmp/strict-profile')).rejects.toThrow();
+      else await expect(verifyChromeProcessAbsent('/tmp/strict-profile')).resolves.toBe(outcome === 'absent');
+    } finally { await rm(tempDir, { recursive: true, force: true }); }
+  });
+});

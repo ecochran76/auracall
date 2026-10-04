@@ -225,6 +225,12 @@ export async function findChromePidUsingUserDataDir(userDataDir: string): Promis
   return match?.pid ?? null;
 }
 
+// A missing endpoint is not absence proof. Recovery requires a successful census.
+export async function verifyChromeProcessAbsent(userDataDir: string): Promise<boolean> {
+  if (process.platform === 'win32' || (isWsl() && isWindowsUserDataDir(userDataDir))) return false;
+  return (await findChromeProcessUnix(userDataDir, true)) === null;
+}
+
 export async function findChromeProcessUsingUserDataDir(userDataDir: string): Promise<ChromeProcessMatch | null> {
   if (isWsl() && isWindowsUserDataDir(userDataDir)) {
     return findWindowsChromeProcessUsingUserDataDir(userDataDir);
@@ -296,18 +302,20 @@ function isWsl(): boolean {
   return isWslEnvironment();
 }
 
-async function findChromeProcessUnix(userDataDir: string): Promise<ChromeProcessMatch | null> {
+async function findChromeProcessUnix(userDataDir: string, requireCensus = false): Promise<ChromeProcessMatch | null> {
   try {
     // -o pid,args to get PID and command line
-    const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'pid,args'], { maxBuffer: 10 * 1024 * 1024 });
+    const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'pid,args'], { maxBuffer: 10 * 1024 * 1024, timeout: requireCensus ? 5_000 : 0 });
     const lines = String(stdout ?? '').split('\n');
     const needle = userDataDir;
     const matches: ChromeProcessMatch[] = [];
+    let parsedRows = 0;
     for (const line of lines) {
       if (!line) continue;
       // Line format: "  PID COMMAND..."
       const match = line.match(/^\s*(\d+)\s+(.*)$/);
       if (!match) continue;
+      parsedRows += 1;
       
       const pid = parseInt(match[1], 10);
       const cmd = match[2];
@@ -322,8 +330,10 @@ async function findChromeProcessUnix(userDataDir: string): Promise<ChromeProcess
         });
       }
     }
+    if (requireCensus && parsedRows === 0) throw new Error("Native browser process census was empty or malformed.");
     return pickPreferredChromeProcessMatch(matches);
-  } catch {
+  } catch (error) {
+    if (requireCensus) throw error;
     // best effort
   }
   return null;

@@ -275,6 +275,71 @@ describe("live-follow crawler tab coordinator", () => {
 		expect(await registry.list()).toEqual([]);
 	});
 
+	test.each([
+		true,
+		false,
+	])("reconciles a retained idle crawler only with proven browser absence: %s", async (absent) => {
+		let sequence = 0;
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: () => `lease-${++sequence}`,
+		});
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "gone-target",
+			workload: { kind: "live-follow", operationId: "stable-scheduler" },
+			operationId: "stable-scheduler",
+			now: "2026-10-04T20:00:00.000Z",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			targetFingerprint: "https://chatgpt.com/",
+		});
+		if (!reserved.ok) throw new Error("fixture reserve failed");
+		await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-10-04T20:00:01.000Z",
+			effectState: "settled",
+		});
+		const startBrowser = vi.fn(async () => ({
+			host: "127.0.0.1",
+			port: 45011,
+			managedBrowserProfile: scope.managedBrowserProfile,
+		}));
+		const openTarget = vi.fn(async () => ({
+			targetId: "new-owned-target",
+			url: "https://chatgpt.com/",
+		}));
+		const acquisition = acquireLiveFollowCrawlerTab({
+			registry,
+			scope,
+			operationId: "stable-scheduler",
+			targetUrl: "https://chatgpt.com/",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			resolveExistingEndpoint: async () => null,
+			verifyBrowserAbsent: async () => absent,
+			startBrowser,
+			coldStartTargetPolicy: "create",
+			preLeaseProviderTrafficGovernor: {
+				begin: async () => ({ settle: async () => undefined }),
+			} as never,
+			inspectTarget: vi.fn(),
+			openTarget,
+			closeTarget: vi.fn(),
+		});
+		if (absent) {
+			expect((await acquisition).lease.targetId).toBe("new-owned-target");
+			expect((await registry.list()).find((l) => l.targetId === "gone-target")?.state).toBe(
+				"released",
+			);
+			expect(startBrowser).toHaveBeenCalledTimes(1);
+		} else {
+			await expect(acquisition).rejects.toThrow("cannot be verified without its browser endpoint");
+			expect(startBrowser).not.toHaveBeenCalled();
+			expect(openTarget).not.toHaveBeenCalled();
+			expect((await registry.list()).find((l) => l.targetId === "gone-target")?.state).toBe("idle");
+		}
+	});
+
 	test("uses the same exact-target lifecycle for bounded ephemeral work", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-utility",
