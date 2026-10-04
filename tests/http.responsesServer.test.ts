@@ -5741,6 +5741,88 @@ describe("http responses adapter", () => {
 		}
 	});
 
+	it("reconciles failed configured live-follow subscriptions on explicit scheduler resume", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-http-failed-resume-"));
+		cleanup.push(homeDir);
+		setAuracallHomeDirOverrideForTest(homeDir);
+		await writeAccountMirrorSchedulerControlState({
+			paused: true,
+			updatedAt: new Date().toISOString(),
+		});
+		const config = {
+			model: "gpt-5.2",
+			browser: { cache: { rootDir: homeDir } },
+			runtimeProfiles: Object.fromEntries(
+				["default", "other"].map((runtimeProfileId) => [
+					runtimeProfileId,
+					{
+						browserProfile: runtimeProfileId,
+						defaultService: "chatgpt",
+						services: {
+							chatgpt: {
+								identity: { email: "operator@example.com" },
+								liveFollow: { enabled: true },
+							},
+						},
+					},
+				]),
+			),
+		};
+		const store = createAccountMirrorCompletionStore({ config });
+		for (const status of ["failed", "paused"] as const) {
+			await store.writeOperation({
+				object: "account_mirror_completion",
+				id: `restored_${status}`,
+				provider: "chatgpt",
+				runtimeProfileId: status === "paused" ? "other" : "default",
+				mode: "live_follow",
+				phase: "steady_follow",
+				status,
+				startedAt: new Date().toISOString(),
+				completedAt: status === "failed" ? new Date().toISOString() : null,
+				nextAttemptAt: null,
+				maxPasses: null,
+				passCount: 0,
+				lastRefresh: null,
+				mirrorCompleteness: null,
+				error: null,
+				lifecycleEvents: [],
+			});
+		}
+		const requestRefresh = vi.fn((_request: unknown) => new Promise<never>(() => {}));
+		const server = await createResponsesHttpServer(
+			{
+				host: "127.0.0.1",
+				port: 0,
+				accountMirrorSchedulerIntervalMs: 60_000,
+				accountMirrorSchedulerDryRun: true,
+			},
+			{ config, accountMirrorRefreshService: { requestRefresh } },
+		);
+		try {
+			expect(requestRefresh).not.toHaveBeenCalled();
+			const resume = () =>
+				fetch(`http://127.0.0.1:${server.port}/status`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ accountMirrorScheduler: { action: "resume" } }),
+				});
+			expect((await resume()).status).toBe(200);
+			await vi.waitFor(() => expect(requestRefresh).toHaveBeenCalledTimes(1), { timeout: 1000 });
+			expect(requestRefresh.mock.calls[0]?.[0]).toMatchObject({ runtimeProfileId: "default" });
+			for (const status of ["failed", "paused"] as const) {
+				const response = await fetch(
+					`http://127.0.0.1:${server.port}/v1/account-mirrors/completions/restored_${status}`,
+				);
+				expect(await response.json()).toMatchObject({ status });
+			}
+			expect((await resume()).status).toBe(200);
+			expect(requestRefresh).toHaveBeenCalledTimes(1);
+		} finally {
+			await server.close();
+		}
+	});
+
 	it("scopes proof server startup without reconciling unrelated live-follow targets", async () => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-http-account-mirror-proof-scope-"),

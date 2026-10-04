@@ -1688,22 +1688,22 @@ lanes:
   - id: P85
     objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
     plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    plan_ref: refs/heads/fix/issue-165-live-follow-replay
-    branch: fix/issue-165-live-follow-replay
+    plan_ref: refs/heads/fix/issue165-follow-continuation
+    branch: fix/issue165-follow-continuation
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 6b4fedaa7537957d1c3619fc8e76b25478b4788d
-    remote_ref: refs/remotes/origin/fix/issue-165-live-follow-replay
+    checkpoint: 42d0b7c730b507cb77f537bad30c37598d070d3f
+    remote_ref: refs/remotes/origin/fix/issue165-follow-continuation
     integration: merge
     work_items: [ecochran76/auracall#165]
     dependencies: [P84]
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: Installed trusted-pointer control settled skipped with zero materialized assets; provider-free discovery diagnosis is required before another live attempt.
-    validation_status: provider-free-product-replay-passed-installed-pending
-    validation_ref: docs/dev/notes/2026-10-03-plan0386-live-follow-repair-loop.md
-    integration_receipt: 554cbe58b8d30b2360d6780894f1c31cbcf5444c
-    disposition: Full persisted evidence corrects the old monitoring-only inference. Provider-free replay repairs normal Regenerate blocking, stale native-file acceptance, and missing single-visit enforcement. Resumed bounded goal has consumed zero of five installed controls; canonical install and Gate D acceptance remain pending.
-    updated_at: 2026-10-03
+    blocker: PR193 created an owned crawler and released the old lease, but normal refresh timed out; inherited bounded pass 1 settled stale-claim and no runnable wsl-chrome-3 completion exists.
+    validation_status: bounded-resumption-source-fix-live-pending
+    validation_ref: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
+    integration_receipt: 42d0b7c730b507cb77f537bad30c37598d070d3f
+    disposition: User resumed Plan0386 at 21:21 UTC for 500000 tokens and one hour with at most five live passes. Count inherited cadence as pass 1; scheduler is contained paused. Resume reconciliation regression reproduces missing subscription and source repair is under validation. Preserve other five operator pauses.
+    updated_at: 2026-10-04

@@ -980,6 +980,12 @@
         scheduler cadence; use all three controls for isolated
         provider/materialization proofs where only explicit commands should
         touch a browser
+      - persisted scheduler pause suppresses both startup runner restoration
+        and configured live-follow reconciliation. Explicit scheduler resume
+        restores runnable records and reconciles enabled missing subscriptions,
+        including targets with failed terminal history, using the same startup
+        capability flags and existing provider guards. Operator-paused targets
+        stay paused; repeated resume must not create duplicate runners.
       - shutdown only parks account-mirror completion loops launched by the
         current server process; a startup-isolated readback server must not
         rewrite unrelated persisted completion records when it exits

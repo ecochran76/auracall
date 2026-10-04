@@ -3260,6 +3260,9 @@ export async function createResponsesHttpServer(
 							if (resumeAccountMirrorCompletionsOnStartRequested) {
 								accountMirrorCompletionService.resumeActiveOperations?.();
 							}
+							if (reconcileAccountMirrorLiveFollowOnStartRequested) {
+								await reconcileAccountMirrorLiveFollow();
+							}
 							scheduleAccountMirrorScheduler(0, "operator-resume");
 						}
 						controlResult = {

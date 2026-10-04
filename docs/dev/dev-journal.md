@@ -1,3 +1,25 @@
+## 2026-10-04 21:38 UTC | Plan0386 resume reconciliation source checkpoint
+
+The real HTTP regression failed before the fix (zero refresh calls after resume)
+and passed after restoring configured reconciliation on explicit resume. Terminal
+failed history and operator-paused targets remain intact; repeated resume is
+idempotent. Typecheck passed. The combined HTTP/completion/reconciler run passed
+303 tests and hit an unrelated timing assertion in background-drain status; its
+isolated rerun passed. Targeted lint has zero errors and 21 existing warnings
+outside the new hunk. Installed live acceptance remains pending. Inherited pass 1
+settled at 21:34:45 with stale-claim heartbeat failure; scheduler remains paused.
+
+## 2026-10-04 | Bounded Plan0386 resumption (#165)
+
+User confirmed 500K additional tokens / one hour and at most five live passes.
+Deadline 22:21:31Z. Acceptance requires PR193 recovery plus a runnable automatic
+materialization completion. Isolated branch fix/issue165-follow-continuation
+starts at canonical PR193. Existing receipts show a 21:10 collector timeout and
+no runnable wsl-chrome-3 completion. Contained future scheduler cadence while
+preserving its in-flight 21:19 pass (packet pass 1) and five other operator pauses.
+Current focus is local diagnosis with a red-capable reproduction; no new live
+pass has been initiated. Prior dirty root journal and repair JSON are preserved.
+
 ## 2026-10-04 | Proven-absence recovery for retained crawler leases
 
 PR 192 is installed with exact hash parity. Its first normal cadence pass failed
