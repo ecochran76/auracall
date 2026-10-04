@@ -52547,3 +52547,8 @@ Installed worker hmj_0861741c86544fba8c10c65b1fb28032 succeeded: one new PDF, th
 ## 2026-10-04 | Issue165 collector fresh-read contract
 
 Installed partial-frontier worker acceptance succeeded: one new PDF, four cache reuses, four pending assets persisted partial/deferred. A single paused scheduler pass then timed out during navigation and failed with a closed WebSocket; stale dry-run receipt masked the failure. Two red-capable regressions repair cached fresh-read fallback and missing scheduler failure receipts; 132 focused tests pass. Navigation and scheduler resume remain open. See notes/2026-10-04-plan0386-collector-fresh-read-contract.md.
+
+
+## 2026-10-04 | Issue165 installed fresh-read acceptance
+
+PR186 installed with exact artifact parity. One paused scheduler control completed its fresh context read successfully in 116 seconds, then failed closed-WebSocket during completion. Current failure receipt now works. Source points to final warning probe reusing a closed provider-session context; local reproduction is next. Scheduler paused. See notes/2026-10-04-plan0386-collector-installed-control.md.
