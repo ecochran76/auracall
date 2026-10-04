@@ -44,3 +44,42 @@ acceptance pass belong to the broader Plan0386 acceptance work.
 Memory disposition: unavailable. Prior narrow atlas discovery supplied no
 qualified group routing manifest; repository evidence is preserved without a
 Graphiti write.
+
+## Merged installation and live test
+
+User explicitly authorized merge/install/test. PR197 merged as canonical
+`c47c7fdff0014752c9d97e4010d99bb8dfadcd74`; freshly fetched origin/main
+matched this SHA before deployment. The clean canonical worktree built
+successfully and installed into the user runtime. Three module hashes match,
+including refreshService, configuredLiveFollowAffinity, and manualLogin.
+
+One existing wsl-chrome-3 completion was resumed at 23:25:39 UTC; scheduler
+and the other five completions stayed paused. The old absent-tab lease was
+released normally, and a new owned crawler was created. The installed guard
+checked that exact tab in 270.8ms and returned no warning. A bounded passive
+sidebar read returned nine visible conversation links in 56.5ms. Its project
+selector returned zero matches; this is not proof that the account has zero
+projects. Page.enable also completed in 10.6ms.
+
+Fresh collector diagnostics (persisted on abort) prove identity started at
+23:25:39.855, completed with matching expected identity at 23:27:33.322,
+and conversation-context began at 23:27:33.327. That read was aborted at
+23:30:05.148 after 165458ms when the bounded test was contained. It did not
+exhaust its own longer deadline, so this test does not prove an indefinite
+hang. It does establish that this run reached collection and that its remaining
+wait was conversation context, not the pre-collector cross-tab warning scan.
+No normal refresh completed and no automatic materialization job was created.
+
+The runner was paused at 23:29:43.522. API-owned browser processes were stopped;
+strict exact-directory native absence returned true. API restarted as PID87315:
+scheduler paused, all six completions paused, zero running/queued/idle-waiting,
+background drain in its original unpaused state. One idle lease remains for
+normal revision-fenced recovery. No lease was manually released. Test duration
+was below the announced ten-minute ceiling; no prompt, Answer now action,
+warning dismissal, or repeated live pass was used.
+
+Curated evidence: `2026-10-04-plan0386-pr197-installed-test.json` alongside
+this note. Outcome: installed warning fix passes its live check; full account
+refresh/materialization remains unaccepted. Next: inspect the bounded context
+read and its pacing using this fresh diagnostic evidence. Memory disposition
+remains unavailable, with a machine-readable non-write receipt.

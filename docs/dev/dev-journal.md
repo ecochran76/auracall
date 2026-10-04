@@ -1,3 +1,16 @@
+## 2026-10-04 23:30 UTC | PR197 installed warning test
+
+User authorized merge/install/test. Canonical c47c7fdff built and installed;
+three module hashes match. One wsl-chrome-3 runner resumed. Its installed warning
+check returned warning-free in 271ms; a passive sidebar read found nine visible
+conversation links in 57ms. Fresh collector evidence proves matching identity,
+then a conversation-context read aborted after 165 seconds at containment.
+No normal refresh or automatic materialization completed. Scheduler and all six
+runners are paused again; API PID87315 is active, exact managed browser absent,
+background drain unchanged, one idle lease retained for normal recovery.
+Evidence: docs/dev/notes/2026-10-04-plan0386-pr197-installed-test.json and the
+owned-page-warning-check note. Memory disposition unavailable; no qualified route.
+
 ## 2026-10-04 | Owned-page ChatGPT warning check (#165)
 
 User narrowed the warning check to AuraCall's own loaded ChatGPT page. On

@@ -1,0 +1,257 @@
+{
+  "sourceCommit": "c47c7fdff0014752c9d97e4010d99bb8dfadcd74",
+  "pr": "https://github.com/ecochran76/auracall/pull/197",
+  "mergeState": "MERGED",
+  "status": "WARNING_FIX_LIVE_PASS_FULL_REFRESH_NOT_COMPLETED",
+  "installHashes": [
+    {
+      "file": "dist/src/accountMirror/refreshService.js",
+      "sha256": "21ed4cc765011718532b2d9d6922ebf9c200a25214b924ff5fc8329785bc9e8f",
+      "match": true
+    },
+    {
+      "file": "dist/src/accountMirror/configuredLiveFollowAffinity.js",
+      "sha256": "1e3651196068b5d1ecf681738011bf9c8ce0d39c761cb58967b4d38003902977",
+      "match": true
+    },
+    {
+      "file": "dist/packages/browser-service/src/manualLogin.js",
+      "sha256": "a551c00424ebb5ad5838f87a930db39c1d805d0bc53e6d8b9d859feb7b89df94",
+      "match": true
+    }
+  ],
+  "runStartedAt": "2026-10-04T23:25:37.817Z",
+  "runPausedAt": "2026-10-04T23:29:43.522Z",
+  "finalObservedAt": "2026-10-04T23:30:31.384Z",
+  "livePassesThisSlice": 1,
+  "warningProbe": {
+    "at": "2026-10-04T23:26:52.427Z",
+    "elapsedMs": 270.81725900000004,
+    "guard": null
+  },
+  "sidebarProbe": {
+    "at": "2026-10-04T23:27:27.878Z",
+    "elapsedMs": 56.54195300000001,
+    "ready": "complete",
+    "path": "/",
+    "visibleSidebarProjects": 0,
+    "visibleSidebarConversations": 9,
+    "visibleSidebarLinks": 11
+  },
+  "pageEnableProbe": {
+    "at": "2026-10-04T23:27:55.740Z",
+    "elapsedMs": 10.609454999999997,
+    "pageEnable": "completed"
+  },
+  "finalAbsence": {
+    "at": "2026-10-04T23:30:05.937Z",
+    "proof": true
+  },
+  "before": {
+    "schedulerPaused": true,
+    "backgroundPaused": false,
+    "metrics": {
+      "total": 5117,
+      "active": 6,
+      "queued": 0,
+      "running": 0,
+      "idle_waiting": 0,
+      "paused": 6,
+      "completed": 80,
+      "blocked": 760,
+      "failed": 4218,
+      "cancelled": 53
+    },
+    "active": [
+      {
+        "id": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+        "runtimeProfileId": "wsl-chrome-3",
+        "provider": "chatgpt",
+        "status": "paused",
+        "passCount": 0
+      },
+      {
+        "id": "acctmirror_completion_84251b28-12d9-4d5f-9bdc-3c77bd9eade0",
+        "runtimeProfileId": "default",
+        "provider": "chatgpt",
+        "status": "paused",
+        "passCount": 61
+      },
+      {
+        "id": "acctmirror_completion_bc68cd94-3f8e-4c2d-bd40-fc4299a5e591",
+        "runtimeProfileId": "wsl-chrome-2",
+        "provider": "chatgpt",
+        "status": "paused",
+        "passCount": 2
+      },
+      {
+        "id": "acctmirror_completion_65de7626-9aaf-4585-8224-601bee2cada4",
+        "runtimeProfileId": "wsl-chrome-4",
+        "provider": "chatgpt",
+        "status": "paused",
+        "passCount": 34
+      },
+      {
+        "id": "acctmirror_completion_2e50553f-5641-4482-a214-9ae2150ba3cb",
+        "runtimeProfileId": "default",
+        "provider": "grok",
+        "status": "paused",
+        "passCount": 0
+      },
+      {
+        "id": "acctmirror_completion_dad4f08c-a59e-4183-91b5-b0b7c445c40a",
+        "runtimeProfileId": "default",
+        "provider": "gemini",
+        "status": "paused",
+        "passCount": 0
+      }
+    ],
+    "leases": {
+      "active": 0,
+      "idle": 0,
+      "retiring": 0,
+      "released": 236,
+      "lost": 0
+    }
+  },
+  "after": {
+    "schedulerPaused": true,
+    "backgroundPaused": false,
+    "metrics": {
+      "total": 5117,
+      "active": 6,
+      "queued": 0,
+      "running": 0,
+      "idle_waiting": 0,
+      "paused": 6,
+      "completed": 80,
+      "blocked": 760,
+      "failed": 4218,
+      "cancelled": 53
+    },
+    "active": [
+      {
+        "id": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+        "provider": "chatgpt",
+        "runtimeProfileId": "wsl-chrome-3",
+        "status": "paused",
+        "passCount": 0
+      },
+      {
+        "id": "acctmirror_completion_84251b28-12d9-4d5f-9bdc-3c77bd9eade0",
+        "provider": "chatgpt",
+        "runtimeProfileId": "default",
+        "status": "paused",
+        "passCount": 61
+      },
+      {
+        "id": "acctmirror_completion_bc68cd94-3f8e-4c2d-bd40-fc4299a5e591",
+        "provider": "chatgpt",
+        "runtimeProfileId": "wsl-chrome-2",
+        "status": "paused",
+        "passCount": 2
+      },
+      {
+        "id": "acctmirror_completion_65de7626-9aaf-4585-8224-601bee2cada4",
+        "provider": "chatgpt",
+        "runtimeProfileId": "wsl-chrome-4",
+        "status": "paused",
+        "passCount": 34
+      },
+      {
+        "id": "acctmirror_completion_2e50553f-5641-4482-a214-9ae2150ba3cb",
+        "provider": "grok",
+        "runtimeProfileId": "default",
+        "status": "paused",
+        "passCount": 0
+      },
+      {
+        "id": "acctmirror_completion_dad4f08c-a59e-4183-91b5-b0b7c445c40a",
+        "provider": "gemini",
+        "runtimeProfileId": "default",
+        "status": "paused",
+        "passCount": 0
+      }
+    ],
+    "leaseStates": {
+      "active": 0,
+      "idle": 1,
+      "retiring": 0,
+      "released": 236,
+      "lost": 0
+    }
+  },
+  "normalRefreshCompleted": false,
+  "automaticMaterializationCreated": false,
+  "ownCompletion": {
+    "id": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+    "status": "paused",
+    "passCount": 0,
+    "lastRefresh": null
+  },
+  "memoryDisposition": "unavailable",
+  "leases": [
+    {
+      "leaseId": "002b46eb-cb83-4def-8c94-9d8996dd7723",
+      "targetId": "1C4DB5CB52EAF320100D2E9A940A3173",
+      "state": "released",
+      "revision": 6,
+      "finalDisposition": "already-missing",
+      "lossReason": null,
+      "actionCounts": {
+        "targetCreations": 1,
+        "adoptions": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "focuses": 0,
+        "closes": 0
+      }
+    },
+    {
+      "leaseId": "7b1924ad-94e2-4ccf-a4bf-4101ac65754c",
+      "targetId": "9F76CBFBF927CD61EA084BDA2F49B5C0",
+      "state": "idle",
+      "revision": 6,
+      "finalDisposition": null,
+      "lossReason": null,
+      "actionCounts": {
+        "targetCreations": 1,
+        "adoptions": 0,
+        "navigations": 2,
+        "reloads": 0,
+        "focuses": 0,
+        "closes": 0
+      }
+    }
+  ],
+  "freshCollectorEvidence": {
+    "identityMatched": true,
+    "identityObservedAt": "2026-10-04T23:27:33.322Z",
+    "diagnostics": [
+      {
+        "stage": "identity",
+        "event": "started",
+        "observedAt": "2026-10-04T23:25:39.855Z"
+      },
+      {
+        "stage": "identity",
+        "event": "completed",
+        "elapsedMs": 124384.81467099999,
+        "observedAt": "2026-10-04T23:27:33.322Z"
+      },
+      {
+        "stage": "conversation-context",
+        "event": "started",
+        "observedAt": "2026-10-04T23:27:33.327Z"
+      },
+      {
+        "stage": "conversation-context",
+        "event": "aborted",
+        "elapsedMs": 165458.339378,
+        "detail": "chatgpt conversation context read was aborted for \"6abbb283-29f4-83ea-9cf7-79141ea79853\".",
+        "observedAt": "2026-10-04T23:30:05.148Z"
+      }
+    ]
+  },
+  "finalApiPid": 87315
+}
