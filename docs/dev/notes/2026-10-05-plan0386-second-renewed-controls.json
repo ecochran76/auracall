@@ -60,7 +60,13 @@
       "installedMerge": "fd1795d083a2274498476586981714ebe9b793f2",
       "policy": "steady_follow/full_missing_assets/all/maxItems6",
       "apiPid": 77151,
-      "observer": "Exact owned lease only; attached before automatic materialization, no provider actions."
+      "observer": "Exact owned lease only; attached before automatic materialization, no provider actions.",
+      "completionId": "acctmirror_completion_2200772f-9907-46b6-9e97-cada9c4f4bdc",
+      "jobId": "hmj_ba4a95225aae47d8935f515ea294818c",
+      "jobStartedAt": "2026-10-05T02:19:17.821Z",
+      "observation": "Still running; exact owned child DOM read timed out; persisted state does not establish terminal outcome.",
+      "startupResult": "Flag present but 45 pages appeared; no-startup-window alone failed to isolate restored sessions.",
+      "observerCorrection": "Initial filter covered live-follow but omitted ephemeral child workload. Original receipt preserved; corrected observer includes only exact job-owned ephemeral lease and has late child coverage."
     }
   ],
   "acceptance": "OPEN",
@@ -75,6 +81,9 @@
     "action": "Rename only the five existing Chromium session-restore entries into a restorable per-launch quarantine; authentication preserved.",
     "regressions": "Public cold process-launch ordering test red before wiring; fixture moves verified; absence and managed-root boundaries preserve session files.",
     "validation": "69 focused tests; typecheck; touched lint has two unchanged external-name baseline warnings.",
-    "installedAcceptance": "Pending after journey3 child settles; two journeys remain."
+    "installedAcceptance": "Pending after journey3 child settles; two journeys remain.",
+    "merge": "f019076aeb53f83ab08690f93fa11e809afc9bd4",
+    "canonicalBuild": "passed",
+    "installed": false
   }
 }

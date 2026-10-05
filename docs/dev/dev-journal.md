@@ -1,3 +1,16 @@
+## 2026-10-05 02:33 UTC | PR208 built; existing child still active
+
+PR208 merged f019076aeb53f83ab08690f93fa11e809afc9bd4; canonical build passed.
+Installed runtime remains PR207/API77151 until journey3 child
+hmj_ba4a95225aae47d8935f515ea294818c settles. Monitor session31092 is live;
+corrected exact-owned child observer session81781 is live. First observer's
+live-follow-only filter omitted ephemeral child ownership; preserve its raw
+receipt and label corrected child coverage late. No new provider journey ran.
+Three of five new controls used; two remain. Memory limit unchanged, scheduler
+paused, previous background-drain pause restored. Next: observe the same job;
+install PR208 only after terminal cleanup, then spend the remaining controls on
+cold-start and automatic asset/cache acceptance. Goal remains OPEN.
+
 ## 2026-10-05 02:27 UTC | Flag-alone live test failed; cold session quarantine ready
 
 Journey3 runs on PR207. Actual process has no-startup-window and no new-window,
