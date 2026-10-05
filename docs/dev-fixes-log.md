@@ -1,3 +1,10 @@
+## 2026-10-05 | Transfer limits do not constrain conversation selection
+
+A one-transfer follow must carry explicit conversation scope into both the
+collector and child worker. Applying maxItems alone still reconciles unrelated
+account candidates. Persist the scope, discard unrelated cursor offsets, and
+preserve identity/traffic/cache guards; source tests do not prove live capture.
+
 ## 2026-10-05 — retained follow ownership after process death
 
 A retained follow exemption belongs to a living process. Generic reconciliation

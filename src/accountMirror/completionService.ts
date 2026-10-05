@@ -34,6 +34,7 @@ import type {
 } from "./statusRegistry.js";
 
 export interface AccountMirrorCompletionStartRequest {
+	conversationIds?: string[] | null;
 	provider?: AccountMirrorProvider | null;
 	runtimeProfileId?: string | null;
 	maxPasses?: number | null;
@@ -120,6 +121,7 @@ export interface AccountMirrorCompletionMaterializationCursor {
 	request: {
 		provider: AccountMirrorProvider;
 		runtimeProfile: string;
+		conversationIds?: string[];
 		reconcile: true;
 		refreshSnapshot: boolean;
 		reuseSnapshotAfter?: string | null;
@@ -133,6 +135,7 @@ export interface AccountMirrorCompletionMaterializationCursor {
 }
 
 type AccountMirrorHistoryMaterializationCreateRequest = {
+	conversationIds?: string[];
 	provider: AccountMirrorProvider;
 	runtimeProfile: string;
 	browserProfile?: string | null;
@@ -186,6 +189,7 @@ export interface AccountMirrorCompletionMaterializationOutcome {
 }
 
 export interface AccountMirrorCompletionOperation {
+	conversationIds?: string[];
 	object: "account_mirror_completion";
 	id: string;
 	provider: AccountMirrorProvider;
@@ -709,7 +713,9 @@ export function createAccountMirrorCompletionService(input: {
 						update(id, { status: "running", nextAttemptAt: null });
 						continue;
 					}
-					const requestedPhase = resolveRequestedCollectorPhase(refreshOperation, phaseStatusEntry);
+					const requestedPhase = refreshOperation.conversationIds?.length
+						? "detail-inventory"
+						: resolveRequestedCollectorPhase(refreshOperation, phaseStatusEntry);
 					const sweepMode = resolveAccountMirrorCollectorSweepMode(
 						refreshOperation.sweepMode ?? "steady_follow",
 						requestedPhase,
@@ -723,6 +729,7 @@ export function createAccountMirrorCompletionService(input: {
 						provider: refreshOperation.provider,
 						runtimeProfileId: refreshOperation.runtimeProfileId,
 						sweepMode,
+						conversationIds: refreshOperation.conversationIds,
 						materializationPolicy: refreshOperation.materializationPolicy ?? null,
 						requestedPhase,
 						explicitRefresh: true,
@@ -949,7 +956,18 @@ export function createAccountMirrorCompletionService(input: {
 		start(request = {}) {
 			const id = generateId();
 			const sweepMode = normalizeSweepMode(request.sweepMode);
+			if (
+				request.conversationIds &&
+				(!request.conversationIds.length ||
+					request.conversationIds.some((id) => !id.trim()) ||
+					sweepMode !== "steady_follow")
+			) {
+				throw new Error("conversationIds requires nonempty IDs and steady_follow.");
+			}
 			const operation: AccountMirrorCompletionOperation = {
+				conversationIds: request.conversationIds?.length
+					? [...new Set(request.conversationIds.map((id) => id.trim()).filter(Boolean))]
+					: undefined,
 				object: "account_mirror_completion",
 				id,
 				provider: request.provider ?? "chatgpt",
@@ -1335,6 +1353,7 @@ export function createAccountMirrorCompletionService(input: {
 		const request = {
 			provider: operation.provider,
 			runtimeProfile: operation.runtimeProfileId,
+			...(operation.conversationIds?.length ? { conversationIds: operation.conversationIds } : {}),
 			reconcile: true,
 			refreshSnapshot: operation.materializationRefreshSnapshot === true,
 			...(options.reuseSnapshotAfter ? { reuseSnapshotAfter: options.reuseSnapshotAfter } : {}),
@@ -1451,6 +1470,7 @@ export function createAccountMirrorCompletionService(input: {
 	async function decideAccountLibraryCatchup(
 		operation: AccountMirrorCompletionOperation,
 	): Promise<AccountMirrorCompletionOperation | null> {
+		if (operation.conversationIds?.length) return null;
 		if (operation.lastRefresh?.status !== "completed") {
 			return await recordAccountLibraryCatchupSkip(operation, "latest refresh did not complete");
 		}
@@ -1813,6 +1833,7 @@ async function shouldQueueMaterializationFromCompleteLedger(
 	statusEntry: AccountMirrorStatusEntry | null | undefined,
 	readMaterializationBacklog: AccountMirrorMaterializationBacklogReader | undefined,
 ): Promise<boolean> {
+	if (operation.conversationIds?.length) return false;
 	if (operation.mode !== "live_follow" || operation.lastRefresh !== null) return false;
 	if (operation.materializationPolicy === "metadata_only") return false;
 	if (!operation.materializationPolicy && operation.sweepMode !== "full_sweep") return false;

@@ -1,3 +1,14 @@
+## 2026-10-05 | Current-main scoped automatic asset acceptance
+
+PR213 merged at c568cf3e6. Fresh runtime readback: API46019, zero restarts,
+scheduler/all twelve completions paused, zero fenced leases or active jobs,
+provider guard clear. Existing maxItems=1 cannot constrain conversation scope.
+Explicit-scope regressions fail on original source and pass after propagation
+through normal follow/detail/automatic child; 171 focused checks pass; 15 HTTP completion checks pass. Review found and
+repaired unscanned project/backfill replacement, verified by one bounded reviewer. Live
+new-byte capture and unchanged repeat remain pending. Source packet belongs to
+Issue165 on fix/issue165-scoped-follow-acceptance; preexisting dirty root preserved.
+
 ## 2026-10-05 02:39 UTC | PR208 installed; fourth control confirms one-page cold startup
 
 Installed f019076aeb53f83ab08690f93fa11e809afc9bd4 with exact parity for

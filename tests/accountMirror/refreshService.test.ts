@@ -13,8 +13,8 @@ import {
 	type AccountMirrorRefreshError,
 	classifyChatgptRateLimitCensusProbeForTest,
 	createAccountMirrorRefreshService,
-	detectProviderGuardWithTargetCensus,
 	deriveRetainedMaterializationConversationIdsForTest,
+	detectProviderGuardWithTargetCensus,
 	mergeConversationsByObservedOrderForTest,
 	readPreviousAccountMirrorFilesForTest,
 	writeChatgptRateLimitCensusGuardForTest,
@@ -91,6 +91,103 @@ describe("account mirror refresh service", () => {
 		setAuracallHomeDirOverrideForTest(homeDir);
 		return homeDir;
 	}
+
+	test("scoped detail preserves unrelated inventory and account backfill cursors", async () => {
+		const priorEvidence = {
+			identitySource: "profile-menu",
+			projectSampleIds: ["project_kept"],
+			conversationSampleIds: ["conv_unrelated"],
+			truncated: { projects: true, conversations: true, artifacts: true },
+			attachmentInventory: {
+				nextProjectIndex: 2,
+				nextConversationIndex: 8,
+				detailReadLimit: 1,
+				scannedProjects: 2,
+				scannedConversations: 8,
+				yielded: true,
+			},
+		};
+		const existing = {
+			projects: [{ id: "project_kept", name: "Kept", provider: "chatgpt" as const }],
+			conversations: [{ id: "conv_unrelated", title: "Unrelated", provider: "chatgpt" as const }],
+			artifacts: [],
+			files: [],
+			media: [],
+		};
+		const persistence = { ...createNoopPersistence(), readCatalog: vi.fn(async () => existing) };
+		const registry = createAccountMirrorStatusRegistry({
+			config,
+			now: () => new Date("2026-04-29T12:00:00Z"),
+		});
+		const collect = vi.fn(
+			async (): Promise<AccountMirrorMetadataCollectorResult> =>
+				({
+					detectedIdentityKey: "ecochran76@gmail.com",
+					detectedAccountLevel: "Business",
+					metadataCounts: { projects: 1, conversations: 1, artifacts: 0, files: 0, media: 0 },
+					manifests: existing,
+					evidence: priorEvidence,
+				}) satisfies AccountMirrorMetadataCollectorResult,
+		);
+		const service = createAccountMirrorRefreshService({
+			config,
+			registry,
+			persistence,
+			metadataCollector: { collect },
+			now: () => new Date("2026-04-29T12:00:00Z"),
+		});
+		await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			explicitRefresh: true,
+		});
+		const before = registry.readStatus({ provider: "chatgpt", runtimeProfileId: "default" })
+			.entries[0];
+		collect.mockResolvedValueOnce({
+			detectedIdentityKey: "ecochran76@gmail.com",
+			detectedAccountLevel: "Business",
+			metadataCounts: { projects: 0, conversations: 1, artifacts: 0, files: 0, media: 0 },
+			manifests: {
+				...existing,
+				projects: [],
+				conversations: [{ id: "conv_selected", title: "Selected", provider: "chatgpt" }],
+			},
+			evidence: {
+				identitySource: "profile-menu",
+				projectSampleIds: [],
+				conversationSampleIds: ["conv_selected"],
+				truncated: { projects: false, conversations: false, artifacts: false },
+				detailConversationIdsThisPass: ["conv_selected"],
+			},
+		} as AccountMirrorMetadataCollectorResult);
+		const result = await service.requestRefresh({
+			provider: "chatgpt",
+			runtimeProfileId: "default",
+			conversationIds: ["conv_selected"],
+			requestedPhase: "detail-inventory",
+			explicitRefresh: true,
+			ignoreMinimumInterval: true,
+		});
+		expect(result.status).toBe("completed");
+		expect(collect).toHaveBeenLastCalledWith(
+			expect.objectContaining({ conversationIds: ["conv_selected"] }),
+		);
+		const saved = (persistence.writeSnapshot as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0];
+		expect(saved.manifests.projects).toEqual(existing.projects);
+		expect(saved.manifests.conversations.map((c: Conversation) => c.id)).toEqual([
+			"conv_selected",
+			"conv_unrelated",
+		]);
+		expect(saved.metadataEvidence.attachmentInventory).toEqual(
+			before.metadataEvidence?.attachmentInventory,
+		);
+		expect(saved.metadataEvidence.truncated).toEqual(before.metadataEvidence?.truncated);
+		expect(saved.metadataEvidence.detailConversationIdsThisPass).toEqual(["conv_selected"]);
+		expect(
+			registry.readStatus({ provider: "chatgpt", runtimeProfileId: "default" }).entries[0]
+				.backfillLedger,
+		).toEqual(before.backfillLedger);
+	});
 
 	test("checks only the owned ChatGPT page without inspecting restored tabs", async () => {
 		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");

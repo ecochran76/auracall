@@ -2328,7 +2328,10 @@ describe("account mirror completion service", () => {
 		service.control({ id: "acctmirror_progress_events", action: "cancel" });
 	});
 
-	test("bounded full-sweep blocks when its owned history materialization fails", async () => {
+	test.each([
+		false,
+		true,
+	])("owned materialization failure blocks completion (scoped=%s)", async (scoped) => {
 		const pacedConfig = {
 			runtimeProfiles: {
 				default: {
@@ -2399,6 +2402,9 @@ describe("account mirror completion service", () => {
 		});
 		const service = createAccountMirrorCompletionService({
 			registry,
+			readMaterializationBacklog: scoped
+				? async () => ({ retrievableMissing: 1, unknownOrDeferred: 0 })
+				: undefined,
 			refreshService: {
 				requestRefresh,
 			},
@@ -2414,7 +2420,10 @@ describe("account mirror completion service", () => {
 			provider: "chatgpt",
 			runtimeProfileId: "default",
 			maxPasses: 1,
-			sweepMode: "full_sweep",
+			conversationIds: scoped ? [" conv_collector_fresh_1 ", "conv_collector_fresh_1"] : undefined,
+			materializationPolicy: "full_missing_assets",
+			materializationRefreshSnapshot: true,
+			sweepMode: scoped ? "steady_follow" : "full_sweep",
 			materializationAssetKinds: ["media"],
 			materializationMaxItems: 2,
 		});
@@ -2425,11 +2434,15 @@ describe("account mirror completion service", () => {
 			expect.objectContaining({
 				provider: "chatgpt",
 				runtimeProfileId: "default",
-				sweepMode: "full_sweep",
+				sweepMode: scoped ? "steady_follow" : "full_sweep",
 				collectorTimeoutMs: 900_000,
+				...(scoped
+					? { conversationIds: ["conv_collector_fresh_1"], requestedPhase: "detail-inventory" }
+					: {}),
 			}),
 		);
 		expect(createJob).toHaveBeenCalledWith({
+			...(scoped ? { conversationIds: ["conv_collector_fresh_1"] } : {}),
 			provider: "chatgpt",
 			runtimeProfile: "default",
 			reconcile: true,
@@ -2450,7 +2463,7 @@ describe("account mirror completion service", () => {
 		expect(readJob).toHaveBeenCalledTimes(1);
 		expect(service.read("acctmirror_full_sweep")).toMatchObject({
 			status: "blocked",
-			sweepMode: "full_sweep",
+			sweepMode: scoped ? "steady_follow" : "full_sweep",
 			materializationPolicy: "full_missing_assets",
 			materializationCursor: {
 				jobId: "hmj_full_sweep_1",

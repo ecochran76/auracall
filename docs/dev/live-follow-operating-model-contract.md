@@ -273,3 +273,15 @@ Maintenance checks retained idle process bindings for native PID liveness. A
 stopped owner loses retention and becomes eligible for ordinary TTL retirement.
 A living active retained follow may outlive its old absolute TTL while its
 heartbeat remains fresh; heartbeat expiry still fences stale active ownership.
+
+## Explicit conversation scope
+
+`POST /v1/account-mirrors/completions` accepts optional `conversationIds`
+(nonempty IDs, at most 100) with `sweepMode: "steady_follow"`. The scope is
+persisted on the completion and reaches both detail collection and its
+automatically queued materialization child. Cached conversation metadata is
+retained, unrelated cursor offsets are ignored, and unrelated account-library
+catchup is omitted. The account identity and normal traffic, cadence, warning
+and cache rules still apply. `full_sweep` with a scope is rejected.
+`materializationMaxItems` continues to limit new transfers rather than
+verified cache reuses. Use `materializationForce: false` for an unchanged repeat.
