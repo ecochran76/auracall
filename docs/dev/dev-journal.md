@@ -52695,3 +52695,8 @@ PR199 installed at exact canonical d564943b3 with four module hashes matching. O
 ## 2026-10-04 | Issue165 warning-free Retry detection
 
 Real context-reader VM regression reproduced hidden and unrelated Retry controls aborting with the installed error signature. Computed visibility and conversation ancestry now filter both; genuine failed-turn Retry still stops. 204 focused/adjacent tests, typecheck and lint passed. No live pass this slice; the historical matching DOM was not captured, so live causality remains unproven. See notes/2026-10-04-plan0386-retry-probe-scope.md.
+
+
+## 2026-10-04 | Issue165 Retry scope installed replay
+
+PR201 canonical 46c6bb3f9 installed with exact adapter SHA256 parity. Three real installed-context-reader VM scenarios passed: hidden/unrelated Retry does not mask the action; visible failed-turn Retry still stops. No provider pass. API37740 active, six completions and global scheduler paused, zero running, exact browser absence true. Live refresh remains unaccepted; prior matching DOM unavailable. See notes/2026-10-04-plan0386-pr201-installed-replay.json.

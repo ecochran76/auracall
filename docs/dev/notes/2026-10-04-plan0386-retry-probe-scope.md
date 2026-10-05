@@ -67,3 +67,15 @@ deadline, and collector suites (three retry tests overlap the 204-test run).
 Memory disposition: unavailable; atlas discovery returned only unrelated
 Previews, Buffer CLI, and IM CLI routes. No qualified AuraCall route exists
 in that readback; a machine non-write receipt was recorded.
+
+## Canonical installation and replay
+
+PR201 merged as `46c6bb3f9ee0bf0e8a33bb03090b4c225e98242c`. The exact
+canonical checkout was built and installed. The installed adapter SHA256
+matched the canonical build, and the same three VM scenarios passed against
+the installed JavaScript context reader without provider access. API restarted
+as PID37740; all six completions and global scheduler remained paused, zero
+completions running, and exact managed browser process absence was verified.
+The completion pass counts match the pre-install readback. This is installed
+provider-free replay qualification, not successful live-refresh acceptance.
+See `2026-10-04-plan0386-pr201-installed-replay.json`.

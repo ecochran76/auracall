@@ -1,0 +1,82 @@
+{
+  "sourceCommit": "46c6bb3f9ee0bf0e8a33bb03090b4c225e98242c",
+  "pr": "https://github.com/ecochran76/auracall/pull/201",
+  "observedAt": "2026-10-05T00:13:07.637Z",
+  "liveProviderPasses": 0,
+  "installedReplay": [
+    {
+      "scenario": "hidden",
+      "passed": true
+    },
+    {
+      "scenario": "unrelated",
+      "passed": true
+    },
+    {
+      "scenario": "failed-turn",
+      "passed": true
+    }
+  ],
+  "adapterHash": {
+    "sha256": "6b96b0066a8ad6da5399cbe40051b2261b625731d69e7cbffb39fddabbdd5c07",
+    "match": true
+  },
+  "schedulerPaused": true,
+  "completions": [
+    {
+      "id": "acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435",
+      "status": "paused",
+      "passCount": 1
+    },
+    {
+      "id": "acctmirror_completion_84251b28-12d9-4d5f-9bdc-3c77bd9eade0",
+      "status": "paused",
+      "passCount": 61
+    },
+    {
+      "id": "acctmirror_completion_bc68cd94-3f8e-4c2d-bd40-fc4299a5e591",
+      "status": "paused",
+      "passCount": 2
+    },
+    {
+      "id": "acctmirror_completion_65de7626-9aaf-4585-8224-601bee2cada4",
+      "status": "paused",
+      "passCount": 34
+    },
+    {
+      "id": "acctmirror_completion_2e50553f-5641-4482-a214-9ae2150ba3cb",
+      "status": "paused",
+      "passCount": 0
+    },
+    {
+      "id": "acctmirror_completion_dad4f08c-a59e-4183-91b5-b0b7c445c40a",
+      "status": "paused",
+      "passCount": 0
+    }
+  ],
+  "metrics": {
+    "total": 5117,
+    "active": 6,
+    "queued": 0,
+    "running": 0,
+    "idle_waiting": 0,
+    "paused": 6,
+    "completed": 80,
+    "blocked": 760,
+    "failed": 4218,
+    "cancelled": 53
+  },
+  "leases": {
+    "active": 0,
+    "idle": 0,
+    "retiring": 0,
+    "released": 238,
+    "lost": 0
+  },
+  "browserAbsent": true,
+  "api": {
+    "pid": 37740,
+    "active": true
+  },
+  "qualification": "Installed provider-free replay passes. No live provider pass and no successful live refresh claim."
+}
