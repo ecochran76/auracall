@@ -74,7 +74,7 @@ No prompts, Answer now clicks, account identity guessing, or memory writes to
 unqualified destinations. Keep unrelated dirty work intact. Full Plan 0386 asset
 acceptance remains a separate unmet requirement unless current evidence proves it.
 
-## Checkpoint 2 | 2026-10-05T11:55Z | outcome_progress
+## Checkpoint 2 | 2026-10-05T11:50Z | outcome_progress
 
 Production process-tab wiring, restarted idle-owner adoption, lost-follow TTL
 retirement, native HTTP 429 warning detection and all managed cold-start
@@ -84,5 +84,5 @@ two unchanged launcher/global-name warnings. The unchanged prompt-structure
 test failure was independently reproduced on clean PR 208 source; its two-case
 file is excluded from this selected lane. Installed runtime remains PR 208.
 Freeze source for serial Standards/Spec review, then integrate/install and prove
-physical reuse and elapsed-time TTL expiry. Meter: 346753 tokens at 11:53Z;
+physical reuse and elapsed-time TTL expiry. Meter: 346753 tokens at 11:49Z;
 original 500000-token and 13:04:30Z bounds remain in force.

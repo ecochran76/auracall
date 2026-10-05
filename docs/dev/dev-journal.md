@@ -52861,7 +52861,7 @@ regex failure on canonical PR208. Source and test for that baseline are unchange
 Installed API PID98666, zero restarts, all lease fences zero, browser absent;
 installation unchanged. Plan0390 remains OPEN pending review/install/browser proof.
 
-### 2026-10-05T11:55Z — Plan 0390 source validation checkpoint
+### 2026-10-05T11:50Z — Plan 0390 source validation checkpoint
 
 - The primary ran the broad browser/account-mirror lane: 164 files, 1781 tests
   passed, one skipped; typecheck and build pass. Touched lint: zero errors, two
@@ -52870,3 +52870,12 @@ installation unchanged. Plan0390 remains OPEN pending review/install/browser pro
   two-case file is excluded, not represented as passing.
 - Source is ready for serial Standards and Spec adjudication. Merge/install and
   actual elapsed-time browser TTL proof remain pending. No new provider pass.
+
+### 2026-10-05T11:55Z — PR 210 reconciliation and serial review
+
+PR 210 merged as 475eb4b70 and its historical startup snapshot is preserved.
+The renewed-control ledger now records the fourth journey's terminal native
+HTTP 429 failure and cleanup; allowance is four used, one remaining. Serial
+Standards/Spec review binds source 5d494e1cd to base 35f3d5750 and Plan 0390.
+No source-blocking candidate was accepted; installed physical proof remains
+an acceptance gate. Review artifact records the distinct axes and limitations.

@@ -265,3 +265,6 @@ process ID and TTL exemption; physical census and deadline retirement are part
 of acceptance. Positive native browser absence reconciles settled idle records
 for that exact browser before another launch. Authentication files and unrelated
 browser directories remain intact.
+
+A lost follow binding is no longer the retained current follow. Its lease
+returns to ordinary TTL retirement; loss cannot retain an orphan page forever.

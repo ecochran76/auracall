@@ -94,7 +94,7 @@
     },
     {
       "ordinal": 4,
-      "status": "running",
+      "status": "failed",
       "completionId": "acctmirror_completion_9620866a-3ddc-4fcb-9549-8c45935db489",
       "startedAt": "2026-10-05T02:36:25.844Z",
       "policy": "steady_follow/full_missing_assets/all/maxItems6",
@@ -105,7 +105,7 @@
         "apiMemoryBytes": 2096140288,
         "restarts": 0
       },
-      "acceptance": "Asset job result pending; startup improvement alone does not close the goal.",
+      "acceptance": "Startup isolation proved; asset acceptance failed. Silent native conversation-list HTTP 429 observed on owned child page.",
       "jobId": "hmj_ae025d2cb3c84689b477ff3680ea3dbc",
       "observerAtCheckpoint": {
         "samples": 40,
@@ -113,6 +113,28 @@
         "errors": 0,
         "attachedAt": "2026-10-05T02:36:29.149Z",
         "coverage": "Owned refresh target before materialization; job target attachment pending until job acquires its own lease."
+      },
+      "completedAt": "2026-10-05T02:50:42.033Z",
+      "metrics": {
+        "materialized": 0,
+        "skipped": 2,
+        "failed": 5
+      },
+      "warningEvidence": {
+        "observedAt": "2026-10-05T02:47Z",
+        "source": "Owned-page passive PerformanceResourceTiming",
+        "conversationListHttp429": 2,
+        "visibleWarning": false,
+        "directProviderApiRequest": false
+      },
+      "cleanup": {
+        "allCompletionsPaused": true,
+        "browserAbsent": true,
+        "activeLeases": 0,
+        "idleLeases": 0,
+        "retiringLeases": 0,
+        "lostLeases": 0,
+        "releasedLeases": 250
       }
     }
   ],
@@ -128,7 +150,7 @@
     "action": "Rename only the five existing Chromium session-restore entries into a restorable per-launch quarantine; authentication preserved.",
     "regressions": "Public cold process-launch ordering test red before wiring; fixture moves verified; absence and managed-root boundaries preserve session files.",
     "validation": "69 focused tests; typecheck; touched lint has two unchanged external-name baseline warnings.",
-    "installedAcceptance": "Pending after journey3 child settles; two journeys remain.",
+    "installedAcceptance": "Journey4 proved one-page cold startup; asset acceptance failed with native HTTP 429. Four journeys used, one remains.",
     "merge": "f019076aeb53f83ab08690f93fa11e809afc9bd4",
     "canonicalBuild": "passed",
     "installed": true,
