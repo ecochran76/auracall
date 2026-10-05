@@ -1,4 +1,10 @@
 import type { ProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
+import { withProcessTabAcquisition } from "../../packages/browser-service/src/service/processTabAcquisition.js";
+import {
+	registerUnownedBrowserTabDeadlines,
+	releaseAbsentBrowserTabLeases,
+	UNOWNED_TAB_WORKLOAD_PREFIX,
+} from "../../packages/browser-service/src/service/tabInventory.js";
 import type {
 	BrowserProfileControlClaim,
 	BrowserTabLease,
@@ -53,19 +59,23 @@ export interface DedicatedBrowserTabInput {
 export function acquireLiveFollowCrawlerTab(
 	input: DedicatedBrowserTabInput,
 ): Promise<LiveFollowCrawlerTab> {
-	return acquireDedicatedBrowserTab(input, {
-		kind: "live-follow",
-		operationId: input.operationId,
-	});
+	return withProcessTabAcquisition(input.scope, () =>
+		acquireDedicatedBrowserTab(input, {
+			kind: "live-follow",
+			operationId: input.operationId,
+		}),
+	);
 }
 
 export function acquireEphemeralBrowserTab(
 	input: DedicatedBrowserTabInput,
 ): Promise<LiveFollowCrawlerTab> {
-	return acquireDedicatedBrowserTab(input, {
-		kind: "ephemeral",
-		operationId: input.operationId,
-	});
+	return withProcessTabAcquisition(input.scope, () =>
+		acquireDedicatedBrowserTab(input, {
+			kind: "ephemeral",
+			operationId: input.operationId,
+		}),
+	);
 }
 
 async function acquireDedicatedBrowserTab(
@@ -75,12 +85,28 @@ async function acquireDedicatedBrowserTab(
 	const now = input.now ?? (() => new Date());
 	let endpoint = await input.resolveExistingEndpoint();
 	let startedBrowser = false;
-	let existing = await input.registry.findByWorkload(input.scope, workload);
-	if (existing && !endpoint && (await input.verifyBrowserAbsent?.()) === true) {
+	const browserAbsent = !endpoint && (await input.verifyBrowserAbsent?.()) === true;
+	if (browserAbsent) {
+		await releaseAbsentBrowserTabLeases({
+			registry: input.registry,
+			scope: {
+				managedBrowserProfile: input.scope.managedBrowserProfile,
+				service: input.scope.service,
+			},
+			now: now().toISOString(),
+		});
+	}
+	let existing =
+		(await input.registry.findByProcess(input.scope)) ??
+		(await input.registry.findByWorkload(input.scope, workload));
+	if (existing && browserAbsent) {
 		await releaseMissingCrawler(input.registry, existing, now().toISOString());
 		existing = null;
 	}
 	if (existing) {
+		if (existing.processBinding && existing.state !== "idle") {
+			throw new Error("The process tab is already owned by running or fenced work.");
+		}
 		if (!endpoint) {
 			throw new Error(
 				"Live-follow crawler target cannot be verified without its browser endpoint.",
@@ -94,12 +120,24 @@ async function acquireDedicatedBrowserTab(
 				? isExactProviderRoute(inspected.url, input.targetUrl)
 				: isProviderRoute(inspected.url, input.targetUrl))
 		) {
-			const acquired = await input.registry.acquire({
-				scope: input.scope,
-				workload,
-				operationId: input.operationId,
-				now: now().toISOString(),
-			});
+			const acquired = existing.processBinding
+				? await input.registry.acquireProcess({
+						leaseId: existing.leaseId,
+						expectedRevision: existing.revision,
+						scope: input.scope,
+						workload,
+						operationId: input.operationId,
+						now: now().toISOString(),
+						idleTtlMs: input.idleTtlMs,
+						absoluteTtlMs: input.absoluteTtlMs,
+					})
+				: await input.registry.acquire({
+						processBound: true,
+						scope: input.scope,
+						workload,
+						operationId: input.operationId,
+						now: now().toISOString(),
+					});
 			if (!acquired.ok) {
 				throw new Error(`Live-follow crawler lease acquisition failed: ${acquired.conflict.kind}.`);
 			}
@@ -117,6 +155,14 @@ async function acquireDedicatedBrowserTab(
 			return { ...adopted.value, endpoint };
 		}
 		if (inspected) {
+			if (
+				existing.processBinding &&
+				(existing.retention === "live-follow" || !input.requireExistingTarget)
+			) {
+				throw new Error(
+					"The process tab is on an incompatible provider route; a second tab is forbidden.",
+				);
+			}
 			const lost = await input.registry.markLost({
 				leaseId: existing.leaseId,
 				expectedRevision: existing.revision,
@@ -198,6 +244,7 @@ async function acquireDedicatedBrowserTab(
 		idleTtlMs: input.idleTtlMs,
 		absoluteTtlMs: input.absoluteTtlMs,
 		targetFingerprint: requireNonEmpty(target.url, "targetUrl"),
+		processBound: true,
 	});
 	if (!reserved.ok) {
 		if (!reusableTarget) {
@@ -315,12 +362,22 @@ async function selectExistingTarget(
 	if (!input.listTargets) {
 		throw new Error("Dedicated browser work cannot inspect existing targets.");
 	}
+	const leases = await input.registry.list();
 	const ownedTargetIds = new Set(
-		(await input.registry.list())
-			.filter((lease) => lease.state !== "released")
+		leases
+			.filter(
+				(lease) =>
+					lease.state !== "released" &&
+					!(
+						lease.state === "idle" &&
+						lease.workload.kind === "ephemeral" &&
+						lease.workload.operationId.startsWith(UNOWNED_TAB_WORKLOAD_PREFIX)
+					),
+			)
 			.map((lease) => lease.targetId),
 	);
-	const compatible = (await input.listTargets(endpoint)).filter(
+	const targets = await input.listTargets(endpoint);
+	const compatible = targets.filter(
 		(target) =>
 			Boolean(target.targetId.trim()) &&
 			!ownedTargetIds.has(target.targetId) &&
@@ -329,7 +386,28 @@ async function selectExistingTarget(
 	if (compatible.length > 1) {
 		throw new Error("Dedicated browser work found multiple existing compatible targets.");
 	}
-	return compatible[0] ?? null;
+	const selected = compatible[0] ?? null;
+	if (selected) {
+		const deadlineLease = leases.find(
+			(lease) => lease.targetId === selected.targetId && lease.state === "idle",
+		);
+		if (deadlineLease) {
+			const released = await input.registry.releasePreserved({
+				leaseId: deadlineLease.leaseId,
+				expectedRevision: deadlineLease.revision,
+				now: (input.now ?? (() => new Date()))().toISOString(),
+			});
+			if (!released.ok)
+				throw new Error(`Existing target deadline transfer failed: ${released.conflict.kind}.`);
+		}
+	}
+	await registerUnownedBrowserTabDeadlines({
+		registry: input.registry,
+		scope: input.scope,
+		now: input.now,
+		targets: targets.filter((target) => target.targetId !== selected?.targetId),
+	});
+	return selected;
 }
 
 async function prepareColdStartTarget(
@@ -341,6 +419,14 @@ async function prepareColdStartTarget(
 		if (!input.preLeaseProviderTrafficGovernor) {
 			throw new Error("Owned cold-start target creation requires a provider traffic governor.");
 		}
+		if (!input.listTargets)
+			throw new Error("Owned cold startup requires a physical target census.");
+		await registerUnownedBrowserTabDeadlines({
+			registry: input.registry,
+			scope: input.scope,
+			now: input.now,
+			targets: await input.listTargets(endpoint),
+		});
 		return null;
 	}
 	if (!input.listTargets) return null;

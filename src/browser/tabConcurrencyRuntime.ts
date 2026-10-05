@@ -10,6 +10,7 @@ import {
 	type BrowserTabLease,
 	type BrowserTabLeaseRegistry,
 	createFileBackedBrowserTabLeaseRegistry,
+	isTabLeaseTtlExempt,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import type { ResolvedUserConfig } from "../config.js";
@@ -63,6 +64,8 @@ export interface BrowserTabConcurrencyStatus {
 	};
 	bindingLifetimes: Array<{
 		workloadKind: BrowserTabLease["workload"]["kind"];
+		ttlExempt?: boolean;
+		processId?: number | null;
 		state: BrowserTabLease["state"];
 		effectState: BrowserTabLease["effectState"];
 		ageMs: number;
@@ -189,6 +192,7 @@ export function createBrowserTabConcurrencyRuntime(
 					expiredIdle: leases.filter(
 						(lease) =>
 							lease.state === "idle" &&
+							!isTabLeaseTtlExempt(lease) &&
 							(nowMs >= Date.parse(lease.idleExpiresAt) ||
 								nowMs >= Date.parse(lease.absoluteExpiresAt)),
 					).length,
@@ -201,14 +205,17 @@ export function createBrowserTabConcurrencyRuntime(
 				bindingLifetimes: fencedLeases
 					.map((lease) => ({
 						workloadKind: lease.workload.kind,
+						ttlExempt: isTabLeaseTtlExempt(lease),
+						processId: lease.processBinding?.processId ?? null,
 						state: lease.state,
 						effectState: lease.effectState,
 						ageMs: Math.max(0, nowMs - Date.parse(lease.acquiredAt)),
 						lastMeaningfulUseAgeMs: Math.max(0, nowMs - Date.parse(lease.lastMeaningfulUseAt)),
 						idleRemainingMs: Math.max(0, Date.parse(lease.idleExpiresAt) - nowMs),
 						absoluteRemainingMs: Math.max(0, Date.parse(lease.absoluteExpiresAt) - nowMs),
-						idleExpired: nowMs >= Date.parse(lease.idleExpiresAt),
-						absoluteExpired: nowMs >= Date.parse(lease.absoluteExpiresAt),
+						idleExpired: !isTabLeaseTtlExempt(lease) && nowMs >= Date.parse(lease.idleExpiresAt),
+						absoluteExpired:
+							!isTabLeaseTtlExempt(lease) && nowMs >= Date.parse(lease.absoluteExpiresAt),
 					}))
 					.sort(
 						(left, right) =>

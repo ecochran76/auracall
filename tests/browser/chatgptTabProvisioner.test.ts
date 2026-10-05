@@ -15,6 +15,62 @@ const scope: TabLeaseScope = {
 };
 
 describe("ChatGPT tab provisioner", () => {
+	test.each([
+		true,
+		false,
+	])("cold process-tab recovery requires native browser absence: %s", async (absent) => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const first = await registry.reserve({
+			scope,
+			processBound: true,
+			targetId: "old",
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "old",
+			now: new Date().toISOString(),
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		if (!first.ok) throw new Error("fixture failed");
+		await registry.idle({
+			claim: first.value.claim,
+			now: new Date().toISOString(),
+			effectState: "settled",
+		});
+		const openTarget = vi.fn(async () => ({
+			targetId: "new",
+			url: "https://chatgpt.com/c/conversation-1",
+		}));
+		const provision = createChatgptTabProvisioner({
+			registry,
+			scope,
+			workload: { kind: "conversation", conversationId: "conversation-1" },
+			operationId: "new",
+			targetUrl: "https://chatgpt.com/c/conversation-1",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			resolveExistingEndpoint: async () => null,
+			verifyBrowserAbsent: async () => absent,
+			startBrowser: async () => ({
+				host: "127.0.0.1",
+				port: 45011,
+				managedBrowserProfile: scope.managedBrowserProfile,
+			}),
+			inspectTarget: async () => null,
+			openTarget,
+			closeTarget: vi.fn(),
+		});
+		if (absent) {
+			expect((await provision({ interactionReservationId: "reservation" })).lease.targetId).toBe(
+				"new",
+			);
+			expect(openTarget).toHaveBeenCalledOnce();
+		} else {
+			await expect(provision({ interactionReservationId: "reservation" })).rejects.toThrow(
+				"cannot be verified",
+			);
+			expect(openTarget).not.toHaveBeenCalled();
+		}
+	});
 	test("reacquires a verified idle conversation lease without creating or navigating a tab", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
 		const reserved = await registry.reserve({

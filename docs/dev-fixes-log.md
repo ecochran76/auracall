@@ -1,5 +1,19 @@
 ## 2026-10-05 | Startup-window suppression alone does not isolate restored tabs
 
+## 2026-10-05 — Process tab reuse and physical TTL accounting (#165)
+
+Restored pages were invisible to workload-only lease uniqueness: a real
+coordinator fixture left 33 pages from 32 restored tabs, then 34 with another
+completion in the same PID. One recorded lease was not one physical tab.
+Process bindings now hand one target between collection/materialization and
+conversation work; acquisition is serialized before browser I/O. A concurrency
+regression initially opened two pages and now opens one. Untracked pages receive
+persisted five-minute deadlines; repeated census cannot renew them. Retirement
+keeps the live-follow tab and closes expired extras with disappearance proof.
+All managed cold launches quarantine saved tab-session inputs after strict
+absence proof; ordinary startup previously bypassed that repair. Authentication
+is preserved. Installed proof and full acceptance remain pending in Plan0390.
+
 PR207 live replay still restored 45 pages when the first crawler appeared. An
 endpoint-only cold managed launch must also quarantine persisted tab-session
 inputs, using the existing bootstrap session whitelist and strict native absence

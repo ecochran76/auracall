@@ -18,7 +18,7 @@ import type {
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import type { PromptInput, PromptResult } from "./llmService/types.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
-import { probeVisibleChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
+import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import {
 	assertChatgptLeasedPromptResult,
 	buildChatgptLeasedPromptOptions,
@@ -250,7 +250,7 @@ async function executeAdmittedChatgptConversation(
 				throw new Error("Provider traffic tab lease ownership changed before prompt action.");
 			}
 		},
-		probeWarning: probeVisibleChatgptRateLimitWarning,
+		probeWarning: probeChatgptRateLimitWarning,
 		persistWarning: async (warning) => {
 			const observedAt = now();
 			await request.ledger.recordProviderWarning({
@@ -369,7 +369,8 @@ async function settleFailedExecution(
 			outcome: "cancelled",
 			stopReason: error instanceof Error ? error.message : String(error),
 		});
-		if (!settled.ok) throw new Error(`Pre-effect interaction settlement failed: ${settled.reason}.`);
+		if (!settled.ok)
+			throw new Error(`Pre-effect interaction settlement failed: ${settled.reason}.`);
 		return;
 	}
 	const used = await request.registry.recordMeaningfulUse({
@@ -410,7 +411,9 @@ function readFailureEffectState(error: unknown): "pre_effect" | "effect_observed
 	const details = (error as { details?: unknown }).details;
 	if (!details || typeof details !== "object") return "unknown";
 	const effectState = (details as { effectState?: unknown }).effectState;
-	return effectState === "pre_effect" || effectState === "effect_observed" || effectState === "unknown"
+	return effectState === "pre_effect" ||
+		effectState === "effect_observed" ||
+		effectState === "unknown"
 		? effectState
 		: "unknown";
 }

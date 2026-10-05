@@ -17,6 +17,92 @@ const scope = {
 };
 
 describe("live-follow crawler tab coordinator", () => {
+	test("concurrent acquisitions in one process never open a second physical target", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		let opened = 0;
+		let releaseOpen!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			releaseOpen = resolve;
+		});
+		let opening!: () => void;
+		const started = new Promise<void>((resolve) => {
+			opening = resolve;
+		});
+		const endpoint = {
+			host: "127.0.0.1",
+			port: 45011,
+			managedBrowserProfile: scope.managedBrowserProfile,
+		};
+		const common = {
+			registry,
+			scope,
+			targetUrl: "https://chatgpt.com/",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			resolveExistingEndpoint: async () => endpoint,
+			startBrowser: async () => endpoint,
+			inspectTarget: async () => ({ url: "https://chatgpt.com/" }),
+			openTarget: async () => {
+				const id = `target-${++opened}`;
+				opening();
+				await gate;
+				return { targetId: id, url: "https://chatgpt.com/" };
+			},
+			closeTarget: async () => {},
+		};
+		const first = acquireLiveFollowCrawlerTab({ ...common, operationId: "follow" });
+		const second = acquireEphemeralBrowserTab({ ...common, operationId: "child" });
+		await started;
+		releaseOpen();
+		const results = await Promise.allSettled([first, second]);
+		expect(results.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
+		expect(opened).toBe(1);
+	});
+	test("live follow and child materialization reuse one physical tab in the same process", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const pages = new Map<string, string>();
+		const endpoint = {
+			host: "127.0.0.1",
+			port: 45011,
+			managedBrowserProfile: scope.managedBrowserProfile,
+		};
+		const common = {
+			registry,
+			scope,
+			targetUrl: "https://chatgpt.com/",
+			idleTtlMs: 60_000,
+			absoluteTtlMs: 3_600_000,
+			resolveExistingEndpoint: async () => endpoint,
+			startBrowser: async () => endpoint,
+			inspectTarget: async (_endpoint: unknown, id: string) =>
+				pages.get(id) ? { url: pages.get(id) as string } : null,
+			openTarget: async () => {
+				const id = `page-${pages.size + 1}`;
+				pages.set(id, "https://chatgpt.com/");
+				return { targetId: id, url: "https://chatgpt.com/" };
+			},
+			closeTarget: async ({ targetId }: { targetId: string }) => {
+				pages.delete(targetId);
+			},
+		};
+		const follow = await acquireLiveFollowCrawlerTab({ ...common, operationId: "follow" });
+		await registry.idle({
+			claim: follow.claim,
+			now: new Date().toISOString(),
+			effectState: "settled",
+		});
+		const child = await acquireEphemeralBrowserTab({
+			...common,
+			operationId: "history-materialization:child",
+		});
+		expect(child.lease.targetId).toBe(follow.lease.targetId);
+		expect(pages.size).toBe(1);
+		expect(child.lease.retention).toBe("live-follow");
+		await expect(
+			acquireEphemeralBrowserTab({ ...common, operationId: "concurrent-child" }),
+		).rejects.toThrow("process");
+		expect(pages.size).toBe(1);
+	});
 	test("adopts the only compatible cold-start target instead of opening a second page", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-cold-start",
@@ -87,7 +173,7 @@ describe("live-follow crawler tab coordinator", () => {
 		expect(await registry.list()).toEqual([]);
 	});
 
-	test("creates one governed owned crawler without adopting or closing restored tabs", async () => {
+	test("creates one governed process crawler and assigns restored pages finite deadlines", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const closeTarget = vi.fn();
 		const openTarget = vi.fn(async () => ({
@@ -127,7 +213,8 @@ describe("live-follow crawler tab coordinator", () => {
 			expect.objectContaining({ outcome: "succeeded", targetId: "owned-crawler" }),
 		);
 		expect(closeTarget).not.toHaveBeenCalled();
-		expect(await registry.list()).toHaveLength(1);
+		expect(await registry.list()).toHaveLength(4);
+		expect((await registry.list()).filter((lease) => lease.retention === "ttl")).toHaveLength(3);
 	});
 
 	test("closes and proves absence of one incompatible startup page before opening the crawler", async () => {
@@ -241,6 +328,7 @@ describe("live-follow crawler tab coordinator", () => {
 				idleTtlMs: 60_000,
 				absoluteTtlMs: 3_600_000,
 				coldStartTargetPolicy: "create",
+				listTargets: async () => [],
 				resolveExistingEndpoint: async () =>
 					mode === "cold"
 						? null
@@ -320,11 +408,13 @@ describe("live-follow crawler tab coordinator", () => {
 			startBrowser,
 			coldStartTargetPolicy: "create",
 			preLeaseProviderTrafficGovernor: {
+				// Physical startup inventory is independently supplied below.
 				begin: async () => ({ settle: async () => undefined }),
 			} as never,
 			inspectTarget: vi.fn(),
 			openTarget,
 			closeTarget: vi.fn(),
+			listTargets: async () => [],
 		});
 		if (absent) {
 			expect((await acquisition).lease.targetId).toBe("new-owned-target");

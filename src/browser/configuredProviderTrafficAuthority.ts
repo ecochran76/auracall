@@ -14,7 +14,7 @@ import type { BrowserMutationAuditSink } from "../../packages/browser-service/sr
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { resolveChatgptInteractionsPerMinute } from "../runtime/tenantExecutionLimits.js";
-import { probeVisibleChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
+import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
 import type { ProviderId } from "./providers/domain.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
@@ -120,8 +120,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 						throw new Error("Provider traffic lease ownership changed before physical action.");
 					}
 				},
-				probeWarning:
-					input.provider === "chatgpt" ? probeVisibleChatgptRateLimitWarning : undefined,
+				probeWarning: input.provider === "chatgpt" ? probeChatgptRateLimitWarning : undefined,
 				persistWarning:
 					input.provider === "chatgpt"
 						? async (warning) => {

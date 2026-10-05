@@ -5,8 +5,10 @@ import {
 import {
 	type BrowserTabLeaseRegistry,
 	getCurrentTabLeaseOwnerIdentity,
+	isTabLeaseTtlExempt,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { reconcileStaleActiveTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
+import { registerUnownedBrowserTabDeadlines } from "../../packages/browser-service/src/service/tabInventory.js";
 import { getCurrentRuntimeProfiles } from "../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
@@ -164,6 +166,7 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 		errors: [],
 	};
 	const deps = input.deps ?? {};
+	const observedCensuses = new Map<string, Awaited<ReturnType<typeof listChromeTargets>>>();
 	const configuredRuntimeProfileIds = Object.keys(
 		getCurrentRuntimeProfiles(input.userConfig as Record<string, unknown>),
 	).sort();
@@ -226,6 +229,29 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 				service: "chatgpt",
 				tenantKey,
 			};
+			if (endpoint) {
+				const censusKey = `${managedBrowserProfile}\u0000${endpoint.host}\u0000${endpoint.port}`;
+				const targets =
+					observedCensuses.get(censusKey) ?? (await listTargets(endpoint.port, endpoint.host));
+				observedCensuses.set(censusKey, targets);
+				await registerUnownedBrowserTabDeadlines({
+					registry: runtime.registry,
+					scope,
+					now: input.now,
+					targets: targets.flatMap((target) => {
+						const record = target as {
+							id?: string;
+							targetId?: string;
+							type?: string;
+							url?: string;
+						};
+						const targetId = record.targetId ?? record.id;
+						return targetId && (!record.type || record.type === "page")
+							? [{ targetId, url: record.url ?? "about:blank" }]
+							: [];
+					}),
+				});
+			}
 			const staleActive = await reconcileStaleActiveTabLeases({
 				registry: runtime.registry,
 				scope,
@@ -257,15 +283,11 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 					else summary.deferredScopeCount += 1;
 					continue;
 				}
-				if (!chatgptTargetMatchesLease(lostLease, { url: target.url ?? "" })) {
-					summary.restartIdentityMismatchCount += 1;
-					continue;
-				}
 				const nowMs = (input.now ?? (() => new Date()))().getTime();
 				const expired =
 					nowMs >= Date.parse(lostLease.idleExpiresAt) ||
 					nowMs >= Date.parse(lostLease.absoluteExpiresAt);
-				if (expired && endpoint) {
+				if (expired && endpoint && !isTabLeaseTtlExempt(lostLease)) {
 					await closeTarget(endpoint.host, endpoint.port, lostLease.targetId, () => undefined);
 					const remainingTargets = await listTargets(endpoint.port, endpoint.host);
 					const stillLive = remainingTargets.some((candidate) => {
@@ -283,10 +305,15 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 						else summary.deferredScopeCount += 1;
 						continue;
 					}
+					if (!chatgptTargetMatchesLease(lostLease, { url: target.url ?? "" })) {
+						summary.restartIdentityMismatchCount += 1;
+						continue;
+					}
 				}
 				summary.restartPreservedCount += 1;
 			}
 			const outcomes = await retireExpiredChatgptTabLeases({
+				retireAllExpiredPages: true,
 				registry: runtime.registry,
 				scope,
 				endpoint,
@@ -316,7 +343,9 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 				if (seenTargetCensuses.has(censusKey)) continue;
 				try {
 					const [targets, fencedTargetIds] = await Promise.all([
-						listTargets(endpoint.port, endpoint.host),
+						Promise.resolve(observedCensuses.get(censusKey) ?? []).then((targets) =>
+							summary.closedCount > 0 ? listTargets(endpoint.port, endpoint.host) : targets,
+						),
 						runtime.registry.listFencedTargetIds(scope),
 					]);
 					const fenced = new Set(fencedTargetIds);

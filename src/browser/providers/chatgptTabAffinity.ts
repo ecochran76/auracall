@@ -42,10 +42,10 @@ export function buildChatgptLeasedPromptOptions(
 
 	return {
 		...(request.options ?? {}),
-		allowNavigation: false,
+		allowNavigation: Boolean(lease.processBinding),
 		host: endpoint.host,
 		port: endpoint.port,
-		preserveActiveTab: true,
+		preserveActiveTab: !lease.processBinding,
 		tabLifecycle: "retain",
 		tabTargetId: lease.targetId,
 	};

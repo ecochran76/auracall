@@ -17,6 +17,205 @@ const scope: TabLeaseScope = {
 };
 
 describe("tabLeaseRegistry (package)", () => {
+	test("the OS PID owns one tab even across separate SDK owner instances", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "process-tab-pid-"));
+		try {
+			const first = createFileBackedBrowserTabLeaseRegistry({
+				registryRoot: directory,
+				ownerIdentity: { processId: 41, instanceId: "sdk-a" },
+			});
+			const second = createFileBackedBrowserTabLeaseRegistry({
+				registryRoot: directory,
+				ownerIdentity: { processId: 41, instanceId: "sdk-b" },
+			});
+			const common = {
+				scope,
+				processBound: true,
+				now: "2026-10-05T11:00:00Z",
+				idleTtlMs: 1000,
+				absoluteTtlMs: 2000,
+			};
+			expect(
+				(
+					await first.reserve({
+						...common,
+						targetId: "first",
+						workload: { kind: "live-follow", operationId: "follow" },
+						operationId: "follow",
+					})
+				).ok,
+			).toBe(true);
+			expect(
+				await second.reserve({
+					...common,
+					targetId: "second",
+					workload: { kind: "ephemeral", operationId: "child" },
+					operationId: "child",
+				}),
+			).toMatchObject({ ok: false, conflict: { kind: "process-owned" } });
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
+	test("restart transfers a persisted idle process tab only after its old process has stopped", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "process-tab-restart-"));
+		try {
+			const old = createFileBackedBrowserTabLeaseRegistry({
+				registryRoot: directory,
+				ownerIdentity: { processId: 41, instanceId: "old" },
+			});
+			const reserved = await old.reserve({
+				scope,
+				processBound: true,
+				targetId: "follow",
+				workload: { kind: "live-follow", operationId: "old-follow" },
+				operationId: "old-follow",
+				now: "2026-10-05T11:00:00Z",
+				idleTtlMs: 1000,
+				absoluteTtlMs: 2000,
+			});
+			if (!reserved.ok) throw new Error("fixture failed");
+			await old.idle({
+				claim: reserved.value.claim,
+				now: "2026-10-05T11:00:00Z",
+				effectState: "settled",
+			});
+			const live = createFileBackedBrowserTabLeaseRegistry({
+				registryRoot: directory,
+				ownerIdentity: { processId: 42, instanceId: "new" },
+				isOwnerAlive: () => true,
+			});
+			expect(await live.findByProcess(scope)).toBeNull();
+			expect(
+				await live.acquire({
+					scope,
+					workload: { kind: "live-follow", operationId: "old-follow" },
+					operationId: "intruder",
+					now: "2026-10-05T11:00:00.500Z",
+					processBound: true,
+				}),
+			).toMatchObject({ ok: false, conflict: { kind: "process-owned" } });
+			const restarted = createFileBackedBrowserTabLeaseRegistry({
+				registryRoot: directory,
+				ownerIdentity: { processId: 42, instanceId: "new" },
+				isOwnerAlive: () => false,
+			});
+			const tab = await restarted.findByProcess(scope);
+			if (!tab) throw new Error("persisted process tab missing");
+			const acquired = await restarted.acquireProcess({
+				leaseId: tab.leaseId,
+				expectedRevision: tab.revision,
+				scope,
+				workload: { kind: "live-follow", operationId: "new-follow" },
+				operationId: "new-follow",
+				now: "2026-10-06T11:00:00Z",
+				idleTtlMs: 1000,
+				absoluteTtlMs: 2000,
+			});
+			expect(acquired).toMatchObject({
+				ok: true,
+				value: {
+					lease: { targetId: "follow", processBinding: { processId: 42, instanceId: "new" } },
+				},
+			});
+			expect(await restarted.list()).toHaveLength(1);
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
+	test("a settled live-follow process tab transfers to its child and back without losing retention", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const first = await registry.reserve({
+			scope,
+			processBound: true,
+			targetId: "crawler",
+			workload: { kind: "live-follow", operationId: "follow" },
+			operationId: "follow",
+			now: "2026-10-05T11:00:00.000Z",
+			idleTtlMs: 1000,
+			absoluteTtlMs: 2000,
+		});
+		if (!first.ok) throw new Error("reserve failed");
+		const idle = await registry.idle({
+			claim: first.value.claim,
+			now: "2026-10-05T11:00:00.100Z",
+			effectState: "settled",
+		});
+		if (!idle.ok) throw new Error("idle failed");
+		const bound = await registry.findByProcess(scope);
+		expect(bound?.targetId).toBe("crawler");
+		const child = await registry.acquireProcess({
+			leaseId: idle.value.leaseId,
+			expectedRevision: idle.value.revision,
+			scope,
+			workload: { kind: "ephemeral", operationId: "child" },
+			operationId: "child",
+			now: "2026-10-05T12:00:00.000Z",
+			idleTtlMs: 300_000,
+			absoluteTtlMs: 3_600_000,
+		});
+		expect(child).toMatchObject({
+			ok: true,
+			value: {
+				lease: {
+					targetId: "crawler",
+					retention: "live-follow",
+					workload: { kind: "ephemeral", operationId: "child" },
+				},
+			},
+		});
+		if (!child.ok) throw new Error("child failed");
+		const action = await registry.recordTargetAction({
+			claim: child.value.claim,
+			action: "navigation",
+			occurredAt: "2026-10-07T12:00:00.000Z",
+			idleTtlMs: 300_000,
+		});
+		expect(action.ok).toBe(true);
+		if (!action.ok) throw new Error("retained follow action expired");
+		const settled = await registry.idle({
+			claim: action.value.claim,
+			now: "2026-10-07T12:00:01.000Z",
+			effectState: "settled",
+		});
+		if (!settled.ok) throw new Error("child idle failed");
+		const follow = await registry.acquireProcess({
+			leaseId: settled.value.leaseId,
+			expectedRevision: settled.value.revision,
+			scope,
+			workload: { kind: "live-follow", operationId: "follow" },
+			operationId: "follow",
+			now: "2026-10-07T12:00:02.000Z",
+			idleTtlMs: 1000,
+			absoluteTtlMs: 2000,
+		});
+		expect(follow).toMatchObject({ ok: true, value: { lease: { targetId: "crawler" } } });
+		expect(await registry.list()).toHaveLength(1);
+	});
+	test("one process cannot reserve another workload target in the same managed browser", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const input = {
+			scope,
+			processBound: true,
+			now: "2026-10-05T11:00:00.000Z",
+			idleTtlMs: 300_000,
+			absoluteTtlMs: 3_600_000,
+		};
+		const first = await registry.reserve({
+			...input,
+			targetId: "crawler",
+			workload: { kind: "live-follow", operationId: "follow" },
+			operationId: "follow",
+		});
+		expect(first.ok).toBe(true);
+		const second = await registry.reserve({
+			...input,
+			targetId: "child",
+			workload: { kind: "ephemeral", operationId: "child" },
+			operationId: "child",
+		});
+		expect(second).toMatchObject({ ok: false, conflict: { kind: "process-owned" } });
+	});
 	test("releases settled owner-free lease ownership while preserving the target", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-a" });
 		const reserved = await registry.reserve({
