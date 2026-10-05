@@ -86,6 +86,12 @@ loop: diagnose the prior terminal class and apply a reasonable remediation or
 wait for a materially changed condition before another attempt. Every forced
 terminal pass requests managed-browser cleanup on both success and failure.
 
+Browser-startup admission denial is an operational materialization failure. It
+must not be reported as a skipped asset or a successfully refreshed file
+inventory. When no inventory was reached, the snapshot remains failed with
+unknown routeability; the reason is retained as a retryable retrieval failure.
+Admission controls still apply before any resumed provider work.
+
 ## Scheduler Operator Authority
 
 Scheduler pause/resume is operator control state, not transient process state.

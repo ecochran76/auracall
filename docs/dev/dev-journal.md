@@ -1,3 +1,18 @@
+## 2026-10-05 01:18 UTC | PR204 installed; admission outcome repair validated
+
+PR204 merged as fb0501823 and installed from the canonical checkout. Installed
+cachePersistence module SHA256 2dfea813ec7a53adfb3d2a851c107129612dc6444bb4c2a0def9e900791ab27b
+matches the build; two real concurrent temporary-fixture writes both fulfill.
+API33615 responds, scheduler paused, nine completions paused, no active/idle/
+retiring/lost leases. No provider effect in installed verification.
+
+On fix/issue165-admission-outcomes, public history-job replay reaches a provider
+file adapter that throws the observed startup denial. Red: skipped job and
+refreshed/routeable file snapshot. Green: failed/retryable entry and failed/
+unknown snapshot; all95 history-materialization tests pass. Source-only outcome
+repair so far. Five renewed controls exhausted; positive live capture and
+changed/unchanged efficiency acceptance remain open.
+
 ## 2026-10-05 01:10 UTC | Status temp-file race reproduced and repaired
 
 Renewed controls4 and5 settled skipped with zero positive captures; five of five

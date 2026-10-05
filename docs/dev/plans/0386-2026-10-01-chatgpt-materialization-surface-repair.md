@@ -188,6 +188,21 @@ unproven. Separate follow-up: classify operational admission errors truthfully
 instead of skipped assets or synthetic refreshed snapshots. Nine completions
 paused, scheduler paused and no active/idle/retiring/lost leases at containment.
 
+### Local blocker reduction | 2026-10-05 01:18 UTC
+
+PR204 merged as fb0501823a2164cf2ffd6aca5212f782656047f2 and installed; cache
+module hash matches canonical build and installed concurrent-write replay passes.
+API33615, nine paused completions, scheduler paused, no active/idle/retiring/lost
+leases. Status filename collision is repaired; no new live acceptance claimed.
+
+Public history-job replay demonstrates admission denial misclassification in
+69ms. On fix/issue165-admission-outcomes, a denied startup now produces a failed
+retryable entry, and synthetic file snapshot stays failed/unknown with no file
+count. All95 history-materialization tests pass. This repairs false authority
+readback, preserves browser admission controls and does not itself clear an
+existing fenced lease. Goal remains open, five controls exhausted; zero remaining
+provider controls. Install/test this source fix provider-free before next gate.
+
 ## Stable Objective
 
 Restore ChatGPT conversation-file and generated-artifact materialization on the

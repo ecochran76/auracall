@@ -9,6 +9,7 @@ import {
 import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
 import { createCacheStore } from "../src/browser/llmService/cache/store.js";
 import type { ProviderCacheContext } from "../src/browser/providers/cache.js";
+import { ChatgptService } from "../src/browser/llmService/providers/chatgptService.js";
 import type { ProviderSessionProof } from "../src/browser/providers/providerSessionAuthority.js";
 import type { RunArchiveItem, RunArchiveService } from "../src/runtime/archiveService.js";
 import {
@@ -69,6 +70,54 @@ describe("history materialization service", () => {
 		expect(resolveHistoryMaterializationResultStatus({ materialized: 1, failed: 11 })).toBe(
 			"materialized",
 		);
+	});
+
+	it("fails file materialization on startup denial without claiming a refreshed route", async () => {
+		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-history-startup-denial-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const denial = "Live-follow browser startup control denied: tab-leases-active.";
+		const provider = vi
+			.spyOn(ChatgptService.prototype, "materializeConversationFiles")
+			.mockRejectedValue(new Error(denial));
+		let scheduled: (() => Promise<void>) | undefined;
+		try {
+			const service = createHistoryMaterializationService({
+				config: { browser: { cache: { store: "json" } } },
+				generateId: () => "hmj_startup_denial",
+				schedule: (work) => {
+					scheduled = work;
+				},
+			});
+			await service.createJob({
+				provider: "chatgpt",
+				runtimeProfile: "default",
+				conversationId: "startup-denial-conversation",
+				assetKinds: ["files"],
+				refreshSnapshot: true,
+				maxItems: 1,
+			});
+			await scheduled?.();
+			expect(provider).toHaveBeenCalledTimes(1);
+			const job = await service.readJob("hmj_startup_denial");
+			expect(job).toMatchObject({
+				status: "failed",
+				result: {
+					metrics: { materialized: 0, failed: 1, skipped: 0 },
+					entries: [{ status: "failed", reason: denial, retryable: true }],
+					snapshotRefreshes: [
+						{
+							status: "failed",
+							routeabilityState: "unknown",
+							fileCount: null,
+							error: denial,
+						},
+					],
+				},
+			});
+		} finally {
+			provider.mockRestore();
+			await fs.rm(homeDir, { recursive: true, force: true });
+		}
 	});
 
 	it("classifies materialization recoverability without collapsing recoverable controls into unavailable assets", () => {
