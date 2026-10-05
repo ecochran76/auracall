@@ -1,3 +1,19 @@
+## 2026-10-05 01:26 UTC | Both blocker repairs merged and installed
+
+PR204 repaired the proven status temporary-file collision. PR205 merged as
+20177f52807045db11f9045634860528c74bd80c and is installed with exact build parity
+for both changed modules. On the API's Node v25.9.0, the installed public-job
+replay now returns failed, one failed asset, zero skipped assets, and a failed
+snapshot with unknown routeability and null file count for the observed startup
+denial. This is provider-free verification, not positive asset acceptance.
+
+Source validation: 166 focused tests, typecheck and touched lint passed. API
+PID11540 responds; nine completions remain paused, scheduler paused, background
+drain unchanged, no active/idle/retiring/lost leases, managed browser absent.
+All five renewed controls have been used. No sixth control ran. Positive capture
+and changed/unchanged efficiency acceptance remain OPEN. Evidence:
+[installed repair receipt](notes/2026-10-05-plan0386-installed-blocker-repairs.json).
+
 ## 2026-10-05 01:18 UTC | PR204 installed; admission outcome repair validated
 
 PR204 merged as fb0501823 and installed from the canonical checkout. Installed
