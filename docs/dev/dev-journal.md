@@ -52690,3 +52690,8 @@ Public context-read regression reproduced an indefinitely pending auth-session e
 ## 2026-10-04 | Issue165 installed context deadline control
 
 PR199 installed at exact canonical d564943b3 with four module hashes matching. One bounded owned completion passed identity and then failed context with retry at readVisibleCanvasProbes; neither identity timeout fired. No successful refresh or materialization. All six completions and global scheduler paused, browser absence verified, API restarted PID439. Prior live slowdown causality remains open. See notes/2026-10-04-plan0386-pr199-installed-test.json.
+
+
+## 2026-10-04 | Issue165 warning-free Retry detection
+
+Real context-reader VM regression reproduced hidden and unrelated Retry controls aborting with the installed error signature. Computed visibility and conversation ancestry now filter both; genuine failed-turn Retry still stops. 204 focused/adjacent tests, typecheck and lint passed. No live pass this slice; the historical matching DOM was not captured, so live causality remains unproven. See notes/2026-10-04-plan0386-retry-probe-scope.md.

@@ -1081,6 +1081,8 @@ async function readVisibleChatgptBlockingSurfaceMatchWithClient(
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const isVisible = (node) => {
         if (!(node instanceof Element)) return false;
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
@@ -1091,8 +1093,8 @@ async function readVisibleChatgptBlockingSurfaceMatchWithClient(
         if (!labels.includes(label)) continue;
         const scope =
           node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}) ||
-          node.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}) ||
-          node.parentElement;
+          node.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
+        if (!scope) continue;
         return {
           label,
           text: normalize(scope?.textContent || node.textContent || ''),
