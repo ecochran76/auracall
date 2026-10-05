@@ -1,0 +1,141 @@
+{
+  "startedAt": "2026-10-05T12:07:22.996Z",
+  "runtimeRoot": "/home/ecochran76/.auracall/user-runtime/node_modules/auracall",
+  "processId": 54507,
+  "runtimeProfileId": "wsl-chrome-3",
+  "managedBrowserProfile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+  "providerNavigationCount": 0,
+  "phases": [
+    {
+      "at": "2026-10-05T12:07:25.225Z",
+      "phase": "preflight-passed"
+    },
+    {
+      "at": "2026-10-05T12:07:26.657Z",
+      "phase": "native-browser-started",
+      "browserPid": 55267,
+      "port": 45015,
+      "startupPages": 0
+    },
+    {
+      "at": "2026-10-05T12:07:27.043Z",
+      "phase": "follow-child-follow-reused",
+      "targetId": "E150DCC6BBC0095E600542BFBD28ABE4",
+      "leaseId": "a84966b3-5f9a-4667-ba22-567dae763f33",
+      "pageCount": 1
+    },
+    {
+      "at": "2026-10-05T12:07:27.431Z",
+      "phase": "extra-pages-have-persisted-ttl",
+      "pageCount": 4,
+      "deadlines": [
+        {
+          "leaseId": "a0f19ddb-b6bd-4921-9fc2-75900fbccc3c",
+          "targetId": "D005867AE7BF558CC3B13934D14BFEB0",
+          "idleExpiresAt": "2026-10-05T12:12:27.350Z",
+          "absoluteExpiresAt": "2026-10-05T12:12:27.350Z"
+        },
+        {
+          "leaseId": "a1c70359-2201-439f-847f-3c0d80667faf",
+          "targetId": "483E5D0EECB27D00F46EB480D73A723D",
+          "idleExpiresAt": "2026-10-05T12:12:27.350Z",
+          "absoluteExpiresAt": "2026-10-05T12:12:27.350Z"
+        },
+        {
+          "leaseId": "62f9b708-28a8-4f22-9b3a-a7eae884e3d6",
+          "targetId": "000BA2ACB564346AC78AB438A1BD2362",
+          "idleExpiresAt": "2026-10-05T12:12:27.350Z",
+          "absoluteExpiresAt": "2026-10-05T12:12:27.350Z"
+        }
+      ],
+      "maintenanceErrors": 0
+    },
+    {
+      "at": "2026-10-05T12:07:54.828Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 273
+    },
+    {
+      "at": "2026-10-05T12:08:22.233Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 246
+    },
+    {
+      "at": "2026-10-05T12:08:49.634Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 218
+    },
+    {
+      "at": "2026-10-05T12:09:17.021Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 191
+    },
+    {
+      "at": "2026-10-05T12:09:44.404Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 163
+    },
+    {
+      "at": "2026-10-05T12:10:11.812Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 136
+    },
+    {
+      "at": "2026-10-05T12:10:39.219Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 109
+    },
+    {
+      "at": "2026-10-05T12:11:06.620Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 81
+    },
+    {
+      "at": "2026-10-05T12:11:34.021Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 54
+    },
+    {
+      "at": "2026-10-05T12:12:01.419Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 4,
+      "secondsUntilExpiry": 26
+    },
+    {
+      "at": "2026-10-05T12:12:28.977Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 1,
+      "secondsUntilExpiry": 0
+    },
+    {
+      "at": "2026-10-05T12:12:56.386Z",
+      "phase": "elapsed-time-check",
+      "pageCount": 1,
+      "secondsUntilExpiry": 0
+    },
+    {
+      "at": "2026-10-05T12:12:56.507Z",
+      "phase": "physical-ttl-proof-passed",
+      "pageCount": 1,
+      "retainedTargetId": "E150DCC6BBC0095E600542BFBD28ABE4",
+      "elapsedMs": 333511
+    },
+    {
+      "at": "2026-10-05T12:12:57.469Z",
+      "phase": "cleanup-verified",
+      "nativeBrowserAbsent": true,
+      "fencedLeaseCount": 0
+    }
+  ],
+  "result": "passed",
+  "completedAt": "2026-10-05T12:12:57.470Z"
+}

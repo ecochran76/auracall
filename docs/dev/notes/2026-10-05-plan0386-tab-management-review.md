@@ -1,6 +1,6 @@
 # Plan 0386: tab-management algorithm review
 
-Status: review complete; remediation and full lifecycle acceptance OPEN.
+Status: historical review complete; successor tab-lifecycle repair accepted in Plan0390. Broader asset acceptance OPEN.
 
 The user requested algorithm review after excessive restored tabs and a cleanup
 that removed saved session state. Cleanup does not prove lifecycle correctness.
@@ -71,3 +71,10 @@ expiry, cancellation, and restart. Tests must assert physical inventory as well
 as lease records. Keep unrelated account scopes isolated, retain custody checks,
 and preserve authentication. Do not spend the remaining live journey merely to
 rediscover the provider-free failure.
+
+## Successor acceptance
+
+The Ask Matt router was subsequently located and used for Plan 0390. PRs 211
+and 212 repair the source findings above. Installed actual-browser acceptance
+is recorded in `2026-10-05-plan0390-installed-acceptance.md`; the broader asset
+acceptance in Plan 0386 remains open. The original review evidence is retained.

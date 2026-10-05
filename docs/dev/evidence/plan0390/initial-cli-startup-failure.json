@@ -1,0 +1,22 @@
+{
+  "startedAt": "2026-10-05T11:58:37.020Z",
+  "runtimeRoot": "/home/ecochran76/.auracall/user-runtime/node_modules/auracall",
+  "processId": 59833,
+  "runtimeProfileId": "wsl-chrome-3",
+  "managedBrowserProfile": "/home/ecochran76/.auracall/browser-profiles/wsl-chrome-3/chatgpt",
+  "providerNavigationCount": 0,
+  "phases": [
+    {
+      "at": "2026-10-05T11:58:39.077Z",
+      "phase": "preflight-passed"
+    },
+    {
+      "at": "2026-10-05T11:59:02.058Z",
+      "phase": "failure",
+      "error": "Error: Chrome DevTools 127.0.0.1:45015 did not become ready"
+    }
+  ],
+  "result": "failed",
+  "error": "Error: Chrome DevTools 127.0.0.1:45015 did not become ready",
+  "completedAt": "2026-10-05T11:59:02.059Z"
+}

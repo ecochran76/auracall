@@ -268,3 +268,8 @@ browser directories remain intact.
 
 A lost follow binding is no longer the retained current follow. Its lease
 returns to ordinary TTL retirement; loss cannot retain an orphan page forever.
+
+Maintenance checks retained idle process bindings for native PID liveness. A
+stopped owner loses retention and becomes eligible for ordinary TTL retirement.
+A living active retained follow may outlive its old absolute TTL while its
+heartbeat remains fresh; heartbeat expiry still fences stale active ownership.

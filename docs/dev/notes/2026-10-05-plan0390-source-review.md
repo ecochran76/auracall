@@ -56,3 +56,12 @@ and retained-follow absolute exemption. This is a bounded correction of the
 restart/retention criterion. Standards: shared rule remains in browser-service;
 no provider heuristic added. Forty-four focused checks, build and typecheck pass.
 Final installed parity and physical proof remain the acceptance gate.
+
+## Final acceptance disposition
+
+Both installed needs_evidence gates are resolved by final-source parity and the
+actual elapsed-time physical proof on 3e58471b2. The two restart blocking cases
+are resolved by observed red/green checks and final installed identity. Accepted
+source blocking findings remaining: zero on both axes. Nonblocking historical
+origin/classifier naming concerns remain documented above. Broader provider asset
+acceptance is outside this tab-lifecycle achievement.
