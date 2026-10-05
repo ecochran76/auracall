@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-05T12:14:51.972Z",
+  "sourceMerge": "3e58471b27d8b1584dce882fade80bbdcf22f007",
+  "httpStatus": 200,
+  "schedulerPaused": true,
+  "activeCompletionCount": 12,
+  "allActiveCompletionsPaused": true,
+  "leaseStates": {
+    "active": 0,
+    "idle": 0,
+    "retiring": 0,
+    "released": 258,
+    "lost": 0
+  },
+  "backgroundDrainPaused": false,
+  "nativeBrowserAbsent": true
+}

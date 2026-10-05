@@ -21,7 +21,7 @@ persisted five-minute deadlines; repeated census cannot renew them. Retirement
 keeps the live-follow tab and closes expired extras with disappearance proof.
 All managed cold launches quarantine saved tab-session inputs after strict
 absence proof; ordinary startup previously bypassed that repair. Authentication
-is preserved. Installed proof and full acceptance remain pending in Plan0390.
+is preserved. Installed tab-lifecycle proof is accepted in Plan0390; broader asset acceptance remains OPEN.
 
 PR207 live replay still restored 45 pages when the first crawler appeared. An
 endpoint-only cold managed launch must also quarantine persisted tab-session
@@ -24241,3 +24241,8 @@ ChatGPT materialization returns verified cached-provider-file assets alongside u
 ## 2026-10-04 | Successful capped batches do not prove complete inventory
 
 A materialization batch can succeed with every returned entry available while eligible assets remain outside maxItems. Carry pending inventory counts from the LLM selection into frontier evidence; preserve partial/deferred status instead of marking the whole conversation complete. Monitoring job projections deliberately omit entries/manifests/telemetry; inspect the durable job for detailed local acceptance. See notes/2026-10-04-plan0386-partial-frontier.md.
+
+Plan 0390 installed acceptance (2026-10-05): final source 3e58471b2, actual
+follow/child/follow same target, three extras closed after five real minutes,
+retained follow survives, native shutdown and zero fences verified. Durable
+receipts are under docs/dev/evidence/plan0390/. No provider journey consumed.

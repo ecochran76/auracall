@@ -1,13 +1,13 @@
 # Process-owned browser tabs and physical TTL reconciliation | 0390
 
-State: OPEN
+State: COMPLETE
 Owner: primary
 Work item: Issue #165; successor repair within Plan 0386
 Branch: fix/issue165-process-tab-lifetimes
 Target: main
 Integration: merge
 
-## Current State
+## Original observed state
 
 The coordinator reproducer leaves 33 pages from 32 restored pages and 34 after
 another completion in the same PID. Existing lease uniqueness is per workload.
@@ -108,3 +108,36 @@ expiry, revision fencing and unknown-effect preservation remain enforced.
 This accepted Spec blocker is remediated in a narrow successor slice; installed
 proof must be rebound to that final source before completion. Meter 459254 at
 12:03Z; original resource limits remain in force.
+
+## Acceptance | 2026-10-05T12:14Z | achieved
+
+PR 211 and the bounded restart successor PR 212 are merged. Final code identity
+is 3e58471b27d8b1584dce882fade80bbdcf22f007. Canonical build and installation
+pass; all ten selected installed modules match. API 46019 is healthy with zero
+restarts. The primary's final installed-runtime fixture runs actual managed
+Chromium with only about:blank, strict native startup/closure ownership and
+the production public coordinator, registry and maintenance. Follow, child and
+follow reuse target E150DCC6BBC0095E600542BFBD28ABE4. Three extra pages keep
+their original five-minute deadlines across repeated real-time scans, then all
+close; retained follow survives its deliberately one-second fixture TTL. The
+333511ms run passes and cleanup proves native absence and zero fenced leases.
+
+Receipts: `docs/dev/evidence/plan0390/installed-3e58471b2-physical-proof.json`,
+`installed-3e58471b2-parity.json`, and `installed-3e58471b2-runtime-state.json`.
+The earlier PR 211 physical run and initial CLI environment failure are also
+preserved. Fixture: `docs/dev/fixtures/plan0390-installed-tab-proof.mjs`; run
+with the same XAUTHORITY file as the service. No provider navigation, prompts,
+warning dismissal or provider journey was consumed. Four provider journeys
+remain used; one remains from the separate allowance. All 12 existing active
+completion records and the scheduler remain paused; background drain remains
+unpaused.
+
+Validation: 1781 selected broad tests passed (one skipped), with the unchanged
+two-case prompt-structure file excluded and its baseline failure preserved.
+The restart correction separately passes 44 affected tests, typecheck, build
+and touched Biome checks. Serial Standards/Spec review and bounded remediation
+are recorded in the review note. Full Plan 0386 asset acceptance remains OPEN.
+Goal achieved within the explicit two-hour and 500000-token bounds; final meter
+is reported by the goal closeout tool.
+
+Final pre-publication meter: 487137 tokens at 12:15Z.

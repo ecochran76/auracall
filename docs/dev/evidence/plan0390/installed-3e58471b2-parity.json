@@ -1,0 +1,56 @@
+{
+  "merge": "3e58471b27d8b1584dce882fade80bbdcf22f007",
+  "at": "2026-10-05T12:07:23.598Z",
+  "modules": [
+    {
+      "module": "packages/browser-service/src/service/tabLeaseRegistry.js",
+      "sha256": "d45bdb6f61d6f834e01da1165eebac00093903adc8d00903d0a79c8112073860",
+      "match": true
+    },
+    {
+      "module": "packages/browser-service/src/service/tabInventory.js",
+      "sha256": "c4bda9f2abfd1f80869e9204721e03bf9823862dc4687524a41a0a3c257bff3e",
+      "match": true
+    },
+    {
+      "module": "packages/browser-service/src/service/processTabAcquisition.js",
+      "sha256": "b3274d24b51bf32c2e076daabd3e82af652c0915f5098c9cb24c40cdaa4a87c0",
+      "match": true
+    },
+    {
+      "module": "packages/browser-service/src/service/tabLeaseRestartReconciliation.js",
+      "sha256": "396228b4b392962ad21c22c536796b3944d4d1efa1f46dde3e77a6dab85abc02",
+      "match": true
+    },
+    {
+      "module": "packages/browser-service/src/chromeLifecycle.js",
+      "sha256": "8e3f1196019f414ecbe7dd5e557d798cc0cd248fa04b1b77f055b266739a1a1a",
+      "match": true
+    },
+    {
+      "module": "src/accountMirror/liveFollowTabCoordinator.js",
+      "sha256": "93765ad73a4d7d458507f18e67ea5c909246103d3a7ed6571396a62dd6c00dd0",
+      "match": true
+    },
+    {
+      "module": "src/browser/configuredChatgptTabMaintenance.js",
+      "sha256": "97977339a2c6a90cea8c4cc2ca5d10d86220da5496e674abba1528be6eaa1a98",
+      "match": true
+    },
+    {
+      "module": "src/browser/configuredChatgptUtilityAffinity.js",
+      "sha256": "fccd0e2c308a810823e29da338ce682c1079ec5fa19f19007e1d7cd9e13f65fd",
+      "match": true
+    },
+    {
+      "module": "src/browser/providers/chatgptTabProvisioner.js",
+      "sha256": "591f23b64b802d954e6eaf238e7ee4a886ee1daee8998e12055ce6d43af532f4",
+      "match": true
+    },
+    {
+      "module": "src/browser/chatgptProviderTraffic.js",
+      "sha256": "630438a031c68e9f987c6d4d153b026b11e8088aced6985b17faac9e17bad439",
+      "match": true
+    }
+  ]
+}

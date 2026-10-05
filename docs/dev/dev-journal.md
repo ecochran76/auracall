@@ -52889,3 +52889,14 @@ no browser remained. The corrected environment uses the service's display
 authority. Two retained-follow restart defects now have observed red/green
 tests; 44 affected checks, build and typecheck pass. Final successor installation
 and physical proof remain open. No provider journey used.
+
+### 2026-10-05T12:14Z — Plan 0390 achieved on installed source
+
+Final installed code 3e58471b2 has ten-module parity; API 46019, zero restarts.
+Actual blank-page fixture reuses one follow/child/follow target; three extra
+pages expire after five real minutes. Follow remains; explicit cleanup verifies
+native absence and zero fenced leases. Receipts and reproducible fixture are
+checked in. All 12 existing active completions and scheduler remain paused;
+background drain is unpaused. No provider journey consumed, one remains.
+Plan 0390 COMPLETE; Plan 0386 broader asset acceptance remains OPEN.
+Memory disposition unavailable: no qualified AuraCall Graphiti destination.
