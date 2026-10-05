@@ -1,8 +1,8 @@
 {
   "authority": "User: take another 5",
   "authorized": 5,
-  "used": 3,
-  "remaining": 2,
+  "used": 4,
+  "remaining": 1,
   "installedMerge": "20177f52807045db11f9045634860528c74bd80c",
   "journeys": [
     {
@@ -56,7 +56,7 @@
     },
     {
       "ordinal": 3,
-      "status": "running",
+      "status": "failed",
       "installedMerge": "fd1795d083a2274498476586981714ebe9b793f2",
       "policy": "steady_follow/full_missing_assets/all/maxItems6",
       "apiPid": 77151,
@@ -74,6 +74,45 @@
         "warningsDetected": 0,
         "readErrors": 16,
         "coverage": "late and incomplete; not warning-free acceptance proof"
+      },
+      "completedAt": "2026-10-05T02:32:53.332Z",
+      "metrics": {
+        "materialized": 0,
+        "skipped": 2,
+        "failed": 5
+      },
+      "failureReasons": [
+        "ChatGPT utility heartbeat failed: stale-claim.",
+        "Live-follow crawler lease acquisition failed: invalid-transition."
+      ],
+      "cleanup": {
+        "at": "2026-10-05T02:34:19.432Z",
+        "browserAbsent": true,
+        "manualLeaseReleases": 0,
+        "readback": "All leases unfenced before install; released248 lost0."
+      }
+    },
+    {
+      "ordinal": 4,
+      "status": "running",
+      "completionId": "acctmirror_completion_9620866a-3ddc-4fcb-9549-8c45935db489",
+      "startedAt": "2026-10-05T02:36:25.844Z",
+      "policy": "steady_follow/full_missing_assets/all/maxItems6",
+      "coldStartupReadback": {
+        "pages": 1,
+        "chatgptPages": 1,
+        "quarantineBackups": 1,
+        "apiMemoryBytes": 2096140288,
+        "restarts": 0
+      },
+      "acceptance": "Asset job result pending; startup improvement alone does not close the goal.",
+      "jobId": "hmj_ae025d2cb3c84689b477ff3680ea3dbc",
+      "observerAtCheckpoint": {
+        "samples": 40,
+        "warnings": 0,
+        "errors": 0,
+        "attachedAt": "2026-10-05T02:36:29.149Z",
+        "coverage": "Owned refresh target before materialization; job target attachment pending until job acquires its own lease."
       }
     }
   ],
@@ -92,6 +131,11 @@
     "installedAcceptance": "Pending after journey3 child settles; two journeys remain.",
     "merge": "f019076aeb53f83ab08690f93fa11e809afc9bd4",
     "canonicalBuild": "passed",
-    "installed": false
+    "installed": true,
+    "apiPid": 98666,
+    "installedModuleHashes": {
+      "chromeLifecycle": "119e54e75eb3821675cf8d029dc5706ff6625c69e2ea3ea6746c2d7913a8b38b",
+      "profileState": "5f2ac0b3f8e9c2a455b9d5e9694b2231340d6ce2675b154b99c428e7fe2e6e49"
+    }
   }
 }
