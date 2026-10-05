@@ -79,3 +79,40 @@ completions running, and exact managed browser process absence was verified.
 The completion pass counts match the pre-install readback. This is installed
 provider-free replay qualification, not successful live-refresh acceptance.
 See `2026-10-04-plan0386-pr201-installed-replay.json`.
+
+## Successful context replay and next live gate
+
+The existing regression now completes the context reader instead of injecting
+an action sentinel. Synthetic CDP responses supply readiness, payload, two
+messages, an input file, and empty artifact/image/canvas surfaces; the actual
+Retry expression still executes in the VM. Hidden/unrelated controls permit
+normalized messages and file metadata to return. Two additional timing cases
+prove an unrelated Retry appearing after canvas extraction does not reject the
+result, while a genuine failed-turn Retry appearing there remains blocking.
+
+The strengthened five-case command was run against the pre-PR201 adapter at
+e632696149841f9921cde4ab8246bb61207dc244: three false-positive cases failed
+with the observed retry signature, and both genuine-failure controls passed.
+Restoring the repaired adapter passed all five. The adapter was restored in a
+finally block; no production source change is part of this test-only slice.
+199 focused tests (five replay plus 194 adapter), typecheck, scoped lint, and
+diff checks pass. Serial Standards review found no blocking findings; Spec
+review confirmed complete synthetic reads without claiming live acceptance.
+
+Live accounting is five of five: the bounded-resumption plan records three
+through PR195, PR197 records one, and PR199 records one. PR201 used zero live
+provider passes. The original window ended; later merge/install/test authority
+did not explicitly raise the five-pass cap. A request for one additional
+ten-minute control is pending. Dependent live work must wait for the answer.
+The proposed control resumes only completion
+acctmirror_completion_328f88a8-56b9-4274-bbe0-bb20f3aea435 on wsl-chrome-3,
+checks exact installed hash and six-paused preconditions, and stops on a
+terminal pass, visible provider guard, or deadline. Global scheduler and the
+other five completions stay paused. Always pause the owned completion after
+the control and verify process/lease state. No bypass or warning dismissal.
+
+Checkpoint: validation hardening; installed live refresh and automatic
+materialization remain unaccepted. The next action is the single prepared
+control after explicit cap extension, rather than another source-hardening
+cycle. Memory disposition remains unavailable: fresh narrow atlas discovery
+returned only unrelated IM CLI, Previews, and Buffer CLI routes.

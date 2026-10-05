@@ -52700,3 +52700,8 @@ Real context-reader VM regression reproduced hidden and unrelated Retry controls
 ## 2026-10-04 | Issue165 Retry scope installed replay
 
 PR201 canonical 46c6bb3f9 installed with exact adapter SHA256 parity. Three real installed-context-reader VM scenarios passed: hidden/unrelated Retry does not mask the action; visible failed-turn Retry still stops. No provider pass. API37740 active, six completions and global scheduler paused, zero running, exact browser absence true. Live refresh remains unaccepted; prior matching DOM unavailable. See notes/2026-10-04-plan0386-pr201-installed-replay.json.
+
+
+## 2026-10-04 | Issue165 complete context replay and live cap
+
+Strengthened existing Retry regression to complete messages/file extraction and exercise late false/genuine Retry. Pre-PR201 adapter fails three false-positive cases; repaired adapter passes all five; 199 focused tests, typecheck and lint pass. No production source change or live pass. Five-of-five live controls used; one additional ten-minute owned-completion control awaits explicit cap extension. Scheduler and completions remain paused.
