@@ -12,7 +12,7 @@ PID11540 responds; nine completions remain paused, scheduler paused, background
 drain unchanged, no active/idle/retiring/lost leases, managed browser absent.
 All five renewed controls have been used. No sixth control ran. Positive capture
 and changed/unchanged efficiency acceptance remain OPEN. Evidence:
-[installed repair receipt](../notes/2026-10-05-plan0386-installed-blocker-repairs.json).
+[installed repair receipt](notes/2026-10-05-plan0386-installed-blocker-repairs.json).
 
 ## 2026-10-05 01:18 UTC | PR204 installed; admission outcome repair validated
 
