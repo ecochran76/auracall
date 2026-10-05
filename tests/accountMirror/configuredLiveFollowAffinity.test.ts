@@ -136,7 +136,7 @@ describe("configured cold-start custody", () => {
 	test.each([
 		false,
 		true,
-	])("launches blank and reserves only its admitted crawler with restored pages and retained lease: %s", async (retainedLease) => {
+	])("launches blank with one process crawler and deadlines for restored pages; retained lease: %s", async (retainedLease) => {
 		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
 		const runtimeModule = await import("../../src/browser/tabConcurrencyRuntime.js");
 		const { createInMemoryBrowserTabLeaseRegistry } = await import(
@@ -220,7 +220,8 @@ describe("configured cold-start custody", () => {
 			expect(affinity?.tabAffinity.targetId).toBe("owned-crawler");
 			expect(open).toHaveBeenCalledTimes(1);
 			expect(close).not.toHaveBeenCalled();
-			expect((await registry.list()).filter((lease) => lease.state !== "released")).toHaveLength(1);
+			expect((await registry.list()).filter((lease) => lease.state !== "released")).toHaveLength(4);
+			expect((await registry.list()).filter((lease) => lease.processBinding)).toHaveLength(1);
 			if (retainedLease) expect(verifyAbsent).toHaveBeenCalledWith("/managed/chatgpt");
 		} finally {
 			vi.restoreAllMocks();

@@ -207,10 +207,14 @@ already archived download look new.
 
 An account-mirror refresh with a pre-acquired crawler checks only that exact
 ChatGPT tab before collection. It does not inspect restored tabs or close them.
-The connection, visible-warning read, and transport cleanup have a ten-second
+The connection, owned-page warning read, and transport cleanup have a ten-second
 outer deadline. A failed or timed-out check fails the refresh with an explicit
 error; a visible rate-limit warning persists the normal cooldown and stops work.
-When no crawler has been pre-acquired, the collector checks the ChatGPT page it
+The owned-page probe also reads native ResourceTiming results for same-origin
+conversation endpoints. A latest HTTP 429 is a rate-limit signal even without
+visible warning text; a later successful response supersedes that old result.
+This is passive observation of requests the page already made, not a separate
+provider API request. When no crawler has been pre-acquired, the collector checks the ChatGPT page it
 loads through the existing adapter guards. Persisted cooldowns remain effective.
 Gemini's account/captcha census is unchanged.
 
@@ -219,7 +223,7 @@ Gemini's account/captcha census is unchanged.
 An explicit `about:blank` manual startup obtains a DevTools endpoint without an
 initial browser window (`--no-startup-window`). The existing admission path then
 creates its owned crawler. The flag alone does not prevent session restoration when a first crawler window
-is created. Before an absent managed browser starts, the launcher moves only
+is created. Before any absent managed browser starts, including ordinary visible startup, the launcher moves only
 Chromium tab-session restore entries into `auracall-session-quarantine` under
 that managed directory. These backups are preserved for restoration while the
 browser is stopped. A strict native absence check is required before moving
@@ -227,3 +231,37 @@ files; unknown process state refuses the launch. Authentication files remain
 in place. Existing running browsers and directories outside the managed root
 are preserved; admission remains required.
 Ordinary provider login URLs retain their visible startup window.
+
+## Process tab ownership and physical deadlines
+
+Within a managed ChatGPT browser and account, an OS process has at most one
+process-bound tab. Runtime-profile aliases for the same browser/account share
+that binding. Sequential live-follow collection, child materialization, utility
+reads and conversation execution reuse it with revision-fenced claims. A second
+concurrent operation receives explicit process contention before opening another
+page; a provider action still requires its own admission and account identity.
+Conversation changes navigate the same owned target under the existing governor.
+An explicit exact-existing-page request refuses an incompatible retained
+live-follow tab instead of opening another page.
+
+A live-follow tab remains retained across collection and materialization and is
+exempt from automatic idle/absolute TTL retirement while its browser is open.
+Explicit cancellation/operator retirement and proven browser shutdown still
+release its binding. A stopped previous process may transfer its idle tab to a
+new process after target verification; an alive process cannot be displaced.
+
+Every other observed page in that managed browser has a persisted finite
+deadline. Previously untracked/restored pages, blank pages and external pages
+receive a five-minute deadline on their first census. Repeated census does not
+extend it. Existing conversation/utility tabs retain their configured idle and
+absolute limits; meaningful use may extend idle time up to that absolute limit.
+The API maintenance loop closes expired idle pages and verifies disappearance,
+including pages that navigated since discovery. Ownership checks protect running
+work; retiring records remain fenced until cleanup is verified. Persisted
+deadlines survive maintenance-loop/API restarts.
+
+Lease count is not physical tab count. Runtime status reports each binding's
+process ID and TTL exemption; physical census and deadline retirement are part
+of acceptance. Positive native browser absence reconciles settled idle records
+for that exact browser before another launch. Authentication files and unrelated
+browser directories remain intact.

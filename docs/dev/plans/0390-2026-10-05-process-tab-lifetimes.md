@@ -1,0 +1,88 @@
+# Process-owned browser tabs and physical TTL reconciliation | 0390
+
+State: OPEN
+Owner: primary
+Work item: Issue #165; successor repair within Plan 0386
+Branch: fix/issue165-process-tab-lifetimes
+Target: main
+Integration: merge
+
+## Current State
+
+The coordinator reproducer leaves 33 pages from 32 restored pages and 34 after
+another completion in the same PID. Existing lease uniqueness is per workload.
+Maintenance counts unleased targets but does not expire them. Saved sessions
+were quarantined after native absence proof; authentication is preserved.
+
+## Objective and bounds
+
+User: one tab per process, including live follow; all other tabs in an open
+managed browser have TTLs. Process means OS process within the managed browser
+and tenant scope unless the pending clarification changes that interpretation.
+Account scopes never share provider tabs. Start 2026-10-05T11:04:30Z; checkpoint
+and stop by 2026-10-05T13:04:30Z or 500,000 consumed tokens, whichever first.
+Goal tool currently exposes no configured token ceiling; poll usage and honor
+the explicit user ceiling independently. Previous review is outcome_progress:
+it supplies a red-capable physical-inventory reproducer and identifies the
+acceptance gap. Material transition checkpoints and 15-minute backstop.
+
+## Matt flow and bounded packets
+
+Diagnosing-bugs has a real coordinator red loop. Continue in this context with
+one red-green TDD slice at each public seam, then serial Standards and Spec
+review against the pinned source base. Existing repository operating contract
+is domain authority. No competing glossary is created.
+
+1. Registry and coordinator: process-bound reuse, atomic contention protection,
+   collector-to-child reuse, no extra tab for a changed workload.
+2. Physical inventory: persist deadlines for untracked pages, expire them with
+   verified close, retain live-follow tab, retain TTLs across maintenance/restart.
+3. Production wiring, documentation, focused/presubmit validation, review,
+   merge/install, provider-free installed replay and bounded browser proof.
+
+## Acceptance and seams
+
+Checkpoint 1 | 2026-10-05T11:27Z | outcome_progress: process binding, atomic
+revision-fenced handoff, pre-I/O acquisition serialization, physical census
+deadlines, live-follow retention and cold restoration quarantine implemented.
+Focused core checks pass 45 tests; latest registry/coordinator subset passes 32.
+Red receipts: second workload admitted; child opens page-2; concurrent cold
+acquisitions open two pages; extra pages never retire and follow expires;
+ordinary cold startup leaves session inputs; retained follow action expires.
+Each reproducer now passes. Installed runtime unchanged. Remaining gates:
+production navigation and restart coverage, broader selected tests, lint/build,
+serial Standards/Spec review, integration/install and actual browser proof.
+Goal meter at 11:21Z: 113064 tokens; explicit ceiling remains 500000.
+
+- Registry enforces at most one current process binding per managed browser and
+  tenant; concurrent jobs serialize or receive explicit contention.
+- Sequential jobs including live-follow and child materialization reuse one
+  physical target. Revisions prevent stale users from navigating it.
+- Every other page has a persisted finite deadline; repeated census does not
+  refresh its deadline. Blank and non-provider pages are included.
+- TTL maintenance closes expired targets and verifies disappearance; a retained
+  live-follow target is exempt from automatic TTL retirement.
+- Cold launch cannot restore excessive untracked tabs indefinitely; warm
+  adoption, cancellation, failure, restart and expired records are covered.
+- Authentication, provider cooldowns and account isolation remain enforced.
+- Tests assert physical target inventories in addition to registry records.
+- Installed runtime matches reviewed source and demonstrates target reuse and
+  TTL retirement without provider mutations or warning dismissal.
+
+No additional provider retries beyond the existing remaining live allowance.
+No prompts, Answer now clicks, account identity guessing, or memory writes to
+unqualified destinations. Keep unrelated dirty work intact. Full Plan 0386 asset
+acceptance remains a separate unmet requirement unless current evidence proves it.
+
+## Checkpoint 2 | 2026-10-05T11:55Z | outcome_progress
+
+Production process-tab wiring, restarted idle-owner adoption, lost-follow TTL
+retirement, native HTTP 429 warning detection and all managed cold-start
+quarantine are implemented. Selected broader validation: 164 files, 1781 tests
+passed, one skipped. Typecheck and build pass. Touched lint has zero errors and
+two unchanged launcher/global-name warnings. The unchanged prompt-structure
+test failure was independently reproduced on clean PR 208 source; its two-case
+file is excluded from this selected lane. Installed runtime remains PR 208.
+Freeze source for serial Standards/Spec review, then integrate/install and prove
+physical reuse and elapsed-time TTL expiry. Meter: 346753 tokens at 11:53Z;
+original 500000-token and 13:04:30Z bounds remain in force.

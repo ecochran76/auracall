@@ -73,6 +73,8 @@ export interface BrowserTabLease {
   ownerOperationId: string | null;
   ownerProcessId?: number | null;
   ownerInstanceId?: string | null;
+  processBinding?: { processId: number; instanceId: string };
+  retention?: 'live-follow' | 'ttl';
   effectState: TabLeaseEffectState;
   acquiredAt: string;
   heartbeatAt: string;
@@ -112,7 +114,12 @@ export interface TabLeaseClaim {
   operationId: string;
 }
 
+export function isTabLeaseTtlExempt(lease: BrowserTabLease): boolean {
+  return lease.retention ? lease.retention === 'live-follow' : lease.workload.kind === 'live-follow';
+}
+
 export type TabLeaseConflict =
+  | { kind: 'process-owned'; lease: BrowserTabLease }
   | { kind: 'target-owned'; lease: BrowserTabLease }
   | { kind: 'workload-owned'; lease: BrowserTabLease }
   | { kind: 'not-found' }
@@ -133,9 +140,21 @@ export interface ReserveTabLeaseInput {
   idleTtlMs: number;
   absoluteTtlMs: number;
   targetFingerprint?: string | null;
+  processBound?: boolean;
 }
 
 export interface BrowserTabLeaseRegistry {
+  findByProcess(scope: TabLeaseScope): Promise<BrowserTabLease | null>;
+  acquireProcess(input: {
+    leaseId: string;
+    expectedRevision: number;
+    scope: TabLeaseScope;
+    workload: TabLeaseWorkload;
+    operationId: string;
+    now: string;
+    idleTtlMs: number;
+    absoluteTtlMs: number;
+  }): Promise<TabLeaseResult<{ lease: BrowserTabLease; claim: TabLeaseClaim }>>;
   acquireProfileControl(input: {
     scope: BrowserProfileControlScope;
     kind: BrowserProfileControlKind;
@@ -189,6 +208,7 @@ export interface BrowserTabLeaseRegistry {
     workload: TabLeaseWorkload;
     operationId: string;
     now: string;
+    processBound?: boolean;
   }): Promise<TabLeaseResult<{
     lease: BrowserTabLease;
     claim: TabLeaseClaim;
@@ -237,6 +257,7 @@ export interface InMemoryBrowserTabLeaseRegistryOptions {
   createLeaseId?: () => string;
   createControlId?: () => string;
   ownerIdentity?: { processId: number; instanceId: string };
+  isOwnerAlive?: (pid: number) => boolean;
 }
 
 export interface FileBackedBrowserTabLeaseRegistryOptions extends InMemoryBrowserTabLeaseRegistryOptions {
@@ -280,6 +301,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
   private readonly createLeaseId: () => string;
   private readonly createControlId: () => string;
   private readonly ownerIdentity: { processId: number; instanceId: string };
+  private readonly isOwnerAlive: (pid: number) => boolean;
 
   constructor(
     options: InMemoryBrowserTabLeaseRegistryOptions,
@@ -288,6 +310,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     this.createLeaseId = options.createLeaseId ?? (() => crypto.randomUUID());
     this.createControlId = options.createControlId ?? (() => crypto.randomUUID());
     this.ownerIdentity = options.ownerIdentity ?? getCurrentTabLeaseOwnerIdentity();
+    this.isOwnerAlive = options.isOwnerAlive ?? isProcessAlive;
     for (const lease of snapshot.leases) this.leases.set(lease.leaseId, cloneLease(lease));
     for (const control of snapshot.controls) {
       this.controls.set(control.controlId, cloneControl(control));
@@ -372,6 +395,68 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return true;
   }
 
+  async findByProcess(scope: TabLeaseScope): Promise<BrowserTabLease | null> {
+    const normalized = normalizeScope(scope);
+    const candidates = [...this.leases.values()].filter(candidate =>
+      FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, normalized));
+    const lease = candidates.find(candidate => this.ownsProcessBinding(candidate)) ??
+      candidates.find(candidate => candidate.state === 'idle' && candidate.effectState !== 'outcome-unknown' &&
+        this.canAdoptProcessBinding(candidate));
+    return lease ? cloneLease(lease) : null;
+  }
+
+  private ownsProcessBinding(lease: BrowserTabLease): boolean {
+    return lease.processBinding?.processId === this.ownerIdentity.processId;
+  }
+
+  private canAdoptProcessBinding(lease: BrowserTabLease): boolean {
+    if (this.ownsProcessBinding(lease)) return true;
+    if (!lease.processBinding) return false;
+    return lease.processBinding.processId === this.ownerIdentity.processId ||
+      !this.isOwnerAlive(lease.processBinding.processId);
+  }
+
+  async acquireProcess(input: Parameters<BrowserTabLeaseRegistry['acquireProcess']>[0]) {
+    const existing = this.leases.get(input.leaseId);
+    if (!existing) return { ok: false as const, conflict: { kind: 'not-found' as const } };
+    if (existing.revision !== input.expectedRevision) {
+      return { ok: false as const, conflict: { kind: 'stale-claim' as const, lease: cloneLease(existing) } };
+    }
+    const scope = normalizeScope(input.scope);
+    const workload = normalizeWorkload(input.workload);
+    const processTab = await this.findByProcess(scope);
+    if (processTab && processTab.leaseId !== existing.leaseId && this.ownsProcessBinding(processTab)) {
+      return { ok: false as const, conflict: { kind: 'process-owned' as const, lease: processTab } };
+    }
+    const nowMs = parseTimestamp(input.now, 'now');
+    const idleTtlMs = normalizeTtl(input.idleTtlMs, 'idleTtlMs');
+    const absoluteTtlMs = normalizeTtl(input.absoluteTtlMs, 'absoluteTtlMs');
+    if (idleTtlMs > absoluteTtlMs) throw new Error('idleTtlMs cannot exceed absoluteTtlMs');
+    if (!sameOwnershipScope(existing.scope, scope) ||
+      !this.canAdoptProcessBinding(existing) ||
+      existing.state !== 'idle' || (existing.effectState !== 'none' && existing.effectState !== 'settled') ||
+      (!isTabLeaseTtlExempt(existing) &&
+        (nowMs >= Date.parse(existing.idleExpiresAt) || nowMs >= Date.parse(existing.absoluteExpiresAt)))) {
+      return { ok: false as const, conflict: { kind: 'process-owned' as const, lease: cloneLease(existing) } };
+    }
+    const other = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
+      FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
+      sameWorkload(candidate.workload, workload));
+    if (other) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(other) } };
+    const operationId = requireNonEmpty(input.operationId, 'operationId');
+    const lease: BrowserTabLease = {
+      ...existing, workload, revision: existing.revision + 1, state: 'active',
+      ownerOperationId: operationId, ownerProcessId: this.ownerIdentity.processId,
+      ownerInstanceId: this.ownerIdentity.instanceId, heartbeatAt: input.now,
+      processBinding: { ...this.ownerIdentity },
+      retention: isTabLeaseTtlExempt(existing) || workload.kind === 'live-follow' ? 'live-follow' : 'ttl',
+      idleExpiresAt: new Date(nowMs + idleTtlMs).toISOString(),
+      absoluteExpiresAt: isTabLeaseTtlExempt(existing) ? new Date(nowMs + absoluteTtlMs).toISOString() : existing.absoluteExpiresAt,
+    };
+    this.leases.set(lease.leaseId, lease);
+    return { ok: true as const, value: { lease: cloneLease(lease), claim: { leaseId: lease.leaseId, revision: lease.revision, operationId } } };
+  }
+
   async reserve(input: ReserveTabLeaseInput): Promise<TabLeaseResult<{
     lease: BrowserTabLease;
     claim: TabLeaseClaim;
@@ -386,6 +471,10 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     for (const existing of this.leases.values()) {
       if (!FENCED_STATES.has(existing.state)) continue;
+      if (normalized.processBound && sameOwnershipScope(existing.scope, normalized.scope) &&
+        existing.processBinding?.processId === this.ownerIdentity.processId) {
+        return { ok: false, conflict: { kind: 'process-owned', lease: cloneLease(existing) } };
+      }
       if (
         sameTargetDomain(existing.scope, normalized.scope) &&
         existing.targetId === normalized.targetId
@@ -414,6 +503,8 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       ownerOperationId: normalized.operationId,
       ownerProcessId: this.ownerIdentity.processId,
       ownerInstanceId: this.ownerIdentity.instanceId,
+      ...(normalized.processBound ? { processBinding: { ...this.ownerIdentity } } : {}),
+      retention: normalized.workload.kind === 'live-follow' ? 'live-follow' : 'ttl',
       effectState: 'none',
       acquiredAt: normalized.now,
       heartbeatAt: normalized.now,
@@ -519,7 +610,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
 
     const nowMs = parseTimestamp(input.now, 'now');
     const absoluteExpiresAtMs = parseTimestamp(existing.absoluteExpiresAt, 'absoluteExpiresAt');
-    if (nowMs > absoluteExpiresAtMs) {
+    if (nowMs > absoluteExpiresAtMs && !isTabLeaseTtlExempt(existing)) {
       return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
     }
     const now = new Date(nowMs).toISOString();
@@ -529,7 +620,9 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       heartbeatAt: now,
       lastMeaningfulUseAt: now,
       idleExpiresAt: new Date(
-        Math.min(nowMs + normalizeTtl(input.idleTtlMs, 'idleTtlMs'), absoluteExpiresAtMs),
+        isTabLeaseTtlExempt(existing)
+          ? nowMs + normalizeTtl(input.idleTtlMs, 'idleTtlMs')
+          : Math.min(nowMs + normalizeTtl(input.idleTtlMs, 'idleTtlMs'), absoluteExpiresAtMs),
       ).toISOString(),
       targetFingerprint: input.targetFingerprint === undefined
         ? existing.targetFingerprint
@@ -572,7 +665,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     const occurredAtMs = parseTimestamp(input.occurredAt, 'occurredAt');
     const absoluteExpiresAtMs = parseTimestamp(existing.absoluteExpiresAt, 'absoluteExpiresAt');
-    if (occurredAtMs > absoluteExpiresAtMs) {
+    if (occurredAtMs > absoluteExpiresAtMs && !isTabLeaseTtlExempt(existing)) {
       return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
     }
     const actionCounts = cloneActionCounts(existing.actionCounts);
@@ -584,7 +677,9 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       heartbeatAt: occurredAt,
       lastMeaningfulUseAt: occurredAt,
       idleExpiresAt: new Date(
-        Math.min(
+        isTabLeaseTtlExempt(existing)
+          ? occurredAtMs + normalizeTtl(input.idleTtlMs, 'idleTtlMs')
+          : Math.min(
           occurredAtMs + normalizeTtl(input.idleTtlMs, 'idleTtlMs'),
           absoluteExpiresAtMs,
         ),
@@ -641,6 +736,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     workload: TabLeaseWorkload;
     operationId: string;
     now: string;
+    processBound?: boolean;
   }): Promise<TabLeaseResult<{
     lease: BrowserTabLease;
     claim: TabLeaseClaim;
@@ -660,10 +756,18 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     if (
       existing.state !== 'idle' ||
       existing.effectState === 'outcome-unknown' ||
-      nowMs > parseTimestamp(existing.idleExpiresAt, 'idleExpiresAt') ||
-      nowMs > parseTimestamp(existing.absoluteExpiresAt, 'absoluteExpiresAt')
+      ((!isTabLeaseTtlExempt(existing)) &&
+        (nowMs >= parseTimestamp(existing.idleExpiresAt, 'idleExpiresAt') ||
+        nowMs >= parseTimestamp(existing.absoluteExpiresAt, 'absoluteExpiresAt')))
     ) {
       return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    }
+    if (input.processBound) {
+      if (existing.processBinding && !this.canAdoptProcessBinding(existing)) {
+        return { ok: false, conflict: { kind: 'process-owned', lease: cloneLease(existing) } };
+      }
+      const other = await this.findByProcess(scope);
+      if (other && other.leaseId !== existing.leaseId) return { ok: false, conflict: { kind: 'process-owned', lease: other } };
     }
     const acquired: BrowserTabLease = {
       ...existing,
@@ -673,6 +777,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       ownerOperationId: operationId,
       ownerProcessId: this.ownerIdentity.processId,
       ownerInstanceId: this.ownerIdentity.instanceId,
+      ...(input.processBound ? { processBinding: { ...this.ownerIdentity } } : {}),
       heartbeatAt: new Date(nowMs).toISOString(),
     };
     this.leases.set(acquired.leaseId, acquired);
@@ -783,6 +888,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       ownerInstanceId: null,
       heartbeatAt: new Date(parseTimestamp(input.now, 'now')).toISOString(),
       lossReason: input.reason,
+      retention: 'ttl',
     };
     this.leases.set(lost.leaseId, lost);
     return { ok: true, value: cloneLease(lost) };
@@ -973,6 +1079,14 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return this.write((registry) => registry.releasePreserved(input));
   }
 
+  findByProcess(scope: TabLeaseScope) {
+    return this.read(registry => registry.findByProcess(scope));
+  }
+
+  acquireProcess(input: Parameters<BrowserTabLeaseRegistry['acquireProcess']>[0]) {
+    return this.write(registry => registry.acquireProcess(input));
+  }
+
   listFencedTargetIds(scope: TabLeaseScope) {
     return this.read((registry) => registry.listFencedTargetIds(scope));
   }
@@ -1025,6 +1139,7 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
         createLeaseId: this.createLeaseId,
         createControlId: this.createControlId,
         ownerIdentity: this.ownerIdentity,
+        isOwnerAlive: this.isOwnerAlive,
       },
       snapshot,
     );
@@ -1175,6 +1290,7 @@ function cloneLease(lease: BrowserTabLease): BrowserTabLease {
   return {
     ...lease,
     scope: { ...lease.scope },
+    ...(lease.processBinding ? { processBinding: { ...lease.processBinding } } : {}),
     workload: { ...lease.workload } as TabLeaseWorkload,
     actionCounts: cloneActionCounts(lease.actionCounts),
   };

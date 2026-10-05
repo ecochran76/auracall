@@ -351,7 +351,7 @@ export async function launchChrome(
   await cleanupStaleProfileState(userDataDir, logger, {
     lockRemovalMode: isManagedProfileForCleanup ? 'if_recorded_pid_dead' : 'never',
   });
-  if (options.suppressStartupWindow && managedProfileRootForCleanup) {
+  if (managedProfileRootForCleanup) {
     const backup = await quarantineColdManagedProfileSessions({
       userDataDir,
       profileName: resolvedProfileName,

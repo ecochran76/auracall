@@ -7,6 +7,78 @@ import {
 } from "../../src/browser/configuredChatgptTabMaintenance.js";
 
 describe("configured ChatGPT tab maintenance", () => {
+	test("expires every extra physical page while retaining the live-follow tab", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const scope = {
+			runtimeProfileId: "affinity",
+			managedBrowserProfile: "/managed/affinity/chatgpt",
+			service: "chatgpt",
+			tenantKey: "service-account:chatgpt:account-id=account-1",
+		};
+		const follow = await registry.reserve({
+			scope,
+			targetId: "follow",
+			workload: { kind: "live-follow", operationId: "completion" },
+			operationId: "completion",
+			now: "2026-10-05T11:00:00Z",
+			idleTtlMs: 1000,
+			absoluteTtlMs: 2000,
+			targetFingerprint: "https://chatgpt.com/",
+		});
+		if (!follow.ok) throw new Error("fixture failed");
+		await registry.idle({
+			claim: follow.value.claim,
+			now: "2026-10-05T11:00:00Z",
+			effectState: "settled",
+		});
+		const pages = new Map<string, string>([
+			["follow", "https://chatgpt.com/"],
+			["blank", "about:blank"],
+			["external", "https://example.com/"],
+			...Array.from({ length: 32 }, (_, i): [string, string] => [
+				`restored-${i}`,
+				`https://chatgpt.com/c/fixture-${i}`,
+			]),
+		]);
+		let time = "2026-10-05T11:00:01Z";
+		const run = () =>
+			runConfiguredChatgptTabMaintenance({
+				userConfig: {
+					browser: { tabConcurrencyMode: "tab-affinity" },
+					profiles: {
+						affinity: {
+							browser: { tabConcurrencyMode: "tab-affinity" },
+							services: { chatgpt: { identity: { accountId: "account-1" } } },
+						},
+					},
+				} as never,
+				now: () => new Date(time),
+				deps: {
+					createRuntime: () => ({ registry }),
+					createBrowserService: () => ({
+						resolveServiceTarget: async () => ({
+							host: "127.0.0.1",
+							port: 9222,
+							managedBrowserProfile: scope.managedBrowserProfile,
+						}),
+					}),
+					listTargets: (async () =>
+						Array.from(pages, ([id, url]) => ({ id, url, type: "page" }))) as never,
+					closeTarget: (async (_host: string, _port: number, id: string) => {
+						pages.delete(id);
+					}) as never,
+				},
+			});
+		await run();
+		time = "2026-10-05T11:04:01Z";
+		await run();
+		expect(pages.size).toBe(35);
+		time = "2026-10-05T11:05:01Z";
+		const summary = await run();
+		expect(summary.errors).toEqual([]);
+		expect(Array.from(pages.keys())).toEqual(["follow"]);
+		expect(summary.closedCount).toBe(34);
+	});
 	test("retires only settled idle leases in the exact stopped managed-browser scope", async () => {
 		const leaseIds = ["crawler", "materialization", "active", "uncertain", "unrelated"];
 		const registry = createInMemoryBrowserTabLeaseRegistry({
@@ -155,14 +227,14 @@ describe("configured ChatGPT tab maintenance", () => {
 			configuredScopeCount: 2,
 			visitedScopeCount: 2,
 			liveChatgptTargetCount: 1,
-			fencedLiveTargetCount: 0,
-			unleasedLiveTargetCount: 1,
+			fencedLiveTargetCount: 1,
+			unleasedLiveTargetCount: 0,
 		});
 		expect(listTargets).toHaveBeenCalledOnce();
 	});
 
-	test("classifies live fenced and unleased ChatGPT targets without mutating them", async () => {
-		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-1" });
+	test("registers unleased pages for TTL without closing them before their deadline", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const reserved = await registry.reserve({
 			scope: {
 				runtimeProfileId: "affinity",
@@ -216,8 +288,8 @@ describe("configured ChatGPT tab maintenance", () => {
 
 		expect(summary).toMatchObject({
 			liveChatgptTargetCount: 2,
-			fencedLiveTargetCount: 1,
-			unleasedLiveTargetCount: 1,
+			fencedLiveTargetCount: 2,
+			unleasedLiveTargetCount: 0,
 			targetCensusErrorCount: 0,
 		});
 		expect(closeTarget).not.toHaveBeenCalled();
@@ -313,8 +385,10 @@ describe("configured ChatGPT tab maintenance", () => {
 			port: 9222,
 			managedBrowserProfile: "/managed/affinity/chatgpt",
 		});
-		const closeTarget = vi.fn().mockResolvedValue(undefined);
-		let censusCount = 0;
+		let targetLive = true;
+		const closeTarget = vi.fn(async () => {
+			targetLive = false;
+		});
 		const summary = await runConfiguredChatgptTabMaintenance({
 			userConfig: {
 				browser: { tabConcurrencyMode: "tab-affinity" },
@@ -330,8 +404,7 @@ describe("configured ChatGPT tab maintenance", () => {
 				createRuntime: () => ({ registry }),
 				createBrowserService: () => ({ resolveServiceTarget }),
 				listTargets: vi.fn(async () => {
-					censusCount += 1;
-					return censusCount === 1
+					return targetLive
 						? [{ id: "target-1", url: "https://chatgpt.com/c/conversation-1" }]
 						: [];
 				}) as never,
@@ -404,7 +477,10 @@ describe("configured ChatGPT tab maintenance", () => {
 		});
 	});
 
-	test("closes and releases an expired lost lease when its attributable target is still live", async () => {
+	test.each([
+		"conversation",
+		"live-follow",
+	] as const)("closes an expired lost %s tab after its work has lost ownership", async (kind) => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({ createLeaseId: () => "lease-lost" });
 		const reserved = await registry.reserve({
 			scope: {
@@ -414,7 +490,10 @@ describe("configured ChatGPT tab maintenance", () => {
 				tenantKey: "service-account:chatgpt:account-id=account-1",
 			},
 			targetId: "target-lost",
-			workload: { kind: "conversation", conversationId: "conversation-1" },
+			workload:
+				kind === "conversation"
+					? { kind, conversationId: "conversation-1" }
+					: { kind, operationId: "follow" },
 			operationId: "operation-1",
 			now: "2026-09-24T12:00:00.000Z",
 			idleTtlMs: 60_000,

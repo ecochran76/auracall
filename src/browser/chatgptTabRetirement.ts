@@ -8,6 +8,7 @@ import {
 	type TabLeaseRetirementEndpoint,
 	type TabLeaseRetirementOutcome,
 } from "../../packages/browser-service/src/service/tabLeaseRetirement.js";
+import { UNOWNED_TAB_WORKLOAD_PREFIX } from "../../packages/browser-service/src/service/tabInventory.js";
 
 export function retireExpiredChatgptTabLeases(input: {
 	registry: BrowserTabLeaseRegistry;
@@ -20,6 +21,7 @@ export function retireExpiredChatgptTabLeases(input: {
 	) => Promise<{ url: string } | null>;
 	closeTarget: (endpoint: TabLeaseRetirementEndpoint, targetId: string) => Promise<void>;
 	endpointAbsenceProvesTargetsMissing?: boolean;
+	retireAllExpiredPages?: boolean;
 }): Promise<TabLeaseRetirementOutcome[]> {
 	return retireExpiredTabLeases({
 		registry: input.registry,
@@ -29,7 +31,7 @@ export function retireExpiredChatgptTabLeases(input: {
 		inspectTarget: input.inspectTarget,
 		closeTarget: input.closeTarget,
 		endpointAbsenceProvesTargetsMissing: input.endpointAbsenceProvesTargetsMissing,
-		targetMatchesLease: chatgptTargetMatchesLease,
+		targetMatchesLease: input.retireAllExpiredPages ? () => true : chatgptTargetMatchesLease,
 	});
 }
 
@@ -37,6 +39,13 @@ export function chatgptTargetMatchesLease(
 	lease: BrowserTabLease,
 	target: { url: string },
 ): boolean {
+	// These are observed physical pages in this exact managed browser, not a
+	// conversation binding. Their deadline survives page navigation.
+	if (
+		lease.workload.kind === "ephemeral" &&
+		lease.workload.operationId.startsWith(UNOWNED_TAB_WORKLOAD_PREFIX)
+	)
+		return true;
 	if (!lease.targetFingerprint) return false;
 	try {
 		const actual = new URL(target.url);

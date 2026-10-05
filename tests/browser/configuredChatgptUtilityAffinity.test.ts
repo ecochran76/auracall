@@ -20,7 +20,10 @@ const userConfig = {
 describe("configured ChatGPT utility affinity", () => {
 	test("adopts the existing exact Library target without opening or closing a page", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
-			createLeaseId: () => "lease-library",
+			createLeaseId: (() => {
+				let index = 0;
+				return () => `lease-library-${++index}`;
+			})(),
 		});
 		const ledger = createInMemoryProviderInteractionLedger();
 		const openTarget = vi.fn();
@@ -93,7 +96,7 @@ describe("configured ChatGPT utility affinity", () => {
 				providerTrafficGovernor: expect.objectContaining({
 					attribution: expect.objectContaining({
 						operationId: "library-files",
-						tabLeaseId: "lease-library",
+						tabLeaseId: "lease-library-2",
 					}),
 				}),
 			}),

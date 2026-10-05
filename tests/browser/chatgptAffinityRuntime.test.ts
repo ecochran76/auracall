@@ -26,6 +26,66 @@ vi.mock("../../packages/browser-service/src/processCheck.js", async (importOrigi
 });
 
 describe("configured ChatGPT affinity runtime", () => {
+	test("two conversations in one process navigate the same physical target", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "process-conversations-"));
+		try {
+			const userConfig = {
+				auracallProfile: "runtime-1",
+				browser: { tabConcurrencyMode: "tab-affinity" },
+				services: { chatgpt: { identity: { email: "operator@example.com" } } },
+			} as never;
+			const runtime = createBrowserTabConcurrencyRuntime(userConfig, { storageRoot: directory });
+			const pages = new Map<string, string>();
+			const openTarget = vi.fn(async ({ url }: { url: string }) => {
+				const targetId = `target-${pages.size + 1}`;
+				pages.set(targetId, url);
+				return { targetId, url };
+			});
+			const runExact: Parameters<typeof runChatgptPromptWithConfiguredAffinity>[0]["runExact"] =
+				async (input, options) => {
+					const targetId = options.tabTargetId;
+					if (!targetId || !input.conversationId)
+						throw new Error("fixture requires an exact conversation target");
+					const url = `https://chatgpt.com/c/${input.conversationId}`;
+					if (pages.get(targetId) !== url) expect(options.allowNavigation).toBe(true);
+					pages.set(targetId, url);
+					return {
+						text: "fixture",
+						conversationId: input.conversationId,
+						url,
+						tabTargetId: targetId,
+					};
+				};
+			for (const conversationId of ["chat-1", "chat-2"]) {
+				await runChatgptPromptWithConfiguredAffinity({
+					userConfig,
+					runtime,
+					input: { prompt: "fixture", conversationId },
+					runSerialized: vi.fn(),
+					runExact,
+					resolveServiceTarget: async () => ({
+						host: "127.0.0.1",
+						port: 45011,
+						managedBrowserProfile: "/managed/chatgpt",
+					}),
+					openTarget,
+					closeTarget: async ({ targetId }) => {
+						pages.delete(targetId);
+					},
+					inspectTarget: async (_endpoint, targetId) =>
+						pages.get(targetId) ? { url: pages.get(targetId) as string } : null,
+				});
+			}
+			expect(openTarget).toHaveBeenCalledOnce();
+			expect(pages.size).toBe(1);
+			expect((await runtime.registry?.list())?.[0]).toMatchObject({
+				state: "idle",
+				workload: { kind: "conversation", conversationId: "chat-2" },
+			});
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
 	test("classifies structured legacy browser warning details", () => {
 		expect(
 			classifyStructuredProviderWarning({
@@ -138,7 +198,7 @@ describe("configured ChatGPT affinity runtime", () => {
 			});
 			expect(runExact.mock.calls[0]?.[1]).toMatchObject({
 				tabTargetId: "target-1",
-				preserveActiveTab: true,
+				preserveActiveTab: false,
 			});
 			expect(await runtime.readStatus()).toMatchObject({
 				leaseCount: 1,

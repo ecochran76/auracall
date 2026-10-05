@@ -158,7 +158,9 @@ describe("configured ChatGPT utility production target wiring", () => {
 			finalDisposition: "preserved",
 			lossReason: "restart-unverified",
 		});
-		expect(leases[1]).toMatchObject({
+		expect(
+			leases.find((lease) => lease.state === "idle" && lease.targetId === "library-target"),
+		).toMatchObject({
 			state: "idle",
 			targetId: "library-target",
 			workload: { kind: "ephemeral", operationId: "chatgpt-service-current-process" },

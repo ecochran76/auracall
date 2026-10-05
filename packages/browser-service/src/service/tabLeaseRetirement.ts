@@ -1,3 +1,4 @@
+import { isTabLeaseTtlExempt } from "./tabLeaseRegistry.js";
 import type {
 	BrowserTabLease,
 	BrowserTabLeaseRegistry,
@@ -51,7 +52,10 @@ export async function retireExpiredTabLeases(input: {
 	}
 
 	for (const candidate of candidates) {
-		const reason = retirementReason(candidate, nowMs);
+		const retainedFollow = isTabLeaseTtlExempt(candidate);
+		if (retainedFollow && endpoint && candidate.state !== "retiring") continue;
+		const reason = retainedFollow && !endpoint && input.endpointAbsenceProvesTargetsMissing
+			? "operator" : retirementReason(candidate, nowMs);
 		if (!reason) continue;
 		if (!endpoint && !input.endpointAbsenceProvesTargetsMissing) {
 			outcomes.push({

@@ -52827,3 +52827,30 @@ PR201 canonical 46c6bb3f9 installed with exact adapter SHA256 parity. Three real
 ## 2026-10-04 | Issue165 complete context replay and live cap
 
 Strengthened existing Retry regression to complete messages/file extraction and exercise late false/genuine Retry. Pre-PR201 adapter fails three false-positive cases; repaired adapter passes all five; 199 focused tests, typecheck and lint pass. No production source change or live pass. Five-of-five live controls used; one additional ten-minute owned-completion control awaits explicit cap extension. Scheduler and completions remain paused.
+
+### 2026-10-05 | Plan 0386 tab-management review
+
+User requested algorithm review after excessive restored tabs. Provider-free real coordinator reproduction leaves 33 physical pages from 32 restored pages, then 34 after a second completion in the same PID; registry has two leases and performs no census. Existing four focused suites pass 25 tests, including explicit restored-tab preservation. Workload ownership is not a physical one-tab-per-process invariant; maintenance only reports unleased pages. Saved Default/Sessions state quarantined after proven browser absence, auth fingerprints unchanged. Review and next repair gates: [tab-management review](notes/2026-10-05-plan0386-tab-management-review.md). No live journey used. Goal and lifecycle remediation remain OPEN.
+
+### 2026-10-05 11:32 UTC | Plan0390 process-owned tab repair
+
+User authorized one tab per process including live follow, TTLs for all other
+physical pages, two hours or 500000 tokens. Implemented process-bound reuse and
+revision-fenced collector/child handoff, pre-I/O concurrency exclusion, persistent
+unknown-page TTLs, retained follow exemption, restart takeover after dead-owner
+proof, and quarantine on every managed cold launch. Core fixtures pass; broader
+165-file browser/account-mirror run found three changed-contract fixture failures
+(now repaired) plus one independently reproduced baseline prompt-structure
+regex failure on canonical PR208. Source and test for that baseline are unchanged.
+Installed API PID98666, zero restarts, all lease fences zero, browser absent;
+installation unchanged. Plan0390 remains OPEN pending review/install/browser proof.
+
+### 2026-10-05T11:55Z — Plan 0390 source validation checkpoint
+
+- The primary ran the broad browser/account-mirror lane: 164 files, 1781 tests
+  passed, one skipped; typecheck and build pass. Touched lint: zero errors, two
+  unchanged browser launcher fixture naming warnings.
+- The unrelated prompt-structure failure is reproduced on clean PR 208; its
+  two-case file is excluded, not represented as passing.
+- Source is ready for serial Standards and Spec adjudication. Merge/install and
+  actual elapsed-time browser TTL proof remain pending. No new provider pass.

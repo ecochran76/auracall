@@ -17,7 +17,7 @@ import {
 	withProviderTrafficContext,
 } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { classifyStructuredProviderWarning } from "../browser/chatgptAffinityRuntime.js";
-import { probeVisibleChatgptRateLimitWarning } from "../browser/chatgptProviderTraffic.js";
+import { probeChatgptRateLimitWarning } from "../browser/chatgptProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "../browser/chatgptRateLimitGuard.js";
 import { retireExpiredChatgptTabLeases } from "../browser/chatgptTabRetirement.js";
 import { BrowserService } from "../browser/service/browserService.js";
@@ -248,7 +248,7 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		interactionGovernor,
 		mutationAudit: browserService.getMutationAuditSink(),
 		settleInteraction: (settlement) => interactionGovernor.finish(settlement),
-		probeWarning: probeVisibleChatgptRateLimitWarning,
+		probeWarning: probeChatgptRateLimitWarning,
 		persistWarning: async (warning) => {
 			const observedAt = (input.now ?? (() => new Date()))();
 			const targets = await listChromeTargets(crawler.endpoint.port, crawler.endpoint.host).catch(

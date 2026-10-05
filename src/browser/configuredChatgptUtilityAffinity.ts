@@ -28,7 +28,7 @@ import {
 	resolveChatgptTenantLimits,
 } from "../runtime/tenantExecutionLimits.js";
 import { classifyStructuredProviderWarning } from "./chatgptAffinityRuntime.js";
-import { probeVisibleChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
+import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
 import { retireExpiredChatgptTabLeases } from "./chatgptTabRetirement.js";
 import {
@@ -138,11 +138,13 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	) {
 		const endpoint = toEndpoint(initialTarget);
 		if (endpoint) {
+			const processTab = await runtime.registry.findByProcess(scope);
 			const recoverable = await runtime.registry.list({
 				scope,
 				states: ["idle", "lost"],
 			});
 			for (const lease of recoverable) {
+				if (lease.leaseId === processTab?.leaseId || lease.retention === "live-follow") continue;
 				if (
 					lease.workload.kind !== "ephemeral" ||
 					lease.effectState === "in-flight" ||
@@ -288,7 +290,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 					throw new Error("Provider traffic tab lease ownership changed before utility action.");
 				}
 			},
-			probeWarning: probeVisibleChatgptRateLimitWarning,
+			probeWarning: probeChatgptRateLimitWarning,
 			persistWarning: async (warning) => {
 				const observedAt = now();
 				await runtime.ledger?.recordProviderWarning({

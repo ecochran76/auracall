@@ -1,4 +1,9 @@
-import { isProcessAlive } from "../../../packages/browser-service/src/processCheck.js";
+import {
+	isProcessAlive,
+	verifyChromeProcessAbsent,
+} from "../../../packages/browser-service/src/processCheck.js";
+import { releaseAbsentBrowserTabLeases } from "../../../packages/browser-service/src/service/tabInventory.js";
+import { withProcessTabAcquisition } from "../../../packages/browser-service/src/service/processTabAcquisition.js";
 import type {
 	BrowserProfileControlClaim,
 	BrowserTabLease,
@@ -35,6 +40,7 @@ export function createChatgptTabProvisioner(input: {
 	isOwnerAlive?: (processId: number) => boolean;
 	now?: () => Date;
 	resolveExistingEndpoint: () => Promise<ChatgptManagedBrowserEndpoint | null>;
+	verifyBrowserAbsent?: () => Promise<boolean>;
 	startBrowser: () => Promise<ChatgptManagedBrowserEndpoint>;
 	inspectTarget?: (
 		endpoint: ChatgptManagedBrowserEndpoint,
@@ -43,122 +49,176 @@ export function createChatgptTabProvisioner(input: {
 	openTarget: (input: { host: string; port: number; url: string }) => Promise<ChatgptOpenedTarget>;
 	closeTarget: (input: { host: string; port: number; targetId: string }) => Promise<void>;
 }): (request: { interactionReservationId: string }) => Promise<ProvisionedChatgptTab> {
-	return async (request) => {
-		requireNonEmpty(request.interactionReservationId, "interactionReservationId");
-		const now = input.now ?? (() => new Date());
-		let endpoint = await input.resolveExistingEndpoint();
-		const reused = await acquireVerifiedExistingLease(input, endpoint, now);
-		if (reused) return reused;
-		if (!endpoint) {
-			await releaseIdleLeasesForAbsentBrowser(
-				input.registry,
-				input.scope,
-				now,
-				input.isOwnerAlive ?? isProcessAlive,
-			);
-			let controlClaim: BrowserProfileControlClaim | null = null;
-			const acquired = await input.registry.acquireProfileControl({
+	return (request) =>
+		withProcessTabAcquisition(input.scope, async () => {
+			requireNonEmpty(request.interactionReservationId, "interactionReservationId");
+			const now = input.now ?? (() => new Date());
+			let endpoint = await input.resolveExistingEndpoint();
+			const absent =
+				!endpoint &&
+				(await (
+					input.verifyBrowserAbsent ??
+					(() => verifyChromeProcessAbsent(input.scope.managedBrowserProfile))
+				)());
+			if (absent) {
+				await releaseAbsentBrowserTabLeases({
+					registry: input.registry,
+					scope: {
+						managedBrowserProfile: input.scope.managedBrowserProfile,
+						service: input.scope.service,
+					},
+					now: now().toISOString(),
+				});
+			}
+			const processTab = await input.registry.findByProcess(input.scope);
+			if (processTab) {
+				if (!endpoint || !input.inspectTarget)
+					throw new Error("ChatGPT process tab cannot be verified.");
+				assertEndpoint(endpoint, input.scope.managedBrowserProfile);
+				const inspected = await input.inspectTarget(endpoint, processTab.targetId);
+				if (!inspected) {
+					await releaseMissingLease(input.registry, processTab, now().toISOString());
+				} else {
+					if (new URL(inspected.url).origin !== new URL(input.targetUrl).origin) {
+						throw new Error("ChatGPT process tab has a different provider origin.");
+					}
+					const acquired = await input.registry.acquireProcess({
+						leaseId: processTab.leaseId,
+						expectedRevision: processTab.revision,
+						scope: input.scope,
+						workload: input.workload,
+						operationId: input.operationId,
+						now: now().toISOString(),
+						idleTtlMs: input.idleTtlMs,
+						absoluteTtlMs: input.absoluteTtlMs,
+					});
+					if (!acquired.ok)
+						throw new Error(`ChatGPT process tab acquisition failed: ${acquired.conflict.kind}.`);
+					const adopted = await input.registry.recordTargetAction({
+						claim: acquired.value.claim,
+						action: "adopted",
+						occurredAt: now().toISOString(),
+						idleTtlMs: input.idleTtlMs,
+					});
+					if (!adopted.ok)
+						throw new Error(`ChatGPT process tab adoption failed: ${adopted.conflict.kind}.`);
+					return { ...adopted.value, endpoint: { host: endpoint.host, port: endpoint.port } };
+				}
+			}
+			const reused = await acquireVerifiedExistingLease(input, endpoint, now);
+			if (reused) return reused;
+			if (!endpoint) {
+				if (absent)
+					await releaseIdleLeasesForAbsentBrowser(
+						input.registry,
+						input.scope,
+						now,
+						input.isOwnerAlive ?? isProcessAlive,
+					);
+				let controlClaim: BrowserProfileControlClaim | null = null;
+				const acquired = await input.registry.acquireProfileControl({
+					scope: input.scope,
+					kind: "browser-startup",
+					operationId: input.operationId,
+					now: now().toISOString(),
+					ttlMs: input.profileControlTtlMs ?? 60_000,
+				});
+				if (!acquired.acquired) {
+					throw new Error(`ChatGPT browser startup control denied: ${acquired.reason}.`);
+				}
+				controlClaim = acquired.claim;
+				let startupError: unknown = null;
+				try {
+					endpoint = await input.startBrowser();
+				} catch (error) {
+					startupError = error;
+				}
+				let releaseError: unknown = null;
+				let released = false;
+				try {
+					released = await input.registry.releaseProfileControl({
+						claim: controlClaim,
+						releasedAt: now().toISOString(),
+					});
+				} catch (error) {
+					releaseError = error;
+				}
+				if (startupError && releaseError) {
+					throw new AggregateError(
+						[startupError, releaseError],
+						"ChatGPT browser startup and profile-control release both failed.",
+					);
+				}
+				if (startupError) throw startupError;
+				if (releaseError) throw releaseError;
+				if (!released) throw new Error("ChatGPT browser startup control release failed.");
+			}
+
+			if (!endpoint) throw new Error("ChatGPT browser startup returned no endpoint.");
+			assertEndpoint(endpoint, input.scope.managedBrowserProfile);
+			const target = await input.openTarget({
+				host: endpoint.host,
+				port: endpoint.port,
+				url: input.targetUrl,
+			});
+			const targetId = requireNonEmpty(target.targetId, "targetId");
+			const targetUrl = requireNonEmpty(target.url, "targetUrl");
+			const reserved = await input.registry.reserve({
 				scope: input.scope,
-				kind: "browser-startup",
+				targetId,
+				workload: input.workload,
 				operationId: input.operationId,
 				now: now().toISOString(),
-				ttlMs: input.profileControlTtlMs ?? 60_000,
+				idleTtlMs: input.idleTtlMs,
+				absoluteTtlMs: input.absoluteTtlMs,
+				targetFingerprint: targetUrl,
+				processBound: true,
 			});
-			if (!acquired.acquired) {
-				throw new Error(`ChatGPT browser startup control denied: ${acquired.reason}.`);
+			if (!reserved.ok) {
+				await input.closeTarget({ host: endpoint.host, port: endpoint.port, targetId });
+				throw new Error(`ChatGPT target lease reservation failed: ${reserved.conflict.kind}.`);
 			}
-			controlClaim = acquired.claim;
-			let startupError: unknown = null;
-			try {
-				endpoint = await input.startBrowser();
-			} catch (error) {
-				startupError = error;
-			}
-			let releaseError: unknown = null;
-			let released = false;
-			try {
-				released = await input.registry.releaseProfileControl({
-					claim: controlClaim,
-					releasedAt: now().toISOString(),
-				});
-			} catch (error) {
-				releaseError = error;
-			}
-			if (startupError && releaseError) {
-				throw new AggregateError(
-					[startupError, releaseError],
-					"ChatGPT browser startup and profile-control release both failed.",
-				);
-			}
-			if (startupError) throw startupError;
-			if (releaseError) throw releaseError;
-			if (!released) throw new Error("ChatGPT browser startup control release failed.");
-		}
 
-		if (!endpoint) throw new Error("ChatGPT browser startup returned no endpoint.");
-		assertEndpoint(endpoint, input.scope.managedBrowserProfile);
-		const target = await input.openTarget({
-			host: endpoint.host,
-			port: endpoint.port,
-			url: input.targetUrl,
-		});
-		const targetId = requireNonEmpty(target.targetId, "targetId");
-		const targetUrl = requireNonEmpty(target.url, "targetUrl");
-		const reserved = await input.registry.reserve({
-			scope: input.scope,
-			targetId,
-			workload: input.workload,
-			operationId: input.operationId,
-			now: now().toISOString(),
-			idleTtlMs: input.idleTtlMs,
-			absoluteTtlMs: input.absoluteTtlMs,
-			targetFingerprint: targetUrl,
-		});
-		if (!reserved.ok) {
-			await input.closeTarget({ host: endpoint.host, port: endpoint.port, targetId });
-			throw new Error(`ChatGPT target lease reservation failed: ${reserved.conflict.kind}.`);
-		}
-
-		let lease = reserved.value.lease;
-		let claim = reserved.value.claim;
-		const created = await input.registry.recordTargetAction({
-			claim,
-			action: "target-created",
-			occurredAt: now().toISOString(),
-			idleTtlMs: input.idleTtlMs,
-		});
-		if (!created.ok) {
-			const accountingError = new Error(
-				`ChatGPT target creation accounting failed: ${created.conflict.kind}.`,
-			);
-			return rollbackCreatedTarget(input, endpoint, reserved.value.lease, accountingError, now);
-		}
-		lease = created.value.lease;
-		claim = created.value.claim;
-
-		if (input.workload.kind === "conversation") {
-			const navigated = await input.registry.recordTargetAction({
+			let lease = reserved.value.lease;
+			let claim = reserved.value.claim;
+			const created = await input.registry.recordTargetAction({
 				claim,
-				action: "navigation",
+				action: "target-created",
 				occurredAt: now().toISOString(),
 				idleTtlMs: input.idleTtlMs,
 			});
-			if (!navigated.ok) {
+			if (!created.ok) {
 				const accountingError = new Error(
-					`ChatGPT target navigation accounting failed: ${navigated.conflict.kind}.`,
+					`ChatGPT target creation accounting failed: ${created.conflict.kind}.`,
 				);
-				return rollbackCreatedTarget(input, endpoint, lease, accountingError, now);
+				return rollbackCreatedTarget(input, endpoint, reserved.value.lease, accountingError, now);
 			}
-			lease = navigated.value.lease;
-			claim = navigated.value.claim;
-		}
+			lease = created.value.lease;
+			claim = created.value.claim;
 
-		return {
-			lease,
-			claim,
-			endpoint: { host: endpoint.host, port: endpoint.port },
-		};
-	};
+			if (input.workload.kind === "conversation") {
+				const navigated = await input.registry.recordTargetAction({
+					claim,
+					action: "navigation",
+					occurredAt: now().toISOString(),
+					idleTtlMs: input.idleTtlMs,
+				});
+				if (!navigated.ok) {
+					const accountingError = new Error(
+						`ChatGPT target navigation accounting failed: ${navigated.conflict.kind}.`,
+					);
+					return rollbackCreatedTarget(input, endpoint, lease, accountingError, now);
+				}
+				lease = navigated.value.lease;
+				claim = navigated.value.claim;
+			}
+
+			return {
+				lease,
+				claim,
+				endpoint: { host: endpoint.host, port: endpoint.port },
+			};
+		});
 }
 
 async function releaseIdleLeasesForAbsentBrowser(
@@ -261,6 +321,7 @@ async function acquireVerifiedExistingLease(
 		throw new Error("ChatGPT bound target no longer has the exact conversation route.");
 	}
 	const acquired = await input.registry.acquire({
+		processBound: true,
 		scope: input.scope,
 		workload: input.workload,
 		operationId: input.operationId,
