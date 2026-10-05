@@ -595,3 +595,32 @@ observer95100 are live. Observer checkpoint40 samples, zero warnings/errors;
 child attachment follows its exact ephemeral lease. Four controls used, one left.
 Third failed job settled before cleanup/install; native absence verified and
 manual lease releases zero. All old unrelated operator pauses preserved.
+
+## 2026-10-05 renewed current-main acceptance packet
+
+User explicitly resumed the four-step objective with a limit of one million
+tokens or two hours, whichever first. PR213 merged as c568cf3e6; source begins
+at that current main. Root preexisting journal/handoff and other worktrees are
+preserved. Primary owns `fix/issue165-scoped-follow-acceptance`, Issue165.
+
+The existing normal follow API cannot freeze a conversation: maxItems bounds
+transfers while its child reconciles the entire account. This packet adds an
+optional explicit conversationIds scope through the normal completion, detail
+collector and automatic child. Scope uses steady_follow, resets unrelated
+attachment cursor offsets, preserves retained cached rows and traffic/identity
+guards, and omits unrelated account-library catchup. Unscoped behavior stays
+covered. No synthetic download or manual worker substitutes for acceptance.
+
+Frozen local fixture: litscout-research-coordination-1.0.0(2).zip, a retained
+ChatGPT user-upload file in one conversation. SQL records its exact provider
+file reference with no storage path; cache-tree filename and filtered archive
+lookup both return zero. Files-only selection has exactly one known filename.
+The preliminary Bailey candidate was rejected before launch because multiple
+missing siblings would make an unchanged next transfer a different asset.
+One new transfer maximum;
+then repeat unchanged. Required evidence is exact parent/child IDs, physical
+page/target history, identity match, native transfer/byte/hash/manifest/archive
+parity, and zero repeat downloads or duplicate entries. Stop on provider guard,
+HTTP429, verification, identity/custody failure; retain failed evidence and
+diagnose locally before any authorized retry. Keep scheduler and unrelated
+completions paused. Full objective remains OPEN until live requirements pass.

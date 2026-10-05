@@ -1688,22 +1688,22 @@ lanes:
   - id: P85
     objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
     plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    plan_ref: refs/heads/fix/issue165-follow-continuation
-    branch: fix/issue165-follow-continuation
+    plan_ref: refs/heads/fix/issue165-scoped-follow-acceptance
+    branch: fix/issue165-scoped-follow-acceptance
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: e747154d428b97ae25a624e9537d9ca1cb37ddf0
-    remote_ref: refs/remotes/origin/fix/issue165-follow-continuation
+    checkpoint: c568cf3e6be710042b6353252934eaa127eeef4b
+    remote_ref: refs/remotes/origin/fix/issue165-scoped-follow-acceptance
     integration: merge
     work_items: [ecochran76/auracall#165]
     dependencies: [P84]
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: Budget-limited after three live passes; owned crawler and automatic completion runner creation proven, but fresh normal refresh and automatic materialization continuation remain unproven.
-    validation_status: installed-partial-budget-limited
+    blocker: Current-main scoped normal follow new-byte capture and unchanged repeat remain unproven.
+    validation_status: scoped-source-validation
     validation_ref: docs/dev/notes/2026-10-04-plan0386-bounded-resumption-acceptance.json
-    integration_receipt: e747154d428b97ae25a624e9537d9ca1cb37ddf0
-    disposition: PR194 and PR195 merged and installed with canonical hash parity. Token budget reached 504761 of 500000 before full acceptance. Scheduler and packet-owned completion contained paused, other five pauses preserved, background drain restored, one retained idle lease fenced. No further live passes started.
-    updated_at: 2026-10-04
+    integration_receipt: c568cf3e6be710042b6353252934eaa127eeef4b
+    disposition: PR213 merged; scoped follow carries selected conversation into detail collection and automatic child while preserving unrelated inventory and backfill. Live acceptance remains open.
+    updated_at: 2026-10-05

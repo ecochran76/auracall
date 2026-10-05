@@ -4539,7 +4539,8 @@ describe("http responses adapter", () => {
 						provider: "chatgpt",
 						runtimeProfile: "default",
 						maxPasses: 1,
-						sweepMode: "full_sweep",
+						sweepMode: "steady_follow",
+						conversationIds: ["conv_scope"],
 						materializationPolicy: "full_missing_assets",
 						materializationAssetKinds: ["media"],
 						materializationMaxItems: 2,
@@ -4555,13 +4556,31 @@ describe("http responses adapter", () => {
 				provider: "chatgpt",
 				runtimeProfileId: "default",
 				maxPasses: 1,
-				sweepMode: "full_sweep",
+				sweepMode: "steady_follow",
+				conversationIds: ["conv_scope"],
 				materializationPolicy: "full_missing_assets",
 				materializationAssetKinds: ["media"],
 				materializationMaxItems: 2,
 				materializationRefreshSnapshot: true,
 				materializationForce: undefined,
 			});
+
+			for (const body of [
+				{ conversationIds: [] },
+				{ conversationIds: [" "] },
+				{ conversationIds: ["conv_scope"], sweepMode: "full_sweep" },
+			]) {
+				const invalid = await fetch(
+					`http://127.0.0.1:${server.port}/v1/account-mirrors/completions`,
+					{
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify(body),
+					},
+				);
+				expect(invalid.status).toBe(400);
+			}
+			expect(start).toHaveBeenCalledTimes(1);
 
 			const response = await fetch(
 				`http://127.0.0.1:${server.port}/v1/account-mirrors/completions?status=active&provider=chatgpt&runtimeProfile=default&limit=5`,

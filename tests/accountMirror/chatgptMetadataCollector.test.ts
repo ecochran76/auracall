@@ -1312,7 +1312,10 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
-	test("honors requested detail-inventory phase without root or project rail reads", async () => {
+	test.each([
+		false,
+		true,
+	])("honors requested detail-inventory without rail reads (explicit scope=%s)", async (scoped) => {
 		const calls: string[] = [];
 		const client = {
 			getProviderSessionProof: vi.fn(async () =>
@@ -1416,8 +1419,21 @@ describe("ChatGPT account mirror metadata collector", () => {
 			expectedIdentityKey: "ecochran76@gmail.com",
 			sweepMode: "steady_follow",
 			requestedPhase: "detail-inventory",
+			conversationIds: scoped ? ["conv_target"] : undefined,
 			previousEvidence: {
 				identitySource: "auth-session",
+				...(scoped
+					? {
+							attachmentInventory: {
+								nextProjectIndex: 0,
+								nextConversationIndex: 8,
+								detailReadLimit: 1,
+								scannedProjects: 0,
+								scannedConversations: 8,
+								yielded: true,
+							},
+						}
+					: {}),
 				projectSampleIds: [],
 				conversationSampleIds: ["conv_target"],
 				truncated: {
@@ -1435,7 +1451,7 @@ describe("ChatGPT account mirror metadata collector", () => {
 					frontierReached: true,
 					firstStoppedRow: null,
 					fallbackReason: null,
-					selectedConversationIds: ["conv_target"],
+					selectedConversationIds: scoped ? ["conv_unrelated"] : ["conv_target"],
 					rowEvidence: [],
 				},
 			},
