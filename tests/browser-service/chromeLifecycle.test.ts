@@ -67,6 +67,13 @@ describe('chromeLifecycle (package)', () => {
     ).toBe('"C:\\Users\\ecoch\\AppData\\Local\\AuraCall\\browser-profiles\\windows-chrome-test\\grok"');
   });
 
+  test('endpoint-only startup suppresses initial windows and session restoration', () => {
+    const flags = buildChromeFlags(false, null, 'Default', { minimal: true, suppressStartupWindow: true });
+    expect(flags).toContain('--no-startup-window');
+    expect(flags).not.toContain('--new-window');
+    expect(buildChromeFlags(false, null, 'Default', { minimal: true })).toContain('--new-window');
+  });
+
   test('buildChromeFlags adds start-minimized when hideWindow launches headful Chrome', () => {
     expect(buildChromeFlags(false, null, 'Default', { startMinimized: true })).toContain('--start-minimized');
     expect(buildChromeFlags(true, null, 'Default', { startMinimized: true })).not.toContain('--start-minimized');

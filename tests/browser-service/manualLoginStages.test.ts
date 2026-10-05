@@ -110,6 +110,7 @@ describe('manual login preflight stages', () => {
     launchMocks.openOrReuseChromeTarget.mockReset().mockResolvedValue(undefined);
     expect(result).toMatchObject({ port: 45015, chrome: { pid: 1234 } });
     expect(openedTab).toBe(0);
+    expect(launchMocks.launchChrome.mock.calls[0]?.[3]).toMatchObject({ suppressStartupWindow: true });
   });
 
   test('reports DevTools readiness and login-tab opening after a successful launch', async () => {

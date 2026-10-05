@@ -533,3 +533,19 @@ drain unchanged, no active/idle/retiring/lost leases, managed browser absent.
 All five renewed controls have been used. No sixth control ran. Positive capture
 and changed/unchanged efficiency acceptance remain OPEN. Evidence:
 [installed repair receipt](../notes/2026-10-05-plan0386-installed-blocker-repairs.json).
+
+## 2026-10-05 02:15 UTC | Endpoint-only startup restoration repair
+
+Two of the second renewed five journeys used; three remain. Journey1 observer
+error paused and aborted context read. Journey2 completed metadata and settled
+six file candidates skipped; no positive capture. Browser closure overlapped its
+child job, so this is not uninterrupted acceptance. Background drain restored.
+
+Persisted profile session events repeatedly restored roughly 40 pages. API group
+hit 1,528,966 high-memory events and 64.99 percent full stall avg10, without OOM
+or API restart. Closing the owned browser freed the pressure. The shared launcher
+now suppresses initial windows only for explicit endpoint-only about:blank
+startup; admitted target creation and all custody guards remain unchanged.
+Flag and wiring regressions failed before repair; 54 focused tests, typecheck,
+and touched lint pass. Installed live verification remains pending. Receipt:
+[second renewed controls](../notes/2026-10-05-plan0386-second-renewed-controls.json).
