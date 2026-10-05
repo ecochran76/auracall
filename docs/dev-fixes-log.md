@@ -1,3 +1,12 @@
+## 2026-10-05 | Startup-window suppression alone does not isolate restored tabs
+
+PR207 live replay still restored 45 pages when the first crawler appeared. An
+endpoint-only cold managed launch must also quarantine persisted tab-session
+inputs, using the existing bootstrap session whitelist and strict native absence
+proof. Renaming preserves a restoration path; authentication and active/external
+browsers remain intact. Public launcher-ordering regression and boundary tests
+pass; installed verification pending after the active child job settles.
+
 ## 2026-10-05 | Endpoint-only startup must suppress session windows
 
 Opening about:blank in a new window can also restore persisted session windows.

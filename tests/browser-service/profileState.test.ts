@@ -12,10 +12,45 @@ vi.mock('../../packages/browser-service/src/processCheck.js', async (importOrigi
     ...actual,
     isChromeAlive: vi.fn(async () => false),
     findChromePidUsingUserDataDir: vi.fn(async () => null),
+    verifyChromeProcessAbsent: vi.fn(async () => true),
   };
 });
 
 describe('profileState (package)', () => {
+  test('quarantines persisted tabs on an absent managed browser without changing authentication', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'browser-service-session-'));
+    const userDataDir = path.join(root, 'managed', 'chatgpt');
+    const profileDir = path.join(userDataDir, 'Default');
+    try {
+      await mkdir(path.join(profileDir, 'Sessions'), { recursive: true });
+      await writeFile(path.join(profileDir, 'Sessions', 'Session_1'), 'persisted-tabs');
+      await writeFile(path.join(profileDir, 'Preferences'), 'authentication-preferences');
+      const backup = await profileState.quarantineColdManagedProfileSessions({ userDataDir, profileName: 'Default', managedProfileRoot: path.join(root, 'managed') });
+      expect(existsSync(path.join(profileDir, 'Sessions'))).toBe(false);
+      if (!backup) throw new Error('Expected a restorable session backup.');
+      expect(await readFile(path.join(backup, 'Sessions', 'Session_1'), 'utf8')).toBe('persisted-tabs');
+      expect(await readFile(path.join(profileDir, 'Preferences'), 'utf8')).toBe('authentication-preferences');
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
+  test('preserves sessions when native absence cannot be proven or the directory is outside managed scope', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'browser-service-session-guard-'));
+    const userDataDir = path.join(root, 'managed', 'chatgpt');
+    const sessions = path.join(userDataDir, 'Default', 'Sessions');
+    try {
+      await mkdir(sessions, { recursive: true });
+      await writeFile(path.join(sessions, 'Session_1'), 'preserve-tabs');
+      vi.mocked(processCheck.verifyChromeProcessAbsent).mockResolvedValue(false);
+      await expect(profileState.quarantineColdManagedProfileSessions({ userDataDir, profileName: 'Default', managedProfileRoot: path.join(root, 'managed') })).rejects.toThrow('without proven managed browser absence');
+      expect(await readFile(path.join(sessions, 'Session_1'), 'utf8')).toBe('preserve-tabs');
+      await expect(profileState.quarantineColdManagedProfileSessions({ userDataDir, profileName: 'Default', managedProfileRoot: path.join(root, 'other') })).resolves.toBeNull();
+      expect(existsSync(sessions)).toBe(true);
+    } finally {
+      vi.mocked(processCheck.verifyChromeProcessAbsent).mockResolvedValue(true);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test('writes and reads DevToolsActivePort', async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-profile-'));
     try {

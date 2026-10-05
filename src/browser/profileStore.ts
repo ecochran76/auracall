@@ -10,6 +10,7 @@ import { isWslEnvironment, toWindowsPath, toWslPath } from '../../packages/brows
 import { listInstances } from '../../packages/browser-service/src/service/stateRegistry.js';
 import { findChromePidUsingUserDataDir, isChromeAlive } from '../../packages/browser-service/src/processCheck.js';
 import { resolveWindowsPowerShellPath } from '../../packages/browser-service/src/windowsLoopbackRelay.js';
+import { CHROMIUM_SESSION_RESTORE_ENTRIES as MANAGED_PROFILE_CRASH_PRUNE_ENTRIES } from '../../packages/browser-service/src/profileState.js';
 
 export type BrowserProfileTarget = 'chatgpt' | 'gemini' | 'grok';
 export type ManagedProfileSeedPolicy = 'bootstrap-only' | 'reseed-if-source-newer' | 'force-reseed';
@@ -68,14 +69,6 @@ const MANAGED_PROFILE_SKIP_ENTRY_NAMES = new Set([
   'singletoncookie',
   'devtoolsactiveport',
 ]);
-
-const MANAGED_PROFILE_CRASH_PRUNE_ENTRIES = [
-  'Sessions',
-  'Current Session',
-  'Current Tabs',
-  'Last Session',
-  'Last Tabs',
-] as const;
 
 export function resolveManagedProfileRoot(configuredRoot?: string | null): string {
   const root = configuredRoot?.trim()

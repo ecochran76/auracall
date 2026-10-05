@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import CDP from 'chrome-remote-interface';
 import { Launcher, type LaunchedChrome } from 'chrome-launcher';
 import type { BrowserLogger, ResolvedBrowserConfig, ChromeClient } from './types.js';
-import { cleanupStaleProfileState, readDevToolsPort, readChromePid, writeDevToolsActivePort } from './profileState.js';
+import { cleanupStaleProfileState, quarantineColdManagedProfileSessions, readDevToolsPort, readChromePid, writeDevToolsActivePort } from './profileState.js';
 import {
   findChromePidUsingUserDataDir,
   findChromeProcessUsingUserDataDir,
@@ -351,6 +351,14 @@ export async function launchChrome(
   await cleanupStaleProfileState(userDataDir, logger, {
     lockRemovalMode: isManagedProfileForCleanup ? 'if_recorded_pid_dead' : 'never',
   });
+  if (options.suppressStartupWindow && managedProfileRootForCleanup) {
+    const backup = await quarantineColdManagedProfileSessions({
+      userDataDir,
+      profileName: resolvedProfileName,
+      managedProfileRoot: managedProfileRootForCleanup,
+    });
+    if (backup) logger(`Quarantined persisted browser session inputs: ${backup}`);
+  }
   const probeHost = resolveRemoteDebugHost(config.chromePath ?? undefined);
   const debugBindAddress =
     probeHost && probeHost !== '127.0.0.1' && !isWindowsLoopbackRemoteHost(probeHost) ? '0.0.0.0' : undefined;

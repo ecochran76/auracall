@@ -1,6 +1,43 @@
 import path from 'node:path';
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { findChromePidUsingUserDataDir, isDevToolsResponsive, isChromeAlive } from './processCheck.js';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { findChromePidUsingUserDataDir, isDevToolsResponsive, isChromeAlive, verifyChromeProcessAbsent } from './processCheck.js';
+
+export const CHROMIUM_SESSION_RESTORE_ENTRIES = [
+  'Sessions', 'Current Session', 'Current Tabs', 'Last Session', 'Last Tabs',
+] as const;
+
+export async function quarantineColdManagedProfileSessions(input: {
+  userDataDir: string;
+  profileName: string;
+  managedProfileRoot: string;
+}): Promise<string | null> {
+  const root = path.resolve(input.managedProfileRoot);
+  const userDataDir = path.resolve(input.userDataDir);
+  if (!userDataDir.startsWith(root + path.sep)) return null;
+  if (path.basename(input.profileName) !== input.profileName || ['.', '..'].includes(input.profileName)) {
+    throw new Error('Invalid managed browser profile directory name.');
+  }
+  const profileDir = path.join(userDataDir, input.profileName);
+  let names: string[];
+  try {
+    names = await readdir(profileDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+  const entries = CHROMIUM_SESSION_RESTORE_ENTRIES.filter(entry => names.includes(entry));
+  if (entries.length === 0) return null;
+  if (!(await verifyChromeProcessAbsent(userDataDir))) {
+    throw new Error('Cannot quarantine browser sessions without proven managed browser absence.');
+  }
+  const backup = path.join(userDataDir, 'auracall-session-quarantine', randomUUID(), input.profileName);
+  await mkdir(backup, { recursive: true, mode: 0o700 });
+  for (const entry of entries) {
+    await rename(path.join(profileDir, entry), path.join(backup, entry));
+  }
+  return backup;
+}
 
 export type ProfileStateLogger = (message: string) => void;
 
