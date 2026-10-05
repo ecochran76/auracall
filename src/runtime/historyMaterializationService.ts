@@ -3807,12 +3807,17 @@ function snapshotRefreshFromFileMaterialization(input: {
 	const fileEntries = input.result.entries.filter((entry) => entry.kind === "file");
 	const providerGuarded = historyMaterializationResultHasProviderGuard(input.result);
 	const unavailable = isTerminalConversationUnavailableResult(input.result);
-	const status = providerGuarded || unavailable ? "failed" : "refreshed";
+	const inventoryFailed = fileEntries.some(
+		(entry) => entry.status === "failed" && entry.providerId === null,
+	);
+	const status = providerGuarded || unavailable || inventoryFailed ? "failed" : "refreshed";
 	const routeabilityState: HistoryMaterializationSnapshotRouteabilityState = providerGuarded
 		? "guarded"
 		: unavailable
 			? "not_found_or_unavailable"
-			: "routeable";
+			: inventoryFailed
+				? "unknown"
+				: "routeable";
 	const error =
 		status === "failed"
 			? (fileEntries.find((entry) => entry.reason)?.reason ?? input.result.message)
@@ -6058,11 +6063,14 @@ function unsupportedEntry(
 	error: unknown,
 	target: HistoryMaterializationTarget | null,
 ): HistoryMaterializationManifestEntry {
+	const reason = formatHistoryMaterializationFailureReason({ target, error });
+	const startupDenied = reason.startsWith("Live-follow browser startup control denied:");
 	return {
 		kind,
 		providerId: null,
 		title: null,
-		status: "skipped",
+		status: startupDenied ? "failed" : "skipped",
+		...(startupDenied ? { failureKind: "retrieval_failed" as const, retryable: true } : {}),
 		localPath: null,
 		remoteUrl: null,
 		cacheKey: null,
@@ -6070,7 +6078,7 @@ function unsupportedEntry(
 		mimeType: null,
 		size: null,
 		materializationMethod: null,
-		reason: formatHistoryMaterializationFailureReason({ target, error }),
+		reason,
 		archiveItemId: null,
 		assetRoute: null,
 	};

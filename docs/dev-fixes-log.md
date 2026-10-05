@@ -1,3 +1,13 @@
+## 2026-10-05 | Startup denial is not an empty file inventory
+
+The materialization catch helper previously labeled browser-startup admission
+errors skipped. File snapshot synthesis then inferred refreshed/routeable with
+one file from that error entry. A public job replay of the observed tab-leases-
+active denial reproduces both claims without a browser. Classify startup denial
+as failed/retryable, and retain failed/unknown snapshot evidence when inventory
+was not reached. Genuine unsupported assets remain skipped; admission guards
+remain authoritative and this classification does not authorize a retry.
+
 ## 2026-10-05 | Concurrent status writes need distinct temporary files
 
 Account-mirror refresh, completion hydration and operator status reads can
