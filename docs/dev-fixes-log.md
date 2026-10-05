@@ -1,3 +1,11 @@
+## 2026-10-05 | Endpoint-only startup must suppress session windows
+
+Opening about:blank in a new window can also restore persisted session windows.
+On wsl-chrome-3, over 40 pages overwhelmed the API group memory limit and delayed
+HTTP monitoring. Use Chromium no-startup-window for endpoint-only launch, then
+create the admitted owned crawler. Keep ordinary login startup behavior. Tests
+cover both emitted flags and public manual-startup wiring; live proof pending.
+
 ## 2026-10-05 | Startup denial is not an empty file inventory
 
 The materialization catch helper previously labeled browser-startup admission
