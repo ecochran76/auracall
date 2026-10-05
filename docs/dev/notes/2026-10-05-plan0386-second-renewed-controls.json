@@ -66,7 +66,15 @@
       "jobStartedAt": "2026-10-05T02:19:17.821Z",
       "observation": "Still running; exact owned child DOM read timed out; persisted state does not establish terminal outcome.",
       "startupResult": "Flag present but 45 pages appeared; no-startup-window alone failed to isolate restored sessions.",
-      "observerCorrection": "Initial filter covered live-follow but omitted ephemeral child workload. Original receipt preserved; corrected observer includes only exact job-owned ephemeral lease and has late child coverage."
+      "observerCorrection": "Initial filter covered live-follow but omitted ephemeral child workload. Original receipt preserved; corrected observer includes only exact job-owned ephemeral lease and has late child coverage.",
+      "childObserver": {
+        "status": "failed",
+        "reason": "tab lease registry lock timeout",
+        "samples": 29,
+        "warningsDetected": 0,
+        "readErrors": 16,
+        "coverage": "late and incomplete; not warning-free acceptance proof"
+      }
     }
   ],
   "acceptance": "OPEN",
