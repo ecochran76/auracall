@@ -1,3 +1,19 @@
+## 2026-10-05 02:39 UTC | PR208 installed; fourth control confirms one-page cold startup
+
+Installed f019076aeb53f83ab08690f93fa11e809afc9bd4 with exact parity for
+chromeLifecycle and profileState. API98666 healthy, no restarts. Fresh cold launch
+shows one ChatGPT page and one restorable session quarantine, versus 45 pages on
+PR207. Process-group memory remains around 2.2GB. Startup isolation is proven;
+positive asset and efficiency acceptance remain OPEN.
+
+Fourth normal completion acctmirror_completion_9620866a-3ddc-4fcb-9549-8c45935db489
+finished metadata and queued hmj_ae025d2cb3c84689b477ff3680ea3dbc. The same job is
+running; do not restart it on an observation timeout. Monitor68890 and owned
+observer95100 are live. Observer checkpoint40 samples, zero warnings/errors;
+child attachment follows its exact ephemeral lease. Four controls used, one left.
+Third failed job settled before cleanup/install; native absence verified and
+manual lease releases zero. All old unrelated operator pauses preserved.
+
 ## 2026-10-05 02:32 UTC | PR208 built; existing child still active
 
 PR208 merged f019076aeb53f83ab08690f93fa11e809afc9bd4; canonical build passed.
