@@ -1,3 +1,39 @@
+## 2026-10-05 01:10 UTC | Status temp-file race reproduced and repaired
+
+Renewed controls4 and5 settled skipped with zero positive captures; five of five
+used. Control4 proves a live context snapshot and settled automatic handoff.
+Control5 masks browser startup admission denial as skipped and synthetic snapshot
+refresh; it does not prove no downloadable files. API57481 exited1 and restarted
+as19838. Redirected crash log proves a concurrent status rename ENOENT; a real
+filesystem public-persistence regression goes red, then green with UUID temp
+names. Ninety-five focused tests and typecheck pass. Merge/install/provider-free
+verification next; no additional live control. Operational-error classification
+and full positive/efficiency acceptance remain open. Curated renewed-controls
+JSON preserves the corrected evidence. Five unrelated pauses remain preserved.
+
+## 2026-10-05 00:44 UTC | Renewed journey3 contained, goal open
+
+Automatic materialization reached running but captured zero assets. API status,
+job detail and operator controls timed out; health also failed to respond.
+Stopped the API control group, proved native managed browser absence, restarted
+as PID57481 and paused own successor. Seven completions paused, zero runnable,
+no active/idle/retiring/lost leases; other five pauses preserved. Job failed
+six snapshots during shutdown because its crawler endpoint disappeared. Root
+cause of API unresponsiveness is unproven. Two renewed controls remain; local
+diagnosis precedes further live work. Curated renewed-controls JSON preserves
+counts, failed-job correction and containment without private payloads.
+
+## 2026-10-05 00:39 UTC | Plan0386 renewed controls in progress
+
+Three of five renewed controls used, two remain. Authoritative prior-job error
+proves API restart interruption after a partial refresh queued materialization;
+earlier compact-monitor no-job interpretation is corrected in Plan0386.
+A controller field mistake created a default successor, immediately paused at
+zero passes. Corrected wsl-chrome-3 successor completed metadata and automatically
+queued hmj_1fa91e638fc545b6a0c857798a1583dc, currently running. Preserve other
+five operator pauses; scheduler remains paused. Positive file/cache/archive
+and efficiency acceptance remain unproven. No source change in this checkpoint.
+
 ## 2026-10-04 23:30 UTC | PR197 installed warning test
 
 User authorized merge/install/test. Canonical c47c7fdff built and installed;

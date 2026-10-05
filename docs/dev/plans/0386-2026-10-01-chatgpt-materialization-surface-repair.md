@@ -63,6 +63,131 @@ API PID80665 restarted. One idle crawler lease remains fenced for subsequent
 same-workload absence recovery. No new source work or live pass after budget stop.
 See the bounded-resumption note and acceptance JSON for evidence and next gate.
 
+## Renewed goal | 2026-10-04 19:32 CDT
+
+User explicitly renewed resolution of Issue165 using ask-matt, permitting up to
+another five live provider journeys and an agentic live-follow simulation if
+needed. This allowance is separate from the earlier five controls. Current
+installed source is canonical PR201, 46c6bb3f9ee0bf0e8a33bb03090b4c225e98242c;
+PR203 strengthens the complete context replay without changing runtime source.
+Primary controller: this agent, isolated auracall-follow-continuation worktree.
+
+Remaining outcome: a normal installed context/metadata refresh followed by
+runnable automatic asset materialization, positive file/cache/archive evidence,
+and changed/unchanged efficiency proof. Synthetic successes and source-only
+repairs cannot satisfy those gates. Start with one owned-completion control,
+up to ten minutes including containment, and increment the new journey ledger
+before each live attempt. Maximum five; no blind repeat after a failed or
+ambiguous control. Diagnose locally before a subsequent journey. Preserve all
+five other operator pauses and keep global scheduler paused until acceptance.
+No prompts, warning dismissal, Answer now, identity bypass, lease bypass, or
+unowned tab adoption. Checkpoint at every live terminal result and material fix;
+maximum two local remediation attempts per demonstrated failure before reframe.
+
+Previous turn classification: progress, with a stronger red-capable complete
+context replay merged as PR203. New allowance started at zero of five. Runtime
+readback at start: API37740 active, original source checkout preserved dirty,
+continuation worktree clean, no conflicting open PR, Issue165 owned by Eric.
+
+### Renewed journey checkpoint | 2026-10-05 00:39 UTC
+
+Three of the new five controls have been attempted (two remain). Journey1
+blocked before provider work because prior job hmj_43f8009f7894424cafffd629a0051a38
+was failed. The authoritative job error is API-process interruption, not a
+provider warning. Its creation at 23:54:26Z and restart failure at 23:54:44Z
+correct the earlier compact-monitor interpretation: the preceding PR199 run
+completed a partial metadata refresh and queued materialization. No materialized
+asset result exists for that interrupted job. Preserve preceding receipts;
+this checkpoint supersedes their no-job assertion, not their raw observations.
+
+Journey2 used the wrong HTTP field runtimeProfileId rather than runtimeProfile;
+the primary immediately paused the resulting default-profile completion at
+zero passes. Its collector reported a missing provider traffic governor before
+physical connect-tab action. Native readback found no managed browser process;
+wsl-chrome-3 absence was true. Count this controller mistake conservatively
+against the five-control cap. All five pre-existing unrelated pauses remain.
+
+Journey3 uses the corrected runtimeProfile field and validates the created
+runtime before control. Successor acctmirror_completion_7b9f84e3-2183-4118-ad2b-4f108d0c3d52
+completed a metadata pass and automatically queued job
+hmj_1fa91e638fc545b6a0c857798a1583dc. Identity probe took 1222ms; context detail
+reported detail/page_navigate budget limit zero. Job is running; no positive
+capture or completion acceptance yet. Controller waits for job settlement
+rather than treating a metadata pass-count increment as full completion.
+
+### Journey3 contained | 2026-10-05 00:44 UTC
+
+Metadata completed partially; automatic materialization ran but captured zero
+assets. Around 00:41Z the API stopped responding to status, job detail, pause,
+cancel and unauthenticated health requests. The API group reached approximately
+7.7GB/904 tasks. Stop control-group containment completed; native browser absence
+was true before restart. API57481 now responds with seven paused completions,
+no runnable work and no active/idle/retiring/lost lease. Scheduler remains paused.
+
+Job completed failed at 00:43:50Z during shutdown: six conversations selected,
+zero materialized, six failures; all snapshot errors say crawler target cannot
+be verified without its browser endpoint. These shutdown-time failures do not
+prove the cause of API unresponsiveness. Last pre-shutdown scrape telemetry
+at 00:41:06Z showed one context/materialization entry, target reuse, auth and
+fallback identity probes, two Runtime.evaluate calls and no download attempt.
+Two controls remain. Diagnose API responsiveness locally before another journey;
+do not retry merely because the endpoint recovered. Goal remains active/open.
+Curated evidence: docs/dev/notes/2026-10-05-plan0386-renewed-controls.json.
+
+### Diagnostic control4 | 2026-10-05 00:50 UTC
+
+Primary starts control4 of five with the same installed runtime and normal
+completion API, maxItems1 to isolate one materialization candidate. An inspector
+CPU sampler is attached to verified API57481 before launch; snapshots every
+20 seconds, twelve initial snapshots plus twelve for the delayed materialization
+window, with 15-second command deadlines and the same eight-minute provider
+control deadline. This is a bounded
+agentic live-follow simulation to discriminate main-thread CPU work, shared
+request waits and browser pressure. Preserve the original failed jobs and
+five other pauses. One control remains afterward; no acceptance claim yet.
+
+### Control4 outcome and control5 selection | 2026-10-05 01:01 UTC
+
+Control4 settled skipped at 00:59:06Z without process restart. One snapshot
+refreshed (10 messages, 22 artifacts), one candidate attempted, zero materialized,
+zero failed. Its selected DOM download artifact invoked viewer-download fallback
+but produced no file. Native managed browser absence true; leases released,
+API57481 responds. Twenty-four bounded CPU traces were mostly idle; sustained
+main-thread CPU starvation was not reproduced, nor was API unresponsiveness.
+Do not infer an API fix from this successful observation window.
+
+Control5 is the last authorized renewed control. It retains full_missing_assets
+but samples files only, maxItems1, to exercise positive binary capture through
+normal completion handoff. Same wsl-chrome-3 configured account and installed
+PR201 source; all other pauses and global scheduler pause remain. Read-only
+owned-tab download-surface capture is permitted within the same journey. This
+sample does not narrow the full goal to files only. Afterward no sixth provider
+control; continue provider-free diagnosis or report the exact remaining gate.
+
+### Five controls exhausted; local crash repair | 2026-10-05 01:10 UTC
+
+Control5 produced skipped job hmj_c9f50363d2474cb9bcd9f34a056a07a1, but its
+entry reason was browser startup control denied: tab-leases-active. The result
+synthetically labels file snapshot evidence refreshed despite that denial; it
+is not proof of a fresh live context read or no downloadable files. Earlier
+observer commentary is superseded by this authoritative result. The API
+restarted from PID57481 to PID19838 after exit1. Its redirected crash log
+proves ENOENT renaming the same-process/same-millisecond status temp file.
+
+Public persistence regression reproduces two concurrent real filesystem writes
+at one clock tick: one rejects before the fix (24ms), both fulfill with UUID temp
+names. Ninety-five persistence/registry/completion tests pass; typecheck passes.
+This source repair removes the demonstrated filename collision, not every
+possible API responsiveness failure. CPU sampling did not reproduce sustained
+CPU starvation; memory pressure remains a separate observed runtime condition.
+
+All five renewed controls consumed. No sixth provider control. Local source
+repair, review, merge, install and provider-free verification remain authorized.
+Goal open: positive current file/cache/archive and efficiency acceptance remain
+unproven. Separate follow-up: classify operational admission errors truthfully
+instead of skipped assets or synthetic refreshed snapshots. Nine completions
+paused, scheduler paused and no active/idle/retiring/lost leases at containment.
+
 ## Stable Objective
 
 Restore ChatGPT conversation-file and generated-artifact materialization on the

@@ -1,0 +1,254 @@
+{
+  "installedSource": "46c6bb3f9ee0bf0e8a33bb03090b4c225e98242c",
+  "renewedControlsUsed": 5,
+  "remainingControls": 0,
+  "priorReadbackCorrection": {
+    "jobId": "hmj_43f8009f7894424cafffd629a0051a38",
+    "error": "History materialization job was interrupted before this AuraCall API process started.",
+    "createdAt": "2026-10-04T23:54:26.012Z",
+    "failedAt": "2026-10-04T23:54:44.571Z"
+  },
+  "journey3": {
+    "jobId": "hmj_1fa91e638fc545b6a0c857798a1583dc",
+    "status": "failed",
+    "completedAt": "2026-10-05T00:43:50.977Z",
+    "error": {
+      "message": "History reconciliation failed to materialize 6 assets from 6 conversations.",
+      "type": "internal_error",
+      "statusCode": 500
+    },
+    "metrics": {
+      "conversations": 6,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 0,
+      "failed": 6,
+      "eligibleCandidates": 252,
+      "selectedCandidates": 6,
+      "materializedCandidates": 0,
+      "candidateFunnel": {
+        "unit": "conversation",
+        "discovered": 316,
+        "preEligibilityExclusions": {
+          "identityMismatch": 0,
+          "missingConversationId": 0,
+          "ignoredProviderRoute": 0,
+          "terminalConversationEvidence": 0,
+          "ineligibleSelectedManifest": 12,
+          "noSelectedAssetEvidence": 0,
+          "assetsAlreadyComplete": 0,
+          "missingTarget": 0,
+          "terminalAssetFamilies": 52
+        },
+        "eligible": 252,
+        "postEligibilityExclusions": {
+          "duplicateAssetFamilies": 0,
+          "targetBudget": 246,
+          "assetBudget": 0,
+          "providerGuard": 0
+        },
+        "selected": 6
+      }
+    },
+    "failureReasons": [
+      "Live-follow crawler target cannot be verified without its browser endpoint."
+    ],
+    "controllerStatusFailure": "20 second timeout; finally pause also timed out",
+    "healthRequest": "no response within 3 seconds",
+    "containment": "API control group stopped; exact native managed browser absence true; service restarted; own successor paused"
+  },
+  "after": {
+    "at": "2026-10-05T00:44:18.311Z",
+    "completion": {
+      "id": "acctmirror_completion_7b9f84e3-2183-4118-ad2b-4f108d0c3d52",
+      "status": "paused",
+      "passCount": 1,
+      "materializationCursor": {
+        "jobId": "hmj_1fa91e638fc545b6a0c857798a1583dc",
+        "jobStatus": "running",
+        "reused": false,
+        "requestedAt": "2026-10-05T00:39:11.905Z",
+        "providerWorkSettledAt": null,
+        "passCount": 1,
+        "request": {
+          "provider": "chatgpt",
+          "runtimeProfile": "wsl-chrome-3",
+          "reconcile": true,
+          "refreshSnapshot": true,
+          "assetKinds": [
+            "all"
+          ],
+          "maxItems": 6,
+          "force": false
+        }
+      },
+      "outcome": null
+    },
+    "schedulerPaused": true,
+    "metrics": {
+      "total": 5119,
+      "active": 7,
+      "queued": 0,
+      "running": 0,
+      "idle_waiting": 0,
+      "paused": 7,
+      "completed": 80,
+      "blocked": 761,
+      "failed": 4218,
+      "cancelled": 53
+    },
+    "active": [
+      {
+        "id": "acctmirror_completion_7b9f84e3-2183-4118-ad2b-4f108d0c3d52",
+        "status": "paused",
+        "runtimeProfileId": "wsl-chrome-3"
+      },
+      {
+        "id": "acctmirror_completion_25302dc7-d665-40ff-85cf-6fde0f25ba60",
+        "status": "paused",
+        "runtimeProfileId": "default"
+      },
+      {
+        "id": "acctmirror_completion_84251b28-12d9-4d5f-9bdc-3c77bd9eade0",
+        "status": "paused",
+        "runtimeProfileId": "default"
+      },
+      {
+        "id": "acctmirror_completion_bc68cd94-3f8e-4c2d-bd40-fc4299a5e591",
+        "status": "paused",
+        "runtimeProfileId": "wsl-chrome-2"
+      },
+      {
+        "id": "acctmirror_completion_65de7626-9aaf-4585-8224-601bee2cada4",
+        "status": "paused",
+        "runtimeProfileId": "wsl-chrome-4"
+      },
+      {
+        "id": "acctmirror_completion_2e50553f-5641-4482-a214-9ae2150ba3cb",
+        "status": "paused",
+        "runtimeProfileId": "default"
+      },
+      {
+        "id": "acctmirror_completion_dad4f08c-a59e-4183-91b5-b0b7c445c40a",
+        "status": "paused",
+        "runtimeProfileId": "default"
+      }
+    ],
+    "leases": {
+      "active": 0,
+      "idle": 0,
+      "retiring": 0,
+      "released": 240,
+      "lost": 0
+    }
+  },
+  "journey4": {
+    "jobId": "hmj_60262c643bd34703a53d0fbb309c3184",
+    "status": "skipped",
+    "completedAt": "2026-10-05T00:59:06.721Z",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 252,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0,
+      "candidateFunnel": {
+        "unit": "conversation",
+        "discovered": 316,
+        "preEligibilityExclusions": {
+          "identityMismatch": 0,
+          "missingConversationId": 0,
+          "ignoredProviderRoute": 0,
+          "terminalConversationEvidence": 0,
+          "ineligibleSelectedManifest": 12,
+          "noSelectedAssetEvidence": 0,
+          "assetsAlreadyComplete": 0,
+          "missingTarget": 0,
+          "terminalAssetFamilies": 52
+        },
+        "eligible": 252,
+        "postEligibilityExclusions": {
+          "duplicateAssetFamilies": 0,
+          "targetBudget": 251,
+          "assetBudget": 0,
+          "providerGuard": 0
+        },
+        "selected": 1
+      }
+    },
+    "entryReasons": [
+      "skipped"
+    ],
+    "snapshotEvidence": [
+      {
+        "status": "refreshed",
+        "messageCount": 10,
+        "fileCount": 13,
+        "artifactCount": 22
+      }
+    ]
+  },
+  "journey5": {
+    "jobId": "hmj_c9f50363d2474cb9bcd9f34a056a07a1",
+    "status": "skipped",
+    "completedAt": "2026-10-05T01:04:39.667Z",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 272,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0,
+      "candidateFunnel": {
+        "unit": "conversation",
+        "discovered": 316,
+        "preEligibilityExclusions": {
+          "identityMismatch": 0,
+          "missingConversationId": 0,
+          "ignoredProviderRoute": 0,
+          "terminalConversationEvidence": 0,
+          "ineligibleSelectedManifest": 4,
+          "noSelectedAssetEvidence": 0,
+          "assetsAlreadyComplete": 0,
+          "missingTarget": 0,
+          "terminalAssetFamilies": 40
+        },
+        "eligible": 272,
+        "postEligibilityExclusions": {
+          "duplicateAssetFamilies": 0,
+          "targetBudget": 271,
+          "assetBudget": 0,
+          "providerGuard": 0
+        },
+        "selected": 1
+      }
+    },
+    "entryReasons": [
+      "Live-follow browser startup control denied: tab-leases-active."
+    ],
+    "snapshotEvidence": [
+      {
+        "status": "refreshed",
+        "messageCount": null,
+        "fileCount": 1,
+        "artifactCount": null
+      }
+    ],
+    "readbackCorrection": "Startup admission denial was reported as skipped. Its synthetic refreshed snapshot is not proof of a live context read."
+  },
+  "crashFinding": {
+    "oldPid": 57481,
+    "newPid": 19838,
+    "error": "ENOENT during rename of same-process same-millisecond account-mirror status temporary file",
+    "regression": "pnpm vitest run tests/accountMirror/cachePersistence.test.ts -t concurrent",
+    "red": "one fulfilled, one rejected; 24ms",
+    "fix": "UUID per status temporary file",
+    "sourceValidation": "95 tests passed; typecheck passed",
+    "liveRetest": "not run; five controls exhausted"
+  }
+}
