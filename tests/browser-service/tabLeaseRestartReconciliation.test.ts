@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
-import { reconcileStaleActiveTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
+import { reconcileStaleTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
 
 const scope = {
 	runtimeProfileId: "runtime-1",
@@ -11,6 +11,69 @@ const scope = {
 };
 
 describe("tab lease restart reconciliation", () => {
+	test("a stopped idle process loses follow retention but a living process keeps it", async () => {
+		for (const alive of [false, true]) {
+			const registry = createInMemoryBrowserTabLeaseRegistry({
+				ownerIdentity: { processId: 41, instanceId: "follow" },
+			});
+			const reserved = await registry.reserve({
+				scope,
+				targetId: "follow",
+				workload: { kind: "live-follow", operationId: "follow" },
+				operationId: "follow",
+				now: "2026-10-05T12:00:00Z",
+				idleTtlMs: 1000,
+				absoluteTtlMs: 2000,
+				processBound: true,
+			});
+			if (!reserved.ok) throw new Error("fixture failed");
+			await registry.idle({
+				claim: reserved.value.claim,
+				now: "2026-10-05T12:00:00Z",
+				effectState: "settled",
+			});
+			await reconcileStaleTabLeases({
+				registry,
+				scope,
+				currentOwner: { processId: 99, instanceId: "maintenance" },
+				isOwnerAlive: () => alive,
+				now: () => new Date("2026-10-05T12:00:03Z"),
+			});
+			expect((await registry.list())[0]).toMatchObject({
+				state: alive ? "idle" : "lost",
+				retention: alive ? "live-follow" : "ttl",
+			});
+		}
+	});
+	test("active follow heartbeat survives its old absolute TTL", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			ownerIdentity: { processId: 99, instanceId: "current" },
+		});
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "follow",
+			workload: { kind: "live-follow", operationId: "follow" },
+			operationId: "follow",
+			now: "2026-10-05T12:00:00Z",
+			idleTtlMs: 1000,
+			absoluteTtlMs: 2000,
+			processBound: true,
+		});
+		if (!reserved.ok) throw new Error("fixture failed");
+		await registry.recordMeaningfulUse({
+			claim: reserved.value.claim,
+			now: "2026-10-05T12:00:03Z",
+			idleTtlMs: 1000,
+		});
+		await reconcileStaleTabLeases({
+			registry,
+			scope,
+			currentOwner: { processId: 99, instanceId: "current" },
+			isOwnerAlive: () => true,
+			now: () => new Date("2026-10-05T12:00:03Z"),
+		});
+		expect((await registry.list())[0].state).toBe("active");
+	});
 	test("marks an active lease from a dead owner process restart-unverified", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry({
 			createLeaseId: () => "lease-1",
@@ -28,7 +91,7 @@ describe("tab lease restart reconciliation", () => {
 		expect(reserved.ok).toBe(true);
 		if (!reserved.ok) throw new Error("expected reservation");
 		await expect(
-			reconcileStaleActiveTabLeases({
+			reconcileStaleTabLeases({
 				registry,
 				scope,
 				currentOwner: { processId: 99, instanceId: "current" },
@@ -61,7 +124,7 @@ describe("tab lease restart reconciliation", () => {
 		});
 
 		await expect(
-			reconcileStaleActiveTabLeases({
+			reconcileStaleTabLeases({
 				registry,
 				scope,
 				currentOwner: { processId: 99, instanceId: "current" },
@@ -88,7 +151,7 @@ describe("tab lease restart reconciliation", () => {
 		});
 
 		await expect(
-			reconcileStaleActiveTabLeases({
+			reconcileStaleTabLeases({
 				registry,
 				scope,
 				currentOwner: { processId: 99, instanceId: "current" },

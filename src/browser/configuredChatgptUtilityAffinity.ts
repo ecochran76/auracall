@@ -18,7 +18,7 @@ import {
 	getCurrentTabLeaseOwnerIdentity,
 	type TabLeaseClaim,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
-import { reconcileStaleActiveTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
+import { reconcileStaleTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
 import { acquireEphemeralBrowserTab } from "../accountMirror/liveFollowTabCoordinator.js";
 import { withAccountMirrorProviderTrafficPlan } from "../accountMirror/providerTrafficPlan.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
@@ -124,7 +124,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			() => undefined,
 		);
 	recordLibraryInventoryStage(input.options, "affinity-reconcile-leases");
-	await reconcileStaleActiveTabLeases({
+	await reconcileStaleTabLeases({
 		registry: runtime.registry,
 		scope,
 		now,

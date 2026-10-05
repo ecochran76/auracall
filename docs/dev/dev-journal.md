@@ -52879,3 +52879,13 @@ HTTP 429 failure and cleanup; allowance is four used, one remaining. Serial
 Standards/Spec review binds source 5d494e1cd to base 35f3d5750 and Plan 0390.
 No source-blocking candidate was accepted; installed physical proof remains
 an acceptance gate. Review artifact records the distinct axes and limitations.
+
+### 2026-10-05T12:04Z — installed physical proof and restart correction
+
+PR 211 installed with eight-module parity; API 44226, zero restarts. Blank-page
+proof confirms one actual follow/child/follow target, then waits for three fixed
+five-minute deadlines. A missing CLI XAUTHORITY caused initial startup failure;
+no browser remained. The corrected environment uses the service's display
+authority. Two retained-follow restart defects now have observed red/green
+tests; 44 affected checks, build and typecheck pass. Final successor installation
+and physical proof remain open. No provider journey used.

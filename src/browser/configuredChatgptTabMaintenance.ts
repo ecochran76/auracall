@@ -2,13 +2,13 @@ import {
 	closeRemoteChromeTarget,
 	listChromeTargets,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
+import { registerUnownedBrowserTabDeadlines } from "../../packages/browser-service/src/service/tabInventory.js";
 import {
 	type BrowserTabLeaseRegistry,
 	getCurrentTabLeaseOwnerIdentity,
 	isTabLeaseTtlExempt,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
-import { reconcileStaleActiveTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
-import { registerUnownedBrowserTabDeadlines } from "../../packages/browser-service/src/service/tabInventory.js";
+import { reconcileStaleTabLeases } from "../../packages/browser-service/src/service/tabLeaseRestartReconciliation.js";
 import { getCurrentRuntimeProfiles } from "../config/model.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
@@ -252,7 +252,7 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 					}),
 				});
 			}
-			const staleActive = await reconcileStaleActiveTabLeases({
+			const staleActive = await reconcileStaleTabLeases({
 				registry: runtime.registry,
 				scope,
 				now: input.now,

@@ -45,3 +45,14 @@ that receipt as a visible UI warning.
 Accepted findings: Standards zero blocking and one nonblocking backlog; Spec
 zero source-blocking, two installed acceptance gates awaiting proof and one
 nonblocking evidence naming concern.
+
+## Closed-world restart remediation
+
+Accepted Spec blocking candidate: an idle follow owner that stopped could retain
+its exemption forever, and an active retained follow with a fresh heartbeat
+could be marked lost solely by its old absolute deadline. Two reproductions on
+PR 211 fail, then pass after the generic reconciler checks idle process liveness
+and retained-follow absolute exemption. This is a bounded correction of the
+restart/retention criterion. Standards: shared rule remains in browser-service;
+no provider heuristic added. Forty-four focused checks, build and typecheck pass.
+Final installed parity and physical proof remain the acceptance gate.

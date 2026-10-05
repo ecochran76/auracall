@@ -1,3 +1,12 @@
+## 2026-10-05 — retained follow ownership after process death
+
+A retained follow exemption belongs to a living process. Generic reconciliation
+now marks settled idle bindings lost after native PID death, returning their
+pages to ordinary TTL retirement. An active retained follow with a renewed
+heartbeat ignores its old absolute TTL; heartbeat health still applies. Two
+observed red regressions and 44 affected checks protect these distinct cases.
+Plan 0390 records installed proof separately.
+
 ## 2026-10-05 | Startup-window suppression alone does not isolate restored tabs
 
 ## 2026-10-05 — Process tab reuse and physical TTL accounting (#165)

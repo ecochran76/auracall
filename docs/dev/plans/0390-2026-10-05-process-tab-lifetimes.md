@@ -86,3 +86,25 @@ file is excluded from this selected lane. Installed runtime remains PR 208.
 Freeze source for serial Standards/Spec review, then integrate/install and prove
 physical reuse and elapsed-time TTL expiry. Meter: 346753 tokens at 11:49Z;
 original 500000-token and 13:04:30Z bounds remain in force.
+
+## Checkpoint 3 | 2026-10-05T12:04Z | outcome_progress
+
+PR 211 merged as 6f0d4e0f8 and canonical installation passed. API 44226 has zero
+restarts; eight installed modules match the canonical build. An installed public
+coordinator proof started native browser 68083, reuses one real target for
+follow/child/follow, and assigns three extra blank pages fixed five-minute
+deadlines. Actual elapsed-time expiry is still running. Initial CLI startup
+failed due to missing XAUTHORITY; native absence verified, original failed
+receipt preserved, rerun uses the API service's existing display authority.
+No provider navigation or remaining provider journey was consumed.
+
+Bounded verification found two restart retention defects after integration:
+idle retained-follow process death never removed exemption, and active follow
+with a renewed heartbeat could be lost at its old absolute TTL. Both tests fail
+on PR 211 and pass after the generic restart reconciler handles dead idle
+process bindings and exempts retained active follow from absolute TTL. Heartbeat
+expiry, revision fencing and unknown-effect preservation remain enforced.
+44 focused maintenance/utility/registry/restart tests pass; typecheck/build pass.
+This accepted Spec blocker is remediated in a narrow successor slice; installed
+proof must be rebound to that final source before completion. Meter 459254 at
+12:03Z; original resource limits remain in force.
