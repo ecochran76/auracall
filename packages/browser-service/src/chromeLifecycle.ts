@@ -154,6 +154,7 @@ export async function launchChrome(
     ownedPorts?: ReadonlySet<number>;
     abortSignal?: AbortSignal;
     onStage?: (stage: string) => void;
+    suppressStartupWindow?: boolean;
   } = {},
 ) {
   options.abortSignal?.throwIfAborted();
@@ -371,6 +372,7 @@ export async function launchChrome(
     {
       minimal: minimalFlags,
       startMinimized: !config.headless && config.hideWindow,
+      suppressStartupWindow: options.suppressStartupWindow,
     },
   );
   const bypassUserDataDir = shouldBypassLauncherUserDataDir(config.chromePath ?? undefined);
@@ -1853,10 +1855,10 @@ export function buildChromeFlags(
   headless: boolean,
   debugBindAddress?: string | null,
   chromeProfile?: string,
-  options: { minimal?: boolean; startMinimized?: boolean } = {},
+  options: { minimal?: boolean; startMinimized?: boolean; suppressStartupWindow?: boolean } = {},
 ): string[] {
   const flags = options.minimal
-    ? ['--new-window', '--hide-crash-restore-bubble']
+    ? [options.suppressStartupWindow ? '--no-startup-window' : '--new-window', '--hide-crash-restore-bubble']
     : [
         '--disable-background-networking',
         '--disable-background-timer-throttling',
@@ -1878,6 +1880,9 @@ export function buildChromeFlags(
         '--accept-lang=en-US,en',
         '--hide-crash-restore-bubble',
       ];
+  if (options.suppressStartupWindow && !options.minimal) {
+    flags.push('--no-startup-window');
+  }
   if (chromeProfile) {
     flags.push(`--profile-directory=${chromeProfile}`);
   }

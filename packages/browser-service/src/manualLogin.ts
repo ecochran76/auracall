@@ -58,6 +58,7 @@ export async function launchManualLoginSession(options: {
     registryPath: options.registryPath,
     abortSignal: options.abortSignal,
     onStage: options.onStage,
+    suppressStartupWindow: options.url === 'about:blank',
   });
   if (options.detach) {
     chrome.process?.unref();
@@ -78,9 +79,9 @@ export async function launchManualLoginSession(options: {
     await hideChromeWindow(chrome, options.logger);
   }
 
-  // Blank startup is endpoint-only. The launcher already opens a blank page;
-  // selecting a restored blank here can stall readiness before the caller
-  // establishes custody of its own target.
+  // Blank startup is endpoint-only. Suppress Chromium's startup window so
+  // persisted session tabs cannot restore before the caller establishes
+  // custody of its own target.
   if (options.url !== 'about:blank') {
     options.onStage?.('browserLoginTabOpening');
     await openLoginUrl(host, chrome.port, options.url, {

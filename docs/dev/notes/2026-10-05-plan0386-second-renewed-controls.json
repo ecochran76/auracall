@@ -29,7 +29,7 @@
     {
       "ordinal": 2,
       "completionId": "acctmirror_completion_6f6aa098-3da7-4c21-8d6b-a2d4097cbd7e",
-      "status": "running",
+      "status": "skipped",
       "change": "Same completion after verified graceful browser close; monitor tolerates transient GET failures. No source behavior changed.",
       "observations": {
         "foregroundDeferrals": "repeated minute retries before browser launch",
@@ -40,8 +40,26 @@
         "apiPid": 11540,
         "restarts": 0,
         "observationTimeouts": "monitor continues; not treated as terminal"
-      }
+      },
+      "jobId": "hmj_d4c73384799e46fe9c5fd2bf6a487abf",
+      "jobCreatedAt": "2026-10-05T02:09:14.926Z",
+      "jobStartedAt": "2026-10-05T02:09:16.255Z",
+      "jobCompletedAt": "2026-10-05T02:11:01.758Z",
+      "metrics": {
+        "conversations": 6,
+        "materialized": 0,
+        "skipped": 6,
+        "failed": 0
+      },
+      "correction": "Browser closure at 02:10:59.698Z overlapped the child job. Earlier empty job-store observation was not proof that no child subsequently started. Do not claim uninterrupted acceptance.",
+      "backgroundDrainRestored": true
     }
   ],
-  "acceptance": "OPEN"
+  "acceptance": "OPEN",
+  "startupRepair": {
+    "finding": "Persisted session log repeatedly restores roughly 40 pages; cgroup high-memory events 1528966 and full stall avg10 64.99 percent. API PID unchanged.",
+    "change": "Explicit about:blank manual startup passes suppressStartupWindow to shared launcher; flag --no-startup-window replaces --new-window in minimal startup.",
+    "regression": "Flag contract red in 8ms; manual startup wiring separately red; 54 focused tests green; typecheck and touched lint passed.",
+    "liveVerification": "pending; three journeys remain"
+  }
 }

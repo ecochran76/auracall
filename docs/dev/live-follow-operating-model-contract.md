@@ -213,3 +213,12 @@ error; a visible rate-limit warning persists the normal cooldown and stops work.
 When no crawler has been pre-acquired, the collector checks the ChatGPT page it
 loads through the existing adapter guards. Persisted cooldowns remain effective.
 Gemini's account/captcha census is unchanged.
+
+## Endpoint-only cold startup
+
+An explicit `about:blank` manual startup obtains a DevTools endpoint without an
+initial browser window (`--no-startup-window`). The existing admission path then
+creates its owned crawler. This prevents persisted session tabs from restoring
+before custody is established; it does not prune sessions, change authentication,
+close restored targets on an already running browser, or bypass admission.
+Ordinary provider login URLs retain their visible startup window.
