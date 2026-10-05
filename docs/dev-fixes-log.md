@@ -1,3 +1,7 @@
+## 2026-10-04 | Retry label alone does not establish a visible conversation failure
+
+The ChatGPT page-button recovery fallback previously accepted positive layout rectangles despite visibility:hidden and used arbitrary button parents as conversation scope. Both could turn a warning-free context read into a retry error. Check computed visibility and require a conversation turn/message ancestor. Visible overlay guards and genuine failed-turn Retry remain blocking. A context-reader VM regression proves both false positives; it does not establish the matching DOM in the earlier live receipt.
+
 ## 2026-10-04 | In-page identity fetch abort is not a CDP deadline
 
 A browser-side fetch AbortController cannot bound an unresponsive Runtime evaluation. ChatGPT auth-session and fallback identity evaluations now each have ten-second host/CDP deadlines and named pending operations. Real context-reader transport-fault regressions reproduce both missing deadlines. Missing or inconclusive identity still fails closed. This bounds two demonstrated defects; live slowdown causality remains unproven.
