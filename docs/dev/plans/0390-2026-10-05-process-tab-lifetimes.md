@@ -1,6 +1,6 @@
 # Process-owned browser tabs and physical TTL reconciliation | 0390
 
-State: COMPLETE
+State: CLOSED
 Owner: primary
 Work item: Issue #165; successor repair within Plan 0386
 Branch: fix/issue165-process-tab-lifetimes

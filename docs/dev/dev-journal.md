@@ -52898,5 +52898,5 @@ pages expire after five real minutes. Follow remains; explicit cleanup verifies
 native absence and zero fenced leases. Receipts and reproducible fixture are
 checked in. All 12 existing active completions and scheduler remain paused;
 background drain is unpaused. No provider journey consumed, one remains.
-Plan 0390 COMPLETE; Plan 0386 broader asset acceptance remains OPEN.
+Plan 0390 CLOSED; Plan 0386 broader asset acceptance remains OPEN.
 Memory disposition unavailable: no qualified AuraCall Graphiti destination.
