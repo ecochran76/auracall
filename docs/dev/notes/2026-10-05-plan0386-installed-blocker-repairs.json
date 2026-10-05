@@ -1,0 +1,75 @@
+{
+  "verifiedAt": "2026-10-05T01:26:06.950Z",
+  "merge": "20177f52807045db11f9045634860528c74bd80c",
+  "node": "v25.9.0",
+  "hashes": [
+    {
+      "file": "dist/src/accountMirror/cachePersistence.js",
+      "sha256": "2dfea813ec7a53adfb3d2a851c107129612dc6444bb4c2a0def9e900791ab27b",
+      "match": true
+    },
+    {
+      "file": "dist/src/runtime/historyMaterializationService.js",
+      "sha256": "15e7bd447ae486ace86064f22d11d8f2ef162d2b1577f2baeefadd6e5d904a7d",
+      "match": true
+    }
+  ],
+  "schedulerPaused": true,
+  "backgroundPaused": false,
+  "activeCompletions": 9,
+  "allActivePaused": true,
+  "leases": {
+    "active": 0,
+    "idle": 0,
+    "retiring": 0,
+    "released": 243,
+    "lost": 0
+  },
+  "browserAbsent": true,
+  "renewedControls": {
+    "used": 5,
+    "authorized": 5,
+    "remaining": 0
+  },
+  "liveAcceptance": "OPEN: positive capture and changed/unchanged efficiency not proven",
+  "installedReplay": {
+    "invoked": true,
+    "status": "failed",
+    "error": {
+      "message": "History materialization failed to download 1 asset for conversation admission-replay-conversation.",
+      "type": "internal_error",
+      "statusCode": 500
+    },
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 0,
+      "failed": 1
+    },
+    "reasons": [
+      "Live-follow browser startup control denied: tab-leases-active."
+    ],
+    "snapshots": [
+      {
+        "status": "failed",
+        "routeabilityState": "unknown",
+        "fileCount": null,
+        "error": "Live-follow browser startup control denied: tab-leases-active."
+      }
+    ]
+  },
+  "api": {
+    "pid": 11540,
+    "activeState": "active",
+    "restarts": 0,
+    "memoryBytes": 863399936,
+    "tasks": 11
+  },
+  "sourceValidation": {
+    "focusedTests": 166,
+    "typecheck": "passed",
+    "touchedLint": "passed"
+  },
+  "providerEffect": "None: installed replay injects the observed denial at the provider boundary in an isolated temporary home."
+}
