@@ -1,7 +1,7 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import fs, { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { createAccountMirrorPersistence } from "../../src/accountMirror/cachePersistence.js";
 import { createAccountMirrorStatusRegistry } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
@@ -453,6 +453,58 @@ describe("account mirror cache persistence", () => {
 				],
 			});
 		} finally {
+			await rm(homeDir, { recursive: true, force: true });
+		}
+	});
+
+	test("persists concurrent status writes in the same millisecond without rename failures", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-concurrent-status-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const config = { browser: { cache: { store: "json" } } };
+		const writers = [0, 1].map(() => createAccountMirrorPersistence({ config }));
+		const key = {
+			provider: "chatgpt" as const,
+			runtimeProfileId: "default",
+			browserProfileId: "default",
+			boundIdentityKey: "status-writer@example.test",
+		};
+		const fixedClock = vi.spyOn(Date, "now").mockReturnValue(1791162173994);
+		const rename = fs.rename.bind(fs);
+		let arrivals = 0;
+		let release!: () => void;
+		const bothWritesReady = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const renameBoundary = vi
+			.spyOn(fs, "rename")
+			.mockImplementation(async (source, destination) => {
+				if (++arrivals === 2) release();
+				await bothWritesReady;
+				await rename(source, destination);
+			});
+		try {
+			const outcomes = await Promise.allSettled(
+				writers.map((writer, index) =>
+					writer.writeState?.({
+						...key,
+						updatedAt: "2026-10-05T01:02:00.000Z",
+						state: {
+							consecutiveFailureCount: index + 1,
+							lastRefreshRequestId: `refresh-${index + 1}`,
+						},
+					}),
+				),
+			);
+			expect(outcomes.map((outcome) => outcome.status)).toEqual(["fulfilled", "fulfilled"]);
+			const state = await writers[0]?.readState(key);
+			expect([1, 2]).toContain(state?.consecutiveFailureCount);
+			expect(state?.lastRefreshRequestId).toBe(`refresh-${state?.consecutiveFailureCount}`);
+			expect(
+				await fs.readdir(path.join(homeDir, "cache", "account-mirror", "status")),
+			).toHaveLength(1);
+		} finally {
+			renameBoundary.mockRestore();
+			fixedClock.mockRestore();
 			await rm(homeDir, { recursive: true, force: true });
 		}
 	});

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getAuracallHomeDir } from "../auracallHome.js";
@@ -223,7 +223,7 @@ export function createAccountMirrorPersistence(input: {
 			await fs.mkdir(statusDir, { recursive: true });
 			const statusRecord = normalizePersistentStatusRecord(record);
 			const recordPath = resolveStatusRecordPath(statusDir, record);
-			const tempPath = `${recordPath}.${process.pid}.${Date.now()}.tmp`;
+			const tempPath = `${recordPath}.${process.pid}.${randomUUID()}.tmp`;
 			await fs.writeFile(tempPath, `${JSON.stringify(statusRecord, null, 2)}\n`, "utf8");
 			await fs.rename(tempPath, recordPath);
 		},

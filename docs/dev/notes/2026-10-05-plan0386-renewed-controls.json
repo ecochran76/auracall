@@ -1,7 +1,7 @@
 {
   "installedSource": "46c6bb3f9ee0bf0e8a33bb03090b4c225e98242c",
-  "renewedControlsUsed": 3,
-  "remainingControls": 2,
+  "renewedControlsUsed": 5,
+  "remainingControls": 0,
   "priorReadbackCorrection": {
     "jobId": "hmj_43f8009f7894424cafffd629a0051a38",
     "error": "History materialization job was interrupted before this AuraCall API process started.",
@@ -141,5 +141,114 @@
       "released": 240,
       "lost": 0
     }
+  },
+  "journey4": {
+    "jobId": "hmj_60262c643bd34703a53d0fbb309c3184",
+    "status": "skipped",
+    "completedAt": "2026-10-05T00:59:06.721Z",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 252,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0,
+      "candidateFunnel": {
+        "unit": "conversation",
+        "discovered": 316,
+        "preEligibilityExclusions": {
+          "identityMismatch": 0,
+          "missingConversationId": 0,
+          "ignoredProviderRoute": 0,
+          "terminalConversationEvidence": 0,
+          "ineligibleSelectedManifest": 12,
+          "noSelectedAssetEvidence": 0,
+          "assetsAlreadyComplete": 0,
+          "missingTarget": 0,
+          "terminalAssetFamilies": 52
+        },
+        "eligible": 252,
+        "postEligibilityExclusions": {
+          "duplicateAssetFamilies": 0,
+          "targetBudget": 251,
+          "assetBudget": 0,
+          "providerGuard": 0
+        },
+        "selected": 1
+      }
+    },
+    "entryReasons": [
+      "skipped"
+    ],
+    "snapshotEvidence": [
+      {
+        "status": "refreshed",
+        "messageCount": 10,
+        "fileCount": 13,
+        "artifactCount": 22
+      }
+    ]
+  },
+  "journey5": {
+    "jobId": "hmj_c9f50363d2474cb9bcd9f34a056a07a1",
+    "status": "skipped",
+    "completedAt": "2026-10-05T01:04:39.667Z",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 272,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0,
+      "candidateFunnel": {
+        "unit": "conversation",
+        "discovered": 316,
+        "preEligibilityExclusions": {
+          "identityMismatch": 0,
+          "missingConversationId": 0,
+          "ignoredProviderRoute": 0,
+          "terminalConversationEvidence": 0,
+          "ineligibleSelectedManifest": 4,
+          "noSelectedAssetEvidence": 0,
+          "assetsAlreadyComplete": 0,
+          "missingTarget": 0,
+          "terminalAssetFamilies": 40
+        },
+        "eligible": 272,
+        "postEligibilityExclusions": {
+          "duplicateAssetFamilies": 0,
+          "targetBudget": 271,
+          "assetBudget": 0,
+          "providerGuard": 0
+        },
+        "selected": 1
+      }
+    },
+    "entryReasons": [
+      "Live-follow browser startup control denied: tab-leases-active."
+    ],
+    "snapshotEvidence": [
+      {
+        "status": "refreshed",
+        "messageCount": null,
+        "fileCount": 1,
+        "artifactCount": null
+      }
+    ],
+    "readbackCorrection": "Startup admission denial was reported as skipped. Its synthetic refreshed snapshot is not proof of a live context read."
+  },
+  "crashFinding": {
+    "oldPid": 57481,
+    "newPid": 19838,
+    "error": "ENOENT during rename of same-process same-millisecond account-mirror status temporary file",
+    "regression": "pnpm vitest run tests/accountMirror/cachePersistence.test.ts -t concurrent",
+    "red": "one fulfilled, one rejected; 24ms",
+    "fix": "UUID per status temporary file",
+    "sourceValidation": "95 tests passed; typecheck passed",
+    "liveRetest": "not run; five controls exhausted"
   }
 }

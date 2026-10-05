@@ -134,6 +134,60 @@ Two controls remain. Diagnose API responsiveness locally before another journey;
 do not retry merely because the endpoint recovered. Goal remains active/open.
 Curated evidence: docs/dev/notes/2026-10-05-plan0386-renewed-controls.json.
 
+### Diagnostic control4 | 2026-10-05 00:50 UTC
+
+Primary starts control4 of five with the same installed runtime and normal
+completion API, maxItems1 to isolate one materialization candidate. An inspector
+CPU sampler is attached to verified API57481 before launch; snapshots every
+20 seconds, twelve initial snapshots plus twelve for the delayed materialization
+window, with 15-second command deadlines and the same eight-minute provider
+control deadline. This is a bounded
+agentic live-follow simulation to discriminate main-thread CPU work, shared
+request waits and browser pressure. Preserve the original failed jobs and
+five other pauses. One control remains afterward; no acceptance claim yet.
+
+### Control4 outcome and control5 selection | 2026-10-05 01:01 UTC
+
+Control4 settled skipped at 00:59:06Z without process restart. One snapshot
+refreshed (10 messages, 22 artifacts), one candidate attempted, zero materialized,
+zero failed. Its selected DOM download artifact invoked viewer-download fallback
+but produced no file. Native managed browser absence true; leases released,
+API57481 responds. Twenty-four bounded CPU traces were mostly idle; sustained
+main-thread CPU starvation was not reproduced, nor was API unresponsiveness.
+Do not infer an API fix from this successful observation window.
+
+Control5 is the last authorized renewed control. It retains full_missing_assets
+but samples files only, maxItems1, to exercise positive binary capture through
+normal completion handoff. Same wsl-chrome-3 configured account and installed
+PR201 source; all other pauses and global scheduler pause remain. Read-only
+owned-tab download-surface capture is permitted within the same journey. This
+sample does not narrow the full goal to files only. Afterward no sixth provider
+control; continue provider-free diagnosis or report the exact remaining gate.
+
+### Five controls exhausted; local crash repair | 2026-10-05 01:10 UTC
+
+Control5 produced skipped job hmj_c9f50363d2474cb9bcd9f34a056a07a1, but its
+entry reason was browser startup control denied: tab-leases-active. The result
+synthetically labels file snapshot evidence refreshed despite that denial; it
+is not proof of a fresh live context read or no downloadable files. Earlier
+observer commentary is superseded by this authoritative result. The API
+restarted from PID57481 to PID19838 after exit1. Its redirected crash log
+proves ENOENT renaming the same-process/same-millisecond status temp file.
+
+Public persistence regression reproduces two concurrent real filesystem writes
+at one clock tick: one rejects before the fix (24ms), both fulfill with UUID temp
+names. Ninety-five persistence/registry/completion tests pass; typecheck passes.
+This source repair removes the demonstrated filename collision, not every
+possible API responsiveness failure. CPU sampling did not reproduce sustained
+CPU starvation; memory pressure remains a separate observed runtime condition.
+
+All five renewed controls consumed. No sixth provider control. Local source
+repair, review, merge, install and provider-free verification remain authorized.
+Goal open: positive current file/cache/archive and efficiency acceptance remain
+unproven. Separate follow-up: classify operational admission errors truthfully
+instead of skipped assets or synthetic refreshed snapshots. Nine completions
+paused, scheduler paused and no active/idle/retiring/lost leases at containment.
+
 ## Stable Objective
 
 Restore ChatGPT conversation-file and generated-artifact materialization on the

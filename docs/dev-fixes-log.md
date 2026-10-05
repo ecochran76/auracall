@@ -1,3 +1,13 @@
+## 2026-10-05 | Concurrent status writes need distinct temporary files
+
+Account-mirror refresh, completion hydration and operator status reads can
+persist one target in the same millisecond. PID plus Date.now is not a unique
+atomic-write filename: one writer renames the shared temp file, and another
+throws ENOENT. A live API crash exposed this collision. Use a UUID per write;
+two real filesystem writers behind a rename barrier reproduce the failure and
+prove both writes complete with one valid final status record. This prevents
+the observed collision without claiming ordered merging of concurrent state.
+
 ## 2026-10-04 | Retry label alone does not establish a visible conversation failure
 
 The ChatGPT page-button recovery fallback previously accepted positive layout rectangles despite visibility:hidden and used arbitrary button parents as conversation scope. Both could turn a warning-free context read into a retry error. Check computed visibility and require a conversation turn/message ancestor. Visible overlay guards and genuine failed-turn Retry remain blocking. A context-reader VM regression proves both false positives; it does not establish the matching DOM in the earlier live receipt.
