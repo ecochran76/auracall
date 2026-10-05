@@ -137,7 +137,10 @@ two-case prompt-structure file excluded and its baseline failure preserved.
 The restart correction separately passes 44 affected tests, typecheck, build
 and touched Biome checks. Serial Standards/Spec review and bounded remediation
 are recorded in the review note. Full Plan 0386 asset acceptance remains OPEN.
-Goal achieved within the explicit two-hour and 500000-token bounds; final meter
-is reported by the goal closeout tool.
+Installed tab-lifecycle acceptance was proved before the resource stop. Final
+documentation integration and goal closeout did not finish within the token
+ceiling: the stop readback was 500210, later automatic continuations reached
+503992, and the goal was marked blocked. PR 213 remains open; do not describe
+the old goal as complete or infer renewed execution authority from this plan.
 
 Final pre-publication meter: 487137 tokens at 12:15Z.
