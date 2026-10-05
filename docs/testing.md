@@ -1,8 +1,9 @@
 - ChatGPT retry visibility and conversation scope (provider-free):
   `pnpm vitest run tests/browser/chatgptRetryVisibility.test.ts`.
   Executes the context reader and its real button expression: hidden and
-  unrelated Retry controls do not mask the context action; genuine visible
-  failed-turn Retry remains blocking. No provider access or live-cause claim.
+  unrelated Retry controls permit a complete synthetic context read; late
+  controls are checked after canvas extraction. Genuine visible failed-turn
+  Retry remains blocking. No provider access or live-cause claim.
 
 - ChatGPT context identity deadlines (provider-free):
   `pnpm vitest run tests/browser/chatgptContextReadDeadline.test.ts`.
