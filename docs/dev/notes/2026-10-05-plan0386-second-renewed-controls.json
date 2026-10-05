@@ -1,8 +1,8 @@
 {
   "authority": "User: take another 5",
   "authorized": 5,
-  "used": 2,
-  "remaining": 3,
+  "used": 3,
+  "remaining": 2,
   "installedMerge": "20177f52807045db11f9045634860528c74bd80c",
   "journeys": [
     {
@@ -53,6 +53,14 @@
       },
       "correction": "Browser closure at 02:10:59.698Z overlapped the child job. Earlier empty job-store observation was not proof that no child subsequently started. Do not claim uninterrupted acceptance.",
       "backgroundDrainRestored": true
+    },
+    {
+      "ordinal": 3,
+      "status": "running",
+      "installedMerge": "fd1795d083a2274498476586981714ebe9b793f2",
+      "policy": "steady_follow/full_missing_assets/all/maxItems6",
+      "apiPid": 77151,
+      "observer": "Exact owned lease only; attached before automatic materialization, no provider actions."
     }
   ],
   "acceptance": "OPEN",
@@ -60,6 +68,13 @@
     "finding": "Persisted session log repeatedly restores roughly 40 pages; cgroup high-memory events 1528966 and full stall avg10 64.99 percent. API PID unchanged.",
     "change": "Explicit about:blank manual startup passes suppressStartupWindow to shared launcher; flag --no-startup-window replaces --new-window in minimal startup.",
     "regression": "Flag contract red in 8ms; manual startup wiring separately red; 54 focused tests green; typecheck and touched lint passed.",
-    "liveVerification": "pending; three journeys remain"
+    "liveVerification": "Journey3: --no-startup-window present, but 45 pages still restored after crawler creation; flag alone insufficient."
+  },
+  "sessionQuarantineRepair": {
+    "scope": "Only explicit endpoint-only cold launch under managed browser root, after strict native absence proof.",
+    "action": "Rename only the five existing Chromium session-restore entries into a restorable per-launch quarantine; authentication preserved.",
+    "regressions": "Public cold process-launch ordering test red before wiring; fixture moves verified; absence and managed-root boundaries preserve session files.",
+    "validation": "69 focused tests; typecheck; touched lint has two unchanged external-name baseline warnings.",
+    "installedAcceptance": "Pending after journey3 child settles; two journeys remain."
   }
 }

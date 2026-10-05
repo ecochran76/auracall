@@ -218,7 +218,12 @@ Gemini's account/captcha census is unchanged.
 
 An explicit `about:blank` manual startup obtains a DevTools endpoint without an
 initial browser window (`--no-startup-window`). The existing admission path then
-creates its owned crawler. This prevents persisted session tabs from restoring
-before custody is established; it does not prune sessions, change authentication,
-close restored targets on an already running browser, or bypass admission.
+creates its owned crawler. The flag alone does not prevent session restoration when a first crawler window
+is created. Before an absent managed browser starts, the launcher moves only
+Chromium tab-session restore entries into `auracall-session-quarantine` under
+that managed directory. These backups are preserved for restoration while the
+browser is stopped. A strict native absence check is required before moving
+files; unknown process state refuses the launch. Authentication files remain
+in place. Existing running browsers and directories outside the managed root
+are preserved; admission remains required.
 Ordinary provider login URLs retain their visible startup window.

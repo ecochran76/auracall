@@ -1,3 +1,7 @@
+import os from 'node:os';
+import path from 'node:path';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
@@ -28,6 +32,7 @@ function createExecFileMock() {
 
 async function importChromeLifecycleWithMocks(options: {
   registeredPid?: number | null;
+  onLaunch?: () => void;
   existingProcess?: { pid: number; port: number; commandLine: string } | null;
 }) {
   const execFileMock = createExecFileMock();
@@ -67,7 +72,7 @@ async function importChromeLifecycleWithMocks(options: {
       chromeProcess = chromeProcess;
       remoteDebuggingPipes = undefined;
       spawn() {}
-      async launch() {}
+      async launch() { options.onLaunch?.(); }
       async kill() {}
     },
   }));
@@ -85,6 +90,7 @@ async function importChromeLifecycleWithMocks(options: {
     isChromeAlive: vi.fn(async () => true),
     probeWindowsLocalDevToolsPort: vi.fn(async () => true),
     isProcessAlive: vi.fn(() => false),
+    verifyChromeProcessAbsent: vi.fn(async () => true),
   }));
   vi.doMock('../../packages/browser-service/src/windowsLoopbackRelay.js', () => ({
     ensureDetachedWindowsLoopbackRelay,
@@ -110,6 +116,23 @@ async function importChromeLifecycleWithMocks(options: {
 }
 
 describe('chromeLifecycle ownership', () => {
+  test('removes managed session restore inputs before endpoint-only process launch', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'browser-cold-session-'));
+    const userDataDir = path.join(root, 'managed', 'chatgpt');
+    const profileDir = path.join(userDataDir, 'Default');
+    try {
+      await mkdir(path.join(profileDir, 'Sessions'), { recursive: true });
+      await writeFile(path.join(profileDir, 'Sessions', 'Session_1'), 'restorable-tabs');
+      await writeFile(path.join(profileDir, 'Preferences'), 'auth-settings');
+      const onLaunch = vi.fn(() => { expect(existsSync(path.join(profileDir, 'Sessions'))).toBe(false); });
+      const { chromeLifecycle } = await importChromeLifecycleWithMocks({ onLaunch });
+      const chrome = await chromeLifecycle.launchChrome({ chromePath: '/usr/bin/google-chrome', chromeProfile: 'Default', manualLogin: true, managedProfileRoot: path.join(root, 'managed') } as never, userDataDir, () => undefined, { suppressStartupWindow: true });
+      expect(onLaunch).toHaveBeenCalledOnce();
+      expect(await readFile(path.join(profileDir, 'Preferences'), 'utf8')).toBe('auth-settings');
+      await chrome.kill();
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
   test('keeps shutdown ownership when reusing a registry instance started by the current run', async () => {
     process.env.WSL_DISTRO_NAME = 'Ubuntu';
     const { chromeLifecycle, execFileMock, unregisterInstanceIfMatches } = await importChromeLifecycleWithMocks({

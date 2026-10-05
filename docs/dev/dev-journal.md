@@ -1,3 +1,18 @@
+## 2026-10-05 02:27 UTC | Flag-alone live test failed; cold session quarantine ready
+
+Journey3 runs on PR207. Actual process has no-startup-window and no new-window,
+but 45 pages restored. Flag alone is insufficient; keep that failed live result.
+Normal metadata completed and hmj_ba4a95225aae47d8935f515ea294818c is still running.
+No restart or fourth journey until that child settles.
+
+The successor uses the shared Chromium session-entry whitelist and renames only
+those tab-state entries to a restorable quarantine before a managed endpoint-only
+cold process launch. Native absence and managed-root boundaries protect active
+and external browser state; authentication remains in place. The public launcher
+fixture failed before wiring, then passed. 69 focused tests and typecheck pass;
+touched lint retains two existing external-export naming warnings, no new warning.
+Two of five newly authorized journeys remain. Installed acceptance is pending.
+
 ## 2026-10-05 02:15 UTC | Endpoint-only startup restoration repair
 
 Two of the second renewed five journeys used; three remain. Journey1 observer
