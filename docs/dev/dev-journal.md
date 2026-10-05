@@ -1,3 +1,12 @@
+## 2026-10-05 01:58 UTC | Second renewed five-journey allowance
+
+User authorized five more live journeys. First normal automatic completion is
+running on installed PR205, files/maxItems6. Four remain. API responding with
+zero restarts; passive target inventory shows 41 pages (32 ChatGPT, nine blank),
+with process-group memory near 7GB. No browser targets closed or adopted by
+the observer. Wait on the same completion before another journey. Receipt:
+[control ledger](notes/2026-10-05-plan0386-second-renewed-controls.json).
+
 ## 2026-10-05 01:26 UTC | Both blocker repairs merged and installed
 
 PR204 repaired the proven status temporary-file collision. PR205 merged as
