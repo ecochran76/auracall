@@ -1,0 +1,321 @@
+{
+  "sourceMerge": "43734fc16a4ab90294fc59036fdcf100f21d5298",
+  "fixture": {
+    "filename": "litscout-research-coordination-1.0.0(2).zip",
+    "conversationId": "6a987662-6578-83ea-bef5-6a465a31eada",
+    "genuinelyMissingBefore": true
+  },
+  "failedFirstPass": {
+    "parentId": "acctmirror_completion_e3a13c6e-b327-44b1-bf2a-47a65eb742b4",
+    "request": {
+      "provider": "chatgpt",
+      "runtimeProfile": "wsl-chrome-3",
+      "conversationIds": [
+        "6a987662-6578-83ea-bef5-6a465a31eada"
+      ],
+      "sweepMode": "steady_follow",
+      "materializationPolicy": "full_missing_assets",
+      "materializationAssetKinds": [
+        "files"
+      ],
+      "materializationMaxItems": 1,
+      "materializationRefreshSnapshot": true,
+      "materializationForce": false
+    },
+    "finalStatus": "failed",
+    "passCount": 0,
+    "error": {
+      "message": "Outer collector deadline reached for chatgpt/wsl-chrome-3.",
+      "code": "account_mirror_collector_timeout"
+    },
+    "automaticChild": null,
+    "collectorDiagnostics": [
+      {
+        "stage": "identity",
+        "event": "started",
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-05T19:28:56.475Z"
+      },
+      {
+        "stage": "identity",
+        "event": "completed",
+        "elapsedMs": 123552.93028100001,
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-05T19:30:59.927Z"
+      },
+      {
+        "stage": "conversation-context",
+        "event": "started",
+        "conversationId": "6a987662-6578-83ea-bef5-6a465a31eada",
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-05T19:30:59.930Z"
+      },
+      {
+        "stage": "collector",
+        "event": "timed_out",
+        "observedAt": "2026-10-05T19:43:55.603Z",
+        "elapsedMs": 899332,
+        "timeoutMs": 900000,
+        "detail": "Outer collector deadline reached for chatgpt/wsl-chrome-3.",
+        "attachmentCursor": null
+      }
+    ],
+    "rendererFatal": {
+      "at": "2026-10-05T19:33:07.663Z",
+      "file": "third_party/blink/renderer/core/frame/local_frame_view.cc",
+      "line": 3440,
+      "assertion": "!frame_->GetDocument()->NeedsLayoutTreeUpdate()",
+      "browserVersion": "150.0.7835.0"
+    },
+    "observer": {
+      "maximumObservedPages": 1,
+      "custody": [
+        {
+          "at": "2026-10-05T19:28:56.699Z",
+          "leaseId": "0f54bdc0-fcbc-4f8a-9eaf-96546bdbb7ab",
+          "targetId": "CAAE7D7D6F358F4D58E4E88F80C8FB4D",
+          "workload": {
+            "kind": "live-follow",
+            "operationId": "acctmirror_completion_e3a13c6e-b327-44b1-bf2a-47a65eb742b4"
+          },
+          "state": "active",
+          "ownerProcessId": 41866
+        },
+        {
+          "at": "2026-10-05T19:36:29.892Z",
+          "leaseId": "0f54bdc0-fcbc-4f8a-9eaf-96546bdbb7ab",
+          "targetId": "CAAE7D7D6F358F4D58E4E88F80C8FB4D",
+          "workload": {
+            "kind": "live-follow",
+            "operationId": "acctmirror_completion_e3a13c6e-b327-44b1-bf2a-47a65eb742b4"
+          },
+          "state": "active",
+          "ownerProcessId": 41866
+        },
+        {
+          "at": "2026-10-05T19:38:25.945Z",
+          "leaseId": "0f54bdc0-fcbc-4f8a-9eaf-96546bdbb7ab",
+          "targetId": "CAAE7D7D6F358F4D58E4E88F80C8FB4D",
+          "workload": {
+            "kind": "live-follow",
+            "operationId": "acctmirror_completion_e3a13c6e-b327-44b1-bf2a-47a65eb742b4"
+          },
+          "state": "active",
+          "ownerProcessId": 41866
+        }
+      ],
+      "warningsDetected": [],
+      "errors": [
+        {
+          "at": "2026-10-05T19:33:13.391Z",
+          "error": "passive_read_timeout"
+        },
+        {
+          "at": "2026-10-05T19:36:29.887Z",
+          "error": "observer_restart_after_close_hang"
+        },
+        {
+          "at": "2026-10-05T19:36:35.000Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:36:41.075Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:36:47.180Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:36:53.275Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:36:59.371Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:05.465Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:11.549Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:17.640Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:23.730Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:29.826Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:35.924Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:42.001Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:48.091Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:37:54.185Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:38:00.287Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:38:06.383Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:38:12.457Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:38:18.561Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:38:24.648Z",
+          "error": "observer_io_timeout"
+        },
+        {
+          "at": "2026-10-05T19:38:25.939Z",
+          "error": "observer_restart_after_close_hang"
+        }
+      ],
+      "trafficThroughGap": {
+        "requests": 502,
+        "documents": 2,
+        "responses": 497,
+        "http429": 0
+      },
+      "coverageLimit": "Page-command observation ceased at renderer crash; local HTTP census resumed later."
+    }
+  },
+  "scopedBinaryRepair": {
+    "at": "2026-10-05T19:47:32.558275+00:00",
+    "family": "wsl-chrome-3",
+    "oldExecutable": "/home/ecochran76/workspace.local/chromium/artifacts/chromium-stealthcdp/150.0.7835.0+stealthcdp.3676a7503929/chrome-linux/chrome",
+    "newExecutable": "/home/ecochran76/workspace.local/chromium/artifacts/chromium-stealthcdp-candidates/stable-153-production-507c6ee3/153.0.8010.36+stealthcdp.8f0f14239da1/chrome-linux/chrome",
+    "newExecutableSha256": "70bb98cb3aea3dd5dabbd9ebd0420fab93949d7566c119dcd4ab1738947cb078",
+    "onlyChange": "single family chromePath replacement"
+  },
+  "acceptance": "OPEN; automatic child/new bytes/unchanged cache reuse not yet proven",
+  "skippedZipPass": {
+    "parentId": "acctmirror_completion_6cd88e3a-955a-4d49-b603-a87d5902a4e5",
+    "jobId": "hmj_b222235014704ba9abf840918f393aa6",
+    "status": "skipped",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 1,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0
+    },
+    "reason": "no-materializable-file: provider detail exposed no downloadable file assets for conversation 6a987662-6578-83ea-bef5-6a465a31eada",
+    "manifestPaths": [],
+    "archiveItems": [],
+    "custody": [
+      {
+        "at": "2026-10-05T19:48:08.012Z",
+        "leaseId": "0b89dd3d-9cdf-44c1-b7f2-6dea439b58dd",
+        "targetId": "87D209FAD7E71790D004E66AD632138E",
+        "workload": {
+          "kind": "live-follow",
+          "operationId": "acctmirror_completion_6cd88e3a-955a-4d49-b603-a87d5902a4e5"
+        },
+        "state": "active",
+        "ownerProcessId": 44403
+      },
+      {
+        "at": "2026-10-05T19:54:24.974Z",
+        "leaseId": "0b89dd3d-9cdf-44c1-b7f2-6dea439b58dd",
+        "targetId": "87D209FAD7E71790D004E66AD632138E",
+        "workload": {
+          "kind": "ephemeral",
+          "operationId": "history-materialization:hmj_b222235014704ba9abf840918f393aa6"
+        },
+        "state": "active",
+        "ownerProcessId": 44403
+      }
+    ],
+    "maxObservedPages": 1,
+    "observerErrors": [
+      {
+        "at": "2026-10-05T19:54:37.234Z",
+        "error": "observer_restart_after_unresponsive_sampler"
+      }
+    ],
+    "nativeEndpointAbsentAfterSettlement": true
+  },
+  "replacementFixture": {
+    "at": "2026-10-05T19:58:42.405816+00:00",
+    "conversationId": "6a0a69aa-1f5c-83ea-bcdc-692457c7e212",
+    "filename": "first_pass_readout.json",
+    "assetKinds": [
+      "files"
+    ],
+    "maxItems": 1,
+    "bindings": [],
+    "downloadRows": [
+      {
+        "title": "first_pass_readout.json",
+        "uri": "chatgpt://download-button/2338cc64-0104-41d1-9184-b71a043f6e51/0",
+        "messageIndex": 1
+      }
+    ],
+    "localMatchingPaths": [],
+    "archiveMatches": [],
+    "genuinelyMissing": true
+  },
+  "wrongAssetLanePass": {
+    "parentId": "acctmirror_completion_3cf7f149-9df9-4594-b7a2-cf4df238fb9d",
+    "jobId": "hmj_146539acc300497db0141b98b9ff301d",
+    "status": "skipped",
+    "assetKinds": [
+      "files"
+    ],
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 1,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0
+    },
+    "reason": "no-materializable-file: provider detail exposed no downloadable file assets for conversation 6a0a69aa-1f5c-83ea-bcdc-692457c7e212",
+    "interpretation": "Files-only is the wrong lane for retained generated download control; retry uses artifacts. snapshot fileCount counts result entries including no-materializable sentinel, and is not a refreshed downloadable file count."
+  },
+  "artifactLaneCheckpoint": {
+    "parentId": "acctmirror_completion_70dee5b3-c335-4b19-8a54-30dd92b1884d",
+    "childId": "hmj_59818104fba844f59b96d9fefefeb5d9",
+    "status": "skipped",
+    "newBytes": 0,
+    "sharedTarget": "B0F6C9AC47B6F03FC52FF7EF080B9B36",
+    "identityMatched": true,
+    "positiveCapture": "OPEN",
+    "unchangedRepeat": "NOT_RUN",
+    "repairValidation": {
+      "workerTests": 97,
+      "typecheck": "pass",
+      "closedWorldReview": "no_remaining_blocker"
+    }
+  }
+}

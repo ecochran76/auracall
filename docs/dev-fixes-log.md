@@ -1,3 +1,29 @@
+## 2026-10-06 | Bound title-family exclusions to explicit conversation scope
+
+Title-only family signatures from another conversation can suppress a genuinely
+missing same-named generated asset. For explicit conversation scope, qualify
+archive, terminal-job and completed-catalog seeds against that scope. Preserve
+same-conversation cache suppression and existing unscoped behavior. Regression
+covers all three seed paths; source validation does not prove captured bytes.
+
+## 2026-10-05 | Select the asset lane from retained control type
+
+A generated ChatGPT download control is an artifact candidate. Files-only
+materialization can return no-materializable-file while that control remains
+in artifact inventory. Snapshot fileCount currently counts file result entries,
+including a skipped sentinel, so it is not proof of a refreshed downloadable
+file. Check exact candidate/entry/byte evidence. Corrected artifacts acceptance
+is pending; retain the failed files-only controller result.
+
+## 2026-10-05 | Reachable browser endpoint can conceal a crashed renderer
+
+Chromium150 failed a Blink local_frame_view layout DCHECK during the selected
+ChatGPT context read. Browser.getVersion and HTTP target listing remained
+responsive while Page/Runtime commands timed out. Preserve Chrome stderr and
+collector deadline evidence; endpoint health alone cannot prove a usable tab.
+A scoped Chromium153 binary change is under live verification, not yet a
+validated capture fix.
+
 ## 2026-10-05 | Transfer limits do not constrain conversation selection
 
 A one-transfer follow must carry explicit conversation scope into both the

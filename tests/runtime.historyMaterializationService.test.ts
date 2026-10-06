@@ -6024,7 +6024,11 @@ describe("history materialization service", () => {
 		await expect(fs.readFile(priorMaterializedPath, "utf8")).resolves.toBe("already materialized");
 	});
 
-	it("forwards terminal job exclusions when a collector-reused conversation has no catalog asset manifest", async () => {
+	it.each([
+		[false, false],
+		[true, false],
+		[true, true],
+	])("respects terminal exclusion scope (scoped=%s, sameConversation=%s)", async (scoped, sameConversation) => {
 		const homeDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "auracall-history-materialize-exact-id-terminal-exclusions-"),
 		);
@@ -6042,6 +6046,7 @@ describe("history materialization service", () => {
 					provider: "chatgpt",
 					runtimeProfile: "wsl-chrome-3",
 					reconcile: true,
+					conversationIds: [sameConversation ? "conv_fresh_exact" : "conv_other"],
 					assetKinds: ["artifacts", "files"],
 				},
 				result: {
@@ -6168,6 +6173,21 @@ describe("history materialization service", () => {
 								projects: [],
 								conversations: [
 									{
+										id: "conv_catalog_other",
+										title: "Other complete row",
+										provider: "chatgpt",
+										assetCompleteness: "complete",
+										artifacts: [
+											{
+												id: "catalog:download:other",
+												source: "download",
+												kind: "download",
+												title: "Catalog Only.pdf",
+												uri: "sandbox:/mnt/data/Catalog_Only.pdf",
+											},
+										],
+									},
+									{
 										id: "conv_fresh_exact",
 										title: "Fresh exact target",
 										provider: "chatgpt",
@@ -6186,7 +6206,22 @@ describe("history materialization service", () => {
 				readItem: vi.fn(),
 			},
 			runArchiveService: {
-				listItems: vi.fn(async () => ({ items: [] })),
+				listItems: vi.fn(async () => ({
+					items: [
+						{
+							provider: "chatgpt",
+							runtimeProfile: "wsl-chrome-3",
+							kind: "generated_artifact",
+							providerConversationId: sameConversation ? "conv_fresh_exact" : "conv_other",
+							title: "OA OCR.pdf",
+							fileName: "OA_OCR.pdf",
+							uri: "sandbox:/mnt/data/OA_OCR.pdf",
+							metadata: { artifactKind: "download" },
+							fileAvailable: true,
+							localPath: priorMaterializedPath,
+						},
+					],
+				})),
 			} as unknown as RunArchiveService,
 			generateId: () => "hmj_exact_id_terminal_exclusions",
 			now: sequenceNow([
@@ -6204,6 +6239,7 @@ describe("history materialization service", () => {
 			provider: "chatgpt",
 			runtimeProfile: "wsl-chrome-3",
 			reuseSnapshotConversationIds: ["conv_fresh_exact"],
+			...(scoped ? { conversationIds: ["conv_fresh_exact"] } : {}),
 			reconcile: true,
 			assetKinds: ["artifacts", "files"],
 			maxItems: 6,
@@ -6219,11 +6255,19 @@ describe("history materialization service", () => {
 
 		expect(materializeConversation).toHaveBeenCalledTimes(1);
 		expect(materializeConversation.mock.calls[0]?.[3]).toMatchObject({
-			excludedAssetFamilySignatures: expect.arrayContaining([
-				"artifact:download:oa_ocr",
-				"artifact:canvas:che4470 exam guide",
-			]),
+			excludedAssetFamilySignatures:
+				scoped && !sameConversation
+					? []
+					: expect.arrayContaining([
+							"artifact:download:oa_ocr",
+							"artifact:canvas:che4470 exam guide",
+						]),
 		});
+		expect(
+			materializeConversation.mock.calls[0]?.[3]?.excludedAssetFamilySignatures?.includes(
+				"artifact:download:catalog_only",
+			),
+		).toBe(!scoped);
 		await expect(service.readJob("hmj_exact_id_terminal_exclusions")).resolves.toMatchObject({
 			status: "skipped",
 			providerSessionProof: {

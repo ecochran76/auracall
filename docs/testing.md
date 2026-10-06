@@ -3332,3 +3332,8 @@ Scheduler paused-startup regression: `pnpm vitest run tests/http.responsesServer
 Cold-start live follow launches blank and creates one admitted crawler target with explicit custody. Restored browser pages remain untouched; default reuse still rejects ambiguous unowned targets. Provider-free checks cover the real affinity factory/coordinator handoff, one target creation/lease, and traffic-budget denial before opening. Installed unattended acceptance remains a separate gate.
 
 Retained crawler recovery additionally covers acquire → idle → browser exit → reacquire with the same scheduler workload. Proven native browser absence releases the old lease before cold startup; unknown absence preserves it. Strict process-census tests distinguish absence, presence, command failure and malformed output. The native proof is bounded to five seconds; Windows absence recovery remains fail-closed.
+
+Explicit conversation-scoped materialization excludes foreign conversation
+archive, terminal-job, and completed-catalog title-family evidence. Same-scoped
+terminal evidence still suppresses repeat downloads. A skipped child and a
+nonzero snapshot fileCount do not prove newly captured bytes.
