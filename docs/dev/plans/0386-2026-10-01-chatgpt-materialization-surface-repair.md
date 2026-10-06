@@ -2,10 +2,41 @@
 
 State: OPEN
 Lane: P85
-Source base: `origin/main` at `cb07bfca07d25df83082cab3bd41db6f3acd5008`
-Branch: `fix/issue165-follow-continuation`
+Source base: `origin/main` at `6a07668e481ef6cb46f816a8e8a2dcca63f25337`
+Branch: `docs/issue165-spec-reconciliation`
 Target: `main`
 Integration: merge
+
+## Current State | 2026-10-06 spec reconciliation
+
+The requested four-step packet is ACCEPTED on installed source 6f4224e7e;
+receipt integration is 6a07668e4 (PR217). Normal scoped follow and automatic
+child captured 22,744 new readable JSON bytes on one shared physical target.
+Unchanged resume retained the file size/hash/mtime and one manifest/archive
+entry, with zero second downloads. The curated acceptance JSON is authoritative
+for this packet; prior zero-capture checkpoints remain historical evidence.
+
+Remaining wider gates, in order:
+1. Automatic changed-frontier handling: observe an eligible metadata/frontier
+   change selecting newly missing work while preserving existing cached bytes,
+   then an unchanged pass producing no further transfer or duplicate. The
+   accepted fixed-conversation capture/repeat does not establish account-level
+   change detection or capped partial-frontier continuation.
+2. Scheduler continuation after that acceptance: one bounded scheduler-driven
+   refresh and automatic child with recorded cadence, custody, traffic and
+   terminal cleanup. Global scheduling remains paused. This review authorizes
+   no provider run or scheduler resume.
+
+Next bounded packet is evidence/spec preparation for gate 1: identify a local
+before/after frontier fixture, expected selected IDs and cached exclusions,
+reuse existing provider-free evidence, and specify terminal live criteria and
+custody/traffic stop rules. No implementation is justified until that packet
+identifies a reproducible missing behavior. Keep gate 2 dependent on gate 1.
+Original Bailey-specific control and original no-loop restrictions are historical;
+later user renewals establish the accepted missing-asset fixture and normal
+follow path. Do not relabel the old failed Bailey controls as successful.
+
+Review: [bounded Standards/Spec reconciliation](../notes/2026-10-06-plan0386-spec-reconciliation.md).
 
 ## Bounded resumption | 2026-10-04 21:21 UTC
 
@@ -240,7 +271,7 @@ the real configured factory with a retained idle lease, presence/probe failures,
 and the original ambiguity, admission and warning guards. Installed automatic
 acceptance is still required; neither guarded failure completes the user goal.
 
-## Current State
+## Historical state before the accepted current-main packet
 
 PR #155 integrated the current semantic preview/download selector repair and
 was installed from canonical merge `ef2ca681a`. Its sole installed canary,

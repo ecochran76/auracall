@@ -1,3 +1,11 @@
+## 2026-10-06 | Plan0386 bounded spec reconciliation
+
+Primary Standards/Spec review pins PR213 baseline to PR217 head. Corrected stale
+P85 capture/repeat blocker and added current-state summary; preserved history.
+Four-step packet accepted. Wider gate is automatic changed-frontier handling,
+then dependent scheduler continuation. Next is one evidence/spec packet, no
+implementation or live effects in this turn. Review note records adjudication.
+
 ## 2026-10-06 03:34 UTC | Bounded positive capture and unchanged repeat ACCEPTED
 
 Same parent bc5f1711 resumed unchanged at normal eligibility. Automatic repeat
