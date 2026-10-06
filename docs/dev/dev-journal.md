@@ -1,3 +1,13 @@
+## 2026-10-06 | Fresh five-journey frontier qualification
+
+User renews fixture qualification and live execution on wsl-chrome-3 with five
+new journeys. 312 distinct focused tests pass; durable deferred horizon persists across epochs.
+Typecheck and touched-file lint pass. Exact current preflight
+API28526, all16 pauses and scheduler preserved, no active leases; touched module
+parity matches installed source. Root-index fixture qualification comes before
+normal unscoped follow; the prior readable asset does not make its unknown
+conversation completeness true. Allowance ledger starts at zero of five.
+
 ## 2026-10-06 | Changed-frontier acceptance spec prepared
 
 Plan0386 now contains a PLANNED bounded changed-frontier spec: existing normal
