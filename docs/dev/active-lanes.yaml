@@ -1688,13 +1688,13 @@ lanes:
   - id: P85
     objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
     plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    plan_ref: refs/heads/docs/issue165-changed-frontier-spec
-    branch: docs/issue165-changed-frontier-spec
+    plan_ref: refs/heads/test/issue165-frontier-qualification
+    branch: test/issue165-frontier-qualification
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
     checkpoint: 6a07668e481ef6cb46f816a8e8a2dcca63f25337
-    remote_ref: refs/remotes/origin/docs/issue165-changed-frontier-spec
+    remote_ref: refs/remotes/origin/test/issue165-frontier-qualification
     integration: merge
     work_items: [ecochran76/auracall#165]
     dependencies: [P84]
@@ -1702,8 +1702,8 @@ lanes:
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
     blocker: Wider automatic changed-frontier handling remains unproven; scheduler continuation depends on that gate.
-    validation_status: scoped-installed-capture-and-repeat-accepted
-    validation_ref: docs/dev/notes/2026-10-05-plan0386-current-main-acceptance.json
+    validation_status: provider-free-qualified-live-admission-denied
+    validation_ref: docs/dev/notes/2026-10-06-plan0386-frontier-fixture-qualification.md
     integration_receipt: 6a07668e481ef6cb46f816a8e8a2dcca63f25337
     disposition: PR214-216 source and PR217 receipt integrated; scoped normal capture and unchanged repeat accepted. Wider changed-frontier and dependent scheduler continuation remain OPEN.
     updated_at: 2026-10-06

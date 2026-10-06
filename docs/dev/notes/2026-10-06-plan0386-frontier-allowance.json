@@ -1,0 +1,53 @@
+{
+  "schema": "auracall_plan0386_frontier_allowance.v1",
+  "objective": "Qualify provider-free fixture/test mapping and execute changed-frontier acceptance on wsl-chrome-3",
+  "authority": "Fresh user allowance of five live journeys; prior completed goal is not reused",
+  "runtimeProfile": "wsl-chrome-3",
+  "sourceBase": "5cceb03e016e47ef16ea33a7fac5b3f8b45b9748",
+  "maxLiveJourneys": 5,
+  "usedLiveJourneys": 1,
+  "liveJourneys": [
+    {
+      "number": 1,
+      "purpose": "qualify real root-index epoch before unscoped follow",
+      "startedAt": "2026-10-06T19:46:42.540Z",
+      "request": {
+        "provider": "chatgpt",
+        "runtimeProfile": "wsl-chrome-3",
+        "sweepMode": "steady_follow",
+        "requestedPhase": "root-conversations",
+        "explicitRefresh": true,
+        "collectorTimeoutMs": 600000
+      },
+      "error": "API 500 {\"error\":{\"message\":\"Provider traffic governor is required before physical action: provider:chatgpt:connect-tab.\",\"type\":\"server_error\"}}",
+      "outcome": "admission_denied_before_connect_tab",
+      "observerEndedAt": "2026-10-06T19:47:06.464Z",
+      "cleanup": {
+        "ownedChromeRoots": 0,
+        "activeLeases": 0,
+        "idleLeases": 1,
+        "schedulerPaused": true,
+        "existingCompletionsPaused": 16
+      }
+    }
+  ],
+  "schedulerResumeAuthorized": false,
+  "normalPolicy": {
+    "maxPageReadsPerCycle": 4,
+    "maxConversationRowsPerCycle": 30,
+    "maxArtifactRowsPerCycle": 24,
+    "maxBrowserInteractionsPerMinute": 6,
+    "newTransferLimit": 1,
+    "force": false
+  },
+  "stopConditions": [
+    "provider warning/429/CAPTCHA",
+    "identity or custody mismatch",
+    "unknown provider outcome",
+    "admission denial",
+    "five journeys exhausted"
+  ],
+  "qualificationStage": "Provider-free fixtures qualified; live root-index qualification denied before physical effects",
+  "executionStopped": true,
+  "stopReason": "required provider traffic governor absent before connect-tab"
+}

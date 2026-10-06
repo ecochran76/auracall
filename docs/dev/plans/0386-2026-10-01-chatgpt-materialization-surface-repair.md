@@ -835,3 +835,27 @@ and limitations retained. This is not a claim that execution has happened.
 Skill integration: existing repo plan authority is used. The optional tracker
 configuration and ready-for-agent label are absent; remote issue/label mutation
 is withheld. Run /setup-matt-pocock-skills before a new multi-ticket flow.
+
+### Renewed execution authority | 2026-10-06
+
+The operator authorized provider-free qualification and live execution on
+`wsl-chrome-3` with a fresh allowance of five journeys. This supersedes the
+preceding publication-only gate for this bounded packet; it does not resume
+the global scheduler or unrelated completions. Count read-only qualification
+probes in the five, preserve normal traffic/cooldown/guard policy, and permit
+at most one new transfer per automatic child. Current packet: OPEN.
+
+Evidence and current allowance:
+- `docs/dev/notes/2026-10-06-plan0386-frontier-fixture-qualification.md`
+- `docs/dev/notes/2026-10-06-plan0386-frontier-allowance.json`
+
+Provider-free assertions are qualified; the live changed/quiet acceptance
+matrix remains unproven. A root-index qualification precedes normal unscoped
+completion so an explicit conversation scope cannot stand in for frontier
+selection. Stop conditions and prior scheduler exclusions remain in force.
+
+Journey1 stopped at the standalone refresh entry point: missing traffic
+governor before connect-tab. Provider-free qualification passed; installed
+changed/quiet acceptance remains OPEN. Fresh allowance used1/5; admission
+stop prevents additional journeys pending explicit clearance. Curated failure
+and entry-point/test distinction are in the qualification note above.

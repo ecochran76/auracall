@@ -1,3 +1,23 @@
+## 2026-10-06 | Frontier qualification stopped at admission
+
+312 focused provider-free tests pass, with typecheck and touched-file lint.
+Journey1 of five: standalone root-index refresh denied connect-tab because
+its request lacks the live-follow affinity governor. Zero observer traffic and
+no owned Chrome root after the attempt. Source mapping identifies the missing
+operation ID at the standalone route; completion-path tests remain separate.
+Frozen admission stop observed. No child, download or live acceptance claim;
+four unused journeys do not authorize crossing that stop.
+
+## 2026-10-06 | Fresh five-journey frontier qualification
+
+User renews fixture qualification and live execution on wsl-chrome-3 with five
+new journeys. 312 distinct focused tests pass; durable deferred horizon persists across epochs.
+Typecheck and touched-file lint pass. Exact current preflight
+API28526, all16 pauses and scheduler preserved, no active leases; touched module
+parity matches installed source. Root-index fixture qualification comes before
+normal unscoped follow; the prior readable asset does not make its unknown
+conversation completeness true. Allowance ledger starts at zero of five.
+
 ## 2026-10-06 | Changed-frontier acceptance spec prepared
 
 Plan0386 now contains a PLANNED bounded changed-frontier spec: existing normal

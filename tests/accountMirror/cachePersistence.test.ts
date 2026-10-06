@@ -240,7 +240,10 @@ describe("account mirror cache persistence", () => {
 		}
 	});
 
-	test("round-trips same-epoch work and rolls physical counters at the next epoch", async () => {
+	test.each([
+		"complete",
+		"deferred",
+	] as const)("round-trips %s work and retry horizon at the next epoch", async (outcome) => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-frontier-state-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
 		const cacheStore = createCacheStore("dual");
@@ -269,8 +272,9 @@ describe("account mirror cache persistence", () => {
 						changeFrontierState: {
 							...workState,
 							action: "visit_once",
-							outcome: "complete",
-							assetAvailability: "available",
+							outcome,
+							assetAvailability: outcome === "complete" ? "available" : "unknown",
+							retryNotBefore: outcome === "deferred" ? "2026-04-29T14:00:00.000Z" : null,
 							checkpointedAt: "2026-04-29T12:00:11.000Z",
 							physicalActivity: {
 								targetsCreated: 1,
@@ -292,8 +296,9 @@ describe("account mirror cache persistence", () => {
 						metadata: {
 							changeFrontierState: {
 								action: "visit_once",
-								outcome: "complete",
-								assetAvailability: "available",
+								outcome,
+								assetAvailability: outcome === "complete" ? "available" : "unknown",
+								retryNotBefore: outcome === "deferred" ? "2026-04-29T14:00:00.000Z" : null,
 								physicalActivity: { navigations: 1, downloads: 1 },
 							},
 						},
@@ -314,7 +319,8 @@ describe("account mirror cache persistence", () => {
 							changeFrontierState: {
 								action: null,
 								outcome: "pending",
-								assetAvailability: "available",
+								assetAvailability: outcome === "complete" ? "available" : "unknown",
+								retryNotBefore: outcome === "deferred" ? "2026-04-29T14:00:00.000Z" : null,
 								physicalActivity: { navigations: 0, downloads: 0 },
 								lifetimePhysicalActivity: { navigations: 1, downloads: 1 },
 							},
