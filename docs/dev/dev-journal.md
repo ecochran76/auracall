@@ -1,3 +1,38 @@
+## 2026-10-06 | Scoped terminal-family repair; live acceptance open
+
+Artifacts child hmj_59818104fba844f59b96d9fefefeb5d9 skipped with zero bytes
+despite fresh exact-conversation download controls. Parent and child shared one
+physical target; identity matched. Foreign conversations supplied title-only
+terminal family exclusions. Explicit scope now filters archive, prior-job and
+completed catalog seeds; unscoped and same-conversation suppression remain.
+Primary validation: 97 worker tests and typecheck pass. Closed-world reviewer
+confirmed the corrected seed-loop placement. Capture/repeat remain OPEN.
+
+## 2026-10-05 20:08 UTC | Correct generated-asset lane pending normal eligibility
+
+Chromium153 runs metadata and automatic children without the Chromium150
+renderer crash. ZIP child b2222350 selected one conversation but skipped with
+no downloadable file. Replacement first_pass_readout.json has a retained
+download control, no conversation file binding/local bytes/archive item.
+Controller files-only child 146539ac also skipped: generated download controls
+belong to artifacts. Preserve both zero-capture results. Snapshot fileCount=1
+counts the skipped sentinel entry, not refreshed downloadable inventory.
+Corrected normal artifacts follow 70dee5b3 awaits the normal minimum interval;
+no eligibility bypass. Positive capture and unchanged reuse remain OPEN.
+
+## 2026-10-05 19:48 UTC | Renderer crash blocks first scoped acceptance
+
+Current-main PR214 source 43734fc16 is installed with seven-module parity.
+Normal scoped follow e3a13c6e failed its outer 15-minute collector deadline;
+no automatic child or captured asset. Chromium150 logged fatal local_frame_view
+layout assertion at 19:33:07Z; page-command reads timed out while browser CDP
+endpoint stayed healthy. Resource readback showed no memory pressure/OOM.
+Failed receipt retained. Exact owned browser closed and native absence verified.
+Only wsl-chrome-3 family chromePath changed to local Chromium153 binary, with
+backup and checksum. New normal follow 6cd88e3a is active; no acceptance claim.
+Scheduler and unrelated operator pauses remain. Curated current-main acceptance
+receipt contains the first failure and scoped runtime repair.
+
 ## 2026-10-05 | Current-main scoped automatic asset acceptance
 
 PR213 merged at c568cf3e6. Fresh runtime readback: API46019, zero restarts,

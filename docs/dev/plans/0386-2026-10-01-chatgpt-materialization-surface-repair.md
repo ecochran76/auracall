@@ -624,3 +624,12 @@ parity, and zero repeat downloads or duplicate entries. Stop on provider guard,
 HTTP429, verification, identity/custody failure; retain failed evidence and
 diagnose locally before any authorized retry. Keep scheduler and unrelated
 completions paused. Full objective remains OPEN until live requirements pass.
+
+### 2026-10-06 scoped terminal-family checkpoint
+
+Current main 43734fc16 installed. Normal artifact follow 70dee5b3 automatically
+created child hmj_59818104fba844f59b96d9fefefeb5d9; one shared target, matching
+identity, but SKIPPED and zero new bytes. Foreign title-family seeds identified
+and scoped across archive, prior jobs and completed catalog. 97 primary worker
+tests/typecheck pass; bounded closed-world review clears placement and scope.
+Positive capture and unchanged repeat remain OPEN pending installed live proof.
