@@ -1688,13 +1688,13 @@ lanes:
   - id: P85
     objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
     plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    plan_ref: refs/heads/docs/issue165-spec-reconciliation
-    branch: docs/issue165-spec-reconciliation
+    plan_ref: refs/heads/docs/issue165-changed-frontier-spec
+    branch: docs/issue165-changed-frontier-spec
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
     checkpoint: 6a07668e481ef6cb46f816a8e8a2dcca63f25337
-    remote_ref: refs/remotes/origin/docs/issue165-spec-reconciliation
+    remote_ref: refs/remotes/origin/docs/issue165-changed-frontier-spec
     integration: merge
     work_items: [ecochran76/auracall#165]
     dependencies: [P84]
