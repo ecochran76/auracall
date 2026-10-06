@@ -1,3 +1,14 @@
+## 2026-10-06 | Bind normal ChatGPT child selection to collector frontier
+
+Snapshot reuse IDs alone do not restrict reconciliation selection. Normal
+unscoped follow selected an older conversation outside its eleven reusable
+references and refreshed it. Bind ChatGPT steady-follow child scope to the
+supplied frontier, preserve explicit scope/full sweep, and skip a qualified
+empty frontier. Extend the existing normal completion fixture; direct RED
+assertions precede the fix. 171 focused tests, typecheck and touched lint pass.
+Physical page fanout and unattributed browser restart remain separate live
+acceptance blockers; the source fix is not installed proof.
+
 ## 2026-10-06 | Verify positive capture separately from repeat suppression
 
 A real normal scoped follow and automatic child captured 22,744 readable JSON

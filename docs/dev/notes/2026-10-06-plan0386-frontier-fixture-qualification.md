@@ -74,3 +74,35 @@ root. The idle registry lease is retained as a cleanup limitation; no manual
 lease release, service restart or browser cleanup was performed. Graphiti
 memory disposition: unavailable, because focused discovery supplied no
 qualified AuraCall group; machine-readable non-write receipt recorded.
+
+## Journey 2 and qualified handoff defect
+
+The operator cleared the first stop with “continue”; normal unscoped completion
+ran on wsl-chrome-3. The account session matched and the index gained three
+rows with one existing row changed. Automatic child settled skipped, one
+selected candidate, zero transfers and duplicates. It chose a conversation
+outside the collector's eleven reusable references, with a new snapshot.
+One original target was retained, but physical census expanded from one to
+three pages. Parent paused; child already running was observed to terminal.
+A later new native Chrome root has unattributed custody. Do not call cleanup
+accepted. Three journeys remain unused under the new custody stop.
+
+Curated expected/observed matrix and cleanup limitations:
+`docs/dev/notes/2026-10-06-plan0386-frontier-journey2.json`.
+
+A real completion-service fixture now includes unscoped steady-follow and
+qualified quiet-frontier variants. Initial test setup lacked its backlog
+reader; that timeout was corrected before qualification. RED then directly
+showed absent child conversationIds. A second RED showed an empty frontier
+starting account-wide work. The repair binds ChatGPT steady-follow children
+to the nonempty collector detail/retained-reference union and withholds the
+child for a qualified empty frontier. Explicit scope takes precedence; full
+sweep and other providers retain existing selection rules.
+
+Final focused run: 171 tests across completionService and
+historyMaterializationService pass, no retries. This includes two additional
+variants in the existing fixture. Typecheck and touched-file lint pass. Earlier 312-test
+qualification remains separate; no combined live acceptance is inferred.
+The repair is source-only until integration, installation and a cleared live
+gate. Physical-page fanout and post-cleanup custody are not fixed by this
+child-scope change.

@@ -859,3 +859,21 @@ governor before connect-tab. Provider-free qualification passed; installed
 changed/quiet acceptance remains OPEN. Fresh allowance used1/5; admission
 stop prevents additional journeys pending explicit clearance. Curated failure
 and entry-point/test distinction are in the qualification note above.
+
+### Journey2 stop and handoff repair | 2026-10-06
+
+Operator “continue” cleared the initial admission stop. Journey2 used normal
+unscoped follow and its automatic child. It did not achieve positive/quiet
+acceptance: child selected outside the collector reuse set, transferred zero
+assets, and physical census reached three pages. Parent paused; running child
+settled skipped. Later browser custody remains unattributed. Used2/5, three
+unspent under a new custody stop. Curated journey2 receipt and qualification
+note above are current authority.
+
+The observed selection defect qualifies a bounded completion-service repair:
+restrict ChatGPT steady-follow children to available collector frontier IDs;
+withhold the child for a qualified empty frontier. Preserve explicit scope,
+full sweep, other providers, normal governor limits and prior pauses. Existing
+fixture is extended with direct RED/green nonempty and empty-frontier cases.
+This source repair does not establish installed acceptance or solve physical
+page fanout. Wider changed/quiet and scheduler gates remain OPEN.

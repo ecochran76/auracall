@@ -1350,10 +1350,18 @@ export function createAccountMirrorCompletionService(input: {
 		if (!input.historyMaterializationService) {
 			throw new Error("Account mirror full-sweep materialization is not configured.");
 		}
+		// ChatGPT steady follow hands off the collector frontier.
+		const conversationIds = operation.conversationIds?.length
+			? operation.conversationIds
+			: operation.provider === "chatgpt" &&
+					operation.sweepMode === "steady_follow" &&
+					options.reuseSnapshotConversationIds?.length
+				? options.reuseSnapshotConversationIds
+				: undefined;
 		const request = {
 			provider: operation.provider,
 			runtimeProfile: operation.runtimeProfileId,
-			...(operation.conversationIds?.length ? { conversationIds: operation.conversationIds } : {}),
+			...(conversationIds?.length ? { conversationIds } : {}),
 			reconcile: true,
 			refreshSnapshot: operation.materializationRefreshSnapshot === true,
 			...(options.reuseSnapshotAfter ? { reuseSnapshotAfter: options.reuseSnapshotAfter } : {}),
@@ -1821,6 +1829,15 @@ async function shouldQueueMaterialization(
 	readMaterializationBacklog: AccountMirrorMaterializationBacklogReader | undefined,
 ): Promise<boolean> {
 	if (operation.lastRefresh?.status !== "completed") return false;
+	if (
+		operation.provider === "chatgpt" &&
+		operation.sweepMode === "steady_follow" &&
+		!operation.conversationIds?.length &&
+		operation.lastRefresh.metadataEvidence?.changeFrontierPlan &&
+		!operation.lastRefresh.metadataEvidence.detailConversationIdsThisPass?.length &&
+		!operation.lastRefresh.metadataEvidence.retainedMaterializationConversationIds?.length
+	)
+		return false;
 	if (operation.materializationPolicy === "metadata_only") return false;
 	if (!operation.materializationPolicy && operation.sweepMode !== "full_sweep") return false;
 	if (operation.materializationCursor?.passCount === operation.passCount) return false;

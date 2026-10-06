@@ -143,6 +143,12 @@ configured conversation-read, page-refresh, or renavigation cooldown has
 elapsed before provider work begins. Its snapshot and asset operations then
 share one job-scoped interaction governor.
 
+For ChatGPT steady follow, supplied collector detail and retained-reference
+IDs constrain the automatic child's conversation selection as well as snapshot
+reuse. An explicit operator conversation scope takes precedence. A qualified
+empty frontier does not fall back to account-wide reconciliation. Full sweeps
+retain their account-wide selection contract.
+
 When completion-owned materialization becomes terminal, its `completedAt`
 provider-work boundary starts a fresh collector minimum interval. The
 completion cursor persists that settlement timestamp across restarts, and the
