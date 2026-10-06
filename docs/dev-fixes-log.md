@@ -1,3 +1,10 @@
+## 2026-10-06 | Preserve explicit conversation scope across completion persistence
+
+Operation serialization must retain conversationIds. Losing it on disk changes
+a scoped paused follow into account-wide work after service restart. Verify the
+real store round trip, not only in-memory propagation. Preserve legacy unscoped
+records and normalize string IDs. Live byte/repeat acceptance remains open.
+
 ## 2026-10-06 | Bound title-family exclusions to explicit conversation scope
 
 Title-only family signatures from another conversation can suppress a genuinely

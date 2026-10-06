@@ -840,7 +840,7 @@ describe("account mirror completion service", () => {
 				generateId: () => "acctmirror_persisted",
 			});
 
-			service.start({ maxPasses: 3 });
+			service.start({ maxPasses: 3, conversationIds: ["conv_scoped_persisted"] });
 
 			await waitFor(
 				async () => (await store.readOperation("acctmirror_persisted"))?.status === "completed",
@@ -848,6 +848,7 @@ describe("account mirror completion service", () => {
 
 			expect(await store.readOperation("acctmirror_persisted")).toMatchObject({
 				id: "acctmirror_persisted",
+				conversationIds: ["conv_scoped_persisted"],
 				status: "completed",
 				mode: "bounded",
 				passCount: 1,

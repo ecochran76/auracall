@@ -633,3 +633,11 @@ identity, but SKIPPED and zero new bytes. Foreign title-family seeds identified
 and scoped across archive, prior jobs and completed catalog. 97 primary worker
 tests/typecheck pass; bounded closed-world review clears placement and scope.
 Positive capture and unchanged repeat remain OPEN pending installed live proof.
+
+### 2026-10-06 persistence boundary checkpoint
+
+PR215 installed with worker SHA-256 parity. Resume created child bcae5ce8,
+failed page_navigate budget limit1 and captured zero bytes. Store stripped
+conversationIds across restart; resumed child was unscoped. Preserve failed
+receipt and paused parent. Completion-store round-trip regression fails before
+repair. Positive scoped capture and unchanged repeat remain OPEN.
