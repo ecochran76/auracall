@@ -2399,7 +2399,14 @@ describe("account mirror completion service", () => {
 								epochId: "quiet-epoch",
 								resumeAfterConversationKey: null,
 								checkpointFound: true,
-								decisions: [],
+								decisions: [
+									{
+										conversationKey: "complete-A",
+										checkpointKey: "complete-A",
+										action: "skip" as const,
+										reason: "unchanged_complete" as const,
+									},
+								],
 								counts: { skip: 1, visit_once: 0, materialize_retained: 0, defer: 0 },
 							},
 						}
