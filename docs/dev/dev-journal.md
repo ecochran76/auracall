@@ -1,3 +1,12 @@
+## 2026-10-06 | Changed-frontier acceptance spec prepared
+
+Plan0386 now contains a PLANNED bounded changed-frontier spec: existing normal
+follow seam, A/B/C/G fixture roles, changed/unchanged/deferred/guarded evidence
+matrix and explicit live authority gate. Explicit scope cannot prove freshness
+selection. Prior closed Plan0381/Issue139 contracts are reused. No source code,
+provider call, scheduler resume or remote issue/label mutation. Next action is
+provider-free fixture qualification; live B is not yet qualified.
+
 ## 2026-10-06 | Plan0386 bounded spec reconciliation
 
 Primary Standards/Spec review pins PR213 baseline to PR217 head. Corrected stale

@@ -3,7 +3,7 @@
 State: OPEN
 Lane: P85
 Source base: `origin/main` at `6a07668e481ef6cb46f816a8e8a2dcca63f25337`
-Branch: `docs/issue165-spec-reconciliation`
+Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
@@ -686,3 +686,152 @@ bytes/hash. Curated source: ../notes/2026-10-05-plan0386-current-main-acceptance
 This closes the requested four-step packet, not every wider plan work item.
 Scheduler and all operations paused; no active/idle leases. Preserve the repeat
 observer terminal-cleanup connection refusal as a coverage limitation.
+
+## Changed-frontier acceptance spec | 2026-10-06
+
+Packet state: PLANNED. Owner: primary agent. Parent: P85 / Issue165.
+Source baseline: PR218 merge 60adae82b. This spec defines evidence work;
+implementation and provider execution are not authorized by its publication.
+Scheduler continuation remains a separate dependent packet.
+
+### Problem Statement
+
+The operator has verified one missing asset and an unchanged scoped repeat,
+but cannot yet rely on normal account-level follow to recognize a changed
+conversation, capture only its newly missing work, and leave complete cached
+conversations alone. Explicit conversation scope bypasses freshness selection,
+so repeating the prior control would not answer this question.
+
+### Solution
+
+Verify one normal steady-follow before/after frontier transition through the
+existing completion API, collector and automatic child. Reuse the closed
+changed-frontier plan's existing contracts and tests. Produce an exact evidence
+receipt, or a reproducible failure identifying the missing behavior. Add code
+only in a subsequent bounded repair if that failure requires it.
+
+### User Stories
+
+1. As an operator, I want lightweight index evidence before detail selection,
+   so that follow reacts to provider changes without rereading account history.
+2. As an operator, I want a changed conversation selected automatically,
+   so that I do not need to supply its ID to bypass the planner.
+3. As an operator, I want a complete unchanged conversation excluded,
+   so that its route and assets are not unnecessarily revisited.
+4. As an operator, I want one visit per selected freshness epoch,
+   so that collector and child do not duplicate snapshot work.
+5. As an operator, I want newly missing bytes captured by the automatic child,
+   so that a metadata-only success cannot masquerade as fulfillment.
+6. As an operator, I want retained readable bytes preserved,
+   so that a changed row does not redownload its already complete assets.
+7. As an operator, I want an unchanged follow to settle without another transfer,
+   so that cache reuse has measurable evidence.
+8. As an operator, I want deferred work to retain an eligible cursor,
+   so that a one-transfer cap cannot falsely complete the remaining frontier.
+9. As an operator, I want partial inventory represented truthfully,
+   so that remaining work is not hidden by a successful selected asset.
+10. As an operator, I want failed or guarded work to retain retry eligibility,
+    so that later cadence does not immediately repeat an unsafe attempt.
+11. As an operator, I want restart-safe frontier and completion state,
+    so that retained complete work is not reset by hydration.
+12. As an operator, I want parent and child custody of one physical target,
+    so that logical lease counts cannot conceal multiple browser tabs.
+13. As an operator, I want identity and traffic guards to stop effects,
+    so that acceptance preserves account and browser ownership boundaries.
+14. As an operator, I want sanitized amplification and integrity evidence,
+    so that I can distinguish a frontier pass from account-wide work.
+15. As an operator, I want old failures and accepted receipts preserved,
+    so that a later packet does not overwrite provenance.
+16. As an operator, I want scheduling to remain paused during this packet,
+    so that one acceptance experiment cannot resume continuous provider work.
+
+### Implementation Decisions
+
+- Use existing normal completion, metadata collector, freshness planner,
+  persistent cache, governor and automatic materialization seams. No new API,
+  planner, schema, aliases, manual worker or fixture-specific provider heuristic.
+- The decisive planner test is normal unscoped steady follow; an explicit
+  conversation list may verify materialization but cannot prove frontier choice.
+- Provider-free execution supplies deterministic index/detail responses through
+  existing injectable boundaries and uses a temporary real durable store.
+  It does not modify production cache timestamps or invent provider changes.
+- Freeze a fixture ledger before execution: A is complete/readable and unchanged;
+  B has a genuine changed index fingerprint/mtime with one newly missing asset;
+  C is incomplete/deferred after the transfer cap; G is guarded before its
+  eligibility horizon. Isolate each case as needed to keep expectations exact.
+- Provider-free IDs are A/B/C/G logical fixture roles, not selected live IDs.
+  No live B candidate is qualified by this spec. Live admission requires exact
+  local/provider before/after evidence, identity, candidate count and readable
+  retained-file hashes recorded without causing a provider mutation.
+- A live provider change must already exist or arise independently. Do not send
+  prompts, upload content, edit provider history or erase cache to manufacture it.
+- One primary owns serialized execution and records parent/child IDs, epochs,
+  selected rows, physical target custody, effect counts and terminal state.
+- Keep unscoped production admission/budgets intact. If normal follow cannot be
+  bounded to the qualified frontier, stop and record that admission blocker;
+  do not fall back to explicit scope and claim frontier acceptance.
+
+### Testing Decisions
+
+- Test external selection, persisted outcomes, bytes and effects; avoid tests
+  that merely mirror internal branches. The highest practical seam is normal
+  completion through collector to automatically created child and durable readback.
+- Prior art: existing phase-decision selected-row/complete-row fixtures,
+  completion disk round-trip and child propagation tests, freshness-frontier
+  retained-evidence tests, and reconciliation cap/terminal-exclusion fixtures.
+  Plan0381 / closed Issue139 are prior accepted source contracts, not new work.
+- Changed case: index changes only B; exact selected frontier excludes complete
+  A. B has at most one governed physical detail visit in the epoch; the child
+  consumes retained references without a second snapshot refresh. Exactly one
+  previously absent nonempty asset becomes readable with matching manifest,
+  checksum, type and available archive projection. A's bytes/hash/mtime stay fixed.
+- Unchanged case: repeat the same normal request with no index/detail changes.
+  Complete A/B cause zero conversation route visits, snapshot refreshes, artifact
+  resolution attempts and downloads. Stable manifest/archive entry IDs and
+  counts plus unchanged file hashes prove reuse. Lightweight index traffic is
+  allowed and must be counted separately. A successful skipped job alone fails.
+- Deferred case: maxItems=1 caps new transfers; retained complete evidence is not
+  charged as a new transfer. C stays partial/deferred with a resumable cursor.
+  A later eligible pass continues C without resetting A/B or claiming complete.
+- Guard case: G remains excluded until its recorded eligibility horizon; no
+  navigation, resolution or retry occurs before it. Persist and reload the
+  temporary store to verify this boundary and retained completion scope/state.
+- Candidate evidence matrix must record expected versus observed selected IDs,
+  epoch/visit counts, reloads, snapshots, resolutions, downloads, duplicates,
+  deferred rows, file integrity, manifest/archive counts and cleanup outcome.
+- Run existing relevant provider-free tests first. If they already cover a row,
+  cite exact assertions/results instead of adding duplicate tests. If a real
+  behavior fails, preserve one red reproducer before proposing a source repair.
+- Installed live evidence is a separate gate after provider-free qualification
+  and explicit execution authority. Bind it to canonical commit/module hashes,
+  installed identity and native process/endpoint/target readbacks. Capture
+  identity before effects and attach the observer to the resolved endpoint;
+  never assume a fixed DevTools port.
+
+### Out of Scope
+
+Global scheduler resume, continuous cadence, account-wide backfill, provider
+content creation, manual asset downloads, forced refresh/retry, changing traffic
+limits, dismissing warnings, unrelated browser adoption/cleanup, source redesign,
+reopening closed Issue139 or rewriting previously accepted packet evidence.
+
+### Further Notes
+
+Entry gate: qualifying before/after fixture and existing-test evidence matrix.
+No implementation ticket is ready until a missing behavior is reproduced.
+Live gate: separate current operator execution authority with a frozen finite
+pass/time/traffic allowance. The completed one-million-token/two-hour goal is
+not reusable authority. Stop on warning/429/CAPTCHA, identity or custody mismatch,
+unknown outcome, admission failure, or the first frozen budget boundary. Preserve
+terminal evidence; no blind retry and no manual lease release. Scheduler and
+unrelated operator pauses remain unchanged.
+
+Definition of done for this spec slice: canonical spec, explicit seam and roles,
+observable acceptance matrix, non-goals, ordered gates and publication receipt.
+Definition of done for later execution: changed + unchanged + deferred/guarded
+matrix passes, installed positive bytes and absence/cleanup proof, with failures
+and limitations retained. This is not a claim that execution has happened.
+
+Skill integration: existing repo plan authority is used. The optional tracker
+configuration and ready-for-agent label are absent; remote issue/label mutation
+is withheld. Run /setup-matt-pocock-skills before a new multi-ticket flow.
