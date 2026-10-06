@@ -1,3 +1,11 @@
+## 2026-10-06 | Verify positive capture separately from repeat suppression
+
+A real normal scoped follow and automatic child captured 22,744 readable JSON
+bytes on one shared tab. Unchanged resume preserved size/hash/mtime and one
+manifest/archive entry, with zero second downloads. Cached archive asset HTTP200
+independently returned the same bytes. Preserve earlier zero-capture failures
+and terminal observer cleanup error; test totals alone are not acceptance.
+
 ## 2026-10-06 | Preserve explicit conversation scope across completion persistence
 
 Operation serialization must retain conversationIds. Losing it on disk changes

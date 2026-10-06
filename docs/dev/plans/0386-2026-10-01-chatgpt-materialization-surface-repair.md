@@ -641,3 +641,17 @@ failed page_navigate budget limit1 and captured zero bytes. Store stripped
 conversationIds across restart; resumed child was unscoped. Preserve failed
 receipt and paused parent. Completion-store round-trip regression fails before
 repair. Positive scoped capture and unchanged repeat remain OPEN.
+
+### 2026-10-06 bounded acceptance packet ACCEPTED
+
+PR213 merged; current installed main 6f4224e7e includes scoped family and disk
+persistence repairs (PR215/216). Exact local inventory lacked the selected
+first_pass_readout.json conversation asset before the run. Normal scoped follow
+bc5f1711 automatically created ee23feb8: 22,744 new readable JSON bytes, one
+shared physical target and one download. Resume unchanged created f939e08c:
+zero materialization/downloads/duplicate aliases; original file size/hash/mtime
+and single manifest/archive entries unchanged. Cached asset API HTTP200 matches
+bytes/hash. Curated source: ../notes/2026-10-05-plan0386-current-main-acceptance.json.
+This closes the requested four-step packet, not every wider plan work item.
+Scheduler and all operations paused; no active/idle leases. Preserve the repeat
+observer terminal-cleanup connection refusal as a coverage limitation.

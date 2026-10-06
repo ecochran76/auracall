@@ -317,5 +317,146 @@
       "typecheck": "pass",
       "closedWorldReview": "no_remaining_blocker"
     }
+  },
+  "positiveCapture": {
+    "sourceCommit": "6f4224e7e81f332373d0f102262088404640a1be",
+    "parentId": "acctmirror_completion_bc5f1711-428e-4a05-ac9b-c6ced0519abf",
+    "childId": "hmj_ee23feb863ef4d248f28bb4b6ad74167",
+    "conversationId": "6a0a69aa-1f5c-83ea-bcdc-692457c7e212",
+    "filename": "first_pass_readout.json",
+    "bytes": 22744,
+    "sha256": "0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7",
+    "readableJson": true,
+    "mtime": "2026-10-06T03:24:24.435Z",
+    "targetId": "9E54AA722D3D294FD4FC71DE2E7C2C1C",
+    "maxPhysicalPages": 1,
+    "downloadEvents": 1,
+    "custody": [
+      {
+        "targetId": "9E54AA722D3D294FD4FC71DE2E7C2C1C",
+        "state": "active",
+        "workload": {
+          "kind": "live-follow",
+          "operationId": "acctmirror_completion_bc5f1711-428e-4a05-ac9b-c6ced0519abf"
+        }
+      },
+      {
+        "targetId": "9E54AA722D3D294FD4FC71DE2E7C2C1C",
+        "state": "idle",
+        "workload": {
+          "kind": "live-follow",
+          "operationId": "acctmirror_completion_bc5f1711-428e-4a05-ac9b-c6ced0519abf"
+        }
+      },
+      {
+        "targetId": "9E54AA722D3D294FD4FC71DE2E7C2C1C",
+        "state": "active",
+        "workload": {
+          "kind": "ephemeral",
+          "operationId": "history-materialization:hmj_ee23feb863ef4d248f28bb4b6ad74167"
+        }
+      },
+      {
+        "targetId": "9E54AA722D3D294FD4FC71DE2E7C2C1C",
+        "state": "idle",
+        "workload": {
+          "kind": "ephemeral",
+          "operationId": "history-materialization:hmj_ee23feb863ef4d248f28bb4b6ad74167"
+        }
+      }
+    ],
+    "manifestEntries": 1,
+    "availableArchiveEntries": 1,
+    "repeat": "ACCEPTED"
+  },
+  "unchangedRepeat": {
+    "parentId": "acctmirror_completion_bc5f1711-428e-4a05-ac9b-c6ced0519abf",
+    "childId": "hmj_f939e08cb66a4e909f128b49fa19dc5d",
+    "status": "skipped",
+    "requestUnchanged": true,
+    "persistedFieldsUnchanged": true,
+    "scope": [
+      "6a0a69aa-1f5c-83ea-bcdc-692457c7e212"
+    ],
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 1,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0
+    },
+    "unchangedBytes": true,
+    "unchangedHash": true,
+    "unchangedMtime": true,
+    "manifestEntryCount": 1,
+    "availableArchiveEntryCount": 1,
+    "archiveIdsUnchanged": true,
+    "downloadEvents": 0,
+    "maxPhysicalPages": 1,
+    "custody": [
+      {
+        "targetId": "DB8415C879BFF6F544B595C2E88E002C",
+        "state": "active",
+        "workload": {
+          "kind": "live-follow",
+          "operationId": "acctmirror_completion_bc5f1711-428e-4a05-ac9b-c6ced0519abf"
+        }
+      },
+      {
+        "targetId": "DB8415C879BFF6F544B595C2E88E002C",
+        "state": "idle",
+        "workload": {
+          "kind": "live-follow",
+          "operationId": "acctmirror_completion_bc5f1711-428e-4a05-ac9b-c6ced0519abf"
+        }
+      },
+      {
+        "targetId": "DB8415C879BFF6F544B595C2E88E002C",
+        "state": "active",
+        "workload": {
+          "kind": "ephemeral",
+          "operationId": "history-materialization:hmj_f939e08cb66a4e909f128b49fa19dc5d"
+        }
+      },
+      {
+        "targetId": "DB8415C879BFF6F544B595C2E88E002C",
+        "state": "idle",
+        "workload": {
+          "kind": "ephemeral",
+          "operationId": "history-materialization:hmj_f939e08cb66a4e909f128b49fa19dc5d"
+        }
+      }
+    ],
+    "observerErrors": [
+      {
+        "at": "2026-10-06T03:33:31.480Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ],
+    "observerErrorDisposition": "one terminal cleanup connection refusal; captured bytes and stable entries independently re-read",
+    "cachedAssetApi": {
+      "status": 200,
+      "bytes": 22744,
+      "sha256": "0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7",
+      "contentType": "application/json",
+      "readableJson": true
+    }
+  },
+  "boundedObjectiveStatus": "ACCEPTED",
+  "finalRuntime": {
+    "apiPid": 28526,
+    "restarts": 0,
+    "schedulerPaused": true,
+    "activeLeases": 0,
+    "idleLeases": 0,
+    "operatorCompletionsPaused": 16
+  },
+  "memoryDisposition": {
+    "disposition": "unavailable",
+    "reason": "No qualified AuraCall Graphiti group configured",
+    "graphitiWritesAttempted": 0
   }
 }
