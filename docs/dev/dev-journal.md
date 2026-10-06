@@ -1,3 +1,12 @@
+## 2026-10-06 | Restart stripped explicit follow scope
+
+Installed PR215 worker parity passed. Resumed parent 70dee5b3 created child
+hmj_bcae5ce8aa924efda4ea2846dcf6e3e7, failed page_navigate budget limit1, zero
+bytes. Persisted completion omitted conversationIds; restart hydrated an
+unscoped request. This run cannot prove scoped capture. Parent paused, evidence
+retained. Disk round-trip regression fails before completion-store repair and passes after.
+All 72 completion-service tests, typecheck and touched-file lint pass.
+
 ## 2026-10-06 | Scoped terminal-family repair; live acceptance open
 
 Artifacts child hmj_59818104fba844f59b96d9fefefeb5d9 skipped with zero bytes

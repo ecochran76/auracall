@@ -3337,3 +3337,6 @@ Explicit conversation-scoped materialization excludes foreign conversation
 archive, terminal-job, and completed-catalog title-family evidence. Same-scoped
 terminal evidence still suppresses repeat downloads. A skipped child and a
 nonzero snapshot fileCount do not prove newly captured bytes.
+
+Completion conversation scope must survive disk persistence and service restart.
+Validate it in the child request before accepting a resumed scoped run.
