@@ -1702,7 +1702,7 @@ lanes:
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
     blocker: Wider automatic changed-frontier handling remains unproven; scheduler continuation depends on that gate.
-    validation_status: provider-free-frontier-qualified-live-pending
+    validation_status: provider-free-qualified-live-admission-denied
     validation_ref: docs/dev/notes/2026-10-06-plan0386-frontier-fixture-qualification.md
     integration_receipt: 6a07668e481ef6cb46f816a8e8a2dcca63f25337
     disposition: PR214-216 source and PR217 receipt integrated; scoped normal capture and unchanged repeat accepted. Wider changed-frontier and dependent scheduler continuation remain OPEN.

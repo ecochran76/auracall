@@ -41,3 +41,36 @@ normal authenticated refresh API is planned as journey1, before selecting live
 B or claiming changed-frontier acceptance. It has no worker or new transfer.
 Freeze index/epoch differences and select genuine changed/missing work from its
 result; do not alter timestamps, delete caches, or send provider prompts.
+
+## Journey 1: admission denial, no acceptance claim
+
+The normal refresh API returned HTTP500:
+`Provider traffic governor is required before physical action: provider:chatgpt:connect-tab.`
+The request was root-conversations, steady_follow, explicitRefresh true,
+collectorTimeoutMs600000, with no limit/guard bypass. Counted one of five.
+No normal completion or child was created. Observer: zero attachments, samples,
+requests, documents and downloads; no observer warnings or errors. A fresh
+OS census found no Chrome root for the exact managed browser directory.
+The retained JSON remains 22744 bytes with its previously frozen checksum.
+
+Source diagnosis: refreshService only creates live-follow affinity when
+`request.liveFollowOperationId` is supplied (lines334-356); the public refresh
+route does not supply it (responsesServer3055 onward). Its collector governor
+therefore remains absent. Existing refresh tests qualify the affinity-bearing
+completion path, including admission bounds, using injected collectors; they
+do not qualify the installed standalone refresh route. This is an entry-point
+qualification failure, not evidence that changed-frontier selection failed.
+
+The frozen admission-denial stop applies. Four journeys remain numerically
+unused; they are not permission to retry after the stop. Changed B and quiet
+complete A/B remain unqualified; no installed positive/quiet matrix is claimed.
+Next bounded execution should use the normal unscoped completion seam after
+the stop is explicitly cleared. No production governor bypass or source repair
+was attempted in this qualification slice.
+
+Final API readback: scheduler paused, all16 existing completions paused,
+active leases0 and idle leases1. Native process census found no owned Chrome
+root. The idle registry lease is retained as a cleanup limitation; no manual
+lease release, service restart or browser cleanup was performed. Graphiti
+memory disposition: unavailable, because focused discovery supplied no
+qualified AuraCall group; machine-readable non-write receipt recorded.

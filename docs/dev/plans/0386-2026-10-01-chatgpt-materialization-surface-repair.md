@@ -853,3 +853,9 @@ Provider-free assertions are qualified; the live changed/quiet acceptance
 matrix remains unproven. A root-index qualification precedes normal unscoped
 completion so an explicit conversation scope cannot stand in for frontier
 selection. Stop conditions and prior scheduler exclusions remain in force.
+
+Journey1 stopped at the standalone refresh entry point: missing traffic
+governor before connect-tab. Provider-free qualification passed; installed
+changed/quiet acceptance remains OPEN. Fresh allowance used1/5; admission
+stop prevents additional journeys pending explicit clearance. Curated failure
+and entry-point/test distinction are in the qualification note above.
