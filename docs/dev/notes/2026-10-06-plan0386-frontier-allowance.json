@@ -5,7 +5,7 @@
   "runtimeProfile": "wsl-chrome-3",
   "sourceBase": "5cceb03e016e47ef16ea33a7fac5b3f8b45b9748",
   "maxLiveJourneys": 5,
-  "usedLiveJourneys": 1,
+  "usedLiveJourneys": 2,
   "liveJourneys": [
     {
       "number": 1,
@@ -29,6 +29,32 @@
         "schedulerPaused": true,
         "existingCompletionsPaused": 16
       }
+    },
+    {
+      "number": 2,
+      "startedAt": "2026-10-06T23:38:23.389Z",
+      "purpose": "normal unscoped follow with automatic maxItems1 child",
+      "request": {
+        "provider": "chatgpt",
+        "runtimeProfile": "wsl-chrome-3",
+        "sweepMode": "steady_follow",
+        "materializationPolicy": "full_missing_assets",
+        "materializationAssetKinds": [
+          "artifacts"
+        ],
+        "materializationMaxItems": 1,
+        "materializationRefreshSnapshot": true,
+        "materializationForce": false
+      },
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "endedAt": "2026-10-06T23:38:38.637Z",
+      "jobId": "hmj_751709d6ec9b4bf7b5a0844727a20a05",
+      "outcome": "not_accepted_custody_stop",
+      "stopReason": "observer_guard",
+      "childOutcome": "skipped",
+      "parentOutcome": "paused",
+      "providerWorkSettledAt": "2026-10-06T23:42:06.138Z",
+      "receipt": "docs/dev/notes/2026-10-06-plan0386-frontier-journey2.json"
     }
   ],
   "schedulerResumeAuthorized": false,
@@ -49,5 +75,12 @@
   ],
   "qualificationStage": "Provider-free fixtures qualified; live root-index qualification denied before physical effects",
   "executionStopped": true,
-  "stopReason": "required provider traffic governor absent before connect-tab"
+  "stopReason": "multiple physical pages and unattributed post-cleanup browser process",
+  "stopClearance": {
+    "authority": "User: continue",
+    "at": "2026-10-06T23:38:16.336707+00:00",
+    "remainingJourneys": 4,
+    "seam": "normal unscoped steady-follow completion"
+  },
+  "remainingJourneys": 3
 }

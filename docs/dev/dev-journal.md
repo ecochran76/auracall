@@ -1,3 +1,17 @@
+## 2026-10-06 | Normal frontier journey2 and bounded child-scope repair
+
+User cleared admission stop. Normal unscoped follow verified account identity
+and refreshed a changed index, then automatic child skipped without transfers.
+Child selected outside collector reuse IDs; physical pages peaked3. Parent
+paused and running child settled. Later new Chrome root custody unattributed.
+Used2/5; no further journeys after new custody stop. All16 prior completions
+and scheduler pauses preserved by direct readback.
+
+Existing completion fixture extended: direct RED for unrestricted child, then
+RED for quiet-frontier fallback. Source repair binds available ChatGPT frontier
+and skips qualified empty frontier. 171 focused tests and touched lint pass.
+No reinstall or positive/quiet live claim; custody/page fanout remains open.
+
 ## 2026-10-06 | Frontier qualification stopped at admission
 
 312 focused provider-free tests pass, with typecheck and touched-file lint.

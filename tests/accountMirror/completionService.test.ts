@@ -2330,9 +2330,14 @@ describe("account mirror completion service", () => {
 	});
 
 	test.each([
-		false,
-		true,
-	])("owned materialization failure blocks completion (scoped=%s)", async (scoped) => {
+		"full_sweep",
+		"scoped",
+		"steady_frontier",
+		"quiet_frontier",
+	])("respects materialization frontier and settles owned failure (mode=%s)", async (mode) => {
+		const scoped = mode === "scoped";
+		const quiet = mode === "quiet_frontier";
+		const frontier = mode === "steady_frontier" || quiet;
 		const pacedConfig = {
 			runtimeProfiles: {
 				default: {
@@ -2384,8 +2389,21 @@ describe("account mirror completion service", () => {
 				identitySource: "browser_session",
 				projectSampleIds: [],
 				conversationSampleIds: ["conv_collector_fresh_1"],
-				detailConversationIdsThisPass: ["conv_collector_fresh_1"],
-				retainedMaterializationConversationIds: ["conv_retained_1"],
+				detailConversationIdsThisPass: quiet ? [] : ["conv_collector_fresh_1"],
+				retainedMaterializationConversationIds: quiet ? [] : ["conv_retained_1"],
+				...(quiet
+					? {
+							changeFrontierPlan: {
+								object: "account_mirror_change_frontier_plan" as const,
+								version: 1 as const,
+								epochId: "quiet-epoch",
+								resumeAfterConversationKey: null,
+								checkpointFound: true,
+								decisions: [],
+								counts: { skip: 1, visit_once: 0, materialize_retained: 0, defer: 0 },
+							},
+						}
+					: {}),
 				truncated: { projects: false, conversations: false, artifacts: false },
 			},
 		}));
@@ -2403,9 +2421,10 @@ describe("account mirror completion service", () => {
 		});
 		const service = createAccountMirrorCompletionService({
 			registry,
-			readMaterializationBacklog: scoped
-				? async () => ({ retrievableMissing: 1, unknownOrDeferred: 0 })
-				: undefined,
+			readMaterializationBacklog:
+				scoped || frontier
+					? async () => ({ retrievableMissing: 1, unknownOrDeferred: 0 })
+					: undefined,
 			refreshService: {
 				requestRefresh,
 			},
@@ -2424,18 +2443,25 @@ describe("account mirror completion service", () => {
 			conversationIds: scoped ? [" conv_collector_fresh_1 ", "conv_collector_fresh_1"] : undefined,
 			materializationPolicy: "full_missing_assets",
 			materializationRefreshSnapshot: true,
-			sweepMode: scoped ? "steady_follow" : "full_sweep",
+			sweepMode: scoped || frontier ? "steady_follow" : "full_sweep",
 			materializationAssetKinds: ["media"],
 			materializationMaxItems: 2,
 		});
 
+		if (quiet) {
+			await waitFor(() => service.read("acctmirror_full_sweep")?.passCount === 1);
+			service.control({ id: "acctmirror_full_sweep", action: "pause" });
+			expect(createJob).not.toHaveBeenCalled();
+			expect(readJob).not.toHaveBeenCalled();
+			return;
+		}
 		await waitFor(() => service.read("acctmirror_full_sweep")?.status === "blocked");
 
 		expect(requestRefresh).toHaveBeenCalledWith(
 			expect.objectContaining({
 				provider: "chatgpt",
 				runtimeProfileId: "default",
-				sweepMode: scoped ? "steady_follow" : "full_sweep",
+				sweepMode: scoped || frontier ? "steady_follow" : "full_sweep",
 				collectorTimeoutMs: 900_000,
 				...(scoped
 					? { conversationIds: ["conv_collector_fresh_1"], requestedPhase: "detail-inventory" }
@@ -2443,7 +2469,11 @@ describe("account mirror completion service", () => {
 			}),
 		);
 		expect(createJob).toHaveBeenCalledWith({
-			...(scoped ? { conversationIds: ["conv_collector_fresh_1"] } : {}),
+			...(scoped
+				? { conversationIds: ["conv_collector_fresh_1"] }
+				: frontier
+					? { conversationIds: ["conv_collector_fresh_1", "conv_retained_1"] }
+					: {}),
 			provider: "chatgpt",
 			runtimeProfile: "default",
 			reconcile: true,
@@ -2464,7 +2494,7 @@ describe("account mirror completion service", () => {
 		expect(readJob).toHaveBeenCalledTimes(1);
 		expect(service.read("acctmirror_full_sweep")).toMatchObject({
 			status: "blocked",
-			sweepMode: scoped ? "steady_follow" : "full_sweep",
+			sweepMode: scoped || frontier ? "steady_follow" : "full_sweep",
 			materializationPolicy: "full_missing_assets",
 			materializationCursor: {
 				jobId: "hmj_full_sweep_1",

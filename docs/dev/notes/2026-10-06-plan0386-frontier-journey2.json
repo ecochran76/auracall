@@ -1,0 +1,97 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 2,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": "hmj_751709d6ec9b4bf7b5a0844727a20a05",
+  "runtimeProfile": "wsl-chrome-3",
+  "sourceBase": "c3f0791f5bb1b4b1f3b72e07aede14aa113bfcb8",
+  "installedSource": "6f4224e7e81f332373d0f102262088404640a1be",
+  "identityVerdict": "match",
+  "outcome": "NOT_ACCEPTED",
+  "indexDelta": {
+    "newIds": [
+      "6ac507ed-73c4-83ea-9a36-b3ae9a2f5e8b",
+      "6ac3fe0a-3ddc-83e9-a63b-ec2f36b59d6a",
+      "6ac3073e-76f8-83e9-8676-fd9645625f43"
+    ],
+    "changedIds": [
+      "6ac02e2d-ecbc-83e9-81f5-08a8e90ee26f"
+    ],
+    "retainedFileSame": true
+  },
+  "selectedConversationId": "6abff386-22cc-83ea-8be5-097878e379f5",
+  "childMetrics": {
+    "conversations": 1,
+    "materialized": 0,
+    "duplicateAliases": 0,
+    "skipped": 1,
+    "failed": 0,
+    "eligibleCandidates": 296,
+    "selectedCandidates": 1,
+    "materializedCandidates": 0,
+    "candidateFunnel": {
+      "unit": "conversation",
+      "discovered": 334,
+      "preEligibilityExclusions": {
+        "identityMismatch": 0,
+        "missingConversationId": 0,
+        "ignoredProviderRoute": 0,
+        "terminalConversationEvidence": 0,
+        "ineligibleSelectedManifest": 13,
+        "noSelectedAssetEvidence": 0,
+        "assetsAlreadyComplete": 0,
+        "missingTarget": 0,
+        "terminalAssetFamilies": 25
+      },
+      "eligible": 296,
+      "postEligibilityExclusions": {
+        "duplicateAssetFamilies": 0,
+        "targetBudget": 295,
+        "assetBudget": 0,
+        "providerGuard": 0
+      },
+      "selected": 1
+    }
+  },
+  "snapshotRefreshes": 1,
+  "custody": {
+    "targetId": "04063D51048DA824A83F890598DB2D18",
+    "initialNativePid": 50657,
+    "resolvedPort": 45015,
+    "maxPhysicalPages": 3,
+    "attachments": 1,
+    "samples": 221,
+    "traffic": {
+      "requests": 448,
+      "documents": 3,
+      "responses": 445,
+      "http429": 0
+    },
+    "downloads": 0,
+    "observerErrors": [
+      {
+        "at": "2026-10-06T23:42:04.433Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ],
+    "stop": "multiple physical pages / custody uncertainty"
+  },
+  "cleanup": {
+    "originalChildTerminal": "skipped",
+    "parentStatus": "paused",
+    "schedulerPaused": true,
+    "existingCompletionsPaused": 16,
+    "activeJobIds": [],
+    "laterNativePid": 12058,
+    "laterNativeStartUtc": "2026-10-06T23:42:24Z",
+    "laterNativeOrigin": "unattributed; no manual termination or lease release"
+  },
+  "acceptance": {
+    "changedPositive": "not achieved: no new bytes; child outside collector reuse set",
+    "quietCompleteRows": "not executed or proven",
+    "retainedFileIntegrity": "bytes/hash/mtime unchanged",
+    "deferred": "target cap excludes295; durable live continuation not proven",
+    "guarded": "provider-free horizon qualified; no live provider warning manufactured",
+    "custody": "failed one-page condition"
+  }
+}
