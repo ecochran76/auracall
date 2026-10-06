@@ -1,3 +1,25 @@
+## 2026-10-06 03:34 UTC | Bounded positive capture and unchanged repeat ACCEPTED
+
+Same parent bc5f1711 resumed unchanged at normal eligibility. Automatic repeat
+child f939e08c skipped without materialization or duplicate aliases. File bytes,
+SHA-256 and mtime remain unchanged; one manifest and one available archive entry
+with stable ID. Zero repeat download events, one shared physical target. Cached
+asset API returns HTTP200, 22,744 readable JSON bytes and matching hash.
+One observer ECONNREFUSED at browser cleanup retained as a limitation. API28526
+zero restarts; scheduler/all16 operations paused; zero active/idle leases.
+The requested four-step packet is ACCEPTED; wider Plan0386 remains separately
+governed. Durable curated receipt records failures, repairs and acceptance.
+
+## 2026-10-06 03:25 UTC | Positive scoped capture; repeat pending
+
+Current main 6f4224e7e installed with completion-store and worker SHA-256 parity.
+Fresh scoped normal follow bc5f1711 automatically created child ee23feb8.
+Exact missing first_pass_readout.json captured: 22,744 readable JSON bytes,
+SHA-256 0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7.
+One physical target shared parent/child, one observed download, one manifest
+entry and one available archive entry. Same-parent unchanged repeat resumed;
+normal eligibility 03:29:27Z respected. Repeat acceptance remains OPEN.
+
 ## 2026-10-06 | Restart stripped explicit follow scope
 
 Installed PR215 worker parity passed. Resumed parent 70dee5b3 created child
