@@ -1,0 +1,217 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 12,
+  "newAllowanceUsed": 7,
+  "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "runtimeProfile": "wsl-chrome-3",
+  "apiPid": 53966,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": "hmj_d66742ffdc1a42d39e218235ed824860",
+  "outcome": "succeeded",
+  "selectedConversationId": "6abc6682-8034-83ea-993d-a020008cc3ff",
+  "frontierSetMatches": true,
+  "frontierConversationCount": 12,
+  "childSnapshotRefreshes": 0,
+  "metrics": {
+    "conversations": 1,
+    "materialized": 1,
+    "duplicateAliases": 0,
+    "skipped": 0,
+    "failed": 0,
+    "eligibleCandidates": 11,
+    "selectedCandidates": 1,
+    "materializedCandidates": 1
+  },
+  "attemptAccounting": [
+    {
+      "targetConsumed": true,
+      "assetsAttempted": 1,
+      "providerGuardObserved": false,
+      "candidateMaterialized": true
+    }
+  ],
+  "entryEvidence": [
+    {
+      "kind": "artifact",
+      "providerId": "download-dom:message-1:1",
+      "status": "materialized",
+      "availability": "available",
+      "recoverabilityState": "materialized",
+      "reason": null
+    }
+  ],
+  "collectorIdentityVerdict": "match",
+  "childIdentityVerdict": "match",
+  "detailIds": [],
+  "selectedRow": {
+    "assetCompleteness": "partial",
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:b510593474782599385add64c5fccaad",
+      "epochId": "sha256:9badf2cda6bb9743dfc9d34871da7e75",
+      "indexFingerprint": "sha256:76881dbbcceecc45725e8fffc7548bd1",
+      "detailFingerprint": "sha256:ff73bdd3aecff6d4dd7586c3754c6fe3",
+      "action": "materialize_retained",
+      "outcome": "deferred",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T14:14:15.556Z",
+      "checkpointedAt": "2026-10-07T14:12:15.556Z",
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 1,
+        "downloads": 1,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 5,
+        "downloads": 1,
+        "duplicates": 0
+      }
+    }
+  },
+  "capturedRow": {
+    "assetCompleteness": "partial",
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:3207f9925ea83c3edc9ea2973f9af8fa",
+      "epochId": "sha256:9badf2cda6bb9743dfc9d34871da7e75",
+      "indexFingerprint": "sha256:bf3ac4d2010366aaa35921f4e7ed9130",
+      "detailFingerprint": "sha256:7a344c89b2242d72bfb787cebe31430d",
+      "action": null,
+      "outcome": "pending",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T10:47:12.298Z",
+      "checkpointedAt": null,
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 0,
+        "downloads": 0,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 6,
+        "downloads": 2,
+        "duplicates": 0
+      }
+    }
+  },
+  "assets": [
+    {
+      "size": 66392,
+      "sha256": "afc81ea7ed5e8df216fc90d74ba56ce1d7afbc42d3e0f9e6087b0b505533c6b4",
+      "mtimeNs": "1791382334486481905",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "archiveHttpStatus": 200,
+      "archiveSize": 66392,
+      "archiveSha256": "afc81ea7ed5e8df216fc90d74ba56ce1d7afbc42d3e0f9e6087b0b505533c6b4",
+      "archiveItemId": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6abc6682-8034-83ea-993d-a020008cc3ff:download-dom_message-1_1",
+      "validZipContainer": true
+    }
+  ],
+  "priorFiles": [
+    {
+      "fromJourney": 3,
+      "size": 320512,
+      "mtimeNs": "1791335279407370801",
+      "sha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 4,
+      "size": 315434,
+      "mtimeNs": "1791335850954709133",
+      "sha256": "aaacf841ab8059d006b8df525c1be8403e86552794f3c1b73475b572f797da77",
+      "unchanged": true
+    },
+    {
+      "fromJourney": "prior-scoped",
+      "size": 22744,
+      "mtimeNs": "1791257064434898332",
+      "sha256": "0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 11,
+      "size": 38789,
+      "mtimeNs": "1791381905422683843",
+      "sha256": "97e318f2c4077d3de8f6b22add3865328ccd3c4886df49ba61f33e6d3d048b17",
+      "unchanged": true
+    }
+  ],
+  "observer": {
+    "attachments": [
+      {
+        "at": "2026-10-07T14:10:15.296Z",
+        "targetId": "34992F33AAEEB549953133C13118150C",
+        "leaseId": "3de83124-3573-492b-898c-5f4a4f1cd530",
+        "port": 45015,
+        "nativePid": 41652
+      }
+    ],
+    "maxPhysicalPages": 1,
+    "routes": [
+      {
+        "at": "2026-10-07T14:10:15.853Z",
+        "kind": "initial_frame",
+        "conversationId": null,
+        "targetId": "34992F33AAEEB549953133C13118150C"
+      },
+      {
+        "at": "2026-10-07T14:12:07.709Z",
+        "kind": "top_frame_navigation",
+        "conversationId": "6abc6682-8034-83ea-993d-a020008cc3ff",
+        "targetId": "34992F33AAEEB549953133C13118150C"
+      }
+    ],
+    "downloads": [
+      {
+        "at": "2026-10-07T14:12:14.477Z",
+        "conversationId": "6abc6682-8034-83ea-993d-a020008cc3ff"
+      }
+    ],
+    "warnings": [],
+    "errors": [
+      {
+        "at": "2026-10-07T14:12:16.521Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ],
+    "traffic": {
+      "requests": 526,
+      "documents": 3,
+      "responses": 517,
+      "http429": 0
+    }
+  },
+  "providerWorkNotBefore": "2026-10-07T14:12:16.328Z",
+  "completedAt": "2026-10-07T14:12:17.802Z",
+  "limitations": [
+    "Full changed-index and quiet-complete-row matrix requires independent row preconditions; skipped/capture results alone do not prove it.",
+    "Observer cleanup disconnects and any navigation before providerWorkNotBefore remain explicit limitations."
+  ],
+  "noWiderAcceptanceClaim": true,
+  "cleanupEvidence": {
+    "resultGeneratedAt": "2026-10-07T14:12:15.589Z",
+    "observerEndpointRefusalAt": "2026-10-07T14:12:16.521Z",
+    "jobCompletedAt": "2026-10-07T14:12:17.802Z",
+    "terminalNativeAbsent": true,
+    "terminalHeldLeases": 0,
+    "terminalActiveJobs": 0
+  }
+}

@@ -55,3 +55,17 @@ external process or user action. API journal has no entries for the interval;
 service uses append-file logging, whose exact PID/target search supplied no
 matching journey9 close evidence. Do not use historical port45015 records as
 current proof. Preserve admission stop pending cause/readiness qualification.
+
+## Operator clarification and four-journey refill
+
+The user clarifies that LitScout owned the browser and browser profile lock,
+and that browser closure was agreed. This explains the intentional external
+cleanup context of journey9 loss; no OS signal attribution is retroactively
+claimed. The user also adds four journeys, raising the additional allowance
+from6 to10; five were used, leaving the existing one plus four new journeys.
+Fresh 13:58UTC readback: exact managed native absent, zero active jobs and
+active/idle/retiring leases, scheduler and all17 parents paused, provider guard
+clear. Agent Browser exact profile allocation available, holderCount0 and
+exclusiveHolderSessionIds empty. Historical route records are not current
+ownership proof. The admission stop is cleared under this clarification and
+standing continuation authority. Normal limits/serial execution remain fixed.

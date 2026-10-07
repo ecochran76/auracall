@@ -53116,3 +53116,59 @@ reconciliation, not attribution to a human close. TTL retirement is unsupported
 as the cause; no matching PID/target close evidence in service append log.
 Browser-loss origin remains unknown, so no sixth provider journey is started.
 See endpoint-denial-qualification.md for exact timestamps and source mapping.
+
+### 2026-10-07T13:58Z — operator custody clarification and refill
+
+User confirms LitScout owned the browser/profile lock and closure was agreed,
+then authorizes four more journeys. Fresh exact-profile clearance: no native
+browser/jobs/held leases, Agent Browser holderCount0, profile available, clear
+provider guard, all17 parents and scheduler paused. Allowance increases6→10:
+five used, five to run serially as global journeys11–15. API53966 and installed
+worker873ad09b remain current. Prior raw denial evidence remains preserved.
+
+### 2026-10-07T14:05Z — frontier journey11 capture
+
+Journey11 selected6abc6682 and captured one valid ZIP, local/manifest/cached
+archive hashes matching. Frontier12 IDs matches; prior files remain unchanged.
+One page, no warning; result generated14:05:10.062Z before cleanup endpoint
+refusal14:05:10.551Z. Terminal parent paused, zero jobs/native/held leases.
+Additional allowance6/10 used, four remain. Broader matrix stays OPEN.
+
+### 2026-10-07T14:12Z — frontier journey12 continuation
+
+Journey12 captured a valid DOCX container in the same6abc6682 family after11
+ZIP. Local/manifest/archive hashes match; all prior captured files unchanged.
+Frontier12 IDs matches, one page/no warning. Result precedes normal cleanup
+endpoint refusal; terminal parent paused, no native/jobs/held leases. Used7/10,
+three remain. This is positive continuation, not full changed/quiet matrix.
+
+### 2026-10-07T14:21Z — frontier journey13 continuation
+
+Journey13 captures a second DOCX from6abc6682 with local/manifest/archive
+parity and unchanged earlier files. Closed12-ID frontier, one page/no warning.
+Generated result precedes cleanup disconnect; terminal census clear. Used8/10,
+two remain. No wider changed/quiet-complete acceptance claimed.
+
+### 2026-10-07T14:30Z — frontier journey14 and monitor recovery
+
+Journey14 captured a valid ZIP, with local/manifest/archive parity and prior
+files unchanged. Frontier12 IDs matches, one page/no warning; terminal census
+clear. Private monitor partial-JSON failure was reattached to existing journey
+without resume/charge; future observer saves are atomic and reads tolerate
+transient failures. Both stored result/completion precede cleanup disconnect,
+but job completion precedes generatedAt468ms; preserve that timestamp limit.
+Used9/10, one remains. No wider acceptance claimed.
+
+### 2026-10-07T14:39Z — refill execution finished
+
+Journey15 captured a valid DOCX with local/manifest/archive parity. Latest
+journeys11–15 all succeeded on matched12-ID frontier, one physical page each,
+normal maxItems1/forcefalse/6 interactions per minute, zero provider warnings.
+Two ZIP and three DOCX hashes/archive identities are distinct. Fresh cached
+download readback for all five: HTTP200 and exact bytes/hash. All eight retained
+files keep their hashes/mtimeNs. Final API53966/NRestarts0, all parents/scheduler
+paused; zero native managed browser, jobs and held leases.
+Allowance10/10 used, zero remain. Journey14 ledger end fields reconciled from
+its terminal raw receipt after monitor recovery; no extra resume/charge. Wider
+Plan0386 changed/quiet-complete acceptance remains OPEN. Memory unavailable:
+no qualified group from focused discovery. Final durable readback under notes.

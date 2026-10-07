@@ -1688,22 +1688,22 @@ lanes:
   - id: P85
     objective: Restore ChatGPT materialization on the current semantic preview/download surface and prove one bounded installed positive control.
     plan: docs/dev/plans/0386-2026-10-01-chatgpt-materialization-surface-repair.md
-    plan_ref: refs/heads/docs/issue165-endpoint-installed-proof
-    branch: docs/issue165-endpoint-installed-proof
+    plan_ref: refs/heads/docs/issue165-frontier-four-refill
+    branch: docs/issue165-frontier-four-refill
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
     checkpoint: 873ad09bffb0295e631ef48ea3f6e8851e0db160
-    remote_ref: refs/remotes/origin/docs/issue165-endpoint-installed-proof
+    remote_ref: refs/remotes/origin/docs/issue165-frontier-four-refill
     integration: merge
     work_items: [ecochran76/auracall#165]
     dependencies: [P84]
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: Crawler endpoint admission denial after custody clearance. One additional journey remains; browser-loss cause and full matrix unproven.
-    validation_status: endpoint-denial-classification-installed-live-stopped
-    validation_ref: docs/dev/notes/2026-10-07-plan0386-frontier-journey9.json
+    blocker: Full independent changed/quiet-complete matrix remains unproven; ten additional journey allowance exhausted.
+    validation_status: installed-frontier-refill-finished-matrix-open
+    validation_ref: docs/dev/notes/2026-10-07-plan0386-frontier-refill-final-readback.json
     integration_receipt: 873ad09bffb0295e631ef48ea3f6e8851e0db160
     disposition: Prior scoped capture/repeat remains accepted. PR221 installed frontier repair now proves positive capture and deferred continuation on journeys3/4. Wider changed-index/quiet-complete matrix and scheduler continuation remain OPEN.
     updated_at: 2026-10-07

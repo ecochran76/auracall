@@ -956,3 +956,30 @@ now fails retryably and preserves unknown routeability;173 focused tests,
 typecheck and touched lint pass. Classification is not lifecycle remediation;
 source acceptance does not establish installed/live success. Browser-loss cause
 remains unproven. No external-browser cleanup or scheduler resume authorized.
+
+### Agreed external closure and four-journey refill | 2026-10-07
+
+User clarifies LitScout owned the browser/profile lock and closure was agreed.
+This is operator attribution of intentional external cleanup, not an invented
+OS signal receipt. Fresh native/job/lease absence, clear provider guard and
+Agent Browser exact-profile holderCount0 qualify the stop clearance. User adds
+four journeys: additional allowance max10, five previously used, global11–15
+now authorized serially. Installed PR227 worker873ad09b/API53966 remains current.
+Normal frontier/timing/identity/custody limits remain unchanged. Full matrix
+and scheduler continuation remain OPEN; provider failure still stops the run.
+
+### Refill terminal proof | 2026-10-07
+
+All five remaining global journeys11–15 succeeded, capturing two ZIP and
+three DOCX artifacts in6abc6682. Distinct hashes/archive IDs; all five cached
+archive downloads HTTP200 with exact bytes/hash; eight baseline files unchanged
+in hash and mtimeNs. Closed12-ID frontier, normal maxItems1/forcefalse/6 per
+minute, one physical page/no provider warning. Endpoint disconnects occur after
+result generation and are followed by strict clean census;14's timestamp
+ordering limitation is explicit. Private monitor14 recovered its partial-JSON
+read without another resume or charge, and ledger terminal fields reconcile
+with its raw receipt. Ten additional journeys (six plus refillfour) are charged;
+zero remain. Final scheduler/parent/prior16 completions paused, zero native
+managed browser/jobs/held leases. This finishes the authorized bounded journey
+execution; full independent changed-index/quiet-complete matrix remains OPEN.
+Canonical receipt: notes/2026-10-07-plan0386-frontier-refill-final-readback.json.
