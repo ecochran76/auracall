@@ -36,3 +36,22 @@ active/idle/retiring leases0. No provider journey consumed by installation.
 Allowance remains five used and one unused under endpoint admission stop.
 Memory disposition unavailable: focused discovery supplied no qualified group;
 non-write receipt recorded, with no Graphiti writes attempted.
+
+## Retained-tab retirement audit
+
+Fresh registry read on 2026-10-07 confirms journey9 lease
+10d6377b-7871-49cb-909e-3c844200aec5 is released at revision6 with
+retention=live-follow, closes0 and disposition=already-missing. Its final
+heartbeat is10:45:12.658Z, after observer endpoint refusal10:44:59.032Z.
+Idle expiry10:58:21.696Z and absolute expiry18:43:16.844Z were later than loss.
+The operator retirement reason is absence reconciliation, not evidence of a
+human close: retireExpiredTabLeases assigns operator to a retained lease when
+endpoint absence proves targets missing, then records already-missing without
+closing. Source skips live retained leases while the endpoint exists.
+
+These receipts do not support idle/absolute TTL retirement as the cause of
+journey9 disappearance. They do not identify an OS signal, browser crash,
+external process or user action. API journal has no entries for the interval;
+service uses append-file logging, whose exact PID/target search supplied no
+matching journey9 close evidence. Do not use historical port45015 records as
+current proof. Preserve admission stop pending cause/readiness qualification.
