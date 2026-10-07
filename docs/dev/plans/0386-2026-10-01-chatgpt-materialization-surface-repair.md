@@ -983,3 +983,13 @@ zero remain. Final scheduler/parent/prior16 completions paused, zero native
 managed browser/jobs/held leases. This finishes the authorized bounded journey
 execution; full independent changed-index/quiet-complete matrix remains OPEN.
 Canonical receipt: notes/2026-10-07-plan0386-frontier-refill-final-readback.json.
+
+### 2026-10-07 — acceptance review after refill closeout
+
+The [closed-world review](../notes/2026-10-07-plan0386-acceptance-review.md)
+compares 6a07668e4 through 6de281107 and records 260 fresh provider-free passing
+tests with no accepted source defect. Isolated changed-index B and the normal
+quiet-complete A/B repeat remain missing live acceptance. Composed guard/reload
+is needs_evidence. A cache-only census now finds 23 metadata-complete candidates;
+readable-file/integrity qualification remains required. No new provider
+journey is authorized, and this review leaves the plan OPEN.

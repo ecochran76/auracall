@@ -53172,3 +53172,13 @@ Allowance10/10 used, zero remain. Journey14 ledger end fields reconciled from
 its terminal raw receipt after monitor recovery; no extra resume/charge. Wider
 Plan0386 changed/quiet-complete acceptance remains OPEN. Memory unavailable:
 no qualified group from focused discovery. Final durable readback under notes.
+
+### 2026-10-07 — closed-world acceptance review
+
+Reviewed 6a07668e4..6de281107, matching PR230 merge tree. Fresh five-file
+provider-free run: 260 tests passed. No accepted Standards defect. Missing
+isolated changed-B and quiet-complete live evidence block Plan0386 closeout;
+composed guard/reload remains needs_evidence. Cache-only census found 23
+metadata-complete candidates among 348 rows; local integrity qualification is
+the next packet. Provider allowance remains exhausted; scheduler gate separate.
+Review: notes/2026-10-07-plan0386-acceptance-review.md.
