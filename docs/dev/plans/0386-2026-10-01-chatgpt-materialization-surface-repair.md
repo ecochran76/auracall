@@ -956,3 +956,14 @@ now fails retryably and preserves unknown routeability;173 focused tests,
 typecheck and touched lint pass. Classification is not lifecycle remediation;
 source acceptance does not establish installed/live success. Browser-loss cause
 remains unproven. No external-browser cleanup or scheduler resume authorized.
+
+### Agreed external closure and four-journey refill | 2026-10-07
+
+User clarifies LitScout owned the browser/profile lock and closure was agreed.
+This is operator attribution of intentional external cleanup, not an invented
+OS signal receipt. Fresh native/job/lease absence, clear provider guard and
+Agent Browser exact-profile holderCount0 qualify the stop clearance. User adds
+four journeys: additional allowance max10, five previously used, global11–15
+now authorized serially. Installed PR227 worker873ad09b/API53966 remains current.
+Normal frontier/timing/identity/custody limits remain unchanged. Full matrix
+and scheduler continuation remain OPEN; provider failure still stops the run.

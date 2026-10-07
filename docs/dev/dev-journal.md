@@ -53116,3 +53116,20 @@ reconciliation, not attribution to a human close. TTL retirement is unsupported
 as the cause; no matching PID/target close evidence in service append log.
 Browser-loss origin remains unknown, so no sixth provider journey is started.
 See endpoint-denial-qualification.md for exact timestamps and source mapping.
+
+### 2026-10-07T13:58Z — operator custody clarification and refill
+
+User confirms LitScout owned the browser/profile lock and closure was agreed,
+then authorizes four more journeys. Fresh exact-profile clearance: no native
+browser/jobs/held leases, Agent Browser holderCount0, profile available, clear
+provider guard, all17 parents and scheduler paused. Allowance increases6→10:
+five used, five to run serially as global journeys11–15. API53966 and installed
+worker873ad09b remain current. Prior raw denial evidence remains preserved.
+
+### 2026-10-07T14:05Z — frontier journey11 capture
+
+Journey11 selected6abc6682 and captured one valid ZIP, local/manifest/cached
+archive hashes matching. Frontier12 IDs matches; prior files remain unchanged.
+One page, no warning; result generated14:05:10.062Z before cleanup endpoint
+refusal14:05:10.551Z. Terminal parent paused, zero jobs/native/held leases.
+Additional allowance6/10 used, four remain. Broader matrix stays OPEN.
