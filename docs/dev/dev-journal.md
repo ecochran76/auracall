@@ -53148,3 +53148,13 @@ Journey13 captures a second DOCX from6abc6682 with local/manifest/archive
 parity and unchanged earlier files. Closed12-ID frontier, one page/no warning.
 Generated result precedes cleanup disconnect; terminal census clear. Used8/10,
 two remain. No wider changed/quiet-complete acceptance claimed.
+
+### 2026-10-07T14:30Z — frontier journey14 and monitor recovery
+
+Journey14 captured a valid ZIP, with local/manifest/archive parity and prior
+files unchanged. Frontier12 IDs matches, one page/no warning; terminal census
+clear. Private monitor partial-JSON failure was reattached to existing journey
+without resume/charge; future observer saves are atomic and reads tolerate
+transient failures. Both stored result/completion precede cleanup disconnect,
+but job completion precedes generatedAt468ms; preserve that timestamp limit.
+Used9/10, one remains. No wider acceptance claimed.
