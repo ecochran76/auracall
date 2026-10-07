@@ -24337,3 +24337,13 @@ Plan 0390 installed acceptance (2026-10-05): final source 3e58471b2, actual
 follow/child/follow same target, three extras closed after five real minutes,
 retained follow survives, native shutdown and zero fences verified. Durable
 receipts are under docs/dev/evidence/plan0390/. No provider journey consumed.
+
+### 2026-10-07 — reconcile live monitor recovery separately from provider restart
+
+A private journey monitor can read partially written observer JSON. Reattach to
+the existing operation after a fresh authoritative readback; do not resume it
+or increment its journey allowance again. Atomic observer writes and tolerant
+reads avoid that monitor-only race. Reconcile ledger terminal fields from the
+existing raw terminal receipt because separately parsed journey objects do not
+mutate the ledger entry. Journey14 proves one provider start/capture despite
+monitor recovery; its original monitor error and timestamp limitation remain.

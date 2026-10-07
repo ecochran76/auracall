@@ -1701,9 +1701,9 @@ lanes:
     overlaps: [P84]
     reconciled_overlaps: [P84]
     reconciliation_note: P85 preserves P84 traffic governance and paused-scheduler authority while repairing only current ChatGPT asset discovery, activation, drift diagnostics, and exact-endpoint observation.
-    blocker: Full changed/quiet-complete matrix remains unproven; operator clarified agreed external closure and authorized four more journeys.
-    validation_status: installed-frontier-continuation-refill-active
-    validation_ref: docs/dev/notes/2026-10-07-plan0386-frontier-journey9.json
+    blocker: Full independent changed/quiet-complete matrix remains unproven; ten additional journey allowance exhausted.
+    validation_status: installed-frontier-refill-finished-matrix-open
+    validation_ref: docs/dev/notes/2026-10-07-plan0386-frontier-refill-final-readback.json
     integration_receipt: 873ad09bffb0295e631ef48ea3f6e8851e0db160
     disposition: Prior scoped capture/repeat remains accepted. PR221 installed frontier repair now proves positive capture and deferred continuation on journeys3/4. Wider changed-index/quiet-complete matrix and scheduler continuation remain OPEN.
     updated_at: 2026-10-07

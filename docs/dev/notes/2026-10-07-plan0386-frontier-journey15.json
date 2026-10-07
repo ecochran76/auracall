@@ -1,0 +1,250 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 15,
+  "newAllowanceUsed": 10,
+  "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "runtimeProfile": "wsl-chrome-3",
+  "apiPid": 53966,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": "hmj_09d2dac221964b9c8a3f0cf27cde640a",
+  "outcome": "succeeded",
+  "selectedConversationId": "6abc6682-8034-83ea-993d-a020008cc3ff",
+  "frontierSetMatches": true,
+  "frontierConversationCount": 12,
+  "childSnapshotRefreshes": 0,
+  "metrics": {
+    "conversations": 1,
+    "materialized": 1,
+    "duplicateAliases": 0,
+    "skipped": 0,
+    "failed": 0,
+    "eligibleCandidates": 11,
+    "selectedCandidates": 1,
+    "materializedCandidates": 1
+  },
+  "attemptAccounting": [
+    {
+      "targetConsumed": true,
+      "assetsAttempted": 1,
+      "providerGuardObserved": false,
+      "candidateMaterialized": true
+    }
+  ],
+  "entryEvidence": [
+    {
+      "kind": "artifact",
+      "providerId": "download-dom:message-3:2",
+      "status": "materialized",
+      "availability": "available",
+      "recoverabilityState": "materialized",
+      "reason": null
+    }
+  ],
+  "collectorIdentityVerdict": "match",
+  "childIdentityVerdict": "match",
+  "detailIds": [],
+  "selectedRow": {
+    "assetCompleteness": "partial",
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:b510593474782599385add64c5fccaad",
+      "epochId": "sha256:ac126e05cc9583db87a3f6520d9359ae",
+      "indexFingerprint": "sha256:76881dbbcceecc45725e8fffc7548bd1",
+      "detailFingerprint": "sha256:ff73bdd3aecff6d4dd7586c3754c6fe3",
+      "action": "materialize_retained",
+      "outcome": "deferred",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T14:41:17.670Z",
+      "checkpointedAt": "2026-10-07T14:39:17.670Z",
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 1,
+        "downloads": 1,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 8,
+        "downloads": 4,
+        "duplicates": 0
+      }
+    }
+  },
+  "capturedRow": {
+    "assetCompleteness": "partial",
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:3207f9925ea83c3edc9ea2973f9af8fa",
+      "epochId": "sha256:ac126e05cc9583db87a3f6520d9359ae",
+      "indexFingerprint": "sha256:bf3ac4d2010366aaa35921f4e7ed9130",
+      "detailFingerprint": "sha256:7a344c89b2242d72bfb787cebe31430d",
+      "action": null,
+      "outcome": "pending",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T10:47:12.298Z",
+      "checkpointedAt": null,
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 0,
+        "downloads": 0,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 6,
+        "downloads": 2,
+        "duplicates": 0
+      }
+    }
+  },
+  "assets": [
+    {
+      "size": 1723452,
+      "sha256": "a40a11930bfa40194202e562f28ba68fb24bfcc194ecd1bc7d19ac756c20469c",
+      "mtimeNs": "1791383956391221709",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "archiveHttpStatus": 200,
+      "archiveSize": 1723452,
+      "archiveSha256": "a40a11930bfa40194202e562f28ba68fb24bfcc194ecd1bc7d19ac756c20469c",
+      "archiveItemId": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6abc6682-8034-83ea-993d-a020008cc3ff:download-dom_message-3_2",
+      "validZipContainer": true
+    }
+  ],
+  "priorFiles": [
+    {
+      "fromJourney": 3,
+      "size": 320512,
+      "mtimeNs": "1791335279407370801",
+      "sha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 4,
+      "size": 315434,
+      "mtimeNs": "1791335850954709133",
+      "sha256": "aaacf841ab8059d006b8df525c1be8403e86552794f3c1b73475b572f797da77",
+      "unchanged": true
+    },
+    {
+      "fromJourney": "prior-scoped",
+      "size": 22744,
+      "mtimeNs": "1791257064434898332",
+      "sha256": "0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 11,
+      "size": 38789,
+      "mtimeNs": "1791381905422683843",
+      "sha256": "97e318f2c4077d3de8f6b22add3865328ccd3c4886df49ba61f33e6d3d048b17",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 12,
+      "size": 66392,
+      "mtimeNs": "1791382334486481905",
+      "sha256": "afc81ea7ed5e8df216fc90d74ba56ce1d7afbc42d3e0f9e6087b0b505533c6b4",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 13,
+      "size": 26284,
+      "mtimeNs": "1791382876681728907",
+      "sha256": "7bced25cabc0e560924d086750f376fd210fb67904e75bf029c3372a4463651b",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 14,
+      "size": 17174,
+      "mtimeNs": "1791383413198199990",
+      "sha256": "52112eb2942199004c38dba1582a4747b3a6b9d36515c6731c36cbcfcdb71348",
+      "unchanged": true
+    }
+  ],
+  "observer": {
+    "attachments": [
+      {
+        "at": "2026-10-07T14:35:21.314Z",
+        "targetId": "A770D1D8A75D772CF292504867F2EB2E",
+        "leaseId": "f5fdfed3-dd88-44b9-8eb0-8574d80feb99",
+        "port": 45015,
+        "nativePid": 59396
+      }
+    ],
+    "maxPhysicalPages": 1,
+    "routes": [
+      {
+        "at": "2026-10-07T14:35:21.317Z",
+        "kind": "initial_frame",
+        "conversationId": null,
+        "targetId": "A770D1D8A75D772CF292504867F2EB2E"
+      },
+      {
+        "at": "2026-10-07T14:35:21.415Z",
+        "kind": "top_frame_navigation",
+        "conversationId": null,
+        "targetId": "A770D1D8A75D772CF292504867F2EB2E"
+      },
+      {
+        "at": "2026-10-07T14:37:10.378Z",
+        "kind": "top_frame_navigation",
+        "conversationId": null,
+        "targetId": "A770D1D8A75D772CF292504867F2EB2E"
+      },
+      {
+        "at": "2026-10-07T14:39:02.402Z",
+        "kind": "top_frame_navigation",
+        "conversationId": "6abc6682-8034-83ea-993d-a020008cc3ff",
+        "targetId": "A770D1D8A75D772CF292504867F2EB2E"
+      }
+    ],
+    "downloads": [
+      {
+        "at": "2026-10-07T14:39:16.349Z",
+        "conversationId": "6abc6682-8034-83ea-993d-a020008cc3ff"
+      }
+    ],
+    "warnings": [],
+    "errors": [
+      {
+        "at": "2026-10-07T14:39:18.500Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ],
+    "traffic": {
+      "requests": 808,
+      "documents": 5,
+      "responses": 798,
+      "http429": 0
+    }
+  },
+  "providerWorkNotBefore": "2026-10-07T14:39:11.197Z",
+  "completedAt": "2026-10-07T14:39:19.955Z",
+  "limitations": [
+    "Full changed-index and quiet-complete-row matrix requires independent row preconditions; skipped/capture results alone do not prove it.",
+    "Observer cleanup disconnects and any navigation before providerWorkNotBefore remain explicit limitations."
+  ],
+  "noWiderAcceptanceClaim": true,
+  "cleanupEvidence": {
+    "resultGeneratedAt": "2026-10-07T14:39:17.702Z",
+    "observerEndpointRefusalAt": "2026-10-07T14:39:18.500Z",
+    "jobCompletedAt": "2026-10-07T14:39:19.955Z",
+    "terminalNativeAbsent": true,
+    "terminalHeldLeases": 0,
+    "terminalActiveJobs": 0
+  }
+}

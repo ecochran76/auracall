@@ -53158,3 +53158,17 @@ without resume/charge; future observer saves are atomic and reads tolerate
 transient failures. Both stored result/completion precede cleanup disconnect,
 but job completion precedes generatedAt468ms; preserve that timestamp limit.
 Used9/10, one remains. No wider acceptance claimed.
+
+### 2026-10-07T14:39Z — refill execution finished
+
+Journey15 captured a valid DOCX with local/manifest/archive parity. Latest
+journeys11–15 all succeeded on matched12-ID frontier, one physical page each,
+normal maxItems1/forcefalse/6 interactions per minute, zero provider warnings.
+Two ZIP and three DOCX hashes/archive identities are distinct. Fresh cached
+download readback for all five: HTTP200 and exact bytes/hash. All eight retained
+files keep their hashes/mtimeNs. Final API53966/NRestarts0, all parents/scheduler
+paused; zero native managed browser, jobs and held leases.
+Allowance10/10 used, zero remain. Journey14 ledger end fields reconciled from
+its terminal raw receipt after monitor recovery; no extra resume/charge. Wider
+Plan0386 changed/quiet-complete acceptance remains OPEN. Memory unavailable:
+no qualified group from focused discovery. Final durable readback under notes.
