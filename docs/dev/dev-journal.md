@@ -53133,3 +53133,11 @@ archive hashes matching. Frontier12 IDs matches; prior files remain unchanged.
 One page, no warning; result generated14:05:10.062Z before cleanup endpoint
 refusal14:05:10.551Z. Terminal parent paused, zero jobs/native/held leases.
 Additional allowance6/10 used, four remain. Broader matrix stays OPEN.
+
+### 2026-10-07T14:12Z — frontier journey12 continuation
+
+Journey12 captured a valid DOCX container in the same6abc6682 family after11
+ZIP. Local/manifest/archive hashes match; all prior captured files unchanged.
+Frontier12 IDs matches, one page/no warning. Result precedes normal cleanup
+endpoint refusal; terminal parent paused, no native/jobs/held leases. Used7/10,
+three remain. This is positive continuation, not full changed/quiet matrix.
