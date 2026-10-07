@@ -16,8 +16,8 @@
   "installedSource": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
   "maxLiveJourneys": 6,
   "journeyOffset": 5,
-  "usedLiveJourneys": 3,
-  "remainingJourneys": 3,
+  "usedLiveJourneys": 5,
+  "remainingJourneys": 1,
   "liveJourneys": [
     {
       "number": 6,
@@ -57,6 +57,30 @@
       "outcome": "paused",
       "stopReason": "observer_custody_or_guard",
       "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey8.json"
+    },
+    {
+      "number": 9,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T10:43:16.717Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 6,
+      "endedAt": "2026-10-07T10:45:15.897Z",
+      "jobId": "hmj_44d119c8f2ee4d0f8ed18dee46f4ad5b",
+      "outcome": "skipped",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey9.json"
+    },
+    {
+      "number": 10,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T10:46:39.665Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 7,
+      "outcome": "PAUSED_BEFORE_PROVIDER_ON_DISCOVERED_PRIOR_DENIAL",
+      "endedAt": "2026-10-07T10:47:59.058Z",
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey10.json"
     }
   ],
   "executionStopped": true,
@@ -70,5 +94,13 @@
   "priorAllowance": "docs/dev/notes/2026-10-06-plan0386-frontier-allowance.json",
   "installedWorkerSha256": "cad74b6a7474a28e845c6dab63c675ad2de16896d42da43cba3a9531962048e9",
   "apiPid": 98818,
-  "stopReason": "external_litscout_supervisor_custody_stop"
+  "stopClearances": [
+    {
+      "authority": "User: try again",
+      "at": "2026-10-07T10:43:03.134907+00:00",
+      "preflight": "API98818 zero restarts; installed worker hash unchanged; exact native browser absent; zero active/idle leases/jobs; profile guard clear",
+      "remainingJourneys": 3
+    }
+  ],
+  "stopReason": "crawler_endpoint_admission_denial"
 }

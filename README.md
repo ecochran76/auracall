@@ -718,6 +718,9 @@ Terminology note:
   with rows visited in the current pass. ChatGPT steady-follow children are
   restricted to that supplied conversation set; a qualified empty frontier
   queues no child even when the account-wide backlog contains older work.
+  Browser startup or missing-endpoint admission denials fail materialization
+  with retryable diagnostics; they do not count as empty inventories or
+  establish a refreshed, routeable conversation snapshot.
   Within a nonempty frontier, zero-asset skipped retries rotate behind
   unattempted conversations on later jobs, preventing one metadata-only row
   from repeatedly consuming the target budget. Force mode keeps supplied order.

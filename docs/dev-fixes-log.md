@@ -1,3 +1,14 @@
+## 2026-10-07 — Missing endpoint is admission failure, not empty inventory
+
+Journey9's legacy skipped result contains no artifact ID or child identity
+proof: crawler target verification lacked its endpoint after observed CDP loss.
+The existing startup-denial fixture reproduces a benign skip and falsely
+refreshed/routeable file snapshot for that exact error. Narrow classification
+now returns failed retryable evidence and unknown routeability. 173 focused
+completion/worker tests, typecheck and touched lint pass. This fixes projection,
+not native lifecycle loss; live acceptance is unproven. Journey10 was paused
+while idle, with no provider traffic, but remains conservatively charged.
+
 ## 2026-10-07 — Rotate zero-asset retries inside supplied frontiers
 
 Journeys5/6 selected the same metadata-only row while a retained partial family

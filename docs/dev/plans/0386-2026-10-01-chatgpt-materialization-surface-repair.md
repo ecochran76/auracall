@@ -938,3 +938,21 @@ release this exact profile and explicit clearance of this stop; no allowance
 increase is needed for the three unused journeys. Changed/quiet matrix and
 scheduler continuation remain OPEN. Memory unavailable: atlas returned no
 usable AuraCall destination.
+
+### Custody retry, admission denial and correction | 2026-10-07
+
+User try again cleared the custody stop; preflight exact browser absent,
+zero active/idle leases/jobs and clear guard. Journey9's collector ran on one
+page with matching identity and supplied frontier. CDP endpoint disappeared
+before the child; the child result is legacy skipped with endpoint-verification
+denial, no artifact ID or child identity proof, and zero attempted assets.
+This contradicts the initial benign/concrete-skip interpretation. Corrected
+receipt preserves raw job status and explicitly withholds rotation/quiet claims.
+Journey10 paused idle before collector/child after discovering the denial;
+zero observer attachments/traffic and unchanged pass count. It remains charged.
+Allowance used5/6; one remains under admission stop. The existing startup-denial
+fixture reproduces false refreshed/routeable projection. Narrow classification
+now fails retryably and preserves unknown routeability;173 focused tests,
+typecheck and touched lint pass. Classification is not lifecycle remediation;
+source acceptance does not establish installed/live success. Browser-loss cause
+remains unproven. No external-browser cleanup or scheduler resume authorized.

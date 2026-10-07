@@ -6095,7 +6095,9 @@ function unsupportedEntry(
 	target: HistoryMaterializationTarget | null,
 ): HistoryMaterializationManifestEntry {
 	const reason = formatHistoryMaterializationFailureReason({ target, error });
-	const startupDenied = reason.startsWith("Live-follow browser startup control denied:");
+	const startupDenied =
+		reason.startsWith("Live-follow browser startup control denied:") ||
+		reason === "Live-follow crawler target cannot be verified without its browser endpoint.";
 	return {
 		kind,
 		providerId: null,
