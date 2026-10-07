@@ -920,3 +920,21 @@ selected-ID receipts join the existing same-lane history. Target/transfer bounds
 force ordering and closed frontier remain intact. 172 focused tests, typecheck
 and touched lint pass. New allowance used1/6; installed repair and journey7 are
 next. Full changed/quiet-complete matrix remains OPEN.
+
+### Installed successor and external custody stop | 2026-10-07
+
+PR223 merge89697e28f installs retry rotation; worker SHA cad74b6a7474a28e845c6dab63c675ad2de16896d42da43cba3a9531962048e9 matches canonical build.
+Journey7 selected retained B and skipped one concrete artifact attempt with
+unknown availability, zero transfer/snapshot refresh. One page, no warning,
+prior files stable, clean terminal census. Collector ordering changed as well;
+only the direct provider-free RED/green isolates rotation causality.
+Journey8 encountered three physical pages at collection startup and paused
+before child/download. Native browser80577 is supervised by Python80554 in
+litscout-0553-integration; foreign lease binds exited82030 and another page has
+a retirement deadline. External supervisor/browser is not adopted or cleaned.
+Curated journey7/8 receipts preserve scopes and limits. New allowance used3/6,
+three remain under custody stop. Resume requires the conflicting supervisor to
+release this exact profile and explicit clearance of this stop; no allowance
+increase is needed for the three unused journeys. Changed/quiet matrix and
+scheduler continuation remain OPEN. Memory unavailable: atlas returned no
+usable AuraCall destination.

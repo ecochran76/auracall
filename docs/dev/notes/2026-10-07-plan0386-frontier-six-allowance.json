@@ -13,11 +13,11 @@
   "objective": "Continue unchanged normal unscoped frontier acceptance with six additional journeys",
   "authority": "User: continue with an additional 6 journeys",
   "sourceBase": "cd1ec3945a730290896f0170594dd9d863866113",
-  "installedSource": "28645128088175304c087171405fe069bbc8795f",
+  "installedSource": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
   "maxLiveJourneys": 6,
   "journeyOffset": 5,
-  "usedLiveJourneys": 1,
-  "remainingJourneys": 5,
+  "usedLiveJourneys": 3,
+  "remainingJourneys": 3,
   "liveJourneys": [
     {
       "number": 6,
@@ -31,9 +31,35 @@
       "outcome": "skipped",
       "stopReason": null,
       "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey6.json"
+    },
+    {
+      "number": 7,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T02:27:36.334Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 5,
+      "endedAt": "2026-10-07T02:34:21.900Z",
+      "jobId": "hmj_06df733ff2c84c02b760f475b8f02770",
+      "outcome": "skipped",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey7.json"
+    },
+    {
+      "number": 8,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T02:34:57.083Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 6,
+      "endedAt": "2026-10-07T02:41:27.942Z",
+      "jobId": null,
+      "outcome": "paused",
+      "stopReason": "observer_custody_or_guard",
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey8.json"
     }
   ],
-  "executionStopped": false,
+  "executionStopped": true,
   "stopConditions": [
     "provider warning/429/CAPTCHA",
     "identity or custody mismatch",
@@ -41,5 +67,8 @@
     "admission denial",
     "six additional journeys exhausted"
   ],
-  "priorAllowance": "docs/dev/notes/2026-10-06-plan0386-frontier-allowance.json"
+  "priorAllowance": "docs/dev/notes/2026-10-06-plan0386-frontier-allowance.json",
+  "installedWorkerSha256": "cad74b6a7474a28e845c6dab63c675ad2de16896d42da43cba3a9531962048e9",
+  "apiPid": 98818,
+  "stopReason": "external_litscout_supervisor_custody_stop"
 }

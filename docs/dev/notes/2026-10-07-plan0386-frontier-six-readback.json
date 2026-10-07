@@ -1,0 +1,65 @@
+{
+  "schema": "auracall_plan0386_frontier_additional_readback.v1",
+  "at": "2026-10-07T02:46:00.675Z",
+  "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+  "installedWorkerSha256": "cad74b6a7474a28e845c6dab63c675ad2de16896d42da43cba3a9531962048e9",
+  "apiPid": 98818,
+  "parentStatus": "paused",
+  "schedulerPaused": true,
+  "allPriorCompletionsPaused": true,
+  "activeJobIds": [],
+  "leaseStates": {
+    "active": 0,
+    "idle": 2,
+    "retiring": 0,
+    "released": 282,
+    "lost": 1
+  },
+  "nativeRootPresent": true,
+  "nativePid": 80577,
+  "physicalPages": 3,
+  "targetIds": [
+    "D392F604226197B9721069E677BDB09F",
+    "7D72EB03B66E6B373D6C4D0E88BF4A25",
+    "6C74EFE0C85DF1EE3467CA9ADEE8E638"
+  ],
+  "assets": [
+    {
+      "fromJourney": 3,
+      "size": 320512,
+      "sha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+      "mtimeNs": "1791335279407370801",
+      "unchanged": true,
+      "archiveHttpStatus": 200,
+      "archiveSize": 320512,
+      "archiveSha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4"
+    },
+    {
+      "fromJourney": 4,
+      "size": 315434,
+      "sha256": "aaacf841ab8059d006b8df525c1be8403e86552794f3c1b73475b572f797da77",
+      "mtimeNs": "1791335850954709133",
+      "unchanged": true,
+      "archiveHttpStatus": 200,
+      "archiveSize": 315434,
+      "archiveSha256": "aaacf841ab8059d006b8df525c1be8403e86552794f3c1b73475b572f797da77"
+    },
+    {
+      "fromJourney": "prior-scoped",
+      "size": 22744,
+      "sha256": "0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7",
+      "mtimeNs": "1791257064434898332",
+      "unchanged": true
+    }
+  ],
+  "additionalUsed": 3,
+  "additionalRemaining": 3,
+  "executionStopped": true,
+  "stopReason": "external_litscout_supervisor_custody_stop",
+  "matrixState": "OPEN",
+  "memoryDisposition": "unavailable",
+  "limitations": [
+    "External supervisor owns native browser; native absence and complete cleanup are not claimed.",
+    "No sixth additional journey started; three unused require external profile release and custody-stop clearance."
+  ]
+}
