@@ -1,0 +1,200 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 7,
+  "newAllowanceUsed": 2,
+  "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+  "runtimeProfile": "wsl-chrome-3",
+  "apiPid": 98818,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": "hmj_06df733ff2c84c02b760f475b8f02770",
+  "outcome": "skipped",
+  "selectedConversationId": "6aa1b83e-4064-83ea-b1e9-945c6c64c634",
+  "frontierSetMatches": true,
+  "frontierConversationCount": 12,
+  "childSnapshotRefreshes": 0,
+  "metrics": {
+    "conversations": 1,
+    "materialized": 0,
+    "duplicateAliases": 0,
+    "skipped": 1,
+    "failed": 0,
+    "eligibleCandidates": 11,
+    "selectedCandidates": 1,
+    "materializedCandidates": 0
+  },
+  "collectorIdentityVerdict": "match",
+  "childIdentityVerdict": "match",
+  "detailIds": [],
+  "selectedRow": {
+    "assetCompleteness": "partial",
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:3207f9925ea83c3edc9ea2973f9af8fa",
+      "epochId": "sha256:5c7eb621f0e57cb2852a3272e02976de",
+      "indexFingerprint": "sha256:bf3ac4d2010366aaa35921f4e7ed9130",
+      "detailFingerprint": "sha256:7a344c89b2242d72bfb787cebe31430d",
+      "action": "materialize_retained",
+      "outcome": "deferred",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T02:36:16.671Z",
+      "checkpointedAt": "2026-10-07T02:34:16.671Z",
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 1,
+        "downloads": 0,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 4,
+        "downloads": 2,
+        "duplicates": 0
+      }
+    }
+  },
+  "capturedRow": {
+    "assetCompleteness": "partial",
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:3207f9925ea83c3edc9ea2973f9af8fa",
+      "epochId": "sha256:5c7eb621f0e57cb2852a3272e02976de",
+      "indexFingerprint": "sha256:bf3ac4d2010366aaa35921f4e7ed9130",
+      "detailFingerprint": "sha256:7a344c89b2242d72bfb787cebe31430d",
+      "action": "materialize_retained",
+      "outcome": "deferred",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T02:36:16.671Z",
+      "checkpointedAt": "2026-10-07T02:34:16.671Z",
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 1,
+        "downloads": 0,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 4,
+        "downloads": 2,
+        "duplicates": 0
+      }
+    }
+  },
+  "assets": [],
+  "priorFiles": [
+    {
+      "fromJourney": 3,
+      "size": 320512,
+      "mtimeNs": "1791335279407370801",
+      "sha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 4,
+      "size": 315434,
+      "mtimeNs": "1791335850954709133",
+      "sha256": "aaacf841ab8059d006b8df525c1be8403e86552794f3c1b73475b572f797da77",
+      "unchanged": true
+    },
+    {
+      "fromJourney": "prior-scoped",
+      "size": 22744,
+      "mtimeNs": "1791257064434898332",
+      "sha256": "0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7",
+      "unchanged": true
+    }
+  ],
+  "observer": {
+    "attachments": [
+      {
+        "at": "2026-10-07T02:28:09.899Z",
+        "targetId": "88146157286E50F6E92E2E2353BDCDA7",
+        "leaseId": "3075b30d-e0a1-4d65-80e3-1b49527bb491",
+        "port": 45015,
+        "nativePid": 4365
+      }
+    ],
+    "maxPhysicalPages": 1,
+    "routes": [
+      {
+        "at": "2026-10-07T02:28:09.965Z",
+        "kind": "initial_frame",
+        "conversationId": null,
+        "targetId": "88146157286E50F6E92E2E2353BDCDA7"
+      },
+      {
+        "at": "2026-10-07T02:30:04.347Z",
+        "kind": "top_frame_navigation",
+        "conversationId": null,
+        "targetId": "88146157286E50F6E92E2E2353BDCDA7"
+      },
+      {
+        "at": "2026-10-07T02:32:00.401Z",
+        "kind": "top_frame_navigation",
+        "conversationId": "6a95f944-cda8-83ea-b270-f6d13c8533df",
+        "targetId": "88146157286E50F6E92E2E2353BDCDA7"
+      },
+      {
+        "at": "2026-10-07T02:34:01.304Z",
+        "kind": "top_frame_navigation",
+        "conversationId": "6aa1b83e-4064-83ea-b1e9-945c6c64c634",
+        "targetId": "88146157286E50F6E92E2E2353BDCDA7"
+      }
+    ],
+    "downloads": [],
+    "warnings": [],
+    "errors": [
+      {
+        "at": "2026-10-07T02:34:17.544Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ],
+    "traffic": {
+      "requests": 936,
+      "documents": 7,
+      "responses": 949,
+      "http429": 0
+    }
+  },
+  "providerWorkNotBefore": "2026-10-07T02:34:04.408Z",
+  "completedAt": "2026-10-07T02:34:19.244Z",
+  "limitations": [
+    "Full changed-index and quiet-complete-row matrix requires independent row preconditions; skipped/capture results alone do not prove it.",
+    "Observer cleanup disconnects and any navigation before providerWorkNotBefore remain explicit limitations.",
+    "Collector supplied B first in journey7, unlike metadata-only first in6. Different selected row is not an isolated live proof that rotation caused advancement; direct RED/green fixture proves that behavior."
+  ],
+  "noWiderAcceptanceClaim": true,
+  "attemptAccounting": [
+    {
+      "targetConsumed": true,
+      "assetsAttempted": 1,
+      "providerGuardObserved": false,
+      "candidateMaterialized": false
+    }
+  ],
+  "entryEvidence": [
+    {
+      "kind": "artifact",
+      "providerId": "download-dom:message-3:0",
+      "status": "skipped",
+      "assetAvailability": "unknown",
+      "recoverabilityState": "downloadable_now",
+      "reason": "skipped",
+      "retryable": null
+    }
+  ],
+  "installedWorkerSha256": "cad74b6a7474a28e845c6dab63c675ad2de16896d42da43cba3a9531962048e9"
+}

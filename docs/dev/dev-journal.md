@@ -1,3 +1,18 @@
+## 2026-10-07 | Installed retry repair; external supervisor custody stop
+
+PR223 merge89697e28f installed with worker SHA cad74b6a, API98818 zero restarts.
+Journey7 selects retained B instead of prior metadata-only row, but skips a
+concrete download reference with unknown availability. Zero new transfers and
+snapshots; files stable, one page and clean terminal browser/job/lease readback.
+Collector order also changed, so this is not isolated live rotation causality.
+Journey8 stops at three physical pages before child/download; parent paused.
+Native80577 belongs to Python supervisor80554 from litscout-0553-integration.
+Other page lease binds exited82030; a third has a tab deadline. This is external
+profile concurrency, not proof of child fanout. Agent Browser route is historical.
+No external adoption/kill/close or scheduler resume attempted. Used3/6 additional,
+three remain under explicit custody stop. External browser absence is not claimed.
+Source qualification and narrower live evidence remain; wider matrix OPEN.
+
 ## 2026-10-07 | Journey6 confirms frontier retry starvation
 
 Journey6 skipped the same metadata-only row as5, zero transfers/snapshots and

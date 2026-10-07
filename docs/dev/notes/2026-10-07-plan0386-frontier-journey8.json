@@ -1,0 +1,76 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 8,
+  "newAllowanceUsed": 3,
+  "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+  "installedWorkerSha256": "cad74b6a7474a28e845c6dab63c675ad2de16896d42da43cba3a9531962048e9",
+  "runtimeProfile": "wsl-chrome-3",
+  "apiPid": 98818,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": null,
+  "outcome": "CUSTODY_STOP_BEFORE_CHILD",
+  "parentStatus": "paused",
+  "frontierCheck": null,
+  "observer": {
+    "attachments": [
+      {
+        "at": "2026-10-07T02:41:20.952Z",
+        "targetId": "D392F604226197B9721069E677BDB09F",
+        "leaseId": "c8630274-5fb5-4421-b316-70ede428e229",
+        "port": 45015,
+        "nativePid": 80577
+      }
+    ],
+    "maxPhysicalPages": 3,
+    "firstWarning": {
+      "at": "2026-10-07T02:41:21.654Z",
+      "kind": "multiple_physical_pages",
+      "count": 3
+    },
+    "warningCount": 204,
+    "downloads": 0,
+    "http429": 0,
+    "routes": [
+      {
+        "at": "2026-10-07T02:41:21.652Z",
+        "kind": "initial_frame",
+        "conversationId": null,
+        "targetId": "D392F604226197B9721069E677BDB09F"
+      }
+    ],
+    "errors": []
+  },
+  "custody": {
+    "nativePid": 80577,
+    "supervisorPid": 80554,
+    "supervisorCommand": "python3.12 build/p0554/browser-supervisor.py",
+    "supervisorWorkspace": "/home/ecochran76/workspace.local/litscout-0553-integration",
+    "foreignLeaseProcessId": 82030,
+    "foreignLeaseProcessPresent": false,
+    "foreignTargetId": "7D72EB03B66E6B373D6C4D0E88BF4A25",
+    "deadlineTargetId": "6C74EFE0C85DF1EE3467CA9ADEE8E638",
+    "parentTargetId": "D392F604226197B9721069E677BDB09F",
+    "agentBrowserReadback": "Registered external profile; matching route is historical and does not establish current native ownership."
+  },
+  "readback": {
+    "parentStatus": "paused",
+    "schedulerPaused": true,
+    "allPriorCompletionsPaused": true,
+    "leaseStates": {
+      "active": 0,
+      "idle": 2,
+      "retiring": 0,
+      "released": 282,
+      "lost": 1
+    },
+    "nativeRootPresent": true,
+    "activeJobIds": []
+  },
+  "limitations": [
+    "Parent pause and settled idle lease do not prove native browser absence. External supervisor remains live.",
+    "No cleanup/adoption/release of the external LitScout browser was authorized or attempted.",
+    "Current identity verdict not qualified; stop occurred at page census before child.",
+    "Previous lastRefresh record is older; it is not a completed journey8 collector proof."
+  ],
+  "noWiderAcceptanceClaim": true
+}
