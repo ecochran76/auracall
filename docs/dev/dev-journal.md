@@ -1,3 +1,17 @@
+## 2026-10-07 | Cleared custody stop; endpoint denial discovered
+
+User try again clears prior stop after exact native absence, zero active/idle
+leases/jobs, clear guard and API98818/hash parity. Journey9 collects on one
+page and queues a matching-frontier child. Endpoint disappears10:44:59; child
+projects skipped with endpoint-verification denial, zero attempted assets and
+no child identity proof. Earlier ordinary/concrete-skip interpretation corrected
+in receipt; no quiet/rotation live acceptance follows. Journey10 started before
+full entry inspection, then paused idle at unchanged pass count with zero
+attachments/traffic. Used5/6 additional; one remains under admission stop.
+Existing denial fixture extended: direct RED falsely reports refreshed/routeable
+file snapshot. Narrow error classification passes173 focused tests, typecheck,
+lint. Browser-loss causality and installed successor proof remain open.
+
 ## 2026-10-07 | Installed retry repair; external supervisor custody stop
 
 PR223 merge89697e28f installed with worker SHA cad74b6a, API98818 zero restarts.

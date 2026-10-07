@@ -72,10 +72,12 @@ describe("history materialization service", () => {
 		);
 	});
 
-	it("fails file materialization on startup denial without claiming a refreshed route", async () => {
+	it.each([
+		"Live-follow browser startup control denied: tab-leases-active.",
+		"Live-follow crawler target cannot be verified without its browser endpoint.",
+	])("fails file materialization on startup denial without claiming a refreshed route (%s)", async (denial) => {
 		const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-history-startup-denial-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
-		const denial = "Live-follow browser startup control denied: tab-leases-active.";
 		const provider = vi
 			.spyOn(ChatgptService.prototype, "materializeConversationFiles")
 			.mockRejectedValue(new Error(denial));

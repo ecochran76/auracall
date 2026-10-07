@@ -301,3 +301,11 @@ lane. Ties preserve collector order; force mode bypasses rotation. Account,
 provider, runtime browser profile and selected asset-kind boundaries remain
 unchanged. No target or transfer budget is increased, and no row outside the
 frontier becomes eligible. This does not mark metadata-only rows complete.
+
+### Endpoint-denial projection
+
+A crawler-target verification denial caused by a missing browser endpoint is
+failed retryable materialization, preserving its exact diagnostic. It must not
+project a refreshed, routeable file snapshot or a benign empty-inventory skip.
+This classification does not authorize relaunch, adoption, forced retry or
+closing another workflow's browser. Native loss causality remains separate.
