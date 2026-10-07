@@ -53096,3 +53096,14 @@ checked in. All 12 existing active completions and scheduler remain paused;
 background drain is unpaused. No provider journey consumed, one remains.
 Plan 0390 CLOSED; Plan 0386 broader asset acceptance remains OPEN.
 Memory disposition unavailable: no qualified AuraCall Graphiti destination.
+
+### 2026-10-07T11:00Z — endpoint denial repair installed
+
+PR227 merged as873ad09bffb and installed with worker SHA256 parity. API53966,
+NRestarts0; scheduler/parent/prior16 completions paused, no active jobs, native
+managed browser or held leases. 173 focused tests, typecheck and touched lint
+pass. Corrected journey9 admission-denial interpretation and idle-paused10
+remain charged: five of six used, one unused. Browser-loss cause and broader
+Plan0386 matrix remain OPEN. No provider retry during installation. Durable
+qualification: docs/dev/notes/2026-10-07-plan0386-endpoint-denial-qualification.md.
+Memory disposition unavailable: no qualified group from focused discovery.

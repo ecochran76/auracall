@@ -25,3 +25,14 @@ Browser-loss cause remains unproven. Current terminal readback has no active
 jobs or exact managed native browser; scheduler and prior operations paused.
 No further provider execution in this packet. Broader changed/quiet matrix
 remains OPEN; one unused journey cannot cross the admission stop by itself.
+
+Installed closeout at 2026-10-07T11:00:03.941Z: PR227 merged as
+873ad09bffb0295e631ef48ea3f6e8851e0db160, confirmed against remote main.
+Canonical and installed worker SHA256 both
+556f4ff68f05fbec7537b64a42603a39c932d6fe0127af633dfd459e2a00657f.
+API active PID53966, NRestarts0. Scheduler, own parent and all16 prior
+completions remain paused; active jobs0, native managed browser absent,
+active/idle/retiring leases0. No provider journey consumed by installation.
+Allowance remains five used and one unused under endpoint admission stop.
+Memory disposition unavailable: focused discovery supplied no qualified group;
+non-write receipt recorded, with no Graphiti writes attempted.
