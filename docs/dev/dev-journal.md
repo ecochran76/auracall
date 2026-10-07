@@ -1,3 +1,22 @@
+## 2026-10-07 | Journey6 confirms frontier retry starvation
+
+Journey6 skipped the same metadata-only row as5, zero transfers/snapshots and
+one page with no warnings. Prior files stable; cleanup has no root/leases/jobs.
+Used1/6 additional, five remain. Existing rotation fixture extended to supplied
+frontier: direct RED repeated rows1/2 instead of3/4. Bounded repair reuses retry
+lane evidence, preserves frontier and budgets, and includes selected-ID receipts.
+172 focused tests, typecheck and touched lint pass. Installation and journey7
+pending; broader changed/quiet matrix remains OPEN.
+
+## 2026-10-07 | Six additional frontier journeys authorized
+
+User adds six journeys on wsl-chrome-3. Separate ledger preserves exhausted
+prior allowance; global numbers6-11, new used0/6. Normal unscoped parent,
+maxItems1 and cooldowns retained. API53363 zero restarts; no active jobs/leases
+or exact managed browser; prior16 completions and scheduler remain paused.
+Installed completion SHA e78b81a7 matches canonical PR221. Complete changed/
+quiet matrix remains open; no synthetic completeness or provider content edits.
+
 ## 2026-10-07 | Installed frontier handoff and deferred continuation
 
 Operator continue cleared the custody stop. Canonical PR221 merge 286451280

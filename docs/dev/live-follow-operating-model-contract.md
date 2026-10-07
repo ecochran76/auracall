@@ -291,3 +291,13 @@ catchup is omitted. The account identity and normal traffic, cadence, warning
 and cache rules still apply. `full_sweep` with a scope is rejected.
 `materializationMaxItems` continues to limit new transfers rather than
 verified cache reuses. Use `materializationForce: false` for an unchanged repeat.
+
+### Frontier retry fairness
+
+Frontier-scoped reconciliation applies the existing retry rotation within the
+supplied IDs. A settled skipped attempt with zero attempted assets, no guard
+and no materialized candidate moves behind unattempted work in the same retry
+lane. Ties preserve collector order; force mode bypasses rotation. Account,
+provider, runtime browser profile and selected asset-kind boundaries remain
+unchanged. No target or transfer budget is increased, and no row outside the
+frontier becomes eligible. This does not mark metadata-only rows complete.

@@ -907,3 +907,16 @@ continuation are proven. Isolated changed-index-only-B and quiet complete A/B
 live matrix remain OPEN. Additional provider execution needs a new allowance
 and a genuinely qualified fixture; scheduler continuation stays withheld.
 Memory disposition unavailable: no qualified AuraCall target from discovery.
+
+### Six additional journeys and retry rotation | 2026-10-07
+
+User adds six journeys, separately accounted in
+notes/2026-10-07-plan0386-frontier-six-allowance.json. Journey6 confirms the same
+metadata-only row retried as5 while retained partial work remains. One page,
+no warnings/429, stable files and clean native/lease/job readback. Existing
+rotation fixture reproduces frontier-specific starvation (rows1/2 repeat rather
+than3/4). The bounded worker repair applies retry evidence inside supplied IDs;
+selected-ID receipts join the existing same-lane history. Target/transfer bounds,
+force ordering and closed frontier remain intact. 172 focused tests, typecheck
+and touched lint pass. New allowance used1/6; installed repair and journey7 are
+next. Full changed/quiet-complete matrix remains OPEN.

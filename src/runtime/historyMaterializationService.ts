@@ -2763,7 +2763,25 @@ async function materializeReconciliation(input: {
 			);
 		});
 		eligibleCandidates += eligibleConversationIds.length;
-		for (const conversationId of eligibleConversationIds) {
+		const retryAttemptedAt =
+			input.request.force === true
+				? new Map<string, string>()
+				: await reconciliationRetryAttemptedAtByConversationId({
+						jobs: priorJobs,
+						request: input.request,
+						selectedKinds,
+					});
+		// Keep the supplied frontier closed while rotating zero-asset retries behind
+		// unattempted work. Stable ties preserve collector ordering.
+		const orderedConversationIds = [...eligibleConversationIds].sort((left, right) => {
+			const leftAttemptedAt = retryAttemptedAt.get(left);
+			const rightAttemptedAt = retryAttemptedAt.get(right);
+			if (!leftAttemptedAt && rightAttemptedAt) return -1;
+			if (leftAttemptedAt && !rightAttemptedAt) return 1;
+			if (leftAttemptedAt && rightAttemptedAt) return leftAttemptedAt.localeCompare(rightAttemptedAt);
+			return 0;
+		});
+		for (const conversationId of orderedConversationIds) {
 			if (consumedTargetBudget >= maxTargets) break;
 			const assetFamilySignatures = selectedCatalogAssetFamilySignatures.get(conversationId) ?? [];
 			if (
@@ -5824,7 +5842,8 @@ async function reconciliationRetryAttemptedAtByConversationId(input: {
 		}
 		for (const attempt of job.result?.attempts ?? []) {
 			if (
-				attempt.origin !== "reconciliation_candidate" ||
+				(attempt.origin !== "reconciliation_candidate" &&
+				attempt.origin !== "selected_conversation_id") ||
 				attempt.status !== "skipped" ||
 				attempt.accounting.assetsAttempted !== 0 ||
 				attempt.accounting.candidateMaterialized ||
