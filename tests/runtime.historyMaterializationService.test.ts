@@ -5441,7 +5441,7 @@ describe("history materialization service", () => {
 		});
 	});
 
-	it("rotates retryable no-materializable candidates across consecutive reconciliation jobs", async () => {
+	it.each([false, true])("rotates retryable no-materializable candidates across consecutive reconciliation jobs (frontier=%s)", async (frontier) => {
 		const scheduled: Array<() => Promise<void>> = [];
 		const conversationIds = ["conv_rotate_1", "conv_rotate_2", "conv_rotate_3", "conv_rotate_4"];
 		const materializeConversation = vi.fn(
@@ -5475,6 +5475,7 @@ describe("history materialization service", () => {
 			provider: "chatgpt",
 			runtimeProfile: "default",
 			reconcile: true,
+			...(frontier ? { conversationIds, reuseSnapshotConversationIds: conversationIds } : {}),
 			assetKinds: ["artifacts", "files"],
 			maxItems: 2,
 			refreshSnapshot: false,

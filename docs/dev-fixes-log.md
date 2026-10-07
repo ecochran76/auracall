@@ -1,3 +1,13 @@
+## 2026-10-07 — Rotate zero-asset retries inside supplied frontiers
+
+Journeys5/6 selected the same metadata-only row while a retained partial family
+remained. Existing rotation fixture reproduced the scoped path repeating rows
+1/2 instead of advancing to3/4. The selected-ID branch now uses the existing
+retry-lane timestamp evidence; selected-conversation attempt receipts participate
+in that evidence. Rotation remains inside supplied IDs and force preserves
+order. 172 focused completion/worker tests, typecheck and touched lint pass.
+Installed acceptance remains separate until successor source is installed.
+
 ## 2026-10-07 — Frontier scope and completion are separate evidence
 
 Installed PR221 children now match the collector frontier and reuse retained
