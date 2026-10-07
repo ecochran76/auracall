@@ -13,7 +13,7 @@
   "objective": "Continue unchanged normal unscoped frontier acceptance with six additional journeys",
   "authority": "User: continue with an additional 6 journeys",
   "sourceBase": "cd1ec3945a730290896f0170594dd9d863866113",
-  "installedSource": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+  "installedSource": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
   "maxLiveJourneys": 6,
   "journeyOffset": 5,
   "usedLiveJourneys": 5,
@@ -68,8 +68,9 @@
       "endedAt": "2026-10-07T10:45:15.897Z",
       "jobId": "hmj_44d119c8f2ee4d0f8ed18dee46f4ad5b",
       "outcome": "skipped",
-      "stopReason": null,
-      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey9.json"
+      "stopReason": "crawler_endpoint_admission_denial",
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey9.json",
+      "semanticOutcome": "ADMISSION_DENIED_WITH_LEGACY_SKIPPED_PROJECTION"
     },
     {
       "number": 10,
@@ -92,8 +93,8 @@
     "six additional journeys exhausted"
   ],
   "priorAllowance": "docs/dev/notes/2026-10-06-plan0386-frontier-allowance.json",
-  "installedWorkerSha256": "cad74b6a7474a28e845c6dab63c675ad2de16896d42da43cba3a9531962048e9",
-  "apiPid": 98818,
+  "installedWorkerSha256": "556f4ff68f05fbec7537b64a42603a39c932d6fe0127af633dfd459e2a00657f",
+  "apiPid": 53966,
   "stopClearances": [
     {
       "authority": "User: try again",

@@ -53107,3 +53107,12 @@ remain charged: five of six used, one unused. Browser-loss cause and broader
 Plan0386 matrix remain OPEN. No provider retry during installation. Durable
 qualification: docs/dev/notes/2026-10-07-plan0386-endpoint-denial-qualification.md.
 Memory disposition unavailable: no qualified group from focused discovery.
+
+### 2026-10-07 — journey9 retained-tab loss audit
+
+Stored lease revision6 proves closes0/already-missing after observed endpoint
+loss, with both expiry deadlines later than loss. Operator reason is absence
+reconciliation, not attribution to a human close. TTL retirement is unsupported
+as the cause; no matching PID/target close evidence in service append log.
+Browser-loss origin remains unknown, so no sixth provider journey is started.
+See endpoint-denial-qualification.md for exact timestamps and source mapping.
