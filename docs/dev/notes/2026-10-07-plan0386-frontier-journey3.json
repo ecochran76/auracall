@@ -1,0 +1,98 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 3,
+  "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+  "installedCompletionSha256": "e78b81a7ff611ef7abe8b620a8cf9fee9f3eab8d5ed41fbf0ca304999f263fd2",
+  "apiPid": 53363,
+  "runtimeProfile": "wsl-chrome-3",
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": "hmj_4fc66a83d66f4d698f3d43684eab6093",
+  "outcome": "POSITIVE_CAPTURE_FRONTIER_HANDOFF_ACCEPTED",
+  "identityVerdict": "match",
+  "selectedConversationId": "6aa1b83e-4064-83ea-b1e9-945c6c64c634",
+  "frontierConversationCount": 12,
+  "frontierSetMatches": true,
+  "childSnapshotRefreshes": 0,
+  "asset": {
+    "size": 320512,
+    "sha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+    "manifestSha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+    "mtime": "2026-10-07T01:07:59.407Z",
+    "kind": "docx",
+    "zipVerified": true,
+    "archiveHttpStatus": 200,
+    "archiveSize": 320512,
+    "archiveSha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+    "archiveContentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  },
+  "metrics": {
+    "conversations": 1,
+    "materialized": 1,
+    "duplicateAliases": 0,
+    "skipped": 0,
+    "failed": 0,
+    "eligibleCandidates": 11,
+    "selectedCandidates": 1,
+    "materializedCandidates": 1
+  },
+  "custody": {
+    "nativePid": 73060,
+    "resolvedPort": 45015,
+    "targetId": "D00836C6B00C660AD0A0C690C77DD1ED",
+    "attachments": 1,
+    "maxPhysicalPages": 1,
+    "downloads": 1,
+    "warnings": 0,
+    "traffic": {
+      "requests": 522,
+      "documents": 3,
+      "responses": 515,
+      "http429": 0
+    },
+    "cleanupObserverErrors": [
+      {
+        "at": "2026-10-07T01:08:01.912Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ]
+  },
+  "deferredState": {
+    "object": "account_mirror_conversation_work_state",
+    "version": 1,
+    "conversationKey": "sha256:3207f9925ea83c3edc9ea2973f9af8fa",
+    "epochId": "sha256:0cd2fa05a4adae7b7e5ec8cdf2d506e8",
+    "indexFingerprint": "sha256:bf3ac4d2010366aaa35921f4e7ed9130",
+    "detailFingerprint": "sha256:7a344c89b2242d72bfb787cebe31430d",
+    "action": "materialize_retained",
+    "outcome": "deferred",
+    "assetAvailability": "unknown",
+    "retryNotBefore": "2026-10-07T01:10:00.519Z",
+    "checkpointedAt": "2026-10-07T01:08:00.519Z",
+    "physicalActivity": {
+      "targetsCreated": 0,
+      "navigations": 1,
+      "reloads": 0,
+      "snapshotRefreshes": 1,
+      "artifactResolutions": 1,
+      "downloads": 1,
+      "duplicates": 0
+    },
+    "lifetimePhysicalActivity": {
+      "targetsCreated": 0,
+      "navigations": 0,
+      "reloads": 0,
+      "snapshotRefreshes": 0,
+      "artifactResolutions": 2,
+      "downloads": 0,
+      "duplicates": 0
+    }
+  },
+  "assetCompleteness": "partial",
+  "retainedJsonIntegrity": true,
+  "remainingGates": [
+    "Isolated changed-index-only-B live fixture not qualified: current B index fingerprint unchanged and detail was missing.",
+    "Quiet complete A/B rows not qualified: captured B remains deferred/partial.",
+    "Deferred continuation and captured-family stability require later eligible pass."
+  ],
+  "noWiderAcceptanceClaim": true
+}

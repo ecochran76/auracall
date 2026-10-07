@@ -1,3 +1,23 @@
+## 2026-10-07 | Installed frontier handoff and deferred continuation
+
+Operator continue cleared the custody stop. Canonical PR221 merge 286451280
+installed with completion SHA e78b81a7; API53363 zero restarts. Journey3 captured
+320,512 valid DOCX bytes; journey4 continued the same partial row with 315,434
+valid DOCX bytes. Both archive responses match local hashes. Each automatic
+child exactly uses the collector frontier and performs zero snapshot refreshes.
+One physical page, no observed warning or HTTP429; fresh cleanup shows no
+managed Chrome root, leases or jobs. Prior capture and retained JSON preserved.
+B remains partial/deferred; isolated changed-index and complete quiet-row
+acceptance remain OPEN. Journey5 settled skipped on a different metadata-only row; zero transfers.
+All5 journeys used; no further provider execution authorized.
+Scheduler and all prior operator pauses preserved. Curated journey3/4 receipts
+retain observer cleanup disconnects and child navigation timing limitations.
+Final API53363 zero restarts, parent/all16 prior completions and scheduler
+paused, zero active/idle/retiring leases/jobs and no exact managed Chrome root.
+Both DOCX hashes/mtimes and retained JSON remain stable. Final readback receipt
+is notes/2026-10-07-plan0386-frontier-final-readback.json. Memory unavailable:
+focused atlas discovery supplied no qualified AuraCall destination.
+
 ## 2026-10-06 | Normal frontier journey2 and bounded child-scope repair
 
 User cleared admission stop. Normal unscoped follow verified account identity

@@ -877,3 +877,33 @@ full sweep, other providers, normal governor limits and prior pauses. Existing
 fixture is extended with direct RED/green nonempty and empty-frontier cases.
 This source repair does not establish installed acceptance or solve physical
 page fanout. Wider changed/quiet and scheduler gates remain OPEN.
+
+### Installed frontier proof | 2026-10-07
+
+Operator continue cleared the prior custody stop. PR221 merged at 286451280
+and is installed with completionService SHA e78b81a7ff611ef7abe8b620a8cf9fee9f3eab8d5ed41fbf0ca304999f263fd2.
+Journey3 captured one missing DOCX; journey4 resumed the same partial row and
+captured its next DOCX. Automatic children match the collector frontier and
+perform zero snapshot refreshes. Each pass has one observed physical page,
+matching identity and no warning/429; cleanup independently proves no managed
+browser, active job or active/idle lease. Previous bytes/hash/mtime stay fixed.
+Curated evidence: notes/2026-10-07-plan0386-frontier-journey3.json and
+notes/2026-10-07-plan0386-frontier-journey4.json. The latter records navigation
+slightly before the child providerWorkNotBefore; download is after the boundary.
+No zero-before-boundary browser-effects claim is made. B remains partial/deferred;
+this is positive handoff/continuation proof, not the frozen isolated changed and
+complete quiet matrix. Journey5 consumes the final authorized journey.
+
+### Five-journey boundary | 2026-10-07
+
+Journey5 settled skipped on a different metadata-only row; zero transfers,
+zero child snapshots and exact frontier equality. Both prior captures and
+retained JSON remain stable. All5 journeys are consumed; execution stopped.
+Final readback: API53363 zero restarts, parent and all16 earlier completions
+paused, scheduler paused, no active jobs/leases or managed native Chrome root.
+Curated journey5 and final-readback JSON receipts bind this boundary. The
+provider-free criterion mapping is qualified; installed handoff and deferred
+continuation are proven. Isolated changed-index-only-B and quiet complete A/B
+live matrix remain OPEN. Additional provider execution needs a new allowance
+and a genuinely qualified fixture; scheduler continuation stays withheld.
+Memory disposition unavailable: no qualified AuraCall target from discovery.

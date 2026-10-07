@@ -1,0 +1,116 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 5,
+  "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+  "runtimeProfile": "wsl-chrome-3",
+  "apiPid": 53363,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": "hmj_4805a8c050e24925807015260d6cd681",
+  "outcome": "SKIPPED_NO_MATERIALIZABLE_ASSET",
+  "selectedConversationId": "6abc7f01-1e50-83ea-afd5-764491da2727",
+  "frontierSetMatches": true,
+  "frontierConversationCount": 12,
+  "childSnapshotRefreshes": 0,
+  "metrics": {
+    "conversations": 1,
+    "materialized": 0,
+    "duplicateAliases": 0,
+    "skipped": 1,
+    "failed": 0,
+    "eligibleCandidates": 11,
+    "selectedCandidates": 1,
+    "materializedCandidates": 0
+  },
+  "collectorIdentityVerdict": "match",
+  "childIdentityProof": null,
+  "observer": {
+    "attachments": 1,
+    "maxPhysicalPages": 1,
+    "routes": [
+      {
+        "at": "2026-10-07T01:22:37.547Z",
+        "kind": "initial_frame",
+        "conversationId": null,
+        "targetId": "8951F7DC450502B2DA4AAD2A0D8C29B1"
+      },
+      {
+        "at": "2026-10-07T01:22:37.184Z",
+        "kind": "top_frame_navigation",
+        "conversationId": null,
+        "targetId": "8951F7DC450502B2DA4AAD2A0D8C29B1"
+      }
+    ],
+    "downloads": 0,
+    "warnings": [],
+    "traffic": {
+      "requests": 242,
+      "documents": 1,
+      "responses": 239,
+      "http429": 0
+    },
+    "cleanupErrors": [
+      {
+        "at": "2026-10-07T01:24:38.424Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ]
+  },
+  "capturedAssets": [
+    {
+      "journey": 3,
+      "size": 320512,
+      "sha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+      "mtimeNs": 1791335279407370801,
+      "unchanged": true
+    },
+    {
+      "journey": 4,
+      "size": 315434,
+      "sha256": "aaacf841ab8059d006b8df525c1be8403e86552794f3c1b73475b572f797da77",
+      "mtimeNs": 1791335850954709133,
+      "unchanged": true
+    }
+  ],
+  "retainedJsonUnchanged": true,
+  "capturedConversationAssetCompleteness": "partial",
+  "capturedConversationWorkState": {
+    "object": "account_mirror_conversation_work_state",
+    "version": 1,
+    "conversationKey": "sha256:3207f9925ea83c3edc9ea2973f9af8fa",
+    "epochId": "sha256:24b9861c08181910d3a093bf7cd88a49",
+    "indexFingerprint": "sha256:bf3ac4d2010366aaa35921f4e7ed9130",
+    "detailFingerprint": "sha256:7a344c89b2242d72bfb787cebe31430d",
+    "action": null,
+    "outcome": "pending",
+    "assetAvailability": "unknown",
+    "retryNotBefore": "2026-10-07T01:19:32.560Z",
+    "checkpointedAt": null,
+    "physicalActivity": {
+      "targetsCreated": 0,
+      "navigations": 0,
+      "reloads": 0,
+      "snapshotRefreshes": 0,
+      "artifactResolutions": 0,
+      "downloads": 0,
+      "duplicates": 0
+    },
+    "lifetimePhysicalActivity": {
+      "targetsCreated": 0,
+      "navigations": 1,
+      "reloads": 0,
+      "snapshotRefreshes": 1,
+      "artifactResolutions": 4,
+      "downloads": 2,
+      "duplicates": 0
+    }
+  },
+  "completedAt": "2026-10-07T01:24:40.338Z",
+  "limitations": [
+    "Different metadata-only row selected; skipped child does not prove quiet complete A/B.",
+    "Collector telemetry includes a chat load/context request while observer saw root route only. No zero provider effects claim.",
+    "Collector identity matched; no fresh child identity proof.",
+    "Skipped result generated before child work boundary without observed conversation navigation/download. No live early-provider-retry proof.",
+    "Cleanup observer disconnect precedes terminal timestamp; fresh census proves absence separately."
+  ],
+  "noWiderAcceptanceClaim": true
+}

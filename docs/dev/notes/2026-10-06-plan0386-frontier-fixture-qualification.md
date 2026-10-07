@@ -106,3 +106,20 @@ qualification remains separate; no combined live acceptance is inferred.
 The repair is source-only until integration, installation and a cleared live
 gate. Physical-page fanout and post-cleanup custody are not fixed by this
 child-scope change.
+
+## Installed repair and continuation readback
+
+PR221 merge 286451280 installs the qualified frontier child restriction and
+empty-frontier suppression. Source repair validation is 171 focused tests in
+completionService/historyMaterializationService plus typecheck and touched lint;
+it does not mean all original 312 checks were rerun on the final merge.
+Journey3/4 curated receipts separately qualify exact child frontier equality,
+zero child snapshot refreshes, matching account identity, one observed page,
+two valid nonempty DOCX captures and matching cached archive responses. Journey4
+continues the still-partial row with maxItems1, retaining the first file and
+previous JSON bytes/hash/mtime. The deferred horizon is durable and the follow
+waits for its ordinary eligibility. Provider-free G assertions remain separate
+from live quiet-complete and isolated changed-index proof, which remain open.
+The navigation timing limitation in journey4 prevents a claim of zero physical
+browser effects before its child work boundary. No guard was observed live;
+containment remains provider-free evidence, not a manufactured live guard.

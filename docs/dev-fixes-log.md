@@ -1,3 +1,14 @@
+## 2026-10-07 — Frontier scope and completion are separate evidence
+
+Installed PR221 children now match the collector frontier and reuse retained
+snapshots. With maxItems1, successive live passes capture different missing
+files from one partial conversation while preserving previous bytes. Successful
+capture and readable archive projection do not qualify a complete quiet row.
+Keep row completeness, index/detail fingerprints, route visits, child snapshot
+counts, file integrity and archive availability as separate readbacks. Passive
+observer cleanup disconnects precede durable terminal timestamps; fresh native
+and lease/job census establishes absence separately.
+
 ## 2026-10-06 | Bind normal ChatGPT child selection to collector frontier
 
 Snapshot reuse IDs alone do not restrict reconciliation selection. Normal
