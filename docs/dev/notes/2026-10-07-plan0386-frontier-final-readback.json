@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-07T01:25:02.309Z",
+  "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+  "apiPid": 53363,
+  "apiRestarts": 0,
+  "parentStatus": "paused",
+  "existingCompletionCount": 16,
+  "allExistingPaused": true,
+  "schedulerPaused": true,
+  "leaseStates": {
+    "active": 0,
+    "idle": 0,
+    "retiring": 0,
+    "released": 280,
+    "lost": 0
+  },
+  "nativeRootPresent": false,
+  "activeJobIds": [],
+  "usedJourneys": 5,
+  "remainingJourneys": 0,
+  "matrixState": "OPEN",
+  "memoryDisposition": "unavailable"
+}
