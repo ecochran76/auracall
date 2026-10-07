@@ -53141,3 +53141,10 @@ ZIP. Local/manifest/archive hashes match; all prior captured files unchanged.
 Frontier12 IDs matches, one page/no warning. Result precedes normal cleanup
 endpoint refusal; terminal parent paused, no native/jobs/held leases. Used7/10,
 three remain. This is positive continuation, not full changed/quiet matrix.
+
+### 2026-10-07T14:21Z — frontier journey13 continuation
+
+Journey13 captures a second DOCX from6abc6682 with local/manifest/archive
+parity and unchanged earlier files. Closed12-ID frontier, one page/no warning.
+Generated result precedes cleanup disconnect; terminal census clear. Used8/10,
+two remain. No wider changed/quiet-complete acceptance claimed.
