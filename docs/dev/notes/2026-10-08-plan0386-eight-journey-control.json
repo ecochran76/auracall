@@ -60,7 +60,12 @@
       "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
       "beforePassCount": 1,
       "purpose": "normal unscoped index qualification and automatic child acceptance",
-      "status": "started"
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:08:08.295Z",
+      "jobId": "hmj_b403983f180246bca9a74946cf184a6c",
+      "childStatus": "skipped",
+      "afterPassCount": 2,
+      "error": null
     }
   ],
   "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
@@ -84,6 +89,6 @@
     "explicitConversationScope": false,
     "globalSchedulerResume": false
   },
-  "progress": "Research complete; journey1 isolated unavailable display; environment repair ready for journey2",
+  "progress": "Four journeys charged; parent paused, child terminal. Single-visit ready project-slug regression reproduced and repaired locally; installation/live verification pending. Wider acceptance remains OPEN.",
   "latestJourneyStart": "2026-10-08T12:25:00Z"
 }
