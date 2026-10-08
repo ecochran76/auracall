@@ -53182,3 +53182,13 @@ composed guard/reload remains needs_evidence. Cache-only census found 23
 metadata-complete candidates among 348 rows; local integrity qualification is
 the next packet. Provider allowance remains exhausted; scheduler gate separate.
 Review: notes/2026-10-07-plan0386-acceptance-review.md.
+
+### 2026-10-08 — Plan0386 fresh eight-journey goal
+
+Local research qualifies readable manifest baseline A among23 candidates;
+260 fresh provider-free checks pass. Current B needs a new index comparison.
+Fresh allowance8, used0; checkpoint deadline12:40UTC, before user two-hour
+limit. Normal unscoped completion, maxItems1/forcefalse/6 interactions per
+minute; global scheduler stays paused until separate dependent gate is ready.
+Source and API identity revalidated; native exact managed browser absent.
+Control: notes/2026-10-08-plan0386-eight-journey-control.json.

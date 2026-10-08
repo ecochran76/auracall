@@ -1,0 +1,53 @@
+{
+  "schema": "auracall_plan0386_goal_control.v1",
+  "objective": "Complete Plan0386",
+  "authority": "User goal 2026-10-08: research then fresh allowance of 8 journeys; no implementation theater; stop/checkpoint before 2h or 1MM tokens",
+  "startedAt": "2026-10-08T10:45:23Z",
+  "checkpointDeadline": "2026-10-08T12:40:00Z",
+  "runtimeProfile": "wsl-chrome-3",
+  "maxLiveJourneys": 8,
+  "usedLiveJourneys": 1,
+  "remainingJourneys": 7,
+  "liveJourneys": [
+    {
+      "number": 1,
+      "startedAt": "2026-10-08T10:50:39.584Z",
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "beforePassCount": 12,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T10:51:52.043Z",
+      "jobId": null,
+      "childStatus": null,
+      "afterPassCount": 12,
+      "error": {
+        "message": "Chrome DevTools 127.0.0.1:45015 did not become ready",
+        "code": null
+      },
+      "outcome": "failed_browser_readiness",
+      "stopResolvedBy": "display feedback loop: :923 timeout; :0.0 responsive; exact browser-family display repaired; native browser/leases/control clear before service config reload"
+    }
+  ],
+  "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "gates": [
+    "independent changed-index + quiet-complete matrix",
+    "deferred/guarded persistence evidence",
+    "bounded scheduler continuation after gate1"
+  ],
+  "hardStops": [
+    "warning/429/CAPTCHA",
+    "identity/custody mismatch",
+    "unknown terminal outcome",
+    "admission failure",
+    "8 journeys",
+    "checkpoint deadline"
+  ],
+  "policy": {
+    "maxItems": 1,
+    "force": false,
+    "interactionsPerMinute": 6,
+    "explicitConversationScope": false,
+    "globalSchedulerResume": false
+  },
+  "progress": "Research complete; journey1 isolated unavailable display; environment repair ready for journey2"
+}
