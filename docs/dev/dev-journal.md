@@ -1,3 +1,11 @@
+## 2026-10-08 | Installed successor journey5 terminal
+
+Root context completes on PR237 installed source09e508924. Pass9→10, one
+observed root-conversation document, one page, zero429/downloads/snapshots.
+Automatic child skips no downloadable artifact. Prior source repro qualifies
+no-op admission defect; this live success does not prove journey3 causality.
+Controller18679 owns remaining journeys serially; do not start duplicate work.
+
 ## 2026-10-08 | PR237 installed; remaining journeys resumed
 
 Canonical/installed source09e508924 includes qualified no-op fallback repair;
