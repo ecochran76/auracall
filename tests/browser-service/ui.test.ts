@@ -1403,6 +1403,54 @@ describe('browser-service ui wait helpers', () => {
     ).toBe(true);
   });
 
+  test.each([{ readyAfterMs: 75, expectedReady: true }, { readyAfterMs: null, expectedReady: false }])('navigateAndSettle keeps the reached-route fallback bounded without a second admission ($expectedReady)', async ({ readyAfterMs, expectedReady }) => {
+    vi.useFakeTimers();
+    try {
+      const startedAt = Date.now();
+      const target = 'https://chatgpt.com/c/fixture';
+      let currentUrl = 'https://chatgpt.com/';
+      const runtime = {
+        evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+          if (expression === 'location.href') return { result: { value: currentUrl } };
+          if (expression === 'routeReady') return { result: { value: currentUrl === target } };
+          if (expression === 'surfaceReady') {
+            return { result: { value: readyAfterMs !== null && Date.now() - startedAt >= readyAfterMs } };
+          }
+          if (expression.includes('location.assign')) throw new Error('Unexpected route mutation');
+          return { result: { value: null } };
+        }),
+      };
+      const page = { navigate: vi.fn(async () => { currentUrl = target; }) };
+      const settle = vi.fn(async () => undefined);
+      const begin = vi.fn(async () => {
+        if (begin.mock.calls.length > 1) {
+          throw new Error('Provider traffic budget exhausted for detail/page_navigate at limit 1.');
+        }
+        return { id: 'one-navigation', settle };
+      });
+      // biome-ignore lint/style/useNamingConvention: CDP protocol domains use canonical names.
+      const pending = navigateAndSettle({ Page: page as never, Runtime: runtime as never }, {
+        url: target,
+        routeExpression: 'routeReady',
+        readyExpression: 'surfaceReady',
+        waitForDocumentReady: false,
+        timeoutMs: 50,
+        fallbackTimeoutMs: 50,
+        fallbackToLocationAssign: true,
+        pollMs: 1,
+        providerTrafficGovernor: { attribution: {} as never, begin },
+      });
+      const observed = pending.then(value => ({ value, error: null }), error => ({ value: null, error }));
+      await vi.advanceTimersByTimeAsync(110);
+      expect(await observed).toMatchObject({ value: { ok: expectedReady, mutationPerformed: true }, error: null });
+      expect(page.navigate).toHaveBeenCalledTimes(1);
+      expect(begin).toHaveBeenCalledTimes(1);
+      expect(runtime.evaluate.mock.calls.some(([arg]) => arg.expression.includes('location.assign'))).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test('navigateAndSettle does not mutate an already-settled requested route', async () => {
     const mutationLog = createInMemoryBrowserMutationLog();
     const runtime = {

@@ -1333,6 +1333,12 @@ export async function navigateAndSettle(
       reason: 'primary-navigation-did-not-settle',
       error: primary.reason ?? null,
     });
+    // The fallback expression does not assign when navigation already reached
+    // this exact URL. Keep its bounded readiness wait without admitting a
+    // physical mutation that will not occur.
+    if (await readLocationHrefForAudit(client.Runtime) === options.url) {
+      return await evaluateState(options.fallbackTimeoutMs ?? options.timeoutMs, true, true);
+    }
     activeAction = await beginUiPhysicalAction({
       providerTrafficGovernor,
       providerTrafficRequired,

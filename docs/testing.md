@@ -1,3 +1,9 @@
+- Reached-route navigation fallback (provider-free):
+  `pnpm vitest run tests/browser-service/ui.test.ts`.
+  Late readiness on the exact reached URL consumes one navigation admission;
+  a never-ready surface fails within existing primary/fallback bounds. Different
+  route fallback remains a governed mutation. This does not prove live causality.
+
 - ChatGPT retry visibility and conversation scope (provider-free):
   `pnpm vitest run tests/browser/chatgptRetryVisibility.test.ts`.
   Executes the context reader and its real button expression: hidden and
