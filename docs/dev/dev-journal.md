@@ -1,3 +1,13 @@
+## 2026-10-08 | PR237 installed; remaining journeys resumed
+
+Canonical/installed source09e508924 includes qualified no-op fallback repair;
+shared UI hashc7d7d83603813ab9dbdc822d34000bed53efaf556dc59bde70faee62b3098790.
+API85906 restarted under paused parent/scheduler and zero active jobs/browser
+controls. Journey5 resumes same parent from pass9. Six unused at repair entry;
+prior charges/failure and original deadline retained. Controller now stops on
+nested failed collector diagnostics. Source proof is not live-cause proof.
+Controller handle18679 owns journeys5–10; poll existing handle before new starts.
+
 ## 2026-10-08 | Reproduced no-op fallback admission defect
 
 A public navigateAndSettle fixture reproduces exact detail/page_navigate limit1:
