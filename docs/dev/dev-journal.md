@@ -1,3 +1,15 @@
+## 2026-10-08 | Cursor traffic key mismatch reproduced
+
+PR232 merge c9ccbe202 installed with adapter SHA3d6e87e8 and API73847.
+Journey5 resumes the second row but the frozen plan authorizes the first,
+causing detail/page_navigate limit0. Parent paused; child observed separately
+through terminal skipped, zero materializations. Five charged; three remain.
+Existing requested-detail continuation test extended with the actual governor
+fails with that exact denial. Selecting the budget key from the same normalized
+persisted cursor as the reader passes159 affected tests, typecheck and lint.
+No budget increased. Changed/quiet acceptance and slug live attribution remain
+unproven. Global scheduler stays paused.
+
 ## 2026-10-08 | Single-visit project route regression qualified
 
 Fresh journeys1–4 are charged; four remain. Journey4 repeats the collector
