@@ -89,5 +89,6 @@
     "quietCompleteAB": false,
     "scheduler": false
   },
-  "limitation": "Operator stop before normal eligibility, no browser/provider work; conservatively charged. Parent passCount stayed9."
+  "limitation": "Operator stop before normal eligibility, no browser/provider work; conservatively charged. Parent passCount stayed9.",
+  "collectorEvidenceOrigin": "Retained prior refresh from journey3; journey4 made no collector pass or provider call."
 }
