@@ -1,3 +1,9 @@
+- Captured rich ChatGPT composer readiness (provider-free):
+  `pnpm vitest run tests/browser/chatgptSingleVisitContext.test.ts`.
+  Executes actual readiness expression against captured editor attributes; rich
+  root composer reads preserve one-visit budget, wrong projects and unrelated
+  editors are rejected. Synthetic message transport does not prove live content.
+
 - Reached-route navigation fallback (provider-free):
   `pnpm vitest run tests/browser-service/ui.test.ts`.
   Late readiness on the exact reached URL consumes one navigation admission;

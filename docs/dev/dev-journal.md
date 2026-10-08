@@ -1,3 +1,14 @@
+## 2026-10-08 | Captured rich editor reproduces root readiness denial
+
+Journey6 repeats B admission denial on PR237; controller stops before7. Two
+read-only owned-page snapshots capture canonical root route, no rendered turns,
+and exact editable DIV Ask ChatGPT composer missed by textarea/plus readiness.
+Public adapter fixture reproduces limit1; exact selector repair passes398 focused
+checks/typecheck/lint. No claim of actual B content/assets. Journey6 child captures
+32,096 valid JSON bytes on another retained row; local/archive hash matches,
+previously absent path frozen. Earlier bytes/mtime unchanged; one partial manifest
+changes IDs. [Repair](notes/2026-10-08-plan0386-rich-composer-repair.md).
+
 ## 2026-10-08 | Installed successor journey5 terminal
 
 Root context completes on PR237 installed source09e508924. Pass9→10, one

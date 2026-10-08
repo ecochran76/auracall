@@ -1,3 +1,14 @@
+## 2026-10-08 — Recognize the captured rich ChatGPT composer for reads
+
+Conversation readiness must recognize the observed DIV with data-composer-markdown,
+contenteditable=true, role=textbox and exact Ask ChatGPT label. Existing textarea
+and plus-button probes miss it on a canonical owned root route and request a second
+navigation under a one-visit budget. Public adapter regression reproduces exact
+limit1 denial; the narrow selector permits reads without another navigation.
+Wrong project and unrelated editor stay rejected. Readiness is not proof that
+messages or downloadable assets exist.398 focused checks/typecheck/lint qualify
+source; installed continuation remains separate.
+
 ## 2026-10-08 — Do not admit a no-op navigation fallback
 
 After Page.navigate reaches the exact requested URL, a slow surface can exhaust

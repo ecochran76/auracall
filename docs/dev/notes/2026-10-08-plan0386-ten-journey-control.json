@@ -8,8 +8,8 @@
   "runtimeProfile": "wsl-chrome-3",
   "browserProfile": "wsl-chrome-3",
   "maxLiveJourneys": 10,
-  "usedLiveJourneys": 5,
-  "remainingJourneys": 5,
+  "usedLiveJourneys": 6,
+  "remainingJourneys": 4,
   "liveJourneys": [
     {
       "number": 1,
@@ -71,7 +71,25 @@
       "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
       "beforePassCount": 9,
       "purpose": "normal unscoped index qualification and automatic child acceptance",
-      "status": "started"
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T15:22:55.980Z",
+      "jobId": "hmj_ee85bca901654b21a4465c733e9a53b6",
+      "childStatus": "skipped",
+      "afterPassCount": 10,
+      "error": null
+    },
+    {
+      "number": 6,
+      "startedAt": "2026-10-08T15:22:59.859Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 10,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T15:32:10.584Z",
+      "jobId": "hmj_1dfd72c17a42495e9ca2fe344de08b70",
+      "childStatus": "succeeded",
+      "afterPassCount": 11,
+      "error": null
     }
   ],
   "installedSourceCommit": "09e508924cffcd758d86400fc6e5de2a13ba4424",
@@ -94,8 +112,8 @@
     "mixed guard/reload",
     "dependent bounded scheduler"
   ],
-  "executionState": "active_after_qualified_repair",
-  "progress": "Four charged terminal; journey5 active on installed PR237 no-op fallback repair. Six-journey unused balance at repair entry is preserved in installation receipt; ledger live rows track current consumption. No live acceptance claim.",
-  "stopResolution": "PR237: public navigation helper regression reproduces no-op fallback admission limit1; exact reached URL keeps bounded wait without second mutation admission. 330 focused tests/typecheck qualify repair; installed before any resumed provider work. Live causality still unproven.",
-  "priorStopReason": "Journey3 nested collector diagnostic: Provider traffic budget exhausted for detail/page_navigate at limit1. Controller missed this and charged journey4; stopped journey4 during eligibility wait, zero provider traffic."
+  "executionState": "qualified_successor_ready",
+  "stopReason": "Journey3 nested collector diagnostic: Provider traffic budget exhausted for detail/page_navigate at limit1. Controller missed this and charged journey4; stopped journey4 during eligibility wait, zero provider traffic.",
+  "progress": "Four charged, three provider runs terminal plus one idle stop. Six remain unused under admission stop. No new downloads. Controller nested-failure replay red then green; provider cause remains unreproduced.",
+  "stopResolution": "PR237: public navigation helper regression reproduces no-op fallback admission limit1; exact reached URL keeps bounded wait without second mutation admission. 330 focused tests/typecheck qualify repair; installed before any resumed provider work. Live causality still unproven."
 }

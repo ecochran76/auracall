@@ -5,16 +5,54 @@ import { createProviderSessionAuthorization } from "../../src/browser/providers/
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 
 test.each([
-	{ routeProject: "g-p-0123456789abcdef-fixture", ready: true },
-	{ routeProject: "g-p-fedcba9876543210-fixture", ready: false },
-])("single-visit context read preserves project identity for $routeProject", async ({
+	{ routeProject: "g-p-0123456789abcdef-fixture", ready: true, richLabel: null },
+	{ routeProject: "g-p-fedcba9876543210-fixture", ready: false, richLabel: null },
+	{ routeProject: null, ready: true, richLabel: "Ask ChatGPT" },
+	{ routeProject: null, ready: false, richLabel: "Unrelated editor" },
+])("single-visit context read preserves project identity for $routeProject and $richLabel", async ({
 	routeProject,
 	ready,
+	richLabel,
 }) => {
 	const conversationId = "fixture-conversation";
-	const projectId = "g-p-0123456789abcdef";
-	const canonical = `https://chatgpt.com/g/${projectId}/c/${conversationId}`;
-	const location = new URL(`https://chatgpt.com/g/${routeProject}/c/${conversationId}`);
+	const projectId = routeProject === null ? undefined : "g-p-0123456789abcdef";
+	const canonical = projectId
+		? `https://chatgpt.com/g/${projectId}/c/${conversationId}`
+		: `https://chatgpt.com/c/${conversationId}`;
+	const location = new URL(
+		routeProject ? `https://chatgpt.com/g/${routeProject}/c/${conversationId}` : canonical,
+	);
+	const richAttributes: Record<string, string> = {
+		"data-composer-markdown": "",
+		contenteditable: "true",
+		role: "textbox",
+		"aria-label": richLabel ?? "",
+	};
+	const querySelector = (selector: string) => {
+		if (!richLabel) return {};
+		for (const part of selector.split(",").map((value) => value.trim())) {
+			const tag = part.match(/^[a-z]+/)?.[0];
+			if (tag && tag !== "div") continue;
+			const attributes = [...part.matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)];
+			if (
+				!attributes.length ||
+				part
+					.replace(/^[a-z]+/, "")
+					.replace(/\[[^\]]+\]/g, "")
+					.trim()
+			)
+				continue;
+			if (
+				attributes.every(
+					([, name, value]) =>
+						Object.hasOwn(richAttributes, name) &&
+						(value === undefined || richAttributes[name] === value),
+				)
+			)
+				return {};
+		}
+		return null;
+	};
 	const navigate = vi.fn(async () => {
 		throw new Error("Provider traffic budget exhausted for detail/page_navigate at limit 1.");
 	});
@@ -30,7 +68,7 @@ test.each([
 				result: {
 					value: runInNewContext(expression, {
 						location,
-						document: { title: "Fixture", querySelector: () => ({}), readyState: "complete" },
+						document: { title: "Fixture", querySelector, readyState: "complete" },
 					}),
 				},
 			};
@@ -97,26 +135,38 @@ test.each([
 	};
 	const adapter = createChatgptAdapter();
 	if (!adapter.readConversationContext) throw new Error("Context read entry point missing");
-	if (!ready) {
-		await expect(
-			adapter.readConversationContext(conversationId, projectId, options),
-		).rejects.toThrow("Provider traffic budget exhausted");
-		expect(navigate).toHaveBeenCalledTimes(1);
-		expect(evaluate).not.toHaveBeenCalledWith(
+	vi.useFakeTimers();
+	try {
+		const pending = adapter.readConversationContext(conversationId, projectId, options).then(
+			(value) => ({ value, error: null }),
+			(error) => ({ value: null, error }),
+		);
+		await vi.runAllTimersAsync();
+		const outcome = await pending;
+		if (!ready) {
+			expect(outcome.error).toMatchObject({
+				message: expect.stringContaining("Provider traffic budget exhausted"),
+			});
+			expect(navigate).toHaveBeenCalledTimes(1);
+			expect(evaluate).not.toHaveBeenCalledWith(
+				expect.objectContaining({
+					expression: expect.stringContaining("/backend-api/conversation/"),
+				}),
+			);
+			return;
+		}
+		expect(outcome.error).toBeNull();
+		expect(outcome.value).toMatchObject({
+			conversationId,
+			messages: [{ role: "assistant", text: "Fixture response" }],
+		});
+		expect(navigate).not.toHaveBeenCalled();
+		expect(evaluate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				expression: expect.stringContaining("/backend-api/conversation/"),
 			}),
 		);
-		return;
+	} finally {
+		vi.useRealTimers();
 	}
-	await expect(
-		adapter.readConversationContext(conversationId, projectId, options),
-	).resolves.toMatchObject({
-		conversationId,
-		messages: [{ role: "assistant", text: "Fixture response" }],
-	});
-	expect(navigate).not.toHaveBeenCalled();
-	expect(evaluate).toHaveBeenCalledWith(
-		expect.objectContaining({ expression: expect.stringContaining("/backend-api/conversation/") }),
-	);
 });
