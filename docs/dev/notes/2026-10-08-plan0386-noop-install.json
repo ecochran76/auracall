@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-08T15:18:51.207Z",
+  "canonicalCommit": "09e508924cffcd758d86400fc6e5de2a13ba4424",
+  "uiSha256": "c7d7d83603813ab9dbdc822d34000bed53efaf556dc59bde70faee62b3098790",
+  "apiPid": 85906,
+  "parentStatus": "paused",
+  "passCount": 9,
+  "activeMaterializations": 0,
+  "schedulerPaused": true,
+  "remainingJourneys": 6
+}

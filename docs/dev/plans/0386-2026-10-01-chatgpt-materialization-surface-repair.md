@@ -7,7 +7,18 @@ Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
-## Current checkpoint | 2026-10-08 renewed allowance admission stop
+## Current checkpoint | 2026-10-08 qualified successor installed
+
+PR237 merge09e508924 repairs a reproduced no-op fallback admission defect in
+the shared navigation helper. 330 focused tests/typecheck qualify source; UI
+module installed/canonical hashes match. API85906, scheduler paused, parent
+resumes from pass9 as journey5 under the same ten-journey allowance. Controller
+checks nested collector failures. Prior four charges and admission failure remain
+immutable; no bound reset. Exact live causality and full Plan0386 remain unproven.
+See [repair](../notes/2026-10-08-plan0386-noop-fallback-repair.md) and
+[installation](../notes/2026-10-08-plan0386-noop-install.json).
+
+## Historical checkpoint | 2026-10-08 renewed allowance admission stop
 
 Additional ten journeys authorized. Four charged, six unused under admission
 stop. Journeys1/2 skipped no-artifact rows. Journey3 context read of independent

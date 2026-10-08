@@ -1,3 +1,32 @@
+## 2026-10-08 | Captured rich editor reproduces root readiness denial
+
+Journey6 repeats B admission denial on PR237; controller stops before7. Two
+read-only owned-page snapshots capture canonical root route, no rendered turns,
+and exact editable DIV Ask ChatGPT composer missed by textarea/plus readiness.
+Public adapter fixture reproduces limit1; exact selector repair passes398 focused
+checks/typecheck/lint. No claim of actual B content/assets. Journey6 child captures
+32,096 valid JSON bytes on another retained row; local/archive hash matches,
+previously absent path frozen. Earlier bytes/mtime unchanged; one partial manifest
+changes IDs. [Repair](notes/2026-10-08-plan0386-rich-composer-repair.md).
+
+## 2026-10-08 | Installed successor journey5 terminal
+
+Root context completes on PR237 installed source09e508924. Pass9→10, one
+observed root-conversation document, one page, zero429/downloads/snapshots.
+Automatic child skips no downloadable artifact. Prior source repro qualifies
+no-op admission defect; this live success does not prove journey3 causality.
+Controller18679 owns remaining journeys serially; do not start duplicate work.
+
+## 2026-10-08 | PR237 installed; remaining journeys resumed
+
+Canonical/installed source09e508924 includes qualified no-op fallback repair;
+shared UI hashc7d7d83603813ab9dbdc822d34000bed53efaf556dc59bde70faee62b3098790.
+API85906 restarted under paused parent/scheduler and zero active jobs/browser
+controls. Journey5 resumes same parent from pass9. Six unused at repair entry;
+prior charges/failure and original deadline retained. Controller now stops on
+nested failed collector diagnostics. Source proof is not live-cause proof.
+Controller handle18679 owns journeys5–10; poll existing handle before new starts.
+
 ## 2026-10-08 | Reproduced no-op fallback admission defect
 
 A public navigateAndSettle fixture reproduces exact detail/page_navigate limit1:
