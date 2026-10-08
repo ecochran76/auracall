@@ -138,10 +138,11 @@
     "mixed guard/reload",
     "dependent bounded scheduler"
   ],
-  "executionState": "qualified_rich_composer_successor_ready",
+  "executionState": "awaiting_readable_content_or_new_independent_frontier",
   "stopReason": "Journey8 independent conversation context messages not found; frozen collector-failure gate prevents journeys9\u201310.",
-  "progress": "Six charged terminal, four unused. Journey6 collector repeats B failure; separate child captures32096 JSON bytes on another retained row. No changed-B/quiet acceptance.",
-  "stopResolution": "PR238: captured owned-page exact rich editor attributes reproduce readiness-related one-visit denial at public adapter seam; narrow selector repair passes398 focused tests/typecheck/lint. PR237 did not resolve original B failure. Installation must be verified before resumed provider work.",
+  "progress": "Eight charged terminal, two unused. Journey7 completes context; journey8 B messages not found. Installed cache-only replay selects same failed B; no new provider work.",
+  "stopResolution": "Unresolved. PR238 removes readiness denial, but readable B content remains unproven. Current installed cursor/planner replay repeats failed B. Preserve failed evidence and two unused journeys.",
   "checkpointStatus": "stopped_at_content_gate",
-  "controllerSession": "55649 (exit 1 after journey8 terminal)"
+  "controllerSession": "55649 (exit 1 after journey8 terminal)",
+  "lastRevalidation": "2026-10-08-plan0386-content-gate-replay.json"
 }

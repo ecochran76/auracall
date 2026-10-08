@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-08T15:56:19.386Z",
+  "cacheOnly": true,
+  "providerCalls": 0,
+  "parentStatus": "paused",
+  "passCount": 13,
+  "installedSourceCommit": "c6710b169b2acd0388adbf964370c6b3a696e399",
+  "persistedCursorIndex": 1,
+  "normalizedCursorIndex": 0,
+  "selectedConversationId": "6ac76440-d80c-83e9-8b84-df32c009247d",
+  "failedConversationId": "6ac76440-d80c-83e9-8b84-df32c009247d",
+  "selectedRows": 16,
+  "limitation": "Installed cursor selection replay on the latest persisted frontier; a future external index change could alter selection. No cache or provider state mutated.",
+  "repeatsFailedConversation": true,
+  "currentCacheRowPlanner": {
+    "outcome": "deferred",
+    "retryNotBefore": null,
+    "assetAvailability": "unknown",
+    "freshnessState": "unknown",
+    "decision": {
+      "conversationKey": "sha256:0f38e9ad3c28a6a873b0ce47ae232e2a",
+      "action": "visit_once",
+      "reason": "detail_or_index_changed",
+      "checkpointKey": "sha256:0f38e9ad3c28a6a873b0ce47ae232e2a"
+    }
+  }
+}
