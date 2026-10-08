@@ -9050,6 +9050,24 @@ async function ensureChatgptConversationSurfaceReadyForRead(
 			`ChatGPT active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
 		);
 	}
+	if (options?.accountMirrorSingleConversationVisit) {
+		// Project slugs may differ from the canonical URL after the governed visit.
+		// Reuse only a ready surface whose conversation and project both match.
+		recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+		const ready = await withChatgptTimeout(
+			client.Runtime.evaluate({
+				expression: buildConversationSurfaceReadyExpression(conversationId, projectId),
+				returnByValue: true,
+				timeout: 10_000,
+			}),
+			10_000,
+			`Timed out checking the active ChatGPT conversation ${conversationId} surface.`,
+		);
+		if (ready.result.value && !ready.exceptionDetails) {
+			recordBrowserScrapeProviderAction(options, "chatgpt.skipSameRouteNavigation");
+			return;
+		}
+	}
 	await navigateToChatgptConversation(client, conversationId, projectId, options);
 }
 

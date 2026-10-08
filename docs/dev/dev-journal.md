@@ -1,3 +1,16 @@
+## 2026-10-08 | Single-visit project route regression qualified
+
+Fresh journeys1–4 are charged; four remain. Journey4 repeats the collector
+`detail/page_navigate` limit1 failure and its automatic child settles skipped,
+zero materializations. Parent and global scheduler remain paused; no active
+jobs or held leases/controls, and exact managed Chrome root is absent.
+A public context-read regression reproduces a second navigation solely because
+a ready same-project URL contains a slug. The narrow single-visit preflight
+reuses the existing project/conversation readiness predicate; wrong-project
+payload reads remain denied. This is local defect evidence, not yet proof of
+journey4 causality or the changed/quiet acceptance matrix. Installation and
+remaining bounded journeys follow validation, without increasing any budget.
+
 ## 2026-10-07 | Cleared custody stop; endpoint denial discovered
 
 User try again clears prior stop after exact native absence, zero active/idle

@@ -1,3 +1,14 @@
+## 2026-10-08 — Reuse ready single-visit project conversation routes
+
+Canonical project URLs omit optional title slugs. The generic URL equality
+check can therefore navigate again after a governed conversation visit, even
+when the exact conversation and project readiness predicate already passes.
+A public adapter regression fails on the exhausted one-navigation budget.
+For single-visit context reads only, check existing semantic readiness with a
+bounded read before navigation. A different project still consumes navigation
+and cannot expose its payload under an exhausted budget. Live attribution of
+the observed collector failure and wider Plan0386 acceptance remain separate.
+
 ## 2026-10-07 — Missing endpoint is admission failure, not empty inventory
 
 Journey9's legacy skipped result contains no artifact ID or child identity
