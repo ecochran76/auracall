@@ -1,3 +1,12 @@
+## 2026-10-08 | Post-checkpoint local fixture research
+
+User requested ask-matt research continuation. Fresh read-only installed cache
+census: 349 rows, zero metadata-complete candidates in retained indexRank0–29;
+positive capture rows remain incomplete. Sole independent new row has zero file
+records, so downloadable missing B remains unqualified. No browser allowance
+renewed or used. [Research](notes/2026-10-08-plan0386-postcheckpoint-research.md)
+records sources, stopping rule and exact next qualification boundary.
+
 ## 2026-10-08 | Eight-journey terminal checkpoint
 
 PR232/233 merged and installed; all eight charged journeys terminal. Journeys7/8
