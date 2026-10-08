@@ -1,3 +1,14 @@
+## 2026-10-08 — Do not admit a no-op navigation fallback
+
+After Page.navigate reaches the exact requested URL, a slow surface can exhaust
+the primary readiness wait. The location.assign fallback already skips assignment
+on that URL, but previously reserved another physical navigation before checking.
+A one-navigation governor rejects that no-op. The shared browser-service helper
+now retains the bounded fallback readiness wait without a second admission when
+location.href exactly equals the target. Different routes still require admission;
+never-ready surfaces remain failures. Public regression red→green and330 affected
+checks qualify source behavior; live causality and Plan0386 acceptance are separate.
+
 ## 2026-10-08 — Freeze the detail budget for the resumed cursor row
 
 A requested detail continuation can retain a nonzero conversation cursor.

@@ -1,3 +1,14 @@
+## 2026-10-08 | Reproduced no-op fallback admission defect
+
+A public navigateAndSettle fixture reproduces exact detail/page_navigate limit1:
+one navigation reaches the URL, surface readiness arrives after primary wait,
+and location-assign fallback requests a second admission even though its own
+expression would return already-there. Exact-URL fallback now waits within the
+existing fallback deadline without a new physical admission. Different routes
+retain governed mutation; never-ready surfaces still fail bounded. 330 focused
+checks pass. This qualifies the source defect, not exact live causality.
+Install/in-envelope continuation remains separate; six journeys still unused.
+
 ## 2026-10-08 | Renewed admission stop after four charged journeys
 
 Journeys1/2 skipped no-artifact rows. Journey3's completed refresh contains a
