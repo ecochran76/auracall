@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createAccountMirrorPersistence } from "../../src/accountMirror/cachePersistence.js";
+import { planAccountMirrorChangeFrontier } from "../../src/accountMirror/changeFrontierPlanner.js";
+import { normalizeAccountMirrorConversationWorkState } from "../../src/accountMirror/changeFrontierState.js";
+import { deriveAccountMirrorConversationFreshness } from "../../src/accountMirror/conversationFreshness.js";
 import { createAccountMirrorStatusRegistry } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { createCacheStore } from "../../src/browser/llmService/cache/store.js";
@@ -328,6 +331,46 @@ describe("account mirror cache persistence", () => {
 					},
 				],
 			});
+			if (outcome === "deferred") {
+				// Reopen the store so eligibility comes from persisted state, not the writer.
+				const reopened = createCacheStore("dual");
+				const reloaded = (await reopened.readConversations(context)).items[0];
+				if (!reloaded) throw new Error("Expected reloaded guarded conversation");
+				const reloadedWork = normalizeAccountMirrorConversationWorkState(
+					reloaded.metadata?.changeFrontierState,
+				);
+				if (!reloadedWork) throw new Error("Expected reloaded frontier state");
+				const freshness = deriveAccountMirrorConversationFreshness({
+					conversationId: reloaded.id,
+					item: reloaded,
+					target: {},
+				});
+				const plan = (now: string) =>
+					planAccountMirrorChangeFrontier({
+						epochId: reloadedWork.epochId,
+						now,
+						rows: [{ workState: reloadedWork, freshness }],
+					});
+				expect(plan("2026-04-29T13:59:59.999Z").decisions).toEqual([
+					{
+						conversationKey: reloadedWork.conversationKey,
+						checkpointKey: reloadedWork.conversationKey,
+						action: "defer",
+						reason: "retry_not_before",
+					},
+				]);
+				expect(plan("2026-04-29T14:00:00.000Z").decisions).toEqual([
+					{
+						conversationKey: reloadedWork.conversationKey,
+						checkpointKey: reloadedWork.conversationKey,
+						action: "visit_once",
+						reason: "detail_or_index_changed",
+					},
+				]);
+				await expect(reopened.readConversations(context)).resolves.toMatchObject({
+					items: [{ metadata: { changeFrontierState: reloadedWork } }],
+				});
+			}
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
 		}

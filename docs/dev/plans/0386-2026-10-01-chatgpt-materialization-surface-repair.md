@@ -1032,3 +1032,15 @@ continuation fixture reproduces that exact denial. Select the frozen work key
 from the reader's normalized persisted cursor, keeping all limits intact.
 Child terminal skipped, zero transfers; five of eight charged. Three remain,
 with changed/quiet, composed guard and scheduler acceptance still OPEN.
+
+### 2026-10-08 — installed resumed-route proof and guard reload boundary
+
+[Journey6](../notes/2026-10-08-plan0386-journey6.json) on canonical PR233
+5b05f5371 completes its resumed conversation context with one document visit,
+observed same-project slug reuse, zero child snapshots and zero attempted assets.
+The row exposes no materializable artifact; no changed/quiet acceptance follows.
+[Guard reload qualification](../notes/2026-10-08-plan0386-guard-reload-qualification.md)
+composes temporary persistence, a newly opened store and planner horizon checks.
+Full normal collector/completion/worker physical-effect composition remains
+needs_evidence. Six of eight charged at that terminal result; journey7 resumes
+under unchanged minimum interval, cap and traffic limits.
