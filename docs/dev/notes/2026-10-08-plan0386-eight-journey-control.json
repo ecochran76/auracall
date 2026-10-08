@@ -1,0 +1,94 @@
+{
+  "schema": "auracall_plan0386_goal_control.v1",
+  "objective": "Complete Plan0386",
+  "authority": "User goal 2026-10-08: research then fresh allowance of 8 journeys; no implementation theater; stop/checkpoint before 2h or 1MM tokens",
+  "startedAt": "2026-10-08T10:45:23Z",
+  "checkpointDeadline": "2026-10-08T12:40:00Z",
+  "runtimeProfile": "wsl-chrome-3",
+  "maxLiveJourneys": 8,
+  "usedLiveJourneys": 4,
+  "remainingJourneys": 4,
+  "liveJourneys": [
+    {
+      "number": 1,
+      "startedAt": "2026-10-08T10:50:39.584Z",
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "beforePassCount": 12,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T10:51:52.043Z",
+      "jobId": null,
+      "childStatus": null,
+      "afterPassCount": 12,
+      "error": {
+        "message": "Chrome DevTools 127.0.0.1:45015 did not become ready",
+        "code": null
+      },
+      "outcome": "failed_browser_readiness",
+      "stopResolvedBy": "display feedback loop: :923 timeout; :0.0 responsive; exact browser-family display repaired; native browser/leases/control clear before service config reload"
+    },
+    {
+      "number": 2,
+      "startedAt": "2026-10-08T10:54:51.462Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 0,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T10:56:53.163Z",
+      "jobId": null,
+      "childStatus": null,
+      "afterPassCount": 1,
+      "error": null
+    },
+    {
+      "number": 3,
+      "startedAt": "2026-10-08T10:58:57.293Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 1,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:01:02.517060+00:00",
+      "outcome": "conservatively_charged_resume_of_existing_child",
+      "jobId": "hmj_2850a1a042df4049ad4a21d7180b6ac8",
+      "childStatus": "skipped",
+      "afterPassCount": 1,
+      "limitation": "Child queued after journey2 pause and was already running before journey3 resume. Journey3 did not create a new child; monitor replaced without another provider start."
+    },
+    {
+      "number": 4,
+      "startedAt": "2026-10-08T11:01:40.306Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 1,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:08:08.295Z",
+      "jobId": "hmj_b403983f180246bca9a74946cf184a6c",
+      "childStatus": "skipped",
+      "afterPassCount": 2,
+      "error": null
+    }
+  ],
+  "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "gates": [
+    "independent changed-index + quiet-complete matrix",
+    "deferred/guarded persistence evidence",
+    "bounded scheduler continuation after gate1"
+  ],
+  "hardStops": [
+    "warning/429/CAPTCHA",
+    "identity/custody mismatch",
+    "unknown terminal outcome",
+    "admission failure",
+    "8 journeys",
+    "checkpoint deadline"
+  ],
+  "policy": {
+    "maxItems": 1,
+    "force": false,
+    "interactionsPerMinute": 6,
+    "explicitConversationScope": false,
+    "globalSchedulerResume": false
+  },
+  "progress": "Four journeys charged; parent paused, child terminal. Single-visit ready project-slug regression reproduced and repaired locally; installation/live verification pending. Wider acceptance remains OPEN.",
+  "latestJourneyStart": "2026-10-08T12:25:00Z"
+}

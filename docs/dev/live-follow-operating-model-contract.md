@@ -247,6 +247,10 @@ reads and conversation execution reuse it with revision-fenced claims. A second
 concurrent operation receives explicit process contention before opening another
 page; a provider action still requires its own admission and account identity.
 Conversation changes navigate the same owned target under the existing governor.
+A single-visit ChatGPT context read reuses an already ready conversation when
+the conversation ID and expected project ID match, including project URLs with
+a title slug. A slug difference alone does not spend another navigation; a
+different project still requires the normal governed navigation.
 An explicit exact-existing-page request refuses an incompatible retained
 live-follow tab instead of opening another page.
 

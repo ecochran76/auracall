@@ -1,0 +1,41 @@
+{
+  "schema": "auracall_plan0386_display_repair.v1",
+  "journey": 1,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "error": {
+    "message": "Chrome DevTools 127.0.0.1:45015 did not become ready",
+    "code": null
+  },
+  "providerRefreshCompleted": false,
+  "newChildCreated": false,
+  "feedback": [
+    {
+      "display": ":923",
+      "exitCode": 124,
+      "timeout": true,
+      "responsive": false
+    },
+    {
+      "display": ":0.0",
+      "exitCode": 0,
+      "timeout": false,
+      "responsive": true,
+      "stderr": ""
+    }
+  ],
+  "repair": {
+    "path": "browserFamilies.wsl-chrome-3.display",
+    "before": ":923",
+    "after": ":0.0",
+    "otherSemanticChanges": 0,
+    "privateBackup": true
+  },
+  "observationLimit": "Initial native census/observer required normalization of Chromium combined command line; no zero-traffic claim from initial observation gap",
+  "cleanup": {
+    "exactNativeRoots": 0,
+    "heldLeases": 0,
+    "activeProfileControls": 0
+  },
+  "sourceRepair": false,
+  "next": "Verify normal unscoped path with journey2; do not claim provider acceptance from display probe"
+}

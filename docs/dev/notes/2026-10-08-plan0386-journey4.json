@@ -1,0 +1,32 @@
+{
+  "schema": "auracall_plan0386_journey.v1",
+  "journey": {
+    "number": 4,
+    "startedAt": "2026-10-08T11:01:40.306Z",
+    "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+    "beforePassCount": 1,
+    "purpose": "normal unscoped index qualification and automatic child acceptance",
+    "status": "observed_terminal",
+    "endedAt": "2026-10-08T11:08:08.295Z",
+    "jobId": "hmj_b403983f180246bca9a74946cf184a6c",
+    "childStatus": "skipped",
+    "afterPassCount": 2,
+    "error": null
+  },
+  "parentPausedAfterObservation": true,
+  "detailConversationIdsThisPass": [],
+  "retainedFrontierCount": 12,
+  "collectorFailure": "Provider traffic budget exhausted for detail/page_navigate at limit 1.",
+  "child": {
+    "id": "hmj_b403983f180246bca9a74946cf184a6c",
+    "status": "skipped",
+    "metrics": null,
+    "snapshotRefreshes": []
+  },
+  "acceptance": {
+    "changedIndexPositive": false,
+    "quietCompleteRepeat": false,
+    "scheduler": false
+  },
+  "interpretation": "Repeated collector navigation denial; automatic child terminal skipped, zero transfers. Same-project slug regression is independently reproduced locally; live causality remains unproven."
+}

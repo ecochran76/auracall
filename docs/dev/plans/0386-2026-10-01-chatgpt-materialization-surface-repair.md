@@ -993,3 +993,32 @@ quiet-complete A/B repeat remain missing live acceptance. Composed guard/reload
 is needs_evidence. A cache-only census now finds 23 metadata-complete candidates;
 readable-file/integrity qualification remains required. No new provider
 journey is authorized, and this review leaves the plan OPEN.
+
+### 2026-10-08 — fresh goal, research and bounded execution
+
+User renews completion of this plan with local research followed by eight new
+browser journeys, no implementation theater, and a checkpoint before two
+hours or one million tokens. Control deadline12:40UTC is before the user
+limit12:45:23UTC. Historical exhausted allowances remain exhausted.
+[Research](../notes/2026-10-08-plan0386-local-fixture-research.md) qualifies
+readable A with matching three cached archive assets;260 existing checks pass.
+Journey1 failed DevTools readiness on unavailable display923. A deterministic
+display probe times out there and passes on0.0; only the selected browser-family
+display was repaired, then the API configuration reloaded. Journey2 verifies
+real browser startup and one-page root collection, finding one new row and no
+existing fingerprint changes. Its monitor paused before the automatic child;
+this is qualification evidence with a retained interruption limit. Journey3
+continues the same parent under a corrected terminal observation rule.
+[Fresh control ledger](../notes/2026-10-08-plan0386-eight-journey-control.json)
+is authoritative for consumption. Changed/quiet acceptance remains unproven;
+scheduler continuation remains dependent and global scheduling stays paused.
+
+### 2026-10-08 — journey4 navigation budget and local regression
+
+Four of eight fresh journeys are charged. Journey4 repeats a detail context
+failure at `detail/page_navigate` limit1; no detail conversation is retained
+from that attempt and the automatic child settles skipped with zero transfers.
+A provider-free public adapter test reproduces an unnecessary second navigation
+for a ready project-slug URL. A single-visit readiness preflight repairs that
+case and preserves wrong-project refusal. Live causality is not yet proven;
+remaining changed/quiet, composed guard and scheduler gates remain OPEN.

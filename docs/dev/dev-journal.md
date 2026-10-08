@@ -1,3 +1,16 @@
+## 2026-10-08 | Single-visit project route regression qualified
+
+Fresh journeys1–4 are charged; four remain. Journey4 repeats the collector
+`detail/page_navigate` limit1 failure and its automatic child settles skipped,
+zero materializations. Parent and global scheduler remain paused; no active
+jobs or held leases/controls, and exact managed Chrome root is absent.
+A public context-read regression reproduces a second navigation solely because
+a ready same-project URL contains a slug. The narrow single-visit preflight
+reuses the existing project/conversation readiness predicate; wrong-project
+payload reads remain denied. This is local defect evidence, not yet proof of
+journey4 causality or the changed/quiet acceptance matrix. Installation and
+remaining bounded journeys follow validation, without increasing any budget.
+
 ## 2026-10-07 | Cleared custody stop; endpoint denial discovered
 
 User try again clears prior stop after exact native absence, zero active/idle
@@ -53182,3 +53195,23 @@ composed guard/reload remains needs_evidence. Cache-only census found 23
 metadata-complete candidates among 348 rows; local integrity qualification is
 the next packet. Provider allowance remains exhausted; scheduler gate separate.
 Review: notes/2026-10-07-plan0386-acceptance-review.md.
+
+### 2026-10-08 — Plan0386 fresh eight-journey goal
+
+Local research qualifies readable manifest baseline A among23 candidates;
+260 fresh provider-free checks pass. Current B needs a new index comparison.
+Fresh allowance8, used0; checkpoint deadline12:40UTC, before user two-hour
+limit. Normal unscoped completion, maxItems1/forcefalse/6 interactions per
+minute; global scheduler stays paused until separate dependent gate is ready.
+Source and API identity revalidated; native exact managed browser absent.
+Control: notes/2026-10-08-plan0386-eight-journey-control.json.
+
+### 2026-10-08T10:59Z — display repaired, index qualification observed
+
+Outcome progress: normal root index adds one genuine row, no existing
+fingerprint changes. Blocker reduction: unavailable display923 replaced by
+responsive0.0 in the exact browser family; journey2 proves startup. A's three
+archive reads match local bytes. Monitor2 stopped before child and interrupted
+next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
+the same parent and retained settled idle lease/one known target. No source
+change or acceptance closure claimed.
