@@ -247,6 +247,8 @@ reads and conversation execution reuse it with revision-fenced claims. A second
 concurrent operation receives explicit process contention before opening another
 page; a provider action still requires its own admission and account identity.
 Conversation changes navigate the same owned target under the existing governor.
+A resumed detail pass freezes its one-row traffic budget for the row selected
+by the persisted cursor, using the same normalized cursor indices as the reader.
 A single-visit ChatGPT context read reuses an already ready conversation when
 the conversation ID and expected project ID match, including project URLs with
 a title slug. A slug difference alone does not spend another navigation; a

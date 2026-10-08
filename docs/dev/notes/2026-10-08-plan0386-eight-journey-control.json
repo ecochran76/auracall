@@ -6,8 +6,8 @@
   "checkpointDeadline": "2026-10-08T12:40:00Z",
   "runtimeProfile": "wsl-chrome-3",
   "maxLiveJourneys": 8,
-  "usedLiveJourneys": 4,
-  "remainingJourneys": 4,
+  "usedLiveJourneys": 5,
+  "remainingJourneys": 3,
   "liveJourneys": [
     {
       "number": 1,
@@ -66,6 +66,21 @@
       "childStatus": "skipped",
       "afterPassCount": 2,
       "error": null
+    },
+    {
+      "number": 5,
+      "startedAt": "2026-10-08T11:20:28.139Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 2,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:22:43.392Z",
+      "jobId": "hmj_abc4d9e0f1f14359a4d8165a62cd38c7",
+      "childStatus": "skipped",
+      "afterPassCount": 3,
+      "error": null,
+      "outcome": "collector_cursor_budget_denial_child_skipped",
+      "limitation": "Parent paused after collector limit0 denial; child terminal observed separately after monitor exited on parent pause."
     }
   ],
   "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
@@ -89,6 +104,6 @@
     "explicitConversationScope": false,
     "globalSchedulerResume": false
   },
-  "progress": "Four journeys charged; parent paused, child terminal. Single-visit ready project-slug regression reproduced and repaired locally; installation/live verification pending. Wider acceptance remains OPEN.",
+  "progress": "Five journeys charged, three remain. Successor slug repair installed; journey5 reveals independent cursor/work-key mismatch, reproduced in existing collector test. Parent and scheduler paused, child terminal.",
   "latestJourneyStart": "2026-10-08T12:25:00Z"
 }

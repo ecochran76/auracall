@@ -1,3 +1,14 @@
+## 2026-10-08 — Freeze the detail budget for the resumed cursor row
+
+A requested detail continuation can retain a nonzero conversation cursor.
+Freezing the first frontier row while reading the resumed row denies the
+legitimate navigation at limit0. The existing collector continuation fixture,
+with the real traffic-plan governor, reproduces the denial. Budget selection
+now uses the same normalized conversation/project cursor indices as the reader.
+The one-row traffic plan, per-row limits and continuation order remain intact.
+159 affected tests, typecheck and touched lint qualify the source repair;
+installed live acceptance remains a separate gate.
+
 ## 2026-10-08 — Reuse ready single-visit project conversation routes
 
 Canonical project URLs omit optional title slugs. The generic URL equality

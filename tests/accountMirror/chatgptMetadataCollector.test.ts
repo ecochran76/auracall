@@ -1556,6 +1556,11 @@ describe("ChatGPT account mirror metadata collector", () => {
 
 	test("continues requested detail-inventory from the persisted selected-row cursor", async () => {
 		const calls: string[] = [];
+		const begin = vi.fn(async () => ({ id: "action", settle: vi.fn() }));
+		const controller = createAccountMirrorMetadataTrafficPlanController(
+			{ attribution: {} as never, begin },
+			{ maxPageReadsPerCycle: 1 },
+		);
 		const client = {
 			getProviderSessionProof: vi.fn(async () =>
 				createCollectorProviderSessionProof("chatgpt", {
@@ -1576,21 +1581,36 @@ describe("ChatGPT account mirror metadata collector", () => {
 				calls.push(`listConversationFiles:${conversationId}`);
 				return [];
 			}),
-			getConversationContext: vi.fn(async (conversationId: string) => {
-				calls.push(`getConversationContext:${conversationId}`);
-				return {
-					provider: "chatgpt" as const,
-					conversationId,
-					messages: [],
-					artifacts: [
-						{
-							id: `artifact-${conversationId}`,
-							title: "Generated table",
-							kind: "spreadsheet" as const,
-						},
-					],
-				};
-			}),
+			getConversationContext: vi.fn(
+				async (conversationId: string, options: { listOptions: BrowserProviderListOptions }) => {
+					const governor = options.listOptions.providerTrafficGovernor;
+					if (!governor) throw new Error("Expected provider traffic governor");
+					const action = await governor
+						.begin({
+							kind: "navigate",
+							interactionClass: "conversation-read",
+							source: "fixture:context",
+						})
+						.catch((error) => {
+							calls.push(String(error));
+							throw error;
+						});
+					await action.settle({ outcome: "succeeded" });
+					calls.push(`getConversationContext:${conversationId}`);
+					return {
+						provider: "chatgpt" as const,
+						conversationId,
+						messages: [],
+						artifacts: [
+							{
+								id: `artifact-${conversationId}`,
+								title: "Generated table",
+								kind: "spreadsheet" as const,
+							},
+						],
+					};
+				},
+			),
 		};
 		const collector = createChatgptAccountMirrorMetadataCollector(
 			{
@@ -1621,6 +1641,8 @@ describe("ChatGPT account mirror metadata collector", () => {
 			expectedIdentityKey: "ecochran76@gmail.com",
 			sweepMode: "steady_follow",
 			requestedPhase: "detail-inventory",
+			providerTrafficGovernor: controller.governor,
+			providerTrafficPlanController: controller,
 			previousEvidence: {
 				identitySource: "auth-session",
 				projectSampleIds: [],
@@ -1662,6 +1684,12 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 
 		expect(calls).toEqual(["getConversationContext:conv_next"]);
+		expect(begin).toHaveBeenCalledWith(
+			expect.objectContaining({
+				workKey: createAccountMirrorProviderTrafficWorkKey("conversation", "conv_next"),
+				trafficPhase: "detail",
+			}),
+		);
 		expect(client.listConversationFiles).not.toHaveBeenCalled();
 		expect(result.evidence.attachmentInventory).toMatchObject({
 			nextConversationIndex: 2,

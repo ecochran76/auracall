@@ -1022,3 +1022,13 @@ A provider-free public adapter test reproduces an unnecessary second navigation
 for a ready project-slug URL. A single-visit readiness preflight repairs that
 case and preserves wrong-project refusal. Live causality is not yet proven;
 remaining changed/quiet, composed guard and scheduler gates remain OPEN.
+
+### 2026-10-08 — journey5 cursor continuation budget repair
+
+PR232 successor installed with canonical/installed module parity. Journey5
+fails before detail navigation at limit0: the resumed second row differs from
+the first row authorized by the frozen traffic plan. Existing collector
+continuation fixture reproduces that exact denial. Select the frozen work key
+from the reader's normalized persisted cursor, keeping all limits intact.
+Child terminal skipped, zero transfers; five of eight charged. Three remain,
+with changed/quiet, composed guard and scheduler acceptance still OPEN.

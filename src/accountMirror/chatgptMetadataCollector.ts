@@ -735,19 +735,30 @@ export function createChatgptAccountMirrorMetadataCollector(
 				? createProviderInteractionBudgetYieldCause()
 				: null;
 			if (input.providerTrafficPlanController) {
+				const selectedConversation =
+					frontier.detailConversations[
+						normalizeCursorIndex(
+							detailAttachmentCursor?.nextConversationIndex,
+							frontier.detailConversations.length,
+						)
+					];
+				const selectedProject =
+					projects.items[
+						normalizeCursorIndex(detailAttachmentCursor?.nextProjectIndex, projects.items.length)
+					];
 				const selectedDetailWorkKey = chatgptAccountLibraryRead
 					? "scope:account-library"
-					: prioritizeDetailConversations && frontier.detailConversations[0]
+					: prioritizeDetailConversations && selectedConversation
 						? createAccountMirrorProviderTrafficWorkKey(
 								"conversation",
-								frontier.detailConversations[0].id,
+								selectedConversation.id,
 							)
-						: projects.items[0]
-							? createAccountMirrorProviderTrafficWorkKey("project", projects.items[0].id)
-							: frontier.detailConversations[0]
+						: selectedProject
+							? createAccountMirrorProviderTrafficWorkKey("project", selectedProject.id)
+							: selectedConversation
 								? createAccountMirrorProviderTrafficWorkKey(
 										"conversation",
-										frontier.detailConversations[0].id,
+										selectedConversation.id,
 									)
 								: null;
 				freezeAccountMirrorDetailTrafficPlan(input.providerTrafficPlanController, {
