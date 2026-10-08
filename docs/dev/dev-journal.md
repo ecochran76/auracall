@@ -1,3 +1,13 @@
+## 2026-10-08 | PR238 installed; remaining four journeys resumed
+
+Canonical/installed sourcec6710b169 includes captured rich-composer selector.
+Adapter hash5c893ff21d2f1fb86ee4dcbeff4c927ec1fdd509931704cd2892038cd3a07861;
+shared UI/collector hashes retain PR237/PR233 values. API12677, parent paused at
+pass11 and scheduler paused with zero active jobs before resume. Journey7 resumes
+under original allowance/deadline. Controller55649 owns journeys7–10; poll that
+existing handle. Earlier journey8 Markdown archive still HTTP200/hash matching;
+its partial manifest ID change remains explicit. No live B acceptance claim.
+
 ## 2026-10-08 | Captured rich editor reproduces root readiness denial
 
 Journey6 repeats B admission denial on PR237; controller stops before7. Two

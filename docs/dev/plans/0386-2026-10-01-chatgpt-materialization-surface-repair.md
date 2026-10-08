@@ -7,7 +7,20 @@ Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
-## Current checkpoint | 2026-10-08 qualified successor installed
+## Current checkpoint | 2026-10-08 captured rich-composer successor installed
+
+Journey6 repeats B admission denial on PR237; corrected controller stops before7.
+Two owned-page read-only snapshots identify a specific rich editor rejected by
+readiness. Public adapter regression reproduces exact limit1; PR238 narrow selector
+repair passes398 focused checks/typecheck/lint. Mergec6710b169 installed with
+canonical adapter/UI/collector parity, API12677. Four unused at installation;
+journey7 resumes same parent from pass11 under original allowance/deadline.
+Journey6 child captures32,096 valid JSON bytes from a different retained row.
+Older bytes/mtime remain; one partial manifest's IDs change, so no quiet claim.
+Plan remains OPEN. See [repair](../notes/2026-10-08-plan0386-rich-composer-repair.md)
+and [installation](../notes/2026-10-08-plan0386-rich-install.json).
+
+## Historical checkpoint | 2026-10-08 qualified successor installed
 
 PR237 merge09e508924 repairs a reproduced no-op fallback admission defect in
 the shared navigation helper. 330 focused tests/typecheck qualify source; UI

@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-08T15:39:47.967Z",
+  "canonicalCommit": "c6710b169b2acd0388adbf964370c6b3a696e399",
+  "hashes": [
+    {
+      "module": "src/browser/providers/chatgptAdapter.js",
+      "sha256": "5c893ff21d2f1fb86ee4dcbeff4c927ec1fdd509931704cd2892038cd3a07861",
+      "canonicalMatch": true
+    },
+    {
+      "module": "packages/browser-service/src/service/ui.js",
+      "sha256": "c7d7d83603813ab9dbdc822d34000bed53efaf556dc59bde70faee62b3098790",
+      "canonicalMatch": true
+    },
+    {
+      "module": "src/accountMirror/chatgptMetadataCollector.js",
+      "sha256": "3c96978926273d9a078b3d689b56c5491c1526b6358316a346493d846c2ccb90",
+      "canonicalMatch": true
+    }
+  ],
+  "apiPid": 12677,
+  "parentStatus": "paused",
+  "passCount": 11,
+  "activeMaterializations": 0,
+  "schedulerPaused": true,
+  "remainingAtInstall": 4
+}

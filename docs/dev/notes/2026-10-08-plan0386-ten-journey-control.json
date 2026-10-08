@@ -8,8 +8,8 @@
   "runtimeProfile": "wsl-chrome-3",
   "browserProfile": "wsl-chrome-3",
   "maxLiveJourneys": 10,
-  "usedLiveJourneys": 6,
-  "remainingJourneys": 4,
+  "usedLiveJourneys": 7,
+  "remainingJourneys": 3,
   "liveJourneys": [
     {
       "number": 1,
@@ -90,9 +90,17 @@
       "childStatus": "succeeded",
       "afterPassCount": 11,
       "error": null
+    },
+    {
+      "number": 7,
+      "startedAt": "2026-10-08T15:39:50.995Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 11,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "started"
     }
   ],
-  "installedSourceCommit": "09e508924cffcd758d86400fc6e5de2a13ba4424",
+  "installedSourceCommit": "c6710b169b2acd0388adbf964370c6b3a696e399",
   "hardStops": [
     "CAPTCHA/warning/HTTP429",
     "identity or custody mismatch",
@@ -112,8 +120,8 @@
     "mixed guard/reload",
     "dependent bounded scheduler"
   ],
-  "executionState": "qualified_successor_ready",
+  "executionState": "qualified_rich_composer_successor_ready",
   "stopReason": "Journey3 nested collector diagnostic: Provider traffic budget exhausted for detail/page_navigate at limit1. Controller missed this and charged journey4; stopped journey4 during eligibility wait, zero provider traffic.",
-  "progress": "Four charged, three provider runs terminal plus one idle stop. Six remain unused under admission stop. No new downloads. Controller nested-failure replay red then green; provider cause remains unreproduced.",
-  "stopResolution": "PR237: public navigation helper regression reproduces no-op fallback admission limit1; exact reached URL keeps bounded wait without second mutation admission. 330 focused tests/typecheck qualify repair; installed before any resumed provider work. Live causality still unproven."
+  "progress": "Six charged terminal, four unused. Journey6 collector repeats B failure; separate child captures32096 JSON bytes on another retained row. No changed-B/quiet acceptance.",
+  "stopResolution": "PR238: captured owned-page exact rich editor attributes reproduce readiness-related one-visit denial at public adapter seam; narrow selector repair passes398 focused tests/typecheck/lint. PR237 did not resolve original B failure. Installation must be verified before resumed provider work."
 }
