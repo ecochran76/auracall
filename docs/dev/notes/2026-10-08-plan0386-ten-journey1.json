@@ -1,0 +1,99 @@
+{
+  "schema": "auracall_plan0386_ten_journey_receipt.v1",
+  "journey": {
+    "number": 1,
+    "startedAt": "2026-10-08T14:42:29.435Z",
+    "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+    "beforePassCount": 6,
+    "purpose": "normal unscoped index qualification and automatic child acceptance",
+    "status": "observed_terminal",
+    "endedAt": "2026-10-08T14:46:32.810Z",
+    "jobId": "hmj_e70fb8a4e309423f91ec0664b481c5bd",
+    "childStatus": "skipped",
+    "afterPassCount": 7,
+    "error": null
+  },
+  "installedSourceCommit": "5b05f5371a6de1cca103d35145dc51a076d8131f",
+  "collector": {
+    "detailConversationIdsThisPass": [
+      "6a89b881-b16c-83ea-9ad2-e0c86fd5a5ca"
+    ],
+    "retainedConversationIds": [
+      "6a95ef46-fb90-83ea-a0c9-33e5a50649dc",
+      "6a95f944-cda8-83ea-b270-f6d13c8533df",
+      "6a89b978-e90c-83ea-991d-ca7708628114",
+      "6a6e5fd4-6f48-83ea-80db-141390780f28",
+      "6aa1b83e-4064-83ea-b1e9-945c6c64c634",
+      "6abc7f01-1e50-83ea-afd5-764491da2727",
+      "6abc6682-8034-83ea-993d-a020008cc3ff",
+      "6ab6d340-89e4-83ea-9990-d8fb278993e6",
+      "6abbeee0-2f98-83ea-bfd8-6e072edbf3d0",
+      "6ab6d3f9-f268-83ea-83b3-4ba7426fff4b",
+      "6ab59f71-2f54-83ea-a971-6024979e44e1",
+      "6ab3fbd8-4aa0-83ea-8ea8-af3e1bc0a25a",
+      "6ab0733d-84b0-83ea-a58f-a8fbcf7bf308",
+      "6ab32fa8-7de0-83ea-b590-e66a3503358b",
+      "6ab2a9d4-56c8-83ea-916b-f70181a94e2b"
+    ],
+    "identityVerdict": "match",
+    "identitySource": "auth-session",
+    "frontierCounts": {
+      "skip": 0,
+      "visit_once": 20,
+      "materialize_retained": 1,
+      "defer": 0
+    }
+  },
+  "child": {
+    "id": "hmj_e70fb8a4e309423f91ec0664b481c5bd",
+    "status": "skipped",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 15,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0
+    },
+    "snapshotRefreshes": [],
+    "attempts": [
+      {
+        "conversationId": "6a89b881-b16c-83ea-9ad2-e0c86fd5a5ca",
+        "status": "skipped",
+        "accounting": {
+          "targetConsumed": true,
+          "assetsAttempted": 0,
+          "providerGuardObserved": false,
+          "candidateMaterialized": false
+        }
+      }
+    ],
+    "entries": [
+      {
+        "status": "skipped",
+        "size": null,
+        "sha256": null,
+        "mimeType": null,
+        "method": null,
+        "reason": "no-materializable-artifact: provider detail exposed no downloadable artifact assets for conversation 6a89b881-b16c-83ea-9ad2-e0c86fd5a5ca"
+      }
+    ]
+  },
+  "observer": {
+    "attachments": 1,
+    "maxPages": 1,
+    "conversationDocuments": {
+      "6a89b881-b16c-83ea-9ad2-e0c86fd5a5ca": 1
+    },
+    "downloads": 0,
+    "http429": 0
+  },
+  "assetProofs": [],
+  "acceptance": {
+    "independentChangedB": false,
+    "quietCompleteAB": false,
+    "scheduler": false
+  }
+}

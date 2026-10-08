@@ -1,0 +1,92 @@
+{
+  "schema": "auracall_plan0386_goal_control.v1",
+  "objective": "Continue Plan0386 with an additional 10 journeys",
+  "authority": "User renewed allowance: continue with an additional 10 journeys",
+  "startedAt": "2026-10-08T14:42:17.041300+00:00",
+  "checkpointDeadline": "2026-10-08T16:42:17.041300+00:00",
+  "latestJourneyStart": "2026-10-08T16:27:17.041300+00:00",
+  "runtimeProfile": "wsl-chrome-3",
+  "browserProfile": "wsl-chrome-3",
+  "maxLiveJourneys": 10,
+  "usedLiveJourneys": 4,
+  "remainingJourneys": 6,
+  "liveJourneys": [
+    {
+      "number": 1,
+      "startedAt": "2026-10-08T14:42:29.435Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 6,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T14:46:32.810Z",
+      "jobId": "hmj_e70fb8a4e309423f91ec0664b481c5bd",
+      "childStatus": "skipped",
+      "afterPassCount": 7,
+      "error": null
+    },
+    {
+      "number": 2,
+      "startedAt": "2026-10-08T14:46:45.868Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 7,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T14:55:32.280Z",
+      "jobId": "hmj_d096b5b9ea3a4185a4d94f0ca71939d2",
+      "childStatus": "skipped",
+      "afterPassCount": 8,
+      "error": null
+    },
+    {
+      "number": 3,
+      "startedAt": "2026-10-08T14:55:50.404Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 8,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T15:05:21.270Z",
+      "jobId": "hmj_e56e90aad21244a386f651c187a20d48",
+      "childStatus": "skipped",
+      "afterPassCount": 9,
+      "error": null,
+      "outcome": "collector_admission_failure_with_unrelated_skipped_child"
+    },
+    {
+      "number": 4,
+      "startedAt": "2026-10-08T15:05:22.669Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 9,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T15:07:22.228Z",
+      "jobId": null,
+      "childStatus": null,
+      "afterPassCount": 9,
+      "error": null,
+      "outcome": "conservatively_charged_idle_stop_no_provider_work"
+    }
+  ],
+  "installedSourceCommit": "5b05f5371a6de1cca103d35145dc51a076d8131f",
+  "hardStops": [
+    "CAPTCHA/warning/HTTP429",
+    "identity or custody mismatch",
+    "unknown terminal outcome",
+    "admission failure",
+    "10 journeys"
+  ],
+  "policy": {
+    "maxItems": 1,
+    "force": false,
+    "explicitConversationScope": false,
+    "globalSchedulerResume": false
+  },
+  "remainingGates": [
+    "sampled complete A and independently changed B missing asset",
+    "normal quiet A/B repeat",
+    "mixed guard/reload",
+    "dependent bounded scheduler"
+  ],
+  "executionState": "stopped_admission_failure",
+  "stopReason": "Journey3 nested collector diagnostic: Provider traffic budget exhausted for detail/page_navigate at limit1. Controller missed this and charged journey4; stopped journey4 during eligibility wait, zero provider traffic.",
+  "progress": "Four charged, three provider runs terminal plus one idle stop. Six remain unused under admission stop. No new downloads. Controller nested-failure replay red then green; provider cause remains unreproduced."
+}
