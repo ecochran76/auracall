@@ -1,3 +1,5 @@
+Current state superseded by [admission checkpoint](2026-10-08-plan0386-ten-journey-checkpoint.md): controller stopped, four charged, six unused. Historical first checkpoint follows.
+
 # Plan0386 renewed ten-journey progress
 
 Authority: user requests an additional ten journeys. The prior eight remain exhausted and immutable. New ledger: [control](2026-10-08-plan0386-ten-journey-control.json).

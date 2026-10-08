@@ -1,3 +1,15 @@
+## 2026-10-08 | Renewed admission stop after four charged journeys
+
+Journeys1/2 skipped no-artifact rows. Journey3's completed refresh contains a
+failed context diagnostic for the independently added row: detail/page_navigate
+limit1. Automatic child selects another retained row and skips. Controller
+missed nested failure and started journey4; stopped it idle before eligibility,
+zero browser/provider effects. Four charged, six preserved. Controller replay
+red→green qualifies nested failure containment only; ready-root public adapter
+probe passes but does not reproduce live readiness. No product patch or retry.
+Parent/scheduler paused, native browser/controls clear, baseline assets unchanged.
+[Checkpoint](notes/2026-10-08-plan0386-ten-journey-checkpoint.md).
+
 ## 2026-10-08 | Additional ten-journey allowance active
 
 User authorizes ten additional normal unscoped journeys toward Plan0386.

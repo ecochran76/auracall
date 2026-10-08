@@ -7,7 +7,19 @@ Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
-## Current checkpoint | 2026-10-08 eight journeys terminal
+## Current checkpoint | 2026-10-08 renewed allowance admission stop
+
+Additional ten journeys authorized. Four charged, six unused under admission
+stop. Journeys1/2 skipped no-artifact rows. Journey3 context read of independent
+new row failed navigation admission; completed refresh hid that nested failure.
+Child selected a different retained row and skipped. Controller started journey4
+before detecting it; stopped while idle with zero provider traffic. Controller
+replay red→green fixes its detection, not the unreproduced provider cause.
+No product source change. Parent/scheduler paused, browsers/controls absent,
+original assets unchanged. Plan stays OPEN; goal remains incomplete.
+See [checkpoint](../notes/2026-10-08-plan0386-ten-journey-checkpoint.md).
+
+## Historical checkpoint | 2026-10-08 eight journeys terminal
 
 Plan remains OPEN. PR232 and PR233 are merged and installed at 5b05f5371;
 route reuse and persisted cursor authorization now succeed in real runs.
