@@ -1,0 +1,51 @@
+{
+  "schema": "auracall_plan0386_journey.v1",
+  "journey": {
+    "number": 5,
+    "startedAt": "2026-10-08T11:20:28.139Z",
+    "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+    "beforePassCount": 2,
+    "purpose": "normal unscoped index qualification and automatic child acceptance",
+    "status": "observed_terminal",
+    "endedAt": "2026-10-08T11:22:43.392Z",
+    "jobId": "hmj_abc4d9e0f1f14359a4d8165a62cd38c7",
+    "childStatus": "skipped",
+    "afterPassCount": 3,
+    "error": null,
+    "outcome": "collector_cursor_budget_denial_child_skipped",
+    "limitation": "Parent paused after collector limit0 denial; child terminal observed separately after monitor exited on parent pause."
+  },
+  "canonicalCommit": "c9ccbe2026f3ea742ae9e0cd56012342cc2e773d",
+  "collectorFailure": "Provider traffic budget exhausted for detail/page_navigate at limit 0.",
+  "detailConversationId": "6a95ef46-fb90-83ea-a0c9-33e5a50649dc",
+  "detailObservedConversationIds": [],
+  "retainedFrontierCount": 12,
+  "child": {
+    "id": "hmj_abc4d9e0f1f14359a4d8165a62cd38c7",
+    "status": "skipped",
+    "completedAt": "2026-10-08T11:22:43.392Z",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 11,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0
+    },
+    "snapshotRefreshes": []
+  },
+  "observer": {
+    "maxPages": 1,
+    "http429": 0,
+    "downloads": 0,
+    "limitation": "Collector and child observers separated by a gap after parent pause; not continuous coverage."
+  },
+  "acceptance": {
+    "changedPositive": false,
+    "quietComplete": false,
+    "scheduler": false
+  },
+  "diagnosis": "Frozen detail work key used first row while persisted cursor selected second row. Existing collector continuation fixture reproduces exact limit0 denial; slug defect live attribution remains unproven."
+}
