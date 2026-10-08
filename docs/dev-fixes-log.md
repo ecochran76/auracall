@@ -24347,3 +24347,12 @@ reads avoid that monitor-only race. Reconcile ledger terminal fields from the
 existing raw terminal receipt because separately parsed journey objects do not
 mutate the ledger entry. Journey14 proves one provider start/capture despite
 monitor recovery; its original monitor error and timestamp limitation remain.
+
+### 2026-10-07 — distinguish continuation from frontier acceptance
+
+Repeated successful capped captures at one unchanged partial/deferred index
+fingerprint qualify continuation and file integrity. They cannot substitute
+for an independently changed-index epoch or a complete quiet repeat. Cache
+metadata marked complete identifies fixture candidates; qualify readable
+bytes, manifest/archive identity and retained integrity before using them as
+complete-role acceptance evidence. See the Plan0386 acceptance review.
