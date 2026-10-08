@@ -12,6 +12,19 @@ Journey6 child independently captures32,096 valid JSON bytes from a different re
 
 Installed retry after source qualification must preserve this failure, the remaining four journeys, ordinary eligibility and the nested-failure stop. Root-read success is not positive changed-B acceptance; empty messages, warning or new readiness failure must remain failed evidence. Plan0386 remains OPEN.
 
-## Installed successor
+## Live continuation result
+
+Journey7 completes context and skips absent downloadable artifacts. Journey8
+reaches the previously failing independent conversation with one observed visit
+and no navigation-budget denial, but context fails `messages not found`. Its child
+skips another retained row. This qualifies narrower readiness progress and leaves
+actual content and changed-B acceptance unproven. Controller55649 stops at the
+frozen nested-failure gate before9. Eight charged and terminal, two unused; no
+counter reset or third source repair. Fresh containment/integrity readback is in
+[stop receipt](2026-10-08-plan0386-ten-journey-stop.json). The ten-journey objective
+is incomplete and Plan0386 stays OPEN. Memory disposition remains unavailable:
+focused discovery supplied no qualified AuraCall group.
+
+## Installed successor (historical start checkpoint)
 
 PR238 mergec6710b169 installed from canonical source. Adapter SHA5c893ff21d2f1fb86ee4dcbeff4c927ec1fdd509931704cd2892038cd3a07861 matches installed bytes; API12677, zero active materialization jobs and parent paused at pass11 before journey7. Scheduler stays paused. [Install receipt](2026-10-08-plan0386-rich-install.json). Controller exec55649 owns journeys7–10; poll it before starting any replacement work. At this checkpoint journey7 is active, not accepted. Memory disposition: unavailable; focused discovery supplied no qualified AuraCall group.

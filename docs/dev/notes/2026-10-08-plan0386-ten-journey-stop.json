@@ -1,0 +1,53 @@
+{
+  "at": "2026-10-08T15:53:50.079Z",
+  "installedSourceCommit": "c6710b169b2acd0388adbf964370c6b3a696e399",
+  "chargedJourneys": 8,
+  "terminalJourneys": 8,
+  "unusedJourneys": 2,
+  "controllerStopped": true,
+  "stopReason": "Journey8 independent conversation context failed: messages not found. Frozen failed-collector gate prevents journeys9–10.",
+  "parent": {
+    "status": "paused",
+    "passCount": 13
+  },
+  "schedulerPaused": true,
+  "activeMaterializationJobs": 0,
+  "local": {
+    "at": "2026-10-08T15:53:50.074409+00:00",
+    "nativeManagedRoots": [],
+    "customChromiumProcesses": [],
+    "heldLeases": 0,
+    "heldControls": 0,
+    "baselineA": [
+      {
+        "kind": "file",
+        "size": 24527,
+        "sha256": "8c0326c99743553b149e74005113a5377fb4dc37fc82e3f8e636423ed3c5dec7",
+        "unchanged": true
+      },
+      {
+        "kind": "file",
+        "size": 5403,
+        "sha256": "872f6b0566379dbb3bb1e4e09fc6d9e028b06510f15fb862950f5c5b79fb701a",
+        "unchanged": true
+      },
+      {
+        "kind": "artifact",
+        "size": 38709,
+        "sha256": "9cfde6a5f292e6a0937aca2e4dd7dfa988d646c6045f08ec321bf5649f154b62",
+        "unchanged": true
+      }
+    ],
+    "journey7AssetUnchanged": true,
+    "journey7ManifestIdsCountsUnchanged": true
+  },
+  "earlierJourney8Asset": {
+    "size": 10860,
+    "sha256": "946184889936b21a55f7e4b32a79d0c9e036c792db3bfadc839cd78b1c86c3d9",
+    "bytesUnchanged": true,
+    "mtimeUnchanged": true,
+    "archiveStatus": 200,
+    "archiveBytesMatch": true
+  },
+  "plan0386Status": "OPEN"
+}

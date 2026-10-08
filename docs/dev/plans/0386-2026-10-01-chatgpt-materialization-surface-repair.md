@@ -7,7 +7,20 @@ Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
-## Current checkpoint | 2026-10-08 captured rich-composer successor installed
+## Current checkpoint | 2026-10-08 eight terminal, two unused at content gate
+
+Journey7 completes context and skips absent downloadable assets on installed
+PR238. Journey8 reaches independent B once, then fails with `messages not found`,
+replacing the earlier readiness/navigation-budget denial. Its child skips a
+different retained row. The frozen nested-failure gate stops controller55649
+before9. Eight journeys charged and terminal; two remain unused. No third source
+repair or allowance reset. Parent and global scheduler paused; zero active child
+jobs, managed browser processes, leases or controls at fresh stop readback.
+Original A and earlier capture bytes remain unchanged. Changed-B, quiet-repeat,
+mixed reload and scheduler acceptance remain OPEN. See [stop receipt](../notes/2026-10-08-plan0386-ten-journey-stop.json)
+and [journey8](../notes/2026-10-08-plan0386-ten-journey8.json).
+
+## Historical checkpoint | 2026-10-08 captured rich-composer successor installed
 
 Journey6 repeats B admission denial on PR237; corrected controller stops before7.
 Two owned-page read-only snapshots identify a specific rich editor rejected by
