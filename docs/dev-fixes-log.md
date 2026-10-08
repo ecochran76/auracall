@@ -24356,3 +24356,14 @@ for an independently changed-index epoch or a complete quiet repeat. Cache
 metadata marked complete identifies fixture candidates; qualify readable
 bytes, manifest/archive identity and retained integrity before using them as
 complete-role acceptance evidence. See the Plan0386 acceptance review.
+
+### 2026-10-08 — qualify display readiness and late child observation
+
+An exact browser family pointed to unavailable display923; a five-second
+xdpyinfo probe timed out while0.0 responded under the same X authority.
+Changing only that display restored real startup. Normalize combined Chromium
+command lines when matching exact managed-browser ownership; an argv-only
+match can miss the process. A parent collector result can precede asynchronous
+child publication, and pause does not establish child absence. Re-read the
+durable child before another resume; observe an existing running child to
+terminal without creating or claiming a second child.

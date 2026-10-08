@@ -53192,3 +53192,13 @@ limit. Normal unscoped completion, maxItems1/forcefalse/6 interactions per
 minute; global scheduler stays paused until separate dependent gate is ready.
 Source and API identity revalidated; native exact managed browser absent.
 Control: notes/2026-10-08-plan0386-eight-journey-control.json.
+
+### 2026-10-08T10:59Z — display repaired, index qualification observed
+
+Outcome progress: normal root index adds one genuine row, no existing
+fingerprint changes. Blocker reduction: unavailable display923 replaced by
+responsive0.0 in the exact browser family; journey2 proves startup. A's three
+archive reads match local bytes. Monitor2 stopped before child and interrupted
+next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
+the same parent and retained settled idle lease/one known target. No source
+change or acceptance closure claimed.

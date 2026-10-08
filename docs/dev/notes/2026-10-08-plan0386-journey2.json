@@ -1,0 +1,121 @@
+{
+  "schema": "auracall_plan0386_index_qualification.v1",
+  "journey": 2,
+  "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+  "startedAt": "2026-10-08T10:54:51.462Z",
+  "endedAt": "2026-10-08T10:56:53.163Z",
+  "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "apiPid": 19222,
+  "runtimeProfile": "wsl-chrome-3",
+  "parentStatusAfterControl": "paused",
+  "passCount": 1,
+  "identityVerdict": "match",
+  "index": {
+    "beforeRows": 348,
+    "afterRows": 349,
+    "newConversationIds": [
+      "6ac76440-d80c-83e9-8b84-df32c009247d"
+    ],
+    "changedExistingIds": []
+  },
+  "baselineA": {
+    "conversationId": "6ab19c99-9d4c-83ea-9024-6f56150107a0",
+    "manifests": [
+      {
+        "kind": "file",
+        "generatedAt": "2026-09-23T09:50:54.457Z",
+        "count": 2
+      },
+      {
+        "kind": "artifact",
+        "generatedAt": "2026-09-23T08:12:19.555Z",
+        "count": 1
+      }
+    ],
+    "assets": [
+      {
+        "kind": "file",
+        "status": "materialized",
+        "size": 24527,
+        "sha256": "8c0326c99743553b149e74005113a5377fb4dc37fc82e3f8e636423ed3c5dec7",
+        "mtimeNs": "1790157053515451808"
+      },
+      {
+        "kind": "file",
+        "status": "materialized",
+        "size": 5403,
+        "sha256": "872f6b0566379dbb3bb1e4e09fc6d9e028b06510f15fb862950f5c5b79fb701a",
+        "mtimeNs": "1790157054323969369"
+      },
+      {
+        "kind": "artifact",
+        "status": "materialized",
+        "size": 38709,
+        "sha256": "9cfde6a5f292e6a0937aca2e4dd7dfa988d646c6045f08ec321bf5649f154b62",
+        "mtimeNs": "1790151139021836756"
+      }
+    ],
+    "archiveReadback": [
+      {
+        "kind": "file",
+        "status": 200,
+        "size": 24527,
+        "sha256": "8c0326c99743553b149e74005113a5377fb4dc37fc82e3f8e636423ed3c5dec7",
+        "matches": true
+      },
+      {
+        "kind": "file",
+        "status": 200,
+        "size": 5403,
+        "sha256": "872f6b0566379dbb3bb1e4e09fc6d9e028b06510f15fb862950f5c5b79fb701a",
+        "matches": true
+      },
+      {
+        "kind": "artifact",
+        "status": 200,
+        "size": 38709,
+        "sha256": "9cfde6a5f292e6a0937aca2e4dd7dfa988d646c6045f08ec321bf5649f154b62",
+        "matches": true
+      }
+    ]
+  },
+  "observer": {
+    "attachments": 1,
+    "maxPages": 1,
+    "requests": {
+      "total": 462,
+      "documents": 3,
+      "conversationDocuments": {
+        "6a95f944-cda8-83ea-b270-f6d13c8533df": 1
+      }
+    },
+    "downloads": 0,
+    "errors": []
+  },
+  "newChild": {
+    "id": "hmj_2850a1a042df4049ad4a21d7180b6ac8",
+    "createdAt": "2026-10-08T10:56:54.495Z",
+    "startedAt": "2026-10-08T10:56:55.462Z",
+    "completedAt": "2026-10-08T10:59:01.099Z",
+    "status": "skipped",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 11,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0
+    },
+    "snapshotRefreshes": []
+  },
+  "acceptance": "qualification_only",
+  "limitations": [
+    "Monitor paused after first collector result; next detail pass had begun and was interrupted. It does not prove the full detail-to-child chain.",
+    "Current root sample is 30 rows; chosen complete A has cached rank73. Preservation is not proof that a sampled complete row was evaluated for quiet exclusion.",
+    "Physical totals in cached frontier rows may include retained historical activity; observer and fresh phase telemetry must distinguish this attempt.",
+    "Child creation finished1.3seconds after parent pause; it ran to terminal independently. Initial receipt lacked this late durable readback. Journey3 resumed while that child was still running; charged conservatively without claiming a second child."
+  ],
+  "remainingAfterJourney": 6
+}
