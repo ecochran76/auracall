@@ -7,7 +7,21 @@ Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
-## Current State | 2026-10-06 spec reconciliation
+## Current checkpoint | 2026-10-08 eight journeys terminal
+
+Plan remains OPEN. PR232 and PR233 are merged and installed at 5b05f5371;
+route reuse and persisted cursor authorization now succeed in real runs.
+All eight authorized journeys are charged and terminal, with zero remaining.
+Two readable Markdown captures total 17,032 bytes; local/job/archive hashes
+match, and earlier assets remain unchanged. Scheduler and parents are paused;
+no active materialization jobs, native browser processes or held controls remain.
+Changed-B and normal quiet-complete A/B acceptance remain open. Guard-only
+persistence/completion composition is qualified; mixed A/B/C/G and completion
+state reload remain needs_evidence. Scheduler continuation stays dependent.
+See [checkpoint](../notes/2026-10-08-plan0386-eight-journey-checkpoint.md).
+No ninth provider journey is authorized by this allowance.
+
+## Historical state | 2026-10-06 spec reconciliation
 
 The requested four-step packet is ACCEPTED on installed source 6f4224e7e;
 receipt integration is 6a07668e4 (PR217). Normal scoped follow and automatic

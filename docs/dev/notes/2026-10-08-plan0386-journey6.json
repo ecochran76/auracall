@@ -1,0 +1,119 @@
+{
+  "schema": "auracall_plan0386_journey.v1",
+  "journey": {
+    "number": 6,
+    "startedAt": "2026-10-08T11:26:57.972Z",
+    "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+    "beforePassCount": 3,
+    "purpose": "normal unscoped index qualification and automatic child acceptance",
+    "status": "observed_terminal",
+    "endedAt": "2026-10-08T11:31:47.287Z",
+    "jobId": "hmj_eda66dc3f4764bea8e473c2865970def",
+    "childStatus": "skipped",
+    "afterPassCount": 4,
+    "error": null
+  },
+  "canonicalCommit": "5b05f5371a6de1cca103d35145dc51a076d8131f",
+  "collector": {
+    "detailConversationIdsThisPass": [
+      "6a89b978-e90c-83ea-991d-ca7708628114"
+    ],
+    "diagnostics": [
+      {
+        "stage": "identity",
+        "event": "started",
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-08T11:27:45.568Z"
+      },
+      {
+        "stage": "identity",
+        "event": "completed",
+        "elapsedMs": 1005.1683320000011,
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-08T11:27:46.573Z"
+      },
+      {
+        "stage": "conversation-context",
+        "event": "started",
+        "conversationId": "6a89b978-e90c-83ea-991d-ca7708628114",
+        "projectId": "g-p-6a09d3716d248191b70034773560947d",
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-08T11:27:46.578Z"
+      },
+      {
+        "stage": "conversation-context",
+        "event": "completed",
+        "conversationId": "6a89b978-e90c-83ea-991d-ca7708628114",
+        "projectId": "g-p-6a09d3716d248191b70034773560947d",
+        "elapsedMs": 134832.783996,
+        "providerCallTimeoutMs": 360000,
+        "detail": null,
+        "observedAt": "2026-10-08T11:29:51.195Z"
+      }
+    ],
+    "providerActions": {
+      "chatgpt.connectTab.start": 2,
+      "chatgpt.connectExistingTarget": 2,
+      "chatgpt.readAuthSessionIdentity": 2,
+      "chatgpt.readFallbackIdentity": 2,
+      "llmService.getConversationContext": 1,
+      "chatgpt.navigateUrl": 1,
+      "chatgpt.retainScopedTarget": 1,
+      "chatgpt.skipSameRouteNavigation": 1,
+      "chatgpt.skipPayloadRouteFallback.singleVisit": 2,
+      "chatgpt.waitPostPayloadReadiness": 1,
+      "chatgpt.postPayloadReadiness.succeeded.v1": 1,
+      "chatgpt.readConversationMessages": 1,
+      "chatgpt.readVisibleConversationFiles": 1,
+      "chatgpt.readVisibleDownloadArtifactProbes": 1,
+      "chatgpt.readVisibleImageArtifactProbes": 1,
+      "chatgpt.readVisibleCanvasProbes": 1
+    },
+    "cursor": {
+      "nextProjectIndex": 0,
+      "nextConversationIndex": 3,
+      "detailReadLimit": 1,
+      "scannedProjects": 0,
+      "scannedConversations": 1,
+      "conversationDetail": null,
+      "yielded": true,
+      "yieldCause": {
+        "observedAt": "2026-10-08T11:27:46.575Z",
+        "ownerCommand": "account-mirror-refresh",
+        "kind": "provider-interaction-budget",
+        "operationClass": "account-mirror"
+      }
+    },
+    "identityVerdict": "match"
+  },
+  "child": {
+    "id": "hmj_eda66dc3f4764bea8e473c2865970def",
+    "status": "skipped",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 0,
+      "duplicateAliases": 0,
+      "skipped": 1,
+      "failed": 0,
+      "eligibleCandidates": 12,
+      "selectedCandidates": 1,
+      "materializedCandidates": 0
+    },
+    "snapshotRefreshes": [],
+    "selectedConversationIds": [
+      "6a89b978-e90c-83ea-991d-ca7708628114"
+    ],
+    "assetsAttempted": 0
+  },
+  "observer": {
+    "attachments": 1,
+    "maxPages": 1,
+    "conversationDocuments": {
+      "6a89b978-e90c-83ea-991d-ca7708628114": 1
+    },
+    "downloads": 0,
+    "http429": 0,
+    "sameProjectSlugObserved": true
+  },
+  "interpretation": "Installed resumed-cursor budget and semantic-route reuse exercised successfully. Selected conversation exposed no materializable artifacts. One detail document, no child snapshot refresh or download. Not changed-index positive or quiet-complete acceptance."
+}

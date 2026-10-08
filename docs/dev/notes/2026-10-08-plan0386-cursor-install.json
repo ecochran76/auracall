@@ -1,0 +1,12 @@
+{
+  "canonicalCommit": "5b05f5371a6de1cca103d35145dc51a076d8131f",
+  "mergedPR": 233,
+  "apiPid": 7729,
+  "apiRestarts": 0,
+  "collectorSha256": "3c96978926273d9a078b3d689b56c5491c1526b6358316a346493d846c2ccb90",
+  "adapterSha256": "3d6e87e881a046fc2962feef423353b7daffb1e958e776e214f556e4af42da03",
+  "canonicalInstalledParity": true,
+  "parentPaused": true,
+  "schedulerPaused": true,
+  "childTerminal": true
+}
