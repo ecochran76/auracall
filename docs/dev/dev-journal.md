@@ -1,3 +1,23 @@
+## 2026-10-08 | Content gate stops additional allowance after eight terminal
+
+Journey7 completes context and skips absent artifacts. Journey8 visits independent
+B once and fails `messages not found`; PR238 removes the prior readiness denial
+but does not establish content. Its child skips another retained row. Frozen
+nested-failure gate stops controller55649 before9; eight charged/terminal, two
+unused. Parent/scheduler paused and zero active jobs/browser processes/held
+leases/controls at fresh stop. A and earlier capture bytes preserved. Plan0386
+and ten-journey objective remain incomplete. [Stop receipt](notes/2026-10-08-plan0386-ten-journey-stop.json).
+
+## 2026-10-08 | PR238 installed; remaining four journeys resumed
+
+Canonical/installed sourcec6710b169 includes captured rich-composer selector.
+Adapter hash5c893ff21d2f1fb86ee4dcbeff4c927ec1fdd509931704cd2892038cd3a07861;
+shared UI/collector hashes retain PR237/PR233 values. API12677, parent paused at
+pass11 and scheduler paused with zero active jobs before resume. Journey7 resumes
+under original allowance/deadline. Controller55649 owns journeys7–10; poll that
+existing handle. Earlier journey8 Markdown archive still HTTP200/hash matching;
+its partial manifest ID change remains explicit. No live B acceptance claim.
+
 ## 2026-10-08 | Captured rich editor reproduces root readiness denial
 
 Journey6 repeats B admission denial on PR237; controller stops before7. Two

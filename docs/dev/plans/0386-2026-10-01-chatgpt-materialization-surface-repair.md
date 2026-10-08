@@ -7,7 +7,33 @@ Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
-## Current checkpoint | 2026-10-08 qualified successor installed
+## Current checkpoint | 2026-10-08 eight terminal, two unused at content gate
+
+Journey7 completes context and skips absent downloadable assets on installed
+PR238. Journey8 reaches independent B once, then fails with `messages not found`,
+replacing the earlier readiness/navigation-budget denial. Its child skips a
+different retained row. The frozen nested-failure gate stops controller55649
+before9. Eight journeys charged and terminal; two remain unused. No third source
+repair or allowance reset. Parent and global scheduler paused; zero active child
+jobs, managed browser processes, leases or controls at fresh stop readback.
+Original A and earlier capture bytes remain unchanged. Changed-B, quiet-repeat,
+mixed reload and scheduler acceptance remain OPEN. See [stop receipt](../notes/2026-10-08-plan0386-ten-journey-stop.json)
+and [journey8](../notes/2026-10-08-plan0386-ten-journey8.json).
+
+## Historical checkpoint | 2026-10-08 captured rich-composer successor installed
+
+Journey6 repeats B admission denial on PR237; corrected controller stops before7.
+Two owned-page read-only snapshots identify a specific rich editor rejected by
+readiness. Public adapter regression reproduces exact limit1; PR238 narrow selector
+repair passes398 focused checks/typecheck/lint. Mergec6710b169 installed with
+canonical adapter/UI/collector parity, API12677. Four unused at installation;
+journey7 resumes same parent from pass11 under original allowance/deadline.
+Journey6 child captures32,096 valid JSON bytes from a different retained row.
+Older bytes/mtime remain; one partial manifest's IDs change, so no quiet claim.
+Plan remains OPEN. See [repair](../notes/2026-10-08-plan0386-rich-composer-repair.md)
+and [installation](../notes/2026-10-08-plan0386-rich-install.json).
+
+## Historical checkpoint | 2026-10-08 qualified successor installed
 
 PR237 merge09e508924 repairs a reproduced no-op fallback admission defect in
 the shared navigation helper. 330 focused tests/typecheck qualify source; UI
