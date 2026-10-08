@@ -1,3 +1,28 @@
+## 2026-10-08 | Eight-journey terminal checkpoint
+
+PR232/233 merged and installed; all eight charged journeys terminal. Journeys7/8
+capture 6,172 and 10,860 verified Markdown bytes, with matching local/job/archive
+hashes and zero child snapshots. Original assets and journey7 capture remain
+unchanged. Final runtime readback shows scheduler/parents paused, no active
+materialization jobs, native browser processes or held controls. Plan0386 stays
+OPEN: independently changed B, normal quiet A/B, mixed guard/reload and dependent
+scheduler acceptance remain. No ninth journey. Focused tests, typecheck and lint
+pass; guarded-only real collector/completion probe records zero effects.
+[Checkpoint](notes/2026-10-08-plan0386-eight-journey-checkpoint.md).
+
+## 2026-10-08 | Installed route/cursor proof and horizon reload qualification
+
+Journey6 on PR233 merge5b05f5371 completes the resumed third conversation read,
+with one observed canonical document navigation followed by a same-project slug
+and skipSameRouteNavigation. Child reuses retained context, settles skipped with
+no materializable artifact, zero attempted assets, snapshots or transfers.
+Native browser and held lease/control absence verified before journey7.
+Six of eight charged at journey6 terminal; journey7 now awaits normal minimum
+interval. Existing temporary-store round-trip fixture now composes reopen,
+normalization, freshness and planner eligibility immediately before/at horizon.
+99 focused checks, typecheck and lint pass. Full G physical-effect composition,
+changed/quiet acceptance and scheduler gate remain open.
+
 ## 2026-10-08 | Cursor traffic key mismatch reproduced
 
 PR232 merge c9ccbe202 installed with adapter SHA3d6e87e8 and API73847.

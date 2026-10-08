@@ -1,0 +1,44 @@
+{
+  "scope": "focused provider-free checks; not comprehensive or live acceptance",
+  "routeRepair": {
+    "redCommand": "pnpm vitest run tests/browser/chatgptSingleVisitContext.test.ts",
+    "redResult": "Exact detail/page_navigate limit1 denial without the repair",
+    "greenCommand": "pnpm vitest run tests/browser/chatgptSingleVisitContext.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptContextReadDeadline.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/changeFrontierPlanner.test.ts tests/accountMirror/completionService.test.ts",
+    "greenTests": 351,
+    "greenExitCode": 0,
+    "mergeCommit": "c9ccbe2026f3ea742ae9e0cd56012342cc2e773d"
+  },
+  "cursorRepair": {
+    "redCommand": "pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts -t 'continues requested detail-inventory'",
+    "redResult": "Exact detail/page_navigate limit0 denial with persisted cursor1 and row0 traffic authorization",
+    "greenCommand": "pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/providerTrafficPlan.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/completionService.test.ts tests/browser/chatgptSingleVisitContext.test.ts",
+    "greenTests": 159,
+    "greenExitCode": 0,
+    "mergeCommit": "5b05f5371a6de1cca103d35145dc51a076d8131f"
+  },
+  "guardQualification": {
+    "command": "pnpm vitest run tests/accountMirror/cachePersistence.test.ts tests/accountMirror/changeFrontierPlanner.test.ts tests/accountMirror/completionService.test.ts",
+    "tests": 99,
+    "exitCode": 0,
+    "probeCommand": "node docs/dev/notes/2026-10-08-plan0386-guard-composed.mjs",
+    "probeResult": "passed guarded-only negative composition; mixed-role completion-state reload remains unproven"
+  },
+  "typecheck": {
+    "command": "pnpm run typecheck",
+    "exitCode": 0
+  },
+  "lint": {
+    "commands": [
+      "pnpm exec biome lint src/browser/providers/chatgptAdapter.ts tests/browser/chatgptSingleVisitContext.test.ts",
+      "pnpm exec biome lint src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts",
+      "pnpm exec biome lint tests/accountMirror/cachePersistence.test.ts"
+    ],
+    "exitCode": 0
+  },
+  "buildInstall": {
+    "command": "pnpm run install:user-runtime",
+    "exitCode": 0,
+    "canonicalInstalledParity": true
+  },
+  "retryDisposition": "Initial probe fixture errors were corrected locally without a product patch; live failed journeys remain charged. No provider retry until a direct local regression qualified the relevant repair."
+}

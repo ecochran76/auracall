@@ -1,0 +1,136 @@
+{
+  "schema": "auracall_plan0386_journey.v1",
+  "journey": {
+    "number": 8,
+    "startedAt": "2026-10-08T11:43:01.003Z",
+    "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+    "beforePassCount": 5,
+    "purpose": "normal unscoped index qualification and automatic child acceptance",
+    "status": "observed_terminal",
+    "endedAt": "2026-10-08T11:49:31.763Z",
+    "jobId": "hmj_a304c547e3374315b7f45d78fee89a8b",
+    "childStatus": "succeeded",
+    "afterPassCount": 6,
+    "error": null
+  },
+  "canonicalCommit": "5b05f5371a6de1cca103d35145dc51a076d8131f",
+  "collector": {
+    "detailConversationIdsThisPass": [
+      "6a95ef46-fb90-83ea-a0c9-33e5a50649dc"
+    ],
+    "diagnostics": [
+      {
+        "stage": "identity",
+        "event": "started",
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-08T11:45:41.295Z"
+      },
+      {
+        "stage": "identity",
+        "event": "completed",
+        "elapsedMs": 1168.7300390000455,
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-08T11:45:42.464Z"
+      },
+      {
+        "stage": "conversation-context",
+        "event": "started",
+        "conversationId": "6a95ef46-fb90-83ea-a0c9-33e5a50649dc",
+        "projectId": "g-p-6a09d3716d248191b70034773560947d",
+        "providerCallTimeoutMs": 360000,
+        "observedAt": "2026-10-08T11:45:42.467Z"
+      },
+      {
+        "stage": "conversation-context",
+        "event": "completed",
+        "conversationId": "6a95ef46-fb90-83ea-a0c9-33e5a50649dc",
+        "projectId": "g-p-6a09d3716d248191b70034773560947d",
+        "elapsedMs": 124180.466121,
+        "providerCallTimeoutMs": 360000,
+        "detail": null,
+        "observedAt": "2026-10-08T11:47:36.320Z"
+      }
+    ],
+    "providerActions": {
+      "chatgpt.connectTab.start": 2,
+      "chatgpt.connectExistingTarget": 2,
+      "chatgpt.readAuthSessionIdentity": 2,
+      "chatgpt.readFallbackIdentity": 2,
+      "llmService.getConversationContext": 1,
+      "chatgpt.navigateUrl": 1,
+      "chatgpt.retainScopedTarget": 1,
+      "chatgpt.skipSameRouteNavigation": 1,
+      "chatgpt.skipPayloadRouteFallback.singleVisit": 2,
+      "chatgpt.waitPostPayloadReadiness": 1,
+      "chatgpt.postPayloadReadiness.succeeded.v1": 1,
+      "chatgpt.readConversationMessages": 1,
+      "chatgpt.readVisibleConversationFiles": 1,
+      "chatgpt.readVisibleDownloadArtifactProbes": 1,
+      "chatgpt.readVisibleImageArtifactProbes": 1,
+      "chatgpt.readVisibleCanvasProbes": 1
+    },
+    "identityVerdict": "match"
+  },
+  "child": {
+    "id": "hmj_a304c547e3374315b7f45d78fee89a8b",
+    "status": "succeeded",
+    "metrics": {
+      "conversations": 1,
+      "materialized": 1,
+      "duplicateAliases": 0,
+      "skipped": 0,
+      "failed": 0,
+      "eligibleCandidates": 14,
+      "selectedCandidates": 1,
+      "materializedCandidates": 1
+    },
+    "snapshotRefreshes": [],
+    "selectedConversationIds": [
+      "6a95ef46-fb90-83ea-a0c9-33e5a50649dc"
+    ]
+  },
+  "assetProof": {
+    "jobId": "hmj_a304c547e3374315b7f45d78fee89a8b",
+    "size": 10860,
+    "sha256": "946184889936b21a55f7e4b32a79d0c9e036c792db3bfadc839cd78b1c86c3d9",
+    "mimeType": "text/markdown",
+    "method": "download-button",
+    "validUtf8": true,
+    "archive": {
+      "status": 200,
+      "size": 10860,
+      "sha256": "946184889936b21a55f7e4b32a79d0c9e036c792db3bfadc839cd78b1c86c3d9"
+    },
+    "manifestCounts": [
+      1
+    ],
+    "matchingManifestEntries": [
+      1
+    ],
+    "manifestChecksumFieldPresent": false,
+    "snapshotRefreshes": 0,
+    "previouslyAbsentProof": "Not frozen before journey; do not use this capture as qualified changed-B acceptance."
+  },
+  "observer": {
+    "maxPages": 1,
+    "conversationDocuments": {
+      "6a95ef46-fb90-83ea-a0c9-33e5a50649dc": 1
+    },
+    "downloads": 1,
+    "http429": 0,
+    "sameProjectSlugObserved": true
+  },
+  "preservation": {
+    "originalThreeBaselineAssetsUnchanged": true,
+    "journey7AssetUnchanged": true,
+    "journey7ManifestIdsCountsUnchanged": true,
+    "journey7ArchiveUnchanged": true
+  },
+  "acceptance": {
+    "positiveInstalledDownload": true,
+    "independentChangedB": false,
+    "quietCompleteAB": false,
+    "scheduler": false
+  },
+  "limitation": "Two distinct positive conversations after repairs; neither independently index-changed B nor normal quiet-complete A/B was qualified. Original A and journey7 capture show preservation, not whole-account quiet acceptance."
+}

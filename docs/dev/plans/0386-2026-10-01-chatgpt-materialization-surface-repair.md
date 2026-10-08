@@ -7,7 +7,21 @@ Branch: `docs/issue165-changed-frontier-spec`
 Target: `main`
 Integration: merge
 
-## Current State | 2026-10-06 spec reconciliation
+## Current checkpoint | 2026-10-08 eight journeys terminal
+
+Plan remains OPEN. PR232 and PR233 are merged and installed at 5b05f5371;
+route reuse and persisted cursor authorization now succeed in real runs.
+All eight authorized journeys are charged and terminal, with zero remaining.
+Two readable Markdown captures total 17,032 bytes; local/job/archive hashes
+match, and earlier assets remain unchanged. Scheduler and parents are paused;
+no active materialization jobs, native browser processes or held controls remain.
+Changed-B and normal quiet-complete A/B acceptance remain open. Guard-only
+persistence/completion composition is qualified; mixed A/B/C/G and completion
+state reload remain needs_evidence. Scheduler continuation stays dependent.
+See [checkpoint](../notes/2026-10-08-plan0386-eight-journey-checkpoint.md).
+No ninth provider journey is authorized by this allowance.
+
+## Historical state | 2026-10-06 spec reconciliation
 
 The requested four-step packet is ACCEPTED on installed source 6f4224e7e;
 receipt integration is 6a07668e4 (PR217). Normal scoped follow and automatic
@@ -1032,3 +1046,15 @@ continuation fixture reproduces that exact denial. Select the frozen work key
 from the reader's normalized persisted cursor, keeping all limits intact.
 Child terminal skipped, zero transfers; five of eight charged. Three remain,
 with changed/quiet, composed guard and scheduler acceptance still OPEN.
+
+### 2026-10-08 — installed resumed-route proof and guard reload boundary
+
+[Journey6](../notes/2026-10-08-plan0386-journey6.json) on canonical PR233
+5b05f5371 completes its resumed conversation context with one document visit,
+observed same-project slug reuse, zero child snapshots and zero attempted assets.
+The row exposes no materializable artifact; no changed/quiet acceptance follows.
+[Guard reload qualification](../notes/2026-10-08-plan0386-guard-reload-qualification.md)
+composes temporary persistence, a newly opened store and planner horizon checks.
+Full normal collector/completion/worker physical-effect composition remains
+needs_evidence. Six of eight charged at that terminal result; journey7 resumes
+under unchanged minimum interval, cap and traffic limits.

@@ -1,0 +1,89 @@
+{
+  "schema": "auracall_plan0386_final_readback.v1",
+  "local": {
+    "at": "2026-10-08T11:50:52.639153+00:00",
+    "nativeManagedRoots": [],
+    "customChromiumProcesses": [],
+    "heldLeases": 0,
+    "heldControls": 0,
+    "baselineA": [
+      {
+        "kind": "file",
+        "size": 24527,
+        "sha256": "8c0326c99743553b149e74005113a5377fb4dc37fc82e3f8e636423ed3c5dec7",
+        "unchanged": true
+      },
+      {
+        "kind": "file",
+        "size": 5403,
+        "sha256": "872f6b0566379dbb3bb1e4e09fc6d9e028b06510f15fb862950f5c5b79fb701a",
+        "unchanged": true
+      },
+      {
+        "kind": "artifact",
+        "size": 38709,
+        "sha256": "9cfde6a5f292e6a0937aca2e4dd7dfa988d646c6045f08ec321bf5649f154b62",
+        "unchanged": true
+      }
+    ],
+    "journey7AssetUnchanged": true,
+    "journey7ManifestIdsCountsUnchanged": true
+  },
+  "api": {
+    "at": "2026-10-08T11:51:18.612Z",
+    "apiOk": true,
+    "apiPid": 7729,
+    "apiRestarts": 0,
+    "schedulerPaused": true,
+    "parentStatus": "paused",
+    "parentPassCount": 6,
+    "completionMetrics": {
+      "total": 5131,
+      "active": 17,
+      "queued": 0,
+      "running": 0,
+      "idle_waiting": 0,
+      "paused": 17,
+      "completed": 80,
+      "blocked": 761,
+      "failed": 4220,
+      "cancelled": 53
+    },
+    "runnableCompletions": 0,
+    "activeMaterializationJobs": 0,
+    "providerGuard": "clear",
+    "baselineAArchive": [
+      {
+        "kind": "file",
+        "status": 200,
+        "size": 24527,
+        "sha256": "8c0326c99743553b149e74005113a5377fb4dc37fc82e3f8e636423ed3c5dec7"
+      },
+      {
+        "kind": "file",
+        "status": 200,
+        "size": 5403,
+        "sha256": "872f6b0566379dbb3bb1e4e09fc6d9e028b06510f15fb862950f5c5b79fb701a"
+      },
+      {
+        "kind": "artifact",
+        "status": 200,
+        "size": 38709,
+        "sha256": "9cfde6a5f292e6a0937aca2e4dd7dfa988d646c6045f08ec321bf5649f154b62"
+      }
+    ],
+    "journey7ArchiveUnchanged": true,
+    "child8Status": "succeeded"
+  },
+  "usedJourneys": 8,
+  "remainingJourneys": 0,
+  "positiveDownloads": 2,
+  "verifiedDownloadedBytes": 17032,
+  "planState": "OPEN",
+  "remainingGates": [
+    "independent changed-B positive fixture",
+    "normal quiet-complete A/B repeat",
+    "mixed guard/completion-state reload proof",
+    "dependent scheduler control"
+  ]
+}
