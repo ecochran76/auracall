@@ -1,3 +1,14 @@
+## 2026-10-08 | Additional ten-journey allowance active
+
+User authorizes ten additional normal unscoped journeys toward Plan0386.
+New control ledger keeps the earlier eight immutable. Installed source5b05f5371
+matches canonical adapter/collector hashes. API7729 has zero restarts; preflight
+shows no managed browser processes or held controls. Global scheduler remains
+paused. Existing parent resumes from pass6; maxItems1, artifacts, forcefalse and
+provider traffic limits remain unchanged. Stop on warnings/429, identity/custody
+mismatch, admission failure or unknown outcome. Checkpoint every two terminal
+journeys and within two hours; no provider content creation.
+
 ## 2026-10-08 | Post-checkpoint local fixture research
 
 User requested ask-matt research continuation. Fresh read-only installed cache
