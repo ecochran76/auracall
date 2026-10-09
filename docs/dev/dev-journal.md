@@ -1,3 +1,7 @@
+## 2026-10-09 — Plan0391 budget checkpoint
+
+Two-minute inactivity source qualified; RemoteView PR346 merged and AuraCall PR244 remains draft. No inactivity revision installed. Stopping before the explicit three-hour limit. Restart authority and acceptance gates: [checkpoint](notes/2026-10-09-plan0391-inactivity-budget-checkpoint.md).
+
 ## 2026-10-09 | Plan0391 authoritative inactivity handoff source packet
 
 The resumed goal advances the two-minute human-input requirement. Remote View
