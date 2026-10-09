@@ -34,5 +34,11 @@
     "native observe/control embed integration",
     "controller grant coordinated with admission",
     "integration and installed acceptance"
-  ]
+  ],
+  "observe_embed": {
+    "red": "issueObserveEmbed absent; public fixture test failed before implementation",
+    "green": "3 native application tests pass; 5 total with control gate/wire tests",
+    "contract": "Fresh exact observe_assignment readback precedes observe-only issue_view; grant target, origin, opaque embed path and lifetime checked",
+    "installed_view_issuance": false
+  }
 }

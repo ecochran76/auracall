@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { isIP } from 'node:net';
 import { z } from 'zod';
 
@@ -14,6 +15,16 @@ const inventorySchema = z.object({
     viewing: z.object({ lifecycleGeneration: generation, generation, desktopId: identity, publicRoute: identity }).optional(),
   })),
 });
+
+const viewTargetSchema = z.object({ assignmentId: identity, registrationId: identity, desktopId: identity,
+  lifecycleGeneration: generation, viewingDesktopId: identity, viewingGeneration: generation });
+function httpsOrigin(value: string): string {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+    throw new Error('Remote View presentation requires a configured HTTPS origin.');
+  }
+  return url.origin;
+}
 
 export interface RemoteViewAssignment {
   assignmentId: string;
@@ -40,11 +51,11 @@ export class RemoteViewApplication {
     this.application = identity.parse(config.application);
   }
 
-  async listReadyAssignments(poolName: string): Promise<RemoteViewAssignment[]> {
+  private async request(request: Record<string, unknown>): Promise<unknown> {
     const response = await fetch(this.endpoint, {
       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15_000),
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ application: this.application, request: { operation: 'inventory' } }),
+      body: JSON.stringify({ application: this.application, request }),
     });
     if (!response.ok || response.headers.get('content-type')?.split(';')[0] !== 'application/json') {
       throw new Error('Remote View application inventory unavailable.');
@@ -62,7 +73,11 @@ export class RemoteViewApplication {
         chunks.push(part.value);
       }
     } catch (error) { await reader.cancel(); throw error; }
-    const parsed = inventorySchema.safeParse(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  }
+
+  async listReadyAssignments(poolName: string): Promise<RemoteViewAssignment[]> {
+    const parsed = inventorySchema.safeParse(await this.request({ operation: 'inventory' }));
     if (!parsed.success) throw new Error('Remote View application inventory has an invalid contract.');
     const inventory = parsed.data;
     if (inventory.registration.consumerKey !== this.application) throw new Error('Remote View application identity mismatch.');
@@ -88,4 +103,34 @@ export class RemoteViewApplication {
     }
     return result;
   }
+
+  async issueObserveEmbed(assignment: RemoteViewAssignment, origins: { publicOrigin: string; appOrigin: string }): Promise<string> {
+    const publicOrigin = httpsOrigin(origins.publicOrigin);
+    const appOrigin = httpsOrigin(origins.appOrigin);
+    const observed = z.object({ schemaVersion: z.literal(1), readinessScope: z.literal('live_resource'),
+      target: viewTargetSchema }).parse(await this.request({ operation: 'observe_assignment',
+        assignment_id: assignment.assignmentId, expected_generation: assignment.generation }));
+    const target = observed.target;
+    if (target.assignmentId !== assignment.assignmentId || target.desktopId !== assignment.desktopId ||
+      target.lifecycleGeneration !== assignment.generation || target.viewingGeneration !== assignment.viewingGeneration) {
+      throw new Error('Remote View assignment generation changed before presentation.');
+    }
+    const issued = z.object({ schemaVersion: z.literal(1), readinessScope: z.literal('live_resource'), path: identity,
+      grant: z.object({ routeId: identity, revoked: z.literal(false), issuedAt: generation, expiresAt: generation, request: z.object({ application: identity,
+        audience: identity, capability: z.literal('observe'), target: viewTargetSchema }) }) }).parse(await this.request({
+      operation: 'issue_view', assignment_id: assignment.assignmentId,
+      expected_generation: assignment.generation, expected_viewing_generation: assignment.viewingGeneration,
+      audience: appOrigin, capability: 'observe', lifetime_seconds: 300, idempotency_key: randomUUID(),
+    }));
+    const now = Date.now();
+    if (issued.grant.expiresAt <= now || issued.grant.issuedAt > now + 30_000 ||
+      issued.grant.expiresAt <= issued.grant.issuedAt || issued.grant.expiresAt - issued.grant.issuedAt > 300_000 ||
+      issued.grant.request.application !== this.application || issued.grant.request.audience !== appOrigin ||
+      JSON.stringify(issued.grant.request.target) !== JSON.stringify(target) ||
+      issued.path !== `/embed/${issued.grant.routeId}` || !/^\/embed\/[0-9a-fA-F-]{32,128}$/.test(issued.path)) {
+      throw new Error('Remote View native embed identity mismatch.');
+    }
+    return new URL(issued.path, publicOrigin).href;
+  }
+
 }

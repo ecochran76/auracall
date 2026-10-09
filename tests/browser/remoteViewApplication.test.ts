@@ -42,6 +42,37 @@ describe('native Remote View application boundary', () => {
     } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
   });
 
+  it('issues only a fresh native observe embed after current ownership readback', async () => {
+    const calls: Array<{ application: string; request: Record<string, unknown> }> = [];
+    const target = { assignmentId: 'assignment-a', registrationId: 'registration-a', desktopId: 'desktop-a', lifecycleGeneration: 2, viewingDesktopId: 'viewer-a', viewingGeneration: 7 };
+    const server = createServer(async (req, res) => {
+      const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
+      const envelope = JSON.parse(Buffer.concat(chunks).toString()); calls.push(envelope);
+      res.setHeader('Content-Type', 'application/json');
+      const request = envelope.request;
+      const grantTime = Date.now();
+      const data = request.operation === 'observe_assignment'
+        ? { schemaVersion: 1, target, readinessScope: 'live_resource' }
+        : { schemaVersion: 1, path: '/embed/11111111-1111-4111-8111-111111111111', readinessScope: 'live_resource',
+          grant: { routeId: '11111111-1111-4111-8111-111111111111', revoked: false, issuedAt: grantTime, expiresAt: grantTime + 300000,
+            request: { application: 'auracall', target, capability: 'observe', audience: 'https://aura.example.test' } } };
+      res.end(JSON.stringify(data));
+    }).listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    try {
+      const address = server.address(); if (!address || typeof address === 'string') throw new Error('missing fixture port');
+      const app = new RemoteViewApplication({ origin: `http://127.0.0.1:${address.port}`, application: 'auracall' });
+      const selected = { assignmentId: 'assignment-a', desktopId: 'desktop-a', generation: 2, viewingGeneration: 7 };
+      expect(await app.issueObserveEmbed(selected, { publicOrigin: 'https://desktop.example.test', appOrigin: 'https://aura.example.test' })).toBe('https://desktop.example.test/embed/11111111-1111-4111-8111-111111111111');
+      expect(calls.map(call => call.request.operation)).toEqual(['observe_assignment', 'issue_view']);
+      expect(calls[1]?.request).toMatchObject({ capability: 'observe', expected_generation: 2, expected_viewing_generation: 7, audience: 'https://aura.example.test' });
+      expect(calls[1]?.request.idempotency_key).toEqual(expect.any(String));
+      target.lifecycleGeneration = 3;
+      await expect(app.issueObserveEmbed(selected, { publicOrigin: 'https://desktop.example.test', appOrigin: 'https://aura.example.test' })).rejects.toThrow('generation');
+      expect(calls).toHaveLength(3);
+    } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
+  });
+
   it('refuses control origins with remote hosts, credentials, paths or query state', () => {
     for (const origin of ['https://127.0.0.1', 'http://example.com', 'http://user@127.0.0.1', 'http://127.0.0.1/path', 'http://127.0.0.1?token=secret']) {
       expect(() => new RemoteViewApplication({ origin, application: 'auracall' })).toThrow('loopback HTTP origin');

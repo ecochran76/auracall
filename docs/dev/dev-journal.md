@@ -53416,3 +53416,9 @@ control transport. A read-only installed probe using this adapter reports two
 ready Agent Browser assignments; no AuraCall consumer is configured yet and no
 borrowed desktop was mutated. CDP wire exclusion and gate tests also pass.
 Source integration, native presentation/control and installed acceptance remain.
+
+Native observe embed issuance also has a failing-before-implementation fixture
+and passes afterward. The adapter rechecks exact assignment/lifecycle/viewing
+generations and validates the opaque observe grant target, configured HTTPS
+origins and current bounded lifetime. Three native tests pass; integrated
+launch/client behavior is still open.
