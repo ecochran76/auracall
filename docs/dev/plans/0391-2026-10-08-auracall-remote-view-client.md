@@ -1,12 +1,12 @@
 # AuraCall Remote-View Client | 0391-2026-10-08
 
-State: PLANNED
+State: OPEN
 Lane: P86
 Target: main
 Integration: pull request
 Owner: Eric Cochran; primary agent handles design and serialized integration.
-Branch: feat/auracall-remote-view-client
-Base: origin/main at 32e8c71a2878b351490a3a32b3aec63d46c34717
+Branch: feat/issue240-named-desktops
+Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
 ## Current State
@@ -19,11 +19,12 @@ explicit control handoff coordinated with automation. Root desktop remains
 independently available and explicitly selectable. Selected remote-view failure
 must not silently fall back to root desktop.
 
-No implementation, runtime configuration, browser launch, installation, or
-service restart has occurred. The operator approved the three-slice breakdown
-and explicitly requested tickets followed by a repo plan. Tickets #240, #241
-and #242 are published and read back; the feature remains unimplemented.
-This planning slice is prepared for source publication through a pull request.
+PR #243 merged at 591a118245cafbc54c34cd0bc179c4b380308ef6.
+The operator then authorized execution of the full plan, with checkpoint and
+stop before two million tokens or three hours. Packet #240 is active on
+feat/issue240-named-desktops; #241 and #242 remain dependent. The execution
+ledger records bounds, current evidence and unmet acceptance. No feature
+acceptance is claimed from the planning merge.
 
 ## Objective and scope
 
@@ -199,9 +200,9 @@ startup, takeover, mutation exclusion, conflict refusal and verified release.
 Primary owns the critical path. Packets are sequential; no parallel agent work
 is needed. Register implementation custody/active lane and claim the ready work
 item under applicable forge policy before editing source. Preserve other
-worktrees, paused scheduler lanes and unrelated dirty state. The current
-request authorizes ticket and planning publication; it does not start source
-implementation, installation, browser launches or infrastructure changes.
+worktrees, paused scheduler lanes and unrelated dirty state. The current execution goal authorizes implementation, integration and bounded
+acceptance work. Infrastructure provisioning and unrelated provider prompts
+remain excluded. Preserve unrelated installed services and browser sessions.
 
 All three packets are expected; this plan does not silently drop the client or
 control handoff if existing remote-view launching proves insufficient. If a

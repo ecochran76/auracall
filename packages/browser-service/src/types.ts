@@ -22,6 +22,9 @@ export type AgentBrowserBuild = 'stock_chrome' | 'stealthcdp_chromium';
 export interface AgentBrowserRdpConfig {
   enabled: boolean;
   runtimeProfile: string;
+  /** Exact service-owned route pool entry for a configured AuraCall desktop. */
+  routePoolEntryId?: string;
+  desktopName?: string;
   command?: string;
   jobTimeoutMs?: number;
 }

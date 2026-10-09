@@ -630,6 +630,38 @@ the named agent-browser runtime profile and RDP route pool to be healthy.
 AuraCall rejects a family/build mismatch both before launch and after
 agent-browser reports the actual selected executable.
 
+## Named AuraCall desktops
+
+`remoteView` selects placement for subsequent browser launches. Define each
+named desktop using an existing Agent Browser runtime profile and exact RDP
+route-pool entry. AuraCall does not provision displays or route-pool entries.
+
+```json5
+remoteView: {
+  defaultDesktop: "research",
+  desktops: {
+    research: { runtimeProfile: "auracall-research", routePoolEntryId: "route-research" },
+    writing: { runtimeProfile: "auracall-writing", routePoolEntryId: "route-writing" }
+  }
+},
+browserProfiles: {
+  "work-chrome": { desktop: "writing" },
+  "root-chrome": { desktop: "root" }
+}
+```
+
+A browser-profile `desktop` assignment overrides the global default. The
+reserved name `root` explicitly selects ordinary desktop launching. Unknown
+names and unavailable routes fail before remote-view open; there is no root
+fallback. Browser profile directories and authentication stay in place.
+Configuration changes do not move an existing browser between displays; an
+existing session on another display is rejected during service attachment.
+Keep each configured route's ownership consistent with Agent Browser's route
+allocation contract.
+
+The dedicated client and coordinated manual control are tracked separately in
+issues #241 and #242; desktop placement alone does not provide those features.
+
 ## Compatibility Bridge Example
 
 If you are still troubleshooting or maintaining the compatibility bridge shape,

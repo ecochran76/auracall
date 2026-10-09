@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -57,6 +58,8 @@ export interface AgentBrowserRdpOpenPlan {
   jobTimeoutMs: number;
   openArgs: string[];
   browserInventoryArgs: string[];
+  routePoolEntryId?: string;
+  desktopName?: string;
 }
 
 export interface AgentBrowserRdpLaunchResult {
@@ -69,6 +72,12 @@ export interface AgentBrowserRdpLaunchResult {
   browserId: string;
   session: string;
   handoffUrl: string;
+  desktop?: {
+    name: string;
+    routePoolEntryId: string;
+    routeId: string;
+    displayAllocationId: string;
+  };
 }
 
 export interface LaunchAgentBrowserRdpSessionOptions {
@@ -166,7 +175,9 @@ export function buildAgentBrowserRdpOpenPlan(options: {
     options.browserProfileId ?? options.auracallRuntimeProfile ?? runtimeProfile,
   );
   const targetSegment = sanitizeSessionSegment(options.serviceTarget);
-  const session = `auracall-${profileSegment}-${targetSegment}`;
+  const session = rdp.desktopName
+    ? `auracall-${createHash('sha256').update(userDataDir).digest('hex').slice(0, 24)}-${targetSegment}`
+    : `auracall-${profileSegment}-${targetSegment}`;
   const jobTimeoutMs = rdp.jobTimeoutMs ?? DEFAULT_AGENT_BROWSER_JOB_TIMEOUT_MS;
   const executable = nonEmptyString(rdp.command) ?? 'agent-browser';
   const openArgs = [
@@ -201,9 +212,12 @@ export function buildAgentBrowserRdpOpenPlan(options: {
     '--job-timeout-ms',
     String(jobTimeoutMs),
   ];
+  if (rdp.routePoolEntryId) openArgs.push('--route-pool-entry-id', rdp.routePoolEntryId);
   return {
     executable,
     session,
+    ...(rdp.routePoolEntryId ? { routePoolEntryId: rdp.routePoolEntryId } : {}),
+    ...(rdp.desktopName ? { desktopName: rdp.desktopName } : {}),
     runtimeProfile,
     browserBuild: compatibility.browserBuild,
     browserFamily: compatibility.browserFamily,
@@ -358,6 +372,74 @@ function resolveBrowserCdpConnection(browser: JsonRecord): { host: string; port:
   return { host: nonEmptyString(browser.cdpHost) ?? '127.0.0.1', port };
 }
 
+async function preflightDesktopRoute(
+  plan: AgentBrowserRdpOpenPlan,
+  runner: AgentBrowserCommandRunner,
+  commandOptions: Parameters<AgentBrowserCommandRunner>[2],
+): Promise<{ routeId: string; displayAllocationId: string } | undefined> {
+  if (!plan.routePoolEntryId) return undefined;
+  const envelope = parseCommandEnvelope(await runner(plan.executable,
+    ['--json', '--session', plan.session, 'service', 'route-pool'], commandOptions), 'agent-browser service route-pool');
+  const data = responseData(envelope, 'agent-browser service route-pool');
+  const entries = Array.isArray(data.routePool) ? data.routePool.filter(isRecord) : [];
+  const matching = entries.filter((entry) => entry.id === plan.routePoolEntryId);
+  const entry = matching.length === 1 ? matching[0] : undefined;
+  if (!entry || entry.provider !== 'rdp_gateway' || !['available', 'checked_out'].includes(String(entry.state))) {
+    throw new Error(`AuraCall desktop ${plan.desktopName ?? plan.routePoolEntryId}: route ${plan.routePoolEntryId} is unavailable. Restore that exact route or select root; no fallback was launched.`);
+  }
+  const routeId = nonEmptyString(entry.routeId);
+  const target = isRecord(entry.target) ? entry.target : {};
+  if (!routeId || !nonEmptyString(target.displayName)) {
+    throw new Error(`AuraCall desktop ${plan.desktopName}: route ${plan.routePoolEntryId} has no exact display binding.`);
+  }
+  return { routeId, displayAllocationId: nonEmptyString(target.displayAllocationId) ?? `remote-view-display:${routeId}` };
+}
+
+function verifyDesktopBinding(data: JsonRecord, plan: AgentBrowserRdpOpenPlan,
+  expected: { routeId: string; displayAllocationId: string } | undefined): void {
+  if (!expected) return;
+  const binding = isRecord(data.routeBinding) ? data.routeBinding : data;
+  const visible = isRecord(data.operatorVisible) ? data.operatorVisible : {};
+  if (binding.routePoolEntryId !== plan.routePoolEntryId ||
+    (binding.routeId ?? visible.routeId) !== expected.routeId ||
+    (binding.displayAllocationId ?? visible.displayAllocationId) !== expected.displayAllocationId) {
+    throw new Error(`AuraCall desktop ${plan.desktopName} returned a mismatched route/display binding; refusing CDP attachment.`);
+  }
+  const url = nonEmptyString(data.handoffUrl);
+  if (!url || !/^https?:$/.test(new URL(url).protocol) || !/^\/remote-view\/[^/]+$/.test(new URL(url).pathname)) {
+    throw new Error(`AuraCall desktop ${plan.desktopName} requires a durable remote-view handoff URL.`);
+  }
+}
+
+/** Discover only the exact session on its configured display. Never launches a browser. */
+export async function findConfiguredDesktopBrowser(
+  options: LaunchAgentBrowserRdpSessionOptions,
+): Promise<{ host: string; port: number } | undefined> {
+  const plan = buildAgentBrowserRdpOpenPlan(options);
+  const runner = options.runner ?? defaultRunner;
+  const commandOptions = {
+    abortSignal: options.abortSignal,
+    timeoutMs: plan.jobTimeoutMs + AGENT_BROWSER_COMMAND_TIMEOUT_PADDING_MS,
+    maxOutputBytes: MAX_AGENT_BROWSER_OUTPUT_BYTES,
+  };
+  const expected = await preflightDesktopRoute(plan, runner, commandOptions);
+  const envelope = parseCommandEnvelope(await runner(plan.executable, plan.browserInventoryArgs, commandOptions),
+    'agent-browser service browsers');
+  const records = browserRecords(envelope.data).filter((record) =>
+    record.sessionName === plan.session || record.sessionId === plan.session ||
+    (Array.isArray(record.activeSessionIds) && record.activeSessionIds.includes(plan.session)));
+  if (records.length === 0) return undefined;
+  if (records.length !== 1) throw new Error('Configured AuraCall desktop has ambiguous browser ownership.');
+  const browser = records[0];
+  const streams = Array.isArray(browser.viewStreams) ? browser.viewStreams.filter(isRecord) : [];
+  if (expected && (browser.displayAllocationId !== expected.displayAllocationId ||
+    !streams.some((stream) => stream.routeId === expected.routeId && stream.displayAllocationId === expected.displayAllocationId))) {
+    throw new Error(`AuraCall desktop ${plan.desktopName} browser is on a different route/display; refusing CDP attachment.`);
+  }
+  if (browser.health !== 'ready') throw new Error(`AuraCall desktop ${plan.desktopName} browser is not ready.`);
+  return resolveBrowserCdpConnection(browser);
+}
+
 export async function launchAgentBrowserRdpSession(
   options: LaunchAgentBrowserRdpSessionOptions,
 ): Promise<AgentBrowserRdpLaunchResult> {
@@ -372,6 +454,8 @@ export async function launchAgentBrowserRdpSession(
     timeoutMs: plan.jobTimeoutMs + AGENT_BROWSER_COMMAND_TIMEOUT_PADDING_MS,
     maxOutputBytes: MAX_AGENT_BROWSER_OUTPUT_BYTES,
   };
+  options.onStage?.('agentBrowserDesktopPreflight');
+  const desktopRoute = await preflightDesktopRoute(plan, runner, commandOptions);
   options.onStage?.('agentBrowserRemoteViewOpen');
   const openedEnvelope = parseCommandEnvelope(
     await runner(plan.executable, plan.openArgs, commandOptions),
@@ -380,6 +464,7 @@ export async function launchAgentBrowserRdpSession(
   const initial = responseData(openedEnvelope, 'agent-browser remote-view open');
   let ready = initial;
   if (initial.status === 'converging') {
+    verifyDesktopBinding(initial, plan, desktopRoute);
     // Retain initial build custody and resolve only the already-created handoff.
     validateRemoteViewBuild(initial, plan);
     const browserId = nonEmptyString(initial.browserId);
@@ -399,12 +484,17 @@ export async function launchAgentBrowserRdpSession(
       if (resolved.browserId !== browserId || resolved.handoffId !== handoffId) {
         throw new Error('agent-browser remote-view resolution changed retained handoff identity.');
       }
-      ready = { ...resolved, browserBuildProof: initial.browserBuildProof, handoffUrl };
+      const opened = resolved.status === 'ready' && isRecord(resolved.open) ? resolved.open : resolved;
+      if (opened.browserId !== browserId) {
+        throw new Error('agent-browser remote-view resolution changed retained browser identity.');
+      }
+      ready = { ...opened, browserBuildProof: initial.browserBuildProof, handoffUrl };
       if (resolved.status !== 'converging') break;
       if (attempt < 29) await sleep(Math.min(1000, Math.max(0, deadline - Date.now())), undefined,
         { signal: options.abortSignal });
     }
   }
+  verifyDesktopBinding(ready, plan, desktopRoute);
   const opened = validateOpenedRemoteView(ready, plan);
   options.abortSignal?.throwIfAborted();
   options.onStage?.('agentBrowserBrowserInventory');
@@ -421,5 +511,8 @@ export async function launchAgentBrowserRdpSession(
     browserId: opened.browserId,
     session: plan.session,
     handoffUrl: opened.handoffUrl,
+    ...(desktopRoute && plan.desktopName && plan.routePoolEntryId ? {
+      desktop: { name: plan.desktopName, routePoolEntryId: plan.routePoolEntryId, ...desktopRoute },
+    } : {}),
   };
 }

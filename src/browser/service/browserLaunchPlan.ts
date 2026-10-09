@@ -27,6 +27,7 @@ const BROWSER_PROFILE_OWNED_FIELDS = [
   'browserFamily',
   'browserBuild',
   'agentBrowserRdp',
+  'desktop',
   'chromePath',
   'chromeProfile',
   'profilePath',

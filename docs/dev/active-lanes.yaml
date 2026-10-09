@@ -1707,3 +1707,25 @@ lanes:
     integration_receipt: 873ad09bffb0295e631ef48ea3f6e8851e0db160
     disposition: Prior scoped capture/repeat remains accepted. PR221 installed frontier repair now proves positive capture and deferred continuation on journeys3/4. Wider changed-index/quiet-complete matrix and scheduler continuation remain OPEN.
     updated_at: 2026-10-07
+  - id: P86
+    objective: Display AuraCall browsers in a configured dedicated remote-view client with multiple desktops and explicit control handoff.
+    plan: docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md
+    plan_ref: refs/heads/feat/issue240-named-desktops
+    branch: feat/issue240-named-desktops
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 591a118245cafbc54c34cd0bc179c4b380308ef6
+    remote_ref: refs/remotes/origin/feat/issue240-named-desktops
+    integration: merge
+    work_items: [ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242]
+    dependencies: []
+    overlaps: [P85]
+    reconciled_overlaps: [P85]
+    reconciliation_note: P86 preserves P85 provider behavior and paused-scheduler authority; shared prompt edits only dispatch named desktop launches.
+    blocker: null
+    validation_status: provider-free-implementation-in-progress
+    validation_ref: docs/dev/notes/2026-10-08-plan0391-execution-ledger.json
+    integration_receipt: null
+    disposition: Planning PR243 merged; desktop binding source is in progress, client/control and installed acceptance remain open.
+    updated_at: 2026-10-09

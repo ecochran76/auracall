@@ -231,8 +231,23 @@ export const BrowserSessionOpenConfigSchema = z.object({
 const AGENT_BROWSER_RDP_CONFIG_SCHEMA = z.object({
   enabled: z.boolean(),
   runtimeProfile: z.string().trim().min(1),
+  routePoolEntryId: z.string().trim().min(1).optional(),
+  desktopName: z.string().trim().min(1).optional(),
   command: z.string().trim().min(1).optional(),
   jobTimeoutMs: z.number().int().positive().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: public config schema name.
+export const RemoteViewConfigSchema = z.object({
+  defaultDesktop: z.string().trim().min(1).optional(),
+  desktops: z.record(z.string().trim().min(1), z.object({
+    runtimeProfile: z.string().trim().min(1),
+    routePoolEntryId: z.string().trim().min(1),
+    label: z.string().trim().min(1).optional(),
+    command: z.string().trim().min(1).optional(),
+    jobTimeoutMs: z.number().int().positive().optional(),
+  })).default({}).refine((desktops) => !Object.hasOwn(desktops, 'root'), 'root is reserved for the root desktop'),
+  rootDesktopUrl: z.url().refine((value) => /^https?:\/\//.test(value), 'Root desktop URL must use HTTP or HTTPS').optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
@@ -257,6 +272,7 @@ export const BrowserConfigSchema = z.object({
   browserFamily: z.enum(['chrome', 'chromium']).optional(),
   browserBuild: z.enum(['stock_chrome', 'stealthcdp_chromium']).optional(),
   agentBrowserRdp: AGENT_BROWSER_RDP_CONFIG_SCHEMA.optional(),
+  desktop: z.string().trim().min(1).optional(),
   chromeProfile: z.string().optional(),
   chromePath: z.string().optional(),
   chromeCookiePath: z.string().optional(),
@@ -319,6 +335,7 @@ export const OracleProfileBrowserSchema = z.object({
   browserFamily: z.enum(['chrome', 'chromium']).optional(),
   browserBuild: z.enum(['stock_chrome', 'stealthcdp_chromium']).optional(),
   agentBrowserRdp: AGENT_BROWSER_RDP_CONFIG_SCHEMA.optional(),
+  desktop: z.string().trim().min(1).optional(),
   chromePath: z.string().optional(),
   chromeProfile: z.string().optional(),
   profilePath: z.string().optional(),
@@ -614,6 +631,8 @@ export const ConfigSchema = z.object({
   dev: OracleDevConfigSchema.optional(),
   runtime: OracleRuntimeConfigSchema.optional(),
   terminalSessionReceipts: TerminalSessionReceiptsConfigSchema.optional(),
+
+  remoteView: RemoteViewConfigSchema.optional(),
 
   // Nested
   browser: BrowserConfigSchema.default({}),

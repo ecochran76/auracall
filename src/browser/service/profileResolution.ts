@@ -1,3 +1,4 @@
+import { resolveDesktopLaunch } from './desktopConfig.js';
 import { resolveManagedProfileName } from '../profileStore.js';
 import type {
   AgentBrowserBuild,
@@ -145,11 +146,15 @@ function asAgentBrowserRdpConfig(value: unknown): AgentBrowserRdpConfig | undefi
   const runtimeProfile = asNonEmptyString(value.runtimeProfile);
   if (!runtimeProfile) return undefined;
   const command = asNonEmptyString(value.command);
+  const routePoolEntryId = asNonEmptyString(value.routePoolEntryId);
+  const desktopName = asNonEmptyString(value.desktopName);
   const jobTimeoutMs = asFiniteNumber(value.jobTimeoutMs);
   return {
     enabled: value.enabled,
     runtimeProfile,
     ...(command ? { command } : {}),
+    ...(routePoolEntryId ? { routePoolEntryId } : {}),
+    ...(desktopName ? { desktopName } : {}),
     ...(jobTimeoutMs !== undefined && jobTimeoutMs > 0 ? { jobTimeoutMs } : {}),
   };
 }
@@ -420,6 +425,15 @@ export function resolveBrowserProfileResolution(input: {
     collapseDisposableWindows:
       asBoolean(browser.collapseDisposableWindows) ?? browserProfile.collapseDisposableWindows,
   };
+
+  const desktopLaunch = resolveDesktopLaunch({
+    remoteView: merged.remoteView,
+    desktop: selectedBrowserProfile.desktop ?? profileBrowser.desktop ?? browser.desktop,
+  });
+  if (desktopLaunch) {
+    browserProfile.agentBrowserRdp = desktopLaunch;
+    launchProfile.agentBrowserRdp = desktopLaunch;
+  }
 
   return {
     profileFamily,

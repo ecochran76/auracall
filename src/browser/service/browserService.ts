@@ -41,7 +41,7 @@ import {
 } from '../../../packages/browser-service/src/service/mutationDispatcher.js';
 import type { BrowserOperationQueueObservationSummary } from '../operationQueueObservations.js';
 import { summarizeBrowserOperationQueueObservations } from '../operationQueueObservations.js';
-import { launchAgentBrowserRdpSession } from './agentBrowserRdpLauncher.js';
+import { findConfiguredDesktopBrowser, launchAgentBrowserRdpSession } from './agentBrowserRdpLauncher.js';
 
 type ServiceTargetMatchOptions = {
   serviceId: 'chatgpt' | 'grok' | 'gemini';
@@ -186,6 +186,9 @@ export class BrowserService extends BrowserServiceCore {
       ? !matchesManagedProfile(matchedByPort, expectedProfilePath, expectedProfileName)
       : false;
     if (matchedByPort && selectedPortProfileMismatch) {
+      if (this.getConfig().agentBrowserRdp?.desktopName) {
+        throw new Error('Desktop-validated CDP endpoint conflicts with the managed browser registry; reconcile ownership before retrying.');
+      }
       const expectedInstance = classifiedInstances.find(({ instance, alive }) =>
         alive && matchesManagedProfile(instance, expectedProfilePath, expectedProfileName),
       )?.instance;
@@ -332,6 +335,32 @@ export class BrowserService extends BrowserServiceCore {
   } = {}) {
     const launchContext = this.resolveLaunchContext(this.serviceTarget);
     const fallbackDir = launchContext.managedBrowserProfile.directory;
+    const config = this.getConfig();
+    if (config.agentBrowserRdp?.enabled && config.agentBrowserRdp.desktopName) {
+      const remoteOptions = {
+        config,
+        userDataDir: options.defaultProfileDir ?? fallbackDir,
+        url: options.launchUrl ?? 'about:blank',
+        auracallRuntimeProfile: this.userConfig.auracallProfile ?? null,
+        browserProfileId: launchContext.selection.browserProfileId,
+        serviceTarget: this.serviceTarget,
+        logger: () => undefined,
+        abortSignal: options.abortSignal,
+        onStage: options.onStage,
+      };
+      options.abortSignal?.throwIfAborted();
+      const existing = await findConfiguredDesktopBrowser(remoteOptions);
+      const explicit = options.port ?? config.remoteChrome?.port;
+      const explicitHost = options.host ?? config.remoteChrome?.host;
+      if (explicit && (!existing || existing.port !== explicit ||
+        (explicitHost && existing.host !== explicitHost))) {
+        throw new Error('Explicit CDP endpoint does not belong to the configured AuraCall desktop.');
+      }
+      if (existing) return { ...existing, launched: false };
+      if (!options.ensurePort) return { host: undefined, port: undefined, launched: false };
+      const result = await launchAgentBrowserRdpSession(remoteOptions);
+      return { host: result.chrome.host, port: result.port, launched: true };
+    }
     return super.resolveDevToolsTarget({
       ...options,
       defaultProfileDir: options.defaultProfileDir ?? fallbackDir,

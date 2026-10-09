@@ -2103,7 +2103,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		options.abortSignal?.throwIfAborted();
 		await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
 		options.abortSignal?.throwIfAborted();
-		reusedChrome = await reuseRunningChromeProfile(userDataDir, logger);
+		reusedChrome = config.agentBrowserRdp?.enabled ? null : await reuseRunningChromeProfile(userDataDir, logger);
 		options.abortSignal?.throwIfAborted();
 		chrome =
 			reusedChrome ??
@@ -5419,7 +5419,7 @@ async function runGrokBrowserMode({
 	let effectiveConfig = launchConfig;
 	let reusedChrome: LaunchedChrome | null = null;
 	try {
-		reusedChrome = await reuseRunningChromeProfile(userDataDir, logger);
+		reusedChrome = effectiveConfig.agentBrowserRdp?.enabled ? null : await reuseRunningChromeProfile(userDataDir, logger);
 		chrome =
 			reusedChrome ??
 			(await launchChrome(

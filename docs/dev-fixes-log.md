@@ -1,3 +1,12 @@
+## 2026-10-09 — Desktop placement must cover prompt and reuse paths
+
+BrowserService's manual-login launcher is only one launch seam. Ordinary
+ChatGPT/Grok prompts call the Chrome lifecycle wrapper directly, and existing
+endpoint discovery can skip launching entirely. Named desktop selection must
+cover both seams and validate exact service session/display ownership before
+reattachment. Provider-free tests caught both bypasses; this source checkpoint
+is not installed or live desktop acceptance.
+
 ## 2026-10-08 — Recognize the captured rich ChatGPT composer for reads
 
 Conversation readiness must recognize the observed DIV with data-composer-markdown,

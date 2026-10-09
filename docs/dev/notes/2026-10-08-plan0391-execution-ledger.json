@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "objective": "Merge PR243 and execute full Plan0391",
+  "started_at": "2026-10-09T01:54:51Z",
+  "checkpoint_deadline": "2026-10-09T04:40:00Z",
+  "hard_stop_before": "2026-10-09T04:54:51Z",
+  "token_checkpoint_before": 1900000,
+  "token_limit": 2000000,
+  "checkpoint_cadence": "At each packet transition and at most 30 minutes apart",
+  "max_work_unit_attempts": 2,
+  "max_broad_reviews": 1,
+  "max_review_remediation_passes": 1,
+  "plan": "docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md",
+  "base": "591a118245cafbc54c34cd0bc179c4b380308ef6",
+  "branch": "feat/issue240-named-desktops",
+  "pr243": "merged",
+  "tickets": {
+    "240": {
+      "state": "running",
+      "blockers": []
+    },
+    "241": {
+      "state": "pending",
+      "blockers": [
+        240
+      ]
+    },
+    "242": {
+      "state": "pending",
+      "blockers": [
+        241
+      ]
+    }
+  },
+  "unmet": "Issue240 full launch/convergence and mutation-safe reuse acceptance; all issue241 and issue242 client/control implementation and integrated/installed acceptance",
+  "authority": "User explicitly requested merge and full execution; safe in-scope fixture/live verification included; unrelated authenticated provider work and infrastructure provisioning excluded",
+  "progress_classification": "outcome_progress",
+  "evidence": "PR243 merged; 64 focused checks and typecheck pass; red-green ordinary prompt dispatch and service ownership attachment regressions reproduced",
+  "next_action": "Complete exact launch/convergence fixtures and prevent registry retargeting after desktop validation"
+}

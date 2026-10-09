@@ -53380,3 +53380,14 @@ archive reads match local bytes. Monitor2 stopped before child and interrupted
 next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
 the same parent and retained settled idle lease/one known target. No source
 change or acceptance closure claimed.
+
+### 2026-10-09 — Plan0391 desktop launch dispatch in progress
+
+PR243 is merged at591a118245cafbc54c34cd0bc179c4b380308ef6. Issue240
+adds named desktop config, exact route preflight, ordinary prompt dispatch,
+and read-only session/display checks for service attachment.64 focused checks
+pass; typecheck passes. Red evidence reproduced ordinary prompt routing to
+local Chrome and service attachment skipping desktop verification. Remaining:
+full launch/convergence contract fixtures, mutation-safe reuse reconciliation,
+client, control handoff, integrated and installed acceptance. No live launches
+or feature completion claimed. Original workspace dirty work is preserved.
