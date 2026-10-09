@@ -1,0 +1,115 @@
+{
+  "schema": "auracall_plan0386_rate_retry.v1",
+  "journey": {
+    "number": 9,
+    "startedAt": "2026-10-09T01:16:23.010Z",
+    "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+    "beforePassCount": 13,
+    "purpose": "User-authorized single retry with passive rate-limit observation",
+    "status": "observed_terminal",
+    "hardStop": "observer warning/physical-page gate",
+    "endedAt": "2026-10-09T01:18:29.167Z",
+    "jobId": null,
+    "childStatus": null,
+    "afterPassCount": 13,
+    "error": null,
+    "outcome": "stopped_on_observed_http429_before_new_refresh_published"
+  },
+  "originalWindowPreserved": true,
+  "retryAuthority": "User: try again. if we are rate limited, messages will not load",
+  "sourceCommit": "c6710b169b2acd0388adbf964370c6b3a696e399",
+  "collectorEvidenceOrigin": "No new completed refresh; earlier messages-not-found diagnostics must not be attributed to this retry.",
+  "observer": {
+    "attachments": 1,
+    "maxPages": 1,
+    "conversationDocuments": {
+      "6ac58ed3-2f7c-83ea-a353-22c17537bd8c": 1
+    },
+    "http429": 1,
+    "downloads": 0,
+    "responseMetadata": [
+      {
+        "at": "2026-10-09T01:18:28.194Z",
+        "status": 429,
+        "host": "chatgpt.com",
+        "category": "other",
+        "conversationId": null,
+        "mimeType": "application/json"
+      },
+      {
+        "at": "2026-10-09T01:18:28.568Z",
+        "status": 404,
+        "host": "chatgpt.com",
+        "category": "conversation",
+        "conversationId": "6ac58ed3-2f7c-83ea-a353-22c17537bd8c",
+        "mimeType": "application/json"
+      },
+      {
+        "at": "2026-10-09T01:18:28.778Z",
+        "status": 404,
+        "host": "chatgpt.com",
+        "category": "conversation",
+        "conversationId": "6ac58ed3-2f7c-83ea-a353-22c17537bd8c",
+        "mimeType": "application/json"
+      }
+    ],
+    "conversationResponses": [
+      {
+        "at": "2026-10-09T01:18:28.568Z",
+        "status": 404,
+        "host": "chatgpt.com",
+        "category": "conversation",
+        "conversationId": "6ac58ed3-2f7c-83ea-a353-22c17537bd8c",
+        "mimeType": "application/json",
+        "bytes": 168,
+        "json": true,
+        "topLevelKeys": [
+          "detail"
+        ],
+        "mappingNodes": 0,
+        "messages": 0,
+        "roles": [],
+        "nonemptyTextParts": 0,
+        "hasError": false
+      },
+      {
+        "at": "2026-10-09T01:18:28.778Z",
+        "status": 404,
+        "host": "chatgpt.com",
+        "category": "conversation",
+        "conversationId": "6ac58ed3-2f7c-83ea-a353-22c17537bd8c",
+        "mimeType": "application/json",
+        "bytes": 168,
+        "json": true,
+        "topLevelKeys": [
+          "detail"
+        ],
+        "mappingNodes": 0,
+        "messages": 0,
+        "roles": [],
+        "nonemptyTextParts": 0,
+        "hasError": false
+      }
+    ]
+  },
+  "cleanup": {
+    "at": "2026-10-09T01:20:47.247Z",
+    "closedOwnedTarget": "9F1B479914157B8C6676572138FB1DB3",
+    "ownedTargetAbsent": true,
+    "remainingPageIds": [
+      "77FEECE3A340526298F413B22A06A913"
+    ],
+    "wholeBrowserTerminated": false,
+    "reason": "Owned target closure confirmed by subsequent census; shared browser preserved. Initial immediate post-close census was too early."
+  },
+  "parentPaused": true,
+  "schedulerPaused": true,
+  "activeMaterializationJobs": 0,
+  "retryLeaseRegistryDisposition": "Idle settled lease remains recorded after target absence; no synthetic release or registry rewrite.",
+  "limitations": [
+    "HTTP429 confirms rate limiting during this retry, not the historical cause of journey8.",
+    "Normal unscoped frontier selected a different conversation from journey8.",
+    "Conversation endpoint returned404 twice with no message mapping; cannot attribute these404s solely to429.",
+    "Shared browser process and foreign target preserved; do not claim global process absence."
+  ]
+}

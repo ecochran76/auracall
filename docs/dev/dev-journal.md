@@ -1,3 +1,15 @@
+## 2026-10-09T01:18Z | User-requested retry observes rate limiting
+
+User explicitly requested another attempt with rate-limit observation. Exact
+managed browser scope was free before launch. Journey9, in a new bounded retry
+window preserving the expired window and allowance, observes ChatGPT HTTP429,
+then two conversation404s with no message mapping. Parent paused before a new
+refresh was published; no child or download. Nine charged/one unused. Normal
+frontier selected another row, so historical journey8 cause remains unproven.
+Cleanup guard detects a new foreign workload in the shared browser: only the
+retry target is closed and confirmed absent; foreign tab/process preserved.
+Idle settled lease remains recorded pending ordinary reconciliation. [Receipt](notes/2026-10-09-plan0386-rate-retry9.json).
+
 ## 2026-10-09 | Messages diagnosis needs actual response evidence and custody
 
 Explicit diagnosing-bugs request targets journey8 messages-not-found. Saved DOM

@@ -1,5 +1,25 @@
 # Plan0386 messages-not-found diagnosis: Phase1 evidence gap
 
+## Successor observation: user-authorized retry
+
+At 2026-10-09T01:16Z the user explicitly requested another attempt, noting rate
+limiting could prevent messages loading. Exact managed browser scope was free at
+preflight. A single new bounded retry window preserves the original expired
+window and charges journey9 against the existing ten, leaving one unused.
+Passive observation records ChatGPT HTTP429 at01:18:28.194Z, followed by two
+conversation404 responses with zero message mapping. The normal frontier selects
+a different row. Parent is paused with no new completed refresh or child; there
+is no second retry. This establishes current rate limiting, not the cause of the
+historical journey8 symptom. No production fix or offline red-capable loop claim.
+
+The owned target is subsequently confirmed closed. Another workload acquired a
+tab in the same process before cleanup, so the whole process and foreign tab are
+preserved. Initial immediate post-close census was too early; subsequent census
+proves absence. Idle settled retry lease remains recorded, without manual
+registry mutation. [Negative retry receipt](2026-10-09-plan0386-rate-retry9.json).
+
+## Historical first diagnostic preflight
+
 User explicitly invoked diagnosing-bugs after the ten-journey objective was
 blocked. Target symptom is journey8's `ChatGPT conversation
 6ac76440-d80c-83e9-8b84-df32c009247d messages not found`, separately from the

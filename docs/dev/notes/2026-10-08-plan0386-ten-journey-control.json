@@ -8,8 +8,8 @@
   "runtimeProfile": "wsl-chrome-3",
   "browserProfile": "wsl-chrome-3",
   "maxLiveJourneys": 10,
-  "usedLiveJourneys": 8,
-  "remainingJourneys": 2,
+  "usedLiveJourneys": 9,
+  "remainingJourneys": 1,
   "liveJourneys": [
     {
       "number": 1,
@@ -116,6 +116,21 @@
       "childStatus": "skipped",
       "afterPassCount": 13,
       "error": null
+    },
+    {
+      "number": 9,
+      "startedAt": "2026-10-09T01:16:23.010Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 13,
+      "purpose": "User-authorized single retry with passive rate-limit observation",
+      "status": "observed_terminal",
+      "hardStop": "observer warning/physical-page gate",
+      "endedAt": "2026-10-09T01:18:29.167Z",
+      "jobId": null,
+      "childStatus": null,
+      "afterPassCount": 13,
+      "error": null,
+      "outcome": "stopped_on_observed_http429_before_new_refresh_published"
     }
   ],
   "installedSourceCommit": "c6710b169b2acd0388adbf964370c6b3a696e399",
@@ -138,11 +153,18 @@
     "mixed guard/reload",
     "dependent bounded scheduler"
   ],
-  "executionState": "awaiting_readable_content_or_new_independent_frontier",
-  "stopReason": "Journey8 independent conversation context messages not found; frozen collector-failure gate prevents journeys9\u201310.",
-  "progress": "Eight charged terminal, two unused. Journey7 completes context; journey8 B messages not found. Installed cache-only replay selects same failed B; no new provider work.",
-  "stopResolution": "Unresolved. PR238 removes readiness denial, but readable B content remains unproven. Current installed cursor/planner replay repeats failed B. Preserve failed evidence and two unused journeys.",
-  "checkpointStatus": "stopped_at_content_gate",
+  "executionState": "rate_limited_stopped",
+  "stopReason": "Journey9 observed ChatGPT HTTP429; parent paused, no further retries.",
+  "progress": "Nine charged journeys, one unused. Journey9 observed one429 and two404 conversation responses; no new refresh published or child created.",
+  "stopResolution": "Unresolved. Wait for provider recovery; rate limiting observed now does not establish cause of journey8.",
+  "checkpointStatus": "stopped_on_http429",
   "controllerSession": "55649 (exit 1 after journey8 terminal)",
-  "lastRevalidation": "2026-10-08-plan0386-content-gate-replay.json"
+  "lastRevalidation": "2026-10-08-plan0386-content-gate-replay.json",
+  "retryWindow": {
+    "authority": "User: try again; observe whether rate limiting prevents messages loading",
+    "maxAdditionalJourneys": 1,
+    "deadline": "2026-10-09T01:28:00Z",
+    "latestJourneyStart": "2026-10-09T01:18:00Z",
+    "originalWindowPreserved": true
+  }
 }
