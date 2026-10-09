@@ -1,3 +1,13 @@
+## 2026-10-09 | Messages diagnosis needs actual response evidence and custody
+
+Explicit diagnosing-bugs request targets journey8 messages-not-found. Saved DOM
+and observer artifacts omit conversation response payload; existing readiness
+fixture supplies synthetic messages. No trustworthy Phase1 loop or source fix
+claimed. Fresh API remains paused/pass13 with zero active jobs, but exact managed
+browser PID6377 now has three held idle leases from a different workflow; owner
+unproven. No attachment, closure or journey9. Eight charged/two unused, original
+window expired. [Diagnosis](notes/2026-10-09-plan0386-messages-diagnosis.md).
+
 ## 2026-10-08 | Content gate stops additional allowance after eight terminal
 
 Journey7 completes context and skips absent artifacts. Journey8 visits independent
