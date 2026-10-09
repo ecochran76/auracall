@@ -1,3 +1,4 @@
+import './desktopControlRuntime.js';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserLaunchPlan } from './browserLaunchPlan.js';

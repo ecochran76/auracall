@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import CDP from 'chrome-remote-interface';
+import CDP from './guardedCdp.js';
 import { Launcher, type LaunchedChrome } from 'chrome-launcher';
 import type { BrowserLogger, ResolvedBrowserConfig, ChromeClient } from './types.js';
 import { cleanupStaleProfileState, quarantineColdManagedProfileSessions, readDevToolsPort, readChromePid, writeDevToolsActivePort } from './profileState.js';

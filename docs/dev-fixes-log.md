@@ -24439,3 +24439,14 @@ AuraCall's application adapter now joins exact application/pool ownership and
 live-resource generations. This source checkpoint does not establish native
 client or installed AuraCall acceptance. See Plan0391 and the native validation
 receipt for red/green and read-only installed evidence.
+
+### 2026-10-09 — Plan0391 CDP mutation admission
+
+Manual desktop ownership must exclude commands at the real transport boundary.
+Generated chrome-remote-interface domain methods call `client.send`; guarding
+only high-level browser operations leaves existing clients able to mutate.
+Shared transport now gates those sends and static target mutations against
+cross-process desktop ownership and fresh retained browser generation. Resolve
+admission from the actual WebSocket target when supplied. A real WebSocket
+regression proves no command emission during human control and verified release
+resumes automation. Native viewer grant coordination remains a separate gate.

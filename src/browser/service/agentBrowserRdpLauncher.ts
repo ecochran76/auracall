@@ -525,6 +525,8 @@ export async function launchAgentBrowserRdpSession(
       session: plan.session,
       routePoolEntryId: plan.routePoolEntryId,
       ...desktopRoute,
+      cdpHost: host,
+      cdpPort: port,
       handoffUrl: opened.handoffUrl,
     });
   }

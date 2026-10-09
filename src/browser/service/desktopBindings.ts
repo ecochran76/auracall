@@ -12,6 +12,8 @@ const bindingSchema = z.object({
   routePoolEntryId: z.string().min(1),
   routeId: z.string().min(1),
   displayAllocationId: z.string().min(1),
+  cdpHost: z.string().min(1).optional(),
+  cdpPort: z.number().int().min(1).max(65535).optional(),
   handoffUrl: z.url().refine((value) => {
     const url = new URL(value);
     return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash && /^\/remote-view\/[A-Za-z0-9_-]+$/.test(url.pathname);

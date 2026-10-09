@@ -1,3 +1,4 @@
+import './service/desktopControlRuntime.js';
 import path from 'node:path';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import {

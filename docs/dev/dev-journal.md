@@ -53422,3 +53422,15 @@ and passes afterward. The adapter rechecks exact assignment/lifecycle/viewing
 generations and validates the opaque observe grant target, configured HTTPS
 origins and current bounded lifetime. Three native tests pass; integrated
 launch/client behavior is still open.
+
+### 2026-10-09 — Plan0391 CDP admission source checkpoint
+
+Shared CDP transport enforces a cross-process per-desktop gate across provider,
+HTTP and lifecycle entry points. Human ownership blocks generated commands
+before WebSocket emission; release requires exact token/generation, and old
+clients reject replaced retained browser identity. A target WebSocket URL supplies
+the actual endpoint used for admission. The wire regression failed with raw CDP
+and passes with the guarded transport. 292 browser checks pass across 12 files;
+focused gate checks pass after endpoint binding refinement. Locks are retained
+on uncertainty; no automatic abandoned-lock reclamation is implemented. Native
+viewer grant/revoke, client integration and installed acceptance remain open.

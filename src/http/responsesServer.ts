@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import CDP from "chrome-remote-interface";
+import CDP from "../browser/cdp.js";
 import { captureDesktopView, listDesktopViews } from "../browser/service/desktopClient.js";
 import { renderDesktopClientPage } from "./desktopClientPage.js";
 import type { OptionValues } from "commander";

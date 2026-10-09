@@ -130,6 +130,7 @@
     "@types/chrome-remote-interface": "^0.33.0",
     "@types/inquirer": "^9.0.9",
     "@types/node": "^25.0.3",
+    "@types/ws": "8.18.1",
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "4.0.16",
     "devtools-protocol": "0.0.1561482",
@@ -141,7 +142,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.13",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "ws": "8.21.0"
   },
   "pnpm": {
     "overrides": {
