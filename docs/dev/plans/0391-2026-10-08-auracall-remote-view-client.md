@@ -42,6 +42,36 @@ Installed readback disproved it. The current source reads the actual supported
 three installed routes currently report unavailable; this is an installed
 acceptance gate, not evidence to synthesize ready state or provision capacity.
 
+### Contract correction: 2026-10-09 native application integration
+
+Canonical Agent Browser main `c4054ed6` and Remote View main `e1ad20d`
+expose a newer native application integration than the local Agent Browser
+checkout used for the first source checkpoint. Remote View's authoritative
+`docs/consumer-integration-guide.md` explicitly includes AuraCall and supplies
+application pools, retained assignments and observe/control embed routes through
+`POST /v1/consumer`. The native viewer owns pixels, transport and input. AuraCall
+owns its dedicated route, desktop selection, durable assignment lookup and
+coordination with automation. Replace the snapshot presentation as the primary
+product path with native presentation; keep prior receipts as historical source
+evidence, not feature acceptance. No second viewer/access layer is required.
+
+The installed consumer API at loopback port 19096 returned native application
+inventory with live-resource desktop joins. Legacy RDP route unavailability does
+not establish native capacity failure. Installed configuration currently has no
+AuraCall consumer. A separate supported Agent Browser `service browsers` read
+failed with `protected_browser_owner_observation_invalid`, effect `no_effect`;
+preserve that failure without repeated recovery attempts. Native Agent Browser
+responses retain `browserSession` handoff identity and differ from legacy open
+responses, so launch/attachment contracts must be adapted and tested before
+acceptance. This revision preserves all confirmed product decisions and gates.
+
+Next bounded source work: implement exact application/pool/assignment generation
+joins at the native consumer seam, then integrate named placement and native
+observe/control presentation. Native viewer control must use the proven CDP
+admission gate; a viewer grant alone remains insufficient. Configuration adoption
+and installed acceptance remain explicit later gates. Do not mutate borrowed
+Agent Browser desktops or reuse foreign application assignments.
+
 ## Objective and scope
 
 Display AuraCall managed browsers through a dedicated remote-view client,

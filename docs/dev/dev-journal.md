@@ -53403,3 +53403,16 @@ caught nonexistent service route-pool syntax in the prior checkpoint; corrected
 to supported service status and its service_state collections. Three installed
 RDP routes currently report unavailable. Control and installed acceptance remain
 open. All provider work and infrastructure provisioning remain excluded.
+
+### 2026-10-09 — Plan0391 native contract correction
+
+Current canonical Agent Browser and Remote View source supersede the local
+legacy RDP integration assumptions. Remote View supplies application pools and
+native observe/control embeds; AuraCall owns selection and automation arbitration.
+Recorded the correction in Plan0391 and the ledger, preserving old receipts.
+Native consumer boundary regression was red against a no-op implementation;
+two tests now pass, including exact ownership/generation joins and loopback-only
+control transport. A read-only installed probe using this adapter reports two
+ready Agent Browser assignments; no AuraCall consumer is configured yet and no
+borrowed desktop was mutated. CDP wire exclusion and gate tests also pass.
+Source integration, native presentation/control and installed acceptance remain.

@@ -32,13 +32,13 @@
       ]
     }
   },
-  "unmet": "Coordinated controller grant and real automation exclusion, conflict/release/resume; integration; installed two-desktop acceptance (all three current RDP routes unavailable)",
+  "unmet": "Native AuraCall application/pool configuration and named placement; replace primary snapshot presentation with native observe/control embeds; join controller grants to automation admission; integration; installed two-desktop acceptance",
   "authority": "User explicitly requested merge and full execution; safe in-scope fixture/live verification included; unrelated authenticated provider work and infrastructure provisioning excluded",
   "progress_classification": "outcome_progress",
   "evidence": "68 focused tests and typecheck pass; rendered provider-free dedicated client smoke passes navigation/reload/empty/unavailable/root; installed route-pool command defect reproduced and repaired to service status",
-  "next_action": "Implement real CDP admission gate and explicit control lifecycle; qualify supported Agent Browser control seam before exposing interactive viewer",
-  "source_checkpoint": "82c3818754e1387f74db01e64270e2d13e0cdd31",
-  "last_checkpoint_at": "2026-10-09T02:21:00Z",
+  "next_action": "Integrate the native consumer application boundary, preserve exact managed browser ownership and adapt native Agent Browser response shapes",
+  "source_checkpoint": "2b36a101be5da8e17f3c1f088eca9f66d84c7a0d",
+  "last_checkpoint_at": "2026-10-09T02:39:00Z",
   "installed_route_readback": {
     "at": "2026-10-09T02:16:00Z",
     "command": "agent-browser --json service status",
@@ -47,6 +47,16 @@
       "guacamole-rdp-a": "unavailable",
       "guacamole-rdp-b": "unavailable"
     },
-    "acceptance": false
+    "acceptance": false,
+    "scope": "Historical legacy RDP readback; does not qualify native Remote View capacity"
+  },
+  "native_contract_correction": {
+    "agent_browser_main": "c4054ed6",
+    "remote_view_main": "e1ad20d",
+    "consumer_origin": "http://127.0.0.1:19096",
+    "read_only_ready_agent_browser_assignments": 2,
+    "auracall_consumer_configured": false,
+    "agent_browser_inventory_failure": "protected_browser_owner_observation_invalid",
+    "installed_acceptance": false
   }
 }

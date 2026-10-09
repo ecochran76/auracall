@@ -24428,3 +24428,14 @@ match can miss the process. A parent collector result can precede asynchronous
 child publication, and pause does not establish child absence. Re-read the
 durable child before another resume; observe an existing running child to
 terminal without creating or claiming a second child.
+
+### 2026-10-09 — Plan0391 native Remote View contract correction
+
+For native Remote View integrations, verify canonical Agent Browser source and
+Remote View's application integration guide before using legacy route-pool
+assumptions. The native consumer API owns assignments and separate lifecycle/
+viewing generations; legacy RDP route availability does not qualify that path.
+AuraCall's application adapter now joins exact application/pool ownership and
+live-resource generations. This source checkpoint does not establish native
+client or installed AuraCall acceptance. See Plan0391 and the native validation
+receipt for red/green and read-only installed evidence.
