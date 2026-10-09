@@ -12,7 +12,7 @@ interface GateOwner {
 	acquiredAt: string;
 }
 
-/** A human lease never expires into unattended automation. Explicit release is required. */
+/** A clock alone never releases a human lease; exact provider revocation must qualify handoff. */
 export class DesktopControlGate {
 	private readonly lockPath: string;
 	constructor(

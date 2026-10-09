@@ -29,7 +29,7 @@ export class NativeDesktopControlError extends Error {
   constructor(message: string, readonly claimRetained: boolean) { super(message); this.name = 'NativeDesktopControlError'; }
 }
 
-/** Only exact provider revocation permits explicit automation resumption. URLs stay ephemeral. */
+/** Exact provider revocation qualifies manual or inactivity handoff. URLs stay ephemeral. */
 export class NativeDesktopControl {
 	constructor(
 		private readonly options: {

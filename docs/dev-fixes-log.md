@@ -1,3 +1,14 @@
+## 2026-10-09 — Input inactivity must be observed at the gateway
+
+Cross-origin viewer input cannot be inferred from the surrounding application's
+mouse events or connection state. A second viewer window also bypasses a parent
+page callback. Track admitted keyboard/pointer instructions for the exact control
+grant at both HTTP and WebSocket gateway paths, exclude sync/ack/resize/ping, and
+persist the input timestamp. Compare and revoke under one provider store lock.
+AuraCall releases automation exclusion only after exact terminal proof and then
+mounts observe-only presentation. Source tests and a real rendered transport
+fixture qualify the implementation; installed wall-clock acceptance is separate.
+
 ## 2026-10-09 — Remote View verification must adopt the effective config
 
 A live verifier loop caches configuration at process startup. Updating the
