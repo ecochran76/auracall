@@ -90,8 +90,8 @@ must not silently fall back to root desktop.
 
 PR #243 merged at 591a118245cafbc54c34cd0bc179c4b380308ef6.
 The operator then authorized execution of the full plan, with checkpoint and
-stop before two million tokens or three hours. Packet #240 is active on
-feat/issue240-named-desktops; #241 and #242 remain dependent. The execution
+stop before two million tokens or three hours. All three source packets are implemented on
+feat/issue240-named-desktops and await their coordinated integration/acceptance. The execution
 ledger records bounds, current evidence and unmet acceptance. No feature
 acceptance is claimed from the planning merge. Current implementation and
 installed API adoption have progressed through all three source packets on the
