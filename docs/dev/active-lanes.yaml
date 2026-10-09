@@ -1723,8 +1723,8 @@ lanes:
     overlaps: [P85]
     reconciled_overlaps: [P85]
     reconciliation_note: P86 preserves P85 provider behavior and paused-scheduler authority; shared prompt edits only dispatch named desktop launches.
-    blocker: null
-    validation_status: provider-free-implementation-in-progress
+    blocker: Operator authenticated native viewer/input and independent root acceptance; marker values remain blank.
+    validation_status: installed-native-viewer-acceptance-blocked
     validation_ref: docs/dev/notes/2026-10-08-plan0391-execution-ledger.json
     integration_receipt: null
     disposition: Planning PR243 merged; native AuraCall placement, observe client and coordinated control pass source qualification; installed Chrome placement/control passes; bounded review remediation passes; installed API adopted with two owned marker browsers; authenticated pixels/input, root viewing and integration remain open.

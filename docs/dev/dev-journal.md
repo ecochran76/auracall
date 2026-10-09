@@ -1,3 +1,15 @@
+## 2026-10-09 | Plan0391 blocked acceptance checkpoint
+
+The authenticated native viewer/input/root gate recurred across three consecutive
+goal turns. Actual installed CDP verification succeeds in reading both marker
+fields, but both remain blank. No authenticated visual/root attestation has
+arrived. PR244 remains draft and all tickets remain open. Source and installed
+API work are retained; the two exact owned marker browsers remain intentionally
+available. Automatic goal continuation stops as blocked, before the user time
+or token limits. Resume only from the operator response: read actual markers
+after release, bind native visual/root acceptance, then integrate if qualified.
+Do not reset markers, create replacement browsers or auto-release control.
+
 ## 2026-10-09 | Plan 0391 installed dedicated client prepared
 
 Installed code checkpoint cdb767f86942c57af03579604028ee5f2f647da5 is active in

@@ -148,6 +148,9 @@
       "research": "research-391",
       "writing": "writing-391"
     },
-    "meaning": "Actual installed CDP read succeeded; required human viewer input is not yet present. No marker reset, new browser, takeover or release occurred."
-  }
+    "meaning": "Actual installed CDP read succeeded; required human viewer input is not yet present. No marker reset, new browser, takeover or release occurred.",
+    "lastRevalidatedAt": "2026-10-09T04:20:10.963556+00:00",
+    "consecutiveImpasseGoalTurns": 3
+  },
+  "goalDisposition": "blocked on operator authenticated native viewer/input and root acceptance; not complete"
 }

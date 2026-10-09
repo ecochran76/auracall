@@ -36,9 +36,9 @@
   "authority": "User explicitly requested merge and full execution; safe in-scope fixture/live verification included; unrelated authenticated provider work and infrastructure provisioning excluded",
   "progress_classification": "no_progress: same external acceptance gate remains; actual marker read confirms input absent",
   "evidence": "170 regressions/25 files; all four bounded review findings verify; installed API91439 code cdb767f8 serves two ready owned native desktops; all 21 old launch plans, 17 paused completions and 33 pre-upgrade Chrome processes preserved",
-  "next_action": "Await existing operator question response; actual installed verification finds both marker values blank. No further source remediation or integration is justified before authenticated viewer/root acceptance.",
+  "next_action": "Operator completes the existing viewer check and replies. Resume by verifying both actual marker values after release, binding visual/root attestation, and integrating only if acceptance qualifies. Do not reset markers or automatically release human control.",
   "source_checkpoint": "b557da7fb",
-  "last_checkpoint_at": "2026-10-09T04:19:23.572788+00:00",
+  "last_checkpoint_at": "2026-10-09T04:20:10.963556+00:00",
   "installed_route_readback": {
     "at": "2026-10-09T02:16:00Z",
     "command": "agent-browser --json service status",
@@ -71,12 +71,18 @@
   "blocking_gate": {
     "condition": "Authenticated native viewer pixels/input and independent root viewing require operator session/attestation; no authorized authenticated browser session available to the agent",
     "first_impasse_turn": "2026-10-09 installed-client preparation and question",
-    "consecutive_impasse_goal_turns": 2,
+    "consecutive_impasse_goal_turns": 3,
     "question_pending": true,
     "do_not_repeat_prepare": true,
     "safe_next_step": "Read actual marker values after human release; bind operator visual/root attestation; do not infer acceptance from API grants",
     "memory_disposition": "forbidden",
-    "memory_receipt": "/home/ecochran76/.graphiti-openclaw/state/closeout-memory/20261009T041710Z-remember.json"
+    "memory_receipt": "/home/ecochran76/.graphiti-openclaw/state/closeout-memory/20261009T041710Z-remember.json",
+    "last_revalidated_at": "2026-10-09T04:20:10.963556+00:00",
+    "actual_marker_values": {
+      "research": "",
+      "writing": ""
+    }
   },
-  "continuation_rule": "Do not rerun prepare or create more acceptance browsers while operator check is pending. On operator response, verify actual marker values after release, bind native-pixel/root attestation, then integrate only if all gates qualify. Preserve the one broad review/one remediation bounds. Stop before deadline or token checkpoint."
+  "continuation_rule": "Do not rerun prepare or create more acceptance browsers while operator check is pending. On operator response, verify actual marker values after release, bind native-pixel/root attestation, then integrate only if all gates qualify. Preserve the one broad review/one remediation bounds. Stop before deadline or token checkpoint.",
+  "execution_disposition": "blocked: authenticated native viewer/input and independent root attestation require operator input"
 }
