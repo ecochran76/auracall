@@ -1,14 +1,16 @@
-# AuraCall Remote-View Client Spec | 0391-1-2026-10-08
+# AuraCall Remote-View Client Spec | 0392-2026-10-08
 
-State: PLANNED
+State: OPEN
 Lane: P86
 Parent: Plan 0391
 Owner: Eric Cochran
 
 ## Current State
 
-Product decisions and delivery breakdown confirmed. Tickets #240, #241 and
-#242 are published; implementation remains pending.
+Tickets #240, #241 and #242 are published. Configured launch placement and the
+passive dedicated client are in implementation; coordinated control remains
+pending. All tickets stay open until integrated and installed evidence qualifies
+their respective outcomes.
 This is a local spec, not a claim of installed behavior.
 
 ## Problem Statement
@@ -63,6 +65,10 @@ stops clearly rather than falling back to root desktop.
 - Build the dedicated presentation at its owning application seam. Any missing
   Agent Browser contract must be identified and implemented truthfully rather
   than inferred from a successful shared-display launch.
+- Passive presentation uses Agent Browser desktop capture frames from the
+  retained remote-view browser, with exact route/display checks before exposure.
+  Frames are response-only and refresh at most once every 1.5 seconds per client.
+  Observation exposes no interactive provider iframe.
 - Viewer and controller ownership remain separate. A controller lease alone
   does not establish that AuraCall CDP writes are excluded. The integration
   must coordinate both or refuse conflicting handoff.
@@ -96,4 +102,5 @@ movement of running browsers, and unrelated recovery or refactoring.
 
 The approved vertical slices and their blocking edges are recorded in the
 parent plan: #240 → #241 → #242. Product decisions are settled. The next
-implementation frontier is #240; the current task publishes tickets and plans.
+implementation frontier is the joint source checkpoint for #240/#241, followed
+by #242 control coordination and whole-plan integration/installed acceptance.

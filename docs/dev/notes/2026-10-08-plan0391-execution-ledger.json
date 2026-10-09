@@ -32,9 +32,21 @@
       ]
     }
   },
-  "unmet": "Issue240 full launch/convergence and mutation-safe reuse acceptance; all issue241 and issue242 client/control implementation and integrated/installed acceptance",
+  "unmet": "Coordinated controller grant and real automation exclusion, conflict/release/resume; integration; installed two-desktop acceptance (all three current RDP routes unavailable)",
   "authority": "User explicitly requested merge and full execution; safe in-scope fixture/live verification included; unrelated authenticated provider work and infrastructure provisioning excluded",
   "progress_classification": "outcome_progress",
-  "evidence": "PR243 merged; 64 focused checks and typecheck pass; red-green ordinary prompt dispatch and service ownership attachment regressions reproduced",
-  "next_action": "Complete exact launch/convergence fixtures and prevent registry retargeting after desktop validation"
+  "evidence": "68 focused tests and typecheck pass; rendered provider-free dedicated client smoke passes navigation/reload/empty/unavailable/root; installed route-pool command defect reproduced and repaired to service status",
+  "next_action": "Implement real CDP admission gate and explicit control lifecycle; qualify supported Agent Browser control seam before exposing interactive viewer",
+  "source_checkpoint": "82c3818754e1387f74db01e64270e2d13e0cdd31",
+  "last_checkpoint_at": "2026-10-09T02:21:00Z",
+  "installed_route_readback": {
+    "at": "2026-10-09T02:16:00Z",
+    "command": "agent-browser --json service status",
+    "routes": {
+      "guacamole-rdp-3": "unavailable",
+      "guacamole-rdp-a": "unavailable",
+      "guacamole-rdp-b": "unavailable"
+    },
+    "acceptance": false
+  }
 }

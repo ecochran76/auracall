@@ -26,6 +26,22 @@ feat/issue240-named-desktops; #241 and #242 remain dependent. The execution
 ledger records bounds, current evidence and unmet acceptance. No feature
 acceptance is claimed from the planning merge.
 
+### Execution revision: 2026-10-09
+
+The implementation remains on one serialized branch for source qualification.
+Packets retain their dependency order; shared launch-binding retention and
+client projection are committed together before joint integration. No ticket
+closes before its outcome is integrated and verified. The dedicated route is
+`/desktops`; passive presentation uses Agent Browser's full-desktop capture
+contract on retained remote-view browsers. Controller presentation remains
+withheld until real automation exclusion and conflict arbitration are proven.
+
+The first checkpoint used a nonexistent `service route-pool` CLI command.
+Installed readback disproved it. The current source reads the actual supported
+`service status` response and its `service_state.routePool` collection. Existing
+three installed routes currently report unavailable; this is an installed
+acceptance gate, not evidence to synthesize ready state or provision capacity.
+
 ## Objective and scope
 
 Display AuraCall managed browsers through a dedicated remote-view client,
@@ -150,7 +166,7 @@ simulating a successful binding. No live adoption is implied.
 
 ### Packet 2: dedicated multi-desktop client
 
-Owner: Eric Cochran. Inputs: integrated packet 1 and its resolved desktop
+Owner: Eric Cochran. Inputs: qualified packet 1 source on the joint branch and its resolved desktop
 identity contract. Expected write surface: AuraCall application/API presentation
 and integration tests; any necessary Agent Browser presentation change must
 have its owning-repo plan and governed work item before modification. The exact

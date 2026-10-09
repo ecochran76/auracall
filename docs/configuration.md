@@ -659,8 +659,17 @@ existing session on another display is rejected during service attachment.
 Keep each configured route's ownership consistent with Agent Browser's route
 allocation contract.
 
-The dedicated client and coordinated manual control are tracked separately in
-issues #241 and #242; desktop placement alone does not provide those features.
+Open `/desktops` on the AuraCall HTTP service for the dedicated AuraCall client.
+It groups positively owned browsers by configured desktop and uses full-desktop
+frames from the retained remote-view route. Viewing sends no input and does not
+close or relaunch the browser. Desktop selection survives reload in the client
+URL. An unavailable or stale binding clears the view and reports the failure.
+`remoteView.rootDesktopUrl` supplies an independent root desktop link.
+
+Passive frames refresh every 1.5 seconds while the client is visible. Closing
+or hiding the client stops its requests; browser lifetime stays service-owned.
+Manual-control coordination is still in implementation under issue #242 and is
+not yet exposed by this source checkpoint.
 
 ## Compatibility Bridge Example
 

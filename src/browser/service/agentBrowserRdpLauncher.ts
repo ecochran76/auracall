@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { DesktopBindingStore } from './desktopBindings.js';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -25,6 +26,8 @@ const BUILD_FOR_FAMILY: Record<BrowserProfileFamily, AgentBrowserBuild> = {
 };
 
 type JsonRecord = Record<string, unknown>;
+
+export const runAgentBrowserCommand: AgentBrowserCommandRunner = (...args) => defaultRunner(...args);
 
 export interface AgentBrowserCommandResult {
   stdout: string;
@@ -91,6 +94,7 @@ export interface LaunchAgentBrowserRdpSessionOptions {
   abortSignal?: AbortSignal;
   onStage?: (stage: string) => void;
   runner?: AgentBrowserCommandRunner;
+  bindingStore?: DesktopBindingStore;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -379,9 +383,12 @@ async function preflightDesktopRoute(
 ): Promise<{ routeId: string; displayAllocationId: string } | undefined> {
   if (!plan.routePoolEntryId) return undefined;
   const envelope = parseCommandEnvelope(await runner(plan.executable,
-    ['--json', '--session', plan.session, 'service', 'route-pool'], commandOptions), 'agent-browser service route-pool');
-  const data = responseData(envelope, 'agent-browser service route-pool');
-  const entries = Array.isArray(data.routePool) ? data.routePool.filter(isRecord) : [];
+    ['--json', '--session', plan.session, 'service', 'status'], commandOptions), 'agent-browser service status');
+  const data = responseData(envelope, 'agent-browser service status');
+  const projection = isRecord(data.serviceStateProjection) ? data.serviceStateProjection : {};
+  if (projection.complete === false) throw new Error('Agent Browser service inventory is incomplete; refusing desktop placement.');
+  const state = isRecord(data.service_state) ? data.service_state : {};
+  const entries = isRecord(state.routePool) ? Object.values(state.routePool).filter(isRecord) : [];
   const matching = entries.filter((entry) => entry.id === plan.routePoolEntryId);
   const entry = matching.length === 1 ? matching[0] : undefined;
   if (!entry || entry.provider !== 'rdp_gateway' || !['available', 'checked_out'].includes(String(entry.state))) {
@@ -503,8 +510,24 @@ export async function launchAgentBrowserRdpSession(
     'agent-browser service browsers',
   );
   const browser = selectBrowserRecord(inventoryEnvelope, opened.browserId, plan.session);
+  if (desktopRoute && (browser.id !== opened.browserId ||
+    browser.displayAllocationId !== desktopRoute.displayAllocationId ||
+    !Array.isArray(browser.activeSessionIds) || !browser.activeSessionIds.includes(plan.session))) {
+    throw new Error('Opened AuraCall desktop browser inventory does not prove exact session/display ownership.');
+  }
   const { host, port } = resolveBrowserCdpConnection(browser);
   const pid = positiveInteger(browser.pid) ?? undefined;
+  if (desktopRoute && plan.desktopName && plan.routePoolEntryId) {
+    await (options.bindingStore ?? new DesktopBindingStore()).record({
+      desktopName: plan.desktopName,
+      managedProfileDir: plan.userDataDir,
+      browserId: opened.browserId,
+      session: plan.session,
+      routePoolEntryId: plan.routePoolEntryId,
+      ...desktopRoute,
+      handoffUrl: opened.handoffUrl,
+    });
+  }
   return {
     chrome: { host, port, ...(pid ? { pid } : {}) },
     port,

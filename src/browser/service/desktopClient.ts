@@ -1,0 +1,112 @@
+import { RemoteViewConfigSchema } from '../../schema/types.js';
+import { DesktopBindingStore, type DesktopBinding } from './desktopBindings.js';
+import { runAgentBrowserCommand, type AgentBrowserCommandRunner } from './agentBrowserRdpLauncher.js';
+
+export { DesktopBindingStore } from './desktopBindings.js';
+type RecordValue = Record<string, unknown>;
+function record(value: unknown): value is RecordValue { return typeof value === 'object' && value !== null && !Array.isArray(value); }
+function records(value: unknown): RecordValue[] { return Array.isArray(value) ? value.filter(record) : []; }
+function collection(value: unknown): RecordValue[] { return record(value) ? Object.values(value).filter(record) : records(value); }
+
+export interface DesktopView {
+  name: string;
+  label: string;
+  state: 'ready' | 'empty' | 'unavailable';
+  message?: string;
+  browsers: Array<{ browserId: string; handoffUrl: string }>;
+}
+
+async function query(command: string, args: string[], runner: AgentBrowserCommandRunner): Promise<RecordValue> {
+  try {
+    const result = await runner(command, ['--json', ...args], { timeoutMs: 15_000, maxOutputBytes: 16 * 1024 * 1024 });
+    const envelope: unknown = JSON.parse(result.stdout);
+    if (!record(envelope) || envelope.success !== true || !record(envelope.data)) throw new Error('Unavailable');
+    return envelope.data;
+  } catch {
+    // Child-process errors may contain the full private service inventory.
+    throw new Error('Agent Browser remote-view service is unavailable.');
+  }
+}
+
+function matchesBrowser(binding: DesktopBinding, browser: RecordValue): boolean {
+  return browser.id === binding.browserId && browser.health === 'ready' &&
+    Array.isArray(browser.activeSessionIds) && browser.activeSessionIds.includes(binding.session) &&
+    browser.displayAllocationId === binding.displayAllocationId && records(browser.viewStreams).some((stream) =>
+      stream.provider === 'rdp_gateway' && stream.routeId === binding.routeId && stream.displayAllocationId === binding.displayAllocationId);
+}
+
+export async function listDesktopViews(input: {
+  remoteView: unknown;
+  store?: DesktopBindingStore;
+  runner?: AgentBrowserCommandRunner;
+}): Promise<{ defaultDesktop?: string; rootDesktopUrl?: string; desktops: DesktopView[] }> {
+  const config = RemoteViewConfigSchema.parse(input.remoteView ?? {});
+  const bindings = await (input.store ?? new DesktopBindingStore()).list();
+  const runner = input.runner ?? runAgentBrowserCommand;
+  const desktops: DesktopView[] = [];
+  for (const [name, desktop] of Object.entries(config.desktops)) {
+    const view: DesktopView = { name, label: desktop.label ?? name, state: 'empty', browsers: [] };
+    try {
+      const command = desktop.command ?? 'agent-browser';
+      const status = await query(command, ['service', 'status'], runner);
+      if (record(status.serviceStateProjection) && status.serviceStateProjection.complete === false) throw new Error('Desktop inventory is incomplete.');
+      const state = record(status.service_state) ? status.service_state : {};
+      const matches = collection(state.routePool).filter((route) => route.id === desktop.routePoolEntryId);
+      const route = matches.length === 1 ? matches[0] : undefined;
+      if (!route || route.provider !== 'rdp_gateway' || !['available', 'checked_out'].includes(String(route.state))) throw new Error('Configured desktop route is unavailable.');
+      const candidates = bindings.filter((binding) => binding.desktopName === name && binding.routePoolEntryId === desktop.routePoolEntryId);
+      for (const binding of candidates) {
+        const target = record(route.target) ? route.target : {};
+        const allocation = target.displayAllocationId ?? `remote-view-display:${String(route.routeId)}`;
+        const browsers = collection(state.browsers).filter((browser) => matchesBrowser(binding, browser));
+        if (route.routeId !== binding.routeId || allocation !== binding.displayAllocationId || browsers.length !== 1) throw new Error('Retained AuraCall browser ownership or display binding is stale.');
+        view.browsers.push({ browserId: binding.browserId, handoffUrl: binding.handoffUrl });
+      }
+      if (view.browsers.length) view.state = 'ready';
+    } catch (error) {
+      view.state = 'unavailable';
+      view.browsers = [];
+      view.message = error instanceof Error ? error.message : 'Desktop unavailable.';
+    }
+    desktops.push(view);
+  }
+  return { defaultDesktop: config.defaultDesktop, rootDesktopUrl: config.rootDesktopUrl, desktops };
+}
+
+export async function captureDesktopView(input: {
+  remoteView: unknown;
+  name: string;
+  browserId: string;
+  store?: DesktopBindingStore;
+  runner?: AgentBrowserCommandRunner;
+}): Promise<{ imageBase64: string; width: number; height: number; capturedAt?: string }> {
+  const config = RemoteViewConfigSchema.parse(input.remoteView ?? {});
+  const desktop = Object.hasOwn(config.desktops, input.name) ? config.desktops[input.name] : undefined;
+  if (!desktop) throw new Error('Unknown AuraCall desktop.');
+  const store = input.store ?? new DesktopBindingStore();
+  const views = await listDesktopViews({ ...input, store });
+  const view = views.desktops.find((item) => item.name === input.name);
+  if (view?.state !== 'ready' || !view.browsers.some((browser) => browser.browserId === input.browserId)) {
+    throw new Error(view?.message ?? 'No ready AuraCall-owned browser exists on this desktop.');
+  }
+  const bindings = (await store.list()).filter((item) => item.desktopName === input.name && item.browserId === input.browserId);
+  if (bindings.length !== 1) throw new Error('Ambiguous retained desktop ownership.');
+  const binding = bindings[0];
+  const data = await query(desktop.command ?? 'agent-browser',
+    ['--session', binding.session, 'desktop', 'capture', '--browser-id', binding.browserId, '--max-bytes', '8388608'],
+    input.runner ?? runAgentBrowserCommand);
+  const context = record(data.context) ? data.context : {};
+  const receipt = record(data.frameReceipt) ? data.frameReceipt : {};
+  if (context.browserId !== binding.browserId || context.sessionName !== binding.session ||
+    context.routeId !== binding.routeId || context.displayAllocationId !== binding.displayAllocationId) {
+    throw new Error('Desktop frame binding changed during observation.');
+  }
+  if (receipt.mimeType !== 'image/png' || receipt.freshness !== 'fresh_capture' ||
+    typeof data.imageBase64 !== 'string' || data.imageBase64.length > 11_184_812 ||
+    typeof context.width !== 'number' || typeof context.height !== 'number' ||
+    !Number.isInteger(context.width) || !Number.isInteger(context.height) || context.width <= 0 || context.height <= 0) {
+    throw new Error('Invalid or stale remote desktop frame.');
+  }
+  return { imageBase64: data.imageBase64, width: context.width, height: context.height,
+    ...(typeof receipt.capturedAt === 'string' ? { capturedAt: receipt.capturedAt } : {}) };
+}

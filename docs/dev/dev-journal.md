@@ -53391,3 +53391,15 @@ local Chrome and service attachment skipping desktop verification. Remaining:
 full launch/convergence contract fixtures, mutation-safe reuse reconciliation,
 client, control handoff, integrated and installed acceptance. No live launches
 or feature completion claimed. Original workspace dirty work is preserved.
+
+### 2026-10-09 — Plan0391 passive client source checkpoint
+
+Added dedicated/desktops app, retained per-managed-browser handoffs, positive
+service inventory filtering, exact capture identity checks and root link.
+68 focused checks and typecheck pass. Puppeteer renders two-desktop navigation,
+reload retention, empty/unavailable states and independent root access with
+fixture frames; it does not establish actual desktops. Installed command probe
+caught nonexistent service route-pool syntax in the prior checkpoint; corrected
+to supported service status and its service_state collections. Three installed
+RDP routes currently report unavailable. Control and installed acceptance remain
+open. All provider work and infrastructure provisioning remain excluded.

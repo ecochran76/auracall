@@ -41,7 +41,7 @@ describe('configured desktop browser launches', () => {
     const config = configuredDesktops();
     const plan = resolveBrowserLaunchPlan({ source: { kind: 'user-config', config } });
     const runner = vi.fn(async (_command: string, args: string[]) => {
-      if (args.includes('route-pool')) return { stdout: JSON.stringify({ success: true, data: { routePool: [{ id: 'route-research', provider: 'rdp_gateway', state: 'unavailable' }] } }), stderr: '' };
+      if (args.includes('status')) return { stdout: JSON.stringify({ success: true, data: { service_state: { routePool: { research: { id: 'route-research', provider: 'rdp_gateway', state: 'unavailable' } } } } }), stderr: '' };
       throw new Error(`Unexpected launch: ${args.join(' ')}`);
     });
     await expect(launchAgentBrowserRdpSession({ config: structuredClone(plan.launchPolicy) as ResolvedBrowserConfig, userDataDir: plan.managedBrowserProfile.directory, url: 'about:blank', serviceTarget: 'chatgpt', logger: () => {}, runner })).rejects.toThrow('route-research is unavailable');
@@ -65,7 +65,7 @@ describe('configured desktop browser launches', () => {
     const plan = buildAgentBrowserRdpOpenPlan(options);
     let allocation = 'remote-view-display:research-route';
     const runner = vi.fn(async (_command: string, args: string[]) => {
-      if (args.includes('route-pool')) return { stdout: JSON.stringify({ success: true, data: { routePool: [{ id: 'route-research', provider: 'rdp_gateway', state: 'checked_out', routeId: 'research-route', target: { displayName: ':20' } }] } }), stderr: '' };
+      if (args.includes('status')) return { stdout: JSON.stringify({ success: true, data: { service_state: { routePool: { research: { id: 'route-research', provider: 'rdp_gateway', state: 'checked_out', routeId: 'research-route', target: { displayName: ':20' } } } } } }), stderr: '' };
       if (args.includes('browsers')) return { stdout: JSON.stringify({ success: true, data: { browsers: [{ id: 'research-browser', activeSessionIds: [plan.session], health: 'ready', cdpEndpoint: 'http://127.0.0.1:45123', displayAllocationId: allocation, viewStreams: [{ routeId: 'research-route', displayAllocationId: allocation }] }] } }), stderr: '' };
       throw new Error('Unexpected browser launch');
     });

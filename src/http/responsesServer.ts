@@ -6,6 +6,8 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import CDP from "chrome-remote-interface";
+import { captureDesktopView, listDesktopViews } from "../browser/service/desktopClient.js";
+import { renderDesktopClientPage } from "./desktopClientPage.js";
 import type { OptionValues } from "commander";
 import { ZodError, z } from "zod";
 import {
@@ -366,6 +368,10 @@ export interface ResponsesHttpServerOptions {
 }
 
 export interface ResponsesHttpServerDeps {
+  desktopClient?: {
+    list: () => ReturnType<typeof listDesktopViews>;
+    capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
+  };
 	control?: ExecutionRuntimeControlContract;
 	runnersControl?: ExecutionRunnerControlContract;
 	config?: Record<string, unknown>;
@@ -1858,6 +1864,34 @@ export async function createResponsesHttpServer(
 				} satisfies HttpErrorPayload);
 				return;
 			}
+
+      if (req.method === "GET" && url.pathname === "/desktops") {
+        sendHtml(res, 200, renderDesktopClientPage());
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/v1/desktops") {
+        const catalog = await (deps.desktopClient?.list() ?? listDesktopViews({ remoteView: configuredRuntimeConfig?.remoteView }));
+        sendJson(res, 200, catalog, { "Cache-Control": "no-store" });
+        return;
+      }
+      const desktopFrame = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/frame$/);
+      if (req.method === "GET" && desktopFrame) {
+        const name = decodeURIComponent(desktopFrame[1]);
+        const browserId = url.searchParams.get("browser");
+        if (!browserId) {
+          sendJson(res, 400, { error: { message: "Select an AuraCall browser to view." } });
+          return;
+        }
+        try {
+          const frame = await (deps.desktopClient?.capture(name, browserId) ?? captureDesktopView({
+            remoteView: configuredRuntimeConfig?.remoteView, name, browserId,
+          }));
+          sendJson(res, 200, frame, { "Cache-Control": "no-store" });
+        } catch (error) {
+          sendJson(res, 503, { error: { message: error instanceof Error ? error.message : "Desktop unavailable." } }, { "Cache-Control": "no-store" });
+        }
+        return;
+      }
 
 			if (
 				(req.method === "GET" || req.method === "HEAD") &&
@@ -7810,6 +7844,8 @@ function sameHost(left: string, right: string): boolean {
 
 function isOperatorDashboardPath(pathname: string, routes: OperatorDashboardRoutes): boolean {
 	const dashboardRoutes = [
+
+    "/desktops",
 		routes.consolePath,
 		routes.dashboardPath,
 		routes.debugDashboardPath,

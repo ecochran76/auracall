@@ -1,3 +1,11 @@
+## 2026-10-09 — Verify CLI syntax separately from collection schemas
+
+Agent Browser's route-pool collection contract does not imply a service
+route-pool CLI command. The installed CLI rejects it. Use the supported service
+status response and service_state.routePool map, including projection completeness
+and exact identity checks. Provider fixtures must reproduce the actual CLI
+response shape. Successful fixture checks alone cannot qualify installed routing.
+
 ## 2026-10-09 — Desktop placement must cover prompt and reuse paths
 
 BrowserService's manual-login launcher is only one launch seam. Ordinary

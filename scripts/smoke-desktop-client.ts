@@ -1,0 +1,59 @@
+#!/usr/bin/env tsx
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import puppeteer from 'puppeteer-core';
+import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
+import { createResponsesHttpServer } from '../src/http/responsesServer.js';
+
+const home = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-desktop-client-smoke-'));
+setAuracallHomeDirOverrideForTest(home);
+const imageBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8ioAAAAASUVORK5CYII=';
+const desktops = [
+  { name: 'research', label: 'Research', state: 'ready' as const, browsers: [{ browserId: 'research-browser', handoffUrl: 'https://browser.example.test/remote-view/research' }] },
+  { name: 'writing', label: 'Writing', state: 'ready' as const, browsers: [{ browserId: 'writing-browser', handoffUrl: 'https://browser.example.test/remote-view/writing' }] },
+  { name: 'empty', label: 'Empty desktop', state: 'empty' as const, browsers: [] },
+  { name: 'unavailable', label: 'Unavailable desktop', state: 'unavailable' as const, browsers: [], message: 'Configured desktop route is unavailable.' },
+];
+const frames: string[] = [];
+const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0, tabAffinityMaintenanceIntervalMs: 0 }, { desktopClient: {
+  list: async () => ({ defaultDesktop: 'research', rootDesktopUrl: 'https://browser.example.test/root', desktops }),
+  capture: async (name, browserId) => { frames.push(`${name}:${browserId}`); return { imageBase64, width: 1, height: 1 }; },
+} });
+let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined;
+let browserProfileArgument: string | undefined;
+try {
+  browser = await puppeteer.launch({ executablePath: process.env.AURACALL_OPERATOR_UX_SMOKE_CHROME_PATH ?? '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  browserProfileArgument = browser.process()?.spawnargs.find((argument) => argument.startsWith('--user-data-dir='));
+  const page = await browser.newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(String(error)));
+  await page.goto(`http://127.0.0.1:${server.port}/desktops`);
+  await page.waitForFunction(() => document.querySelector<HTMLImageElement>('#frame')?.hidden === false);
+  assert.equal(await page.$eval('#title', (node) => node.textContent), 'Research');
+  await page.$eval('#desktops button:nth-child(2)', (node) => (node as HTMLButtonElement).click());
+  await page.waitForFunction(() => document.querySelector('#title')?.textContent === 'Writing' && document.querySelector<HTMLImageElement>('#frame')?.hidden === false);
+  assert.equal(new URL(page.url()).searchParams.get('desktop'), 'writing');
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('#title')?.textContent === 'Writing' && document.querySelector<HTMLImageElement>('#frame')?.hidden === false);
+  await page.$eval('#desktops button:nth-child(3)', (node) => (node as HTMLButtonElement).click());
+  await page.waitForFunction(() => document.querySelector('#message')?.textContent?.includes('No AuraCall browsers'));
+  await page.$eval('#desktops button:nth-child(4)', (node) => (node as HTMLButtonElement).click());
+  await page.waitForFunction(() => document.querySelector('#message')?.textContent?.includes('Configured desktop route'));
+  assert.equal(await page.$eval('#root', (node) => (node as HTMLAnchorElement).href), 'https://browser.example.test/root');
+  assert.deepEqual(errors, []);
+  assert(frames.includes('research:research-browser') && frames.includes('writing:writing-browser'));
+  console.log(JSON.stringify({ scope: 'provider-free rendered client', passed: ['two-desktop-navigation', 'durable-selection-reload', 'empty-state', 'unavailable-state', 'independent-root-link'], pageErrors: errors, installedDesktopAcceptance: false }));
+} finally {
+  await browser?.close();
+  await server.close();
+  setAuracallHomeDirOverrideForTest(null);
+  await fs.rm(home, { recursive: true, force: true });
+  const processList = await promisify(execFile)('ps', ['-eo', 'pid,args']);
+  const remaining = browserProfileArgument ? processList.stdout.split('\n').filter((line) => line.includes(browserProfileArgument as string)) : [];
+  assert.equal(remaining.length, 0, 'The smoke browser left an owned process running.');
+  console.log(JSON.stringify({ freshOsReadback: true, remainingOwnedProcesses: remaining.length }));
+}

@@ -1,9 +1,11 @@
 # Aura-Call Roadmap
 
-- Planned P86: [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)
+- OPEN P86: [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)
   and [its spec](docs/dev/plans/0392-2026-10-08-auracall-remote-view-client-spec.md) govern the dedicated AuraCall remote-view client with multiple configured
   desktops, independent root desktop and explicit coordinated control handoff.
-  Approved tickets are #240 → #241 → #242; implementation has not started.
+  Current State: PR243 is merged. Configured launches and the passive client are
+  in source qualification; controller coordination and installed acceptance
+  remain open. Approved tickets stay #240 → #241 → #242.
   This registers the requested feature without changing other lane priorities.
 
 - Completed P78 / issue 131: [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)

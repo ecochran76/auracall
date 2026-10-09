@@ -21989,3 +21989,20 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Plan remains PLANNED. No source implementation, browser/provider activity,
   installation, infrastructure provisioning or service restart occurred.
   Original checkout dirty work is preserved in the separate source checkout.
+
+## Turn 634 | 2026-10-09
+
+- User authorized merge and full execution of Plan0391, with checkpoint before
+  two million tokens or three hours. PR243 merged at591a118245cafbc54c34cd0bc179c4b380308ef6.
+- Published initial named-desktop dispatch checkpoint82c381875, then implemented
+  retained ownership, supported service status reads, passive full-desktop
+  capture and the dedicated/desktops HTTP application on the same serialized
+  implementation branch. No controller UI is exposed before real exclusion.
+- 68 focused checks, 30 launch regression checks, typecheck and targeted lint
+  qualify source. Rendered fixture smoke covers multiple desktop navigation,
+  reload, empty/unavailable states and root link; fresh OS readback has zero
+  smoke-owned processes. The broader HTTP suite has222 passes and one timing
+  failure, reproduced identically on checkpoint82c381875; isolated repeat passes.
+- Installed service readback lists three existing RDP routes as unavailable.
+  This blocks two-actual-desktop acceptance; no state was fabricated and no
+  infrastructure was provisioned. Plan and tickets remain OPEN.
