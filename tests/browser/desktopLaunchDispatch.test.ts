@@ -36,3 +36,14 @@ test('service attachment verifies desktop ownership before accepting an existing
   expect(launches.discover).toHaveBeenCalledTimes(1);
   expect(launches.remote).not.toHaveBeenCalled();
 });
+
+test('native desktop launch dispatch uses the native placement path rather than root or legacy RDP', async () => {
+  const native = await import('../../src/browser/service/nativeDesktopRuntime.js');
+  const stub = vi.spyOn(native, 'launchNativeDesktopBrowser').mockResolvedValue({ port: 45125, pid: 12347, kill: async () => {} });
+  try {
+    const remoteViewDesktop = { desktopName: 'research', poolName: 'main', application: 'auracall', origin: 'http://127.0.0.1:19096', publicOrigin: 'https://desktop.example.test', appOrigin: 'https://aura.example.test' };
+    const chrome = await launchChrome({ ...DEFAULT_BROWSER_CONFIG, remoteViewDesktop }, '/tmp/native-dispatch-browser', () => {});
+    expect(chrome.port).toBe(45125); expect(stub).toHaveBeenCalledTimes(1);
+    expect(launches.local).not.toHaveBeenCalled(); expect(launches.remote).not.toHaveBeenCalled();
+  } finally { stub.mockRestore(); }
+});

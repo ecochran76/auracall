@@ -9,8 +9,9 @@ test('the dedicated desktop app serves an owned inventory and passive frames thr
   const home = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-desktops-'));
   setAuracallHomeDirOverrideForTest(home);
   const calls: string[] = [];
-  const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0, tabAffinityMaintenanceIntervalMs: 0 }, { config: { api: { auth: { required: true, keys: [{ id: 'operator', secret: 'fixture-api-key' }] } } }, desktopClient: {
+  const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0, tabAffinityMaintenanceIntervalMs: 0 }, { config: { api: { auth: { required: true, keys: [{ id: 'operator', secret: 'fixture-api-key' }, { id: 'scoped', secret: 'scoped-api-key', services: ['chatgpt'] }] } } }, desktopClient: {
     list: async () => ({ desktops: [{ name: 'research', label: 'Research', state: 'ready' as const, browsers: [{ browserId: 'owned-browser', handoffUrl: 'https://browser.example.test/remote-view/owned' }] }] }),
+    view: async (name, browserId) => { calls.push(`native:${name}:${browserId}`); return { url: 'https://desktop.example.test/embed/11111111-1111-4111-8111-111111111111', capability: 'observe' as const }; },
     capture: async (name, browserId) => { calls.push(`${name}:${browserId}`); return { imageBase64: 'iVBORw0KGgo=', width: 1920, height: 1080 }; },
   } });
   try {
@@ -26,5 +27,11 @@ test('the dedicated desktop app serves an owned inventory and passive frames thr
     expect(frame.headers.get('cache-control')).toBe('no-store');
     expect((await frame.json()).width).toBe(1920);
     expect(calls).toEqual(['research:owned-browser']);
+    expect((await fetch(`${base}/v1/desktops`, { headers: { authorization: 'Bearer scoped-api-key' } })).status).toBe(403);
+    expect((await fetch(`${base}/v1/desktops/research/view?browser=owned-browser`)).status).toBe(401);
+    const native = await fetch(`${base}/v1/desktops/research/view?browser=owned-browser`, { headers: operatorHeaders });
+    expect(native.status).toBe(200);
+    expect(await native.json()).toMatchObject({ capability: 'observe', url: expect.stringContaining('/embed/') });
+    expect(calls).toEqual(['research:owned-browser', 'native:research:owned-browser']);
   } finally { await server.close(); setAuracallHomeDirOverrideForTest(null); await fs.rm(home, { recursive: true, force: true }); }
 });

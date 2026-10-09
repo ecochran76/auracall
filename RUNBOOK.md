@@ -22006,3 +22006,13 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Installed service readback lists three existing RDP routes as unavailable.
   This blocks two-actual-desktop acceptance; no state was fabricated and no
   infrastructure was provisioned. Plan and tickets remain OPEN.
+
+## Turn 635 | 2026-10-09
+
+Plan0391 native contract correction is implemented through native assignment
+acquisition, per-child launch environment, process-bound browser receipts, owned
+catalog and passive native embeds. The initial RDP snapshot checkpoint remains
+historical evidence. 121 focused source checks and rendered provider-free
+native client smoke pass. Root remains independently selectable. No native
+controller presentation, installed AuraCall consumer adoption or feature
+completion is claimed. Receipt: docs/dev/notes/2026-10-09-plan0391-native-placement-client-validation.json.

@@ -1,8 +1,9 @@
-import { resolveDesktopLaunch } from './desktopConfig.js';
+import { resolveDesktopLaunch, resolveNativeDesktopLaunch } from './desktopConfig.js';
 import { resolveManagedProfileName } from '../profileStore.js';
 import type {
   AgentBrowserBuild,
   AgentBrowserRdpConfig,
+  RemoteViewDesktopConfig,
   BrowserProfileFamily,
   DebugPortStrategy,
   ResolvedBrowserConfig,
@@ -42,6 +43,7 @@ export interface ResolvedBrowserProfile {
   browserFamily?: BrowserProfileFamily;
   browserBuild?: AgentBrowserBuild;
   agentBrowserRdp?: AgentBrowserRdpConfig;
+  remoteViewDesktop?: RemoteViewDesktopConfig;
   chromePath?: string;
   display?: string;
   managedProfileRoot?: string;
@@ -86,6 +88,7 @@ export interface ResolvedBrowserLaunchProfile {
   browserFamily?: BrowserProfileFamily;
   browserBuild?: AgentBrowserBuild;
   agentBrowserRdp?: AgentBrowserRdpConfig;
+  remoteViewDesktop?: RemoteViewDesktopConfig;
   chromePath?: string;
   display?: string;
   chromeProfile?: string;
@@ -426,6 +429,13 @@ export function resolveBrowserProfileResolution(input: {
       asBoolean(browser.collapseDisposableWindows) ?? browserProfile.collapseDisposableWindows,
   };
 
+  const nativeDesktopLaunch = resolveNativeDesktopLaunch({ remoteView: merged.remoteView, desktop: selectedBrowserProfile.desktop ?? profileBrowser.desktop ?? browser.desktop });
+  if (nativeDesktopLaunch) {
+    browserProfile.remoteViewDesktop = nativeDesktopLaunch;
+    launchProfile.remoteViewDesktop = nativeDesktopLaunch;
+    browserProfile.agentBrowserRdp = undefined;
+    launchProfile.agentBrowserRdp = undefined;
+  }
   const desktopLaunch = resolveDesktopLaunch({
     remoteView: merged.remoteView,
     desktop: selectedBrowserProfile.desktop ?? profileBrowser.desktop ?? browser.desktop,

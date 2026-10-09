@@ -632,17 +632,27 @@ agent-browser reports the actual selected executable.
 
 ## Named AuraCall desktops
 
-`remoteView` selects placement for subsequent browser launches. Define each
-named desktop using an existing Agent Browser runtime profile and exact RDP
-route-pool entry. AuraCall does not provision displays or route-pool entries.
+Native `remoteView` uses Remote View's application consumer API. AuraCall owns
+its Chromium processes, managed browser profiles and CDP; Remote View supplies
+desktops and the native viewer. Configure an enabled external-mode `auracall`
+consumer with a bounded pool and AuraCall's exact HTTPS embedding origin in the
+Remote View installation before selecting it here. No provider installation,
+network provisioning or borrowed Agent Browser desktop adoption is automatic.
 
 ```json5
 remoteView: {
+  application: {
+    name: "auracall",
+    origin: "http://127.0.0.1:19096", // private native control endpoint
+    publicOrigin: "https://desktops.example.com",
+    appOrigin: "https://auracall.example.com"
+  },
   defaultDesktop: "research",
   desktops: {
-    research: { runtimeProfile: "auracall-research", routePoolEntryId: "route-research" },
-    writing: { runtimeProfile: "auracall-writing", routePoolEntryId: "route-writing" }
-  }
+    research: { poolName: "main", label: "Research" },
+    writing: { poolName: "main", label: "Writing" }
+  },
+  rootDesktopUrl: "https://desktops.example.com/root"
 },
 browserProfiles: {
   "work-chrome": { desktop: "writing" },
@@ -650,26 +660,38 @@ browserProfiles: {
 }
 ```
 
-A browser-profile `desktop` assignment overrides the global default. The
-reserved name `root` explicitly selects ordinary desktop launching. Unknown
-names and unavailable routes fail before remote-view open; there is no root
-fallback. Browser profile directories and authentication stay in place.
-Configuration changes do not move an existing browser between displays; an
-existing session on another display is rejected during service attachment.
-Keep each configured route's ownership consistent with Agent Browser's route
-allocation contract.
+The private origin must use loopback HTTP; presentation origins use HTTPS.
+The root URL is operator-supplied and independent of AuraCall's assignments.
+A browser-profile assignment overrides the global default. `root` selects
+ordinary desktop launching explicitly. Unknown names, unavailable configuration,
+stale assignments and unverified browser ownership fail clearly without root
+fallback. Selecting a native desktop forces a persistent headed browser and
+keeps the existing managed browser directory and authentication.
 
-Open `/desktops` on the AuraCall HTTP service for the dedicated AuraCall client.
-It groups positively owned browsers by configured desktop and uses full-desktop
-frames from the retained remote-view route. Viewing sends no input and does not
-close or relaunch the browser. Desktop selection survives reload in the client
-URL. An unavailable or stale binding clears the view and reports the failure.
-`remoteView.rootDesktopUrl` supplies an independent root desktop link.
+Each named desktop retains one exact native assignment. Multiple browser
+profiles can share it; different names acquire distinct assignments within the
+configured pool's capacity. Configuration changes apply to subsequent launches;
+an existing browser on a different desktop is refused rather than moved.
+Native browser receipts bind the PID, boot/start identity, selected executable,
+managed directory, display, CDP endpoint and assignment generation.
 
-Passive frames refresh every 1.5 seconds while the client is visible. Closing
-or hiding the client stops its requests; browser lifetime stays service-owned.
-Manual-control coordination is still in implementation under issue #242 and is
-not yet exposed by this source checkpoint.
+Open `/desktops` on the AuraCall HTTP service. The dedicated client lists only
+positively owned running AuraCall browsers and mounts Remote View's native
+observe-only embed. Selecting another desktop disposes the old viewer, and
+reload preserves the selected desktop/browser through AuraCall's own URL.
+Fresh presentation routes are issued after exact assignment/generation readback;
+opaque provider routes are temporary and never become durable browser identity.
+Existing ingress authentication remains in force. Scoped execution API keys do
+not authorize desktop operator access.
+
+Viewing sends no input and closing the client keeps browsers and assignments
+running. Explicit coordinated native control remains under implementation in
+issue #242; this checkpoint exposes passive native presentation only.
+
+Existing explicit `agentBrowserRdp` configuration remains independent. A legacy
+named desktop may still specify `runtimeProfile` plus `routePoolEntryId` instead
+of `poolName`; its compatibility presentation uses passive captures. Legacy RDP
+route state does not establish native Remote View availability.
 
 ## Compatibility Bridge Example
 

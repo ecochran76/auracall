@@ -266,3 +266,26 @@ the owning-repo dependency, and keep the affected acceptance criterion open.
 - Work items, plan state, roadmap/runbook and custody projection are reconciled
   from verified evidence. Close the plan only when required outcomes are met;
   this ticket-and-plan publication alone leaves it PLANNED.
+
+### Native placement execution decision: 2026-10-09
+
+AuraCall will use Remote View's documented external-application contract directly
+for native named desktops. AuraCall already owns its Chromium launch, managed
+browser profiles and CDP lifecycle. Keep those existing seams and provide the
+exact provider launch environment per child process. Agent Browser's globally
+configured application identity does not become AuraCall ownership merely by
+changing service labels; borrowed Agent Browser assignments stay excluded.
+Existing explicitly configured agentBrowserRdp behavior remains independently
+supported. Native named desktop configuration selects an AuraCall application
+and pool; acquisition uses a stable key per named desktop and retains the exact
+assignment. Multiple AuraCall browsers may share that retained desktop.
+
+Expected write surface adds native application configuration/resolution, durable
+native assignment/browser receipts, the existing Chrome launch environment seam,
+native client inventory/embed/control APIs and their public tests. No upstream
+code or installed runtime upgrade is required for this path. The provider must
+already expose a configured AuraCall consumer/pool and approved embed origin;
+missing configuration fails before browser launch. Capacity acquisition within
+that configured application pool is ordinary desktop use, not installation or
+network provisioning. Release and cleanup require exact process/assignment
+readback; closing a viewer does not release the desktop.

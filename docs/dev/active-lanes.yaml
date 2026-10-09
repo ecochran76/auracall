@@ -1715,7 +1715,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 82c3818754e1387f74db01e64270e2d13e0cdd31
+    checkpoint: 373e9b802d9aebc3cfd22ccea0d6d781331274ac
     remote_ref: refs/remotes/origin/feat/issue240-named-desktops
     integration: merge
     work_items: [ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242]
@@ -1727,5 +1727,5 @@ lanes:
     validation_status: provider-free-implementation-in-progress
     validation_ref: docs/dev/notes/2026-10-08-plan0391-execution-ledger.json
     integration_receipt: null
-    disposition: Planning PR243 merged; desktop binding and passive client source are in qualification; control and installed acceptance remain open.
+    disposition: Planning PR243 merged; native AuraCall placement and observe client are in source qualification; native controller coordination and installed acceptance remain open.
     updated_at: 2026-10-09

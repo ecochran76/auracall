@@ -1,3 +1,5 @@
+import { resolveNativeDesktopLaunch } from './desktopConfig.js';
+import { readyNativeDesktopBrowsers, nativeDesktopObserveView } from './nativeDesktopClient.js';
 import { RemoteViewConfigSchema } from '../../schema/types.js';
 import { DesktopBindingStore, type DesktopBinding } from './desktopBindings.js';
 import { runAgentBrowserCommand, type AgentBrowserCommandRunner } from './agentBrowserRdpLauncher.js';
@@ -10,6 +12,7 @@ function collection(value: unknown): RecordValue[] { return record(value) ? Obje
 
 export interface DesktopView {
   name: string;
+  presentation?: 'native';
   label: string;
   state: 'ready' | 'empty' | 'unavailable';
   message?: string;
@@ -47,6 +50,17 @@ export async function listDesktopViews(input: {
   for (const [name, desktop] of Object.entries(config.desktops)) {
     const view: DesktopView = { name, label: desktop.label ?? name, state: 'empty', browsers: [] };
     try {
+      if (desktop.poolName) {
+        const selected = resolveNativeDesktopLaunch({ remoteView: config, desktop: name });
+        if (!selected) throw new Error('Native desktop configuration is unavailable.');
+        view.presentation = 'native';
+        const nativeBrowsers = await readyNativeDesktopBrowsers(selected);
+        view.browsers = nativeBrowsers.map(binding => ({ browserId: binding.browserId,
+          handoffUrl: `/desktops?desktop=${encodeURIComponent(name)}&browser=${encodeURIComponent(binding.browserId)}` }));
+        if (view.browsers.length) view.state = 'ready';
+        desktops.push(view);
+        continue;
+      }
       const command = desktop.command ?? 'agent-browser';
       const status = await query(command, ['service', 'status'], runner);
       if (record(status.serviceStateProjection) && status.serviceStateProjection.complete === false) throw new Error('Desktop inventory is incomplete.');
@@ -83,6 +97,7 @@ export async function captureDesktopView(input: {
   const config = RemoteViewConfigSchema.parse(input.remoteView ?? {});
   const desktop = Object.hasOwn(config.desktops, input.name) ? config.desktops[input.name] : undefined;
   if (!desktop) throw new Error('Unknown AuraCall desktop.');
+  if (desktop.poolName) throw new Error('Use the native viewer for this desktop.');
   const store = input.store ?? new DesktopBindingStore();
   const views = await listDesktopViews({ ...input, store });
   const view = views.desktops.find((item) => item.name === input.name);
@@ -109,4 +124,10 @@ export async function captureDesktopView(input: {
   }
   return { imageBase64: data.imageBase64, width: context.width, height: context.height,
     ...(typeof receipt.capturedAt === 'string' ? { capturedAt: receipt.capturedAt } : {}) };
+}
+
+export async function openDesktopView(input: { remoteView: unknown; name: string; browserId: string }): Promise<{ url: string; capability: 'observe' }> {
+  const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
+  if (!selected) throw new Error('The selected desktop does not provide a native viewer.');
+  return nativeDesktopObserveView(selected, input.browserId);
 }

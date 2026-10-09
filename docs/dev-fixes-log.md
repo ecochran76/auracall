@@ -24450,3 +24450,13 @@ cross-process desktop ownership and fresh retained browser generation. Resolve
 admission from the actual WebSocket target when supplied. A real WebSocket
 regression proves no command emission during human control and verified release
 resumes automation. Native viewer grant coordination remains a separate gate.
+
+### 2026-10-09 — Native desktop launch environments and owned embeds
+
+Passing DISPLAY/XAUTHORITY through process.env couples concurrent desktop
+launches. Chrome launch now uses a per-child environment, including the exact
+Remote View slot generation and X11 toolkit posture. Native AuraCall receipts
+bind managed directory, process boot/start/executable, display and CDP to the
+retained application assignment. The dedicated client uses the provider's
+existing observe embed; it does not reconstruct pixels or transport. Source
+and fixture rendering evidence remains separate from installed acceptance.

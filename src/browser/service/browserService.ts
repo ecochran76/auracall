@@ -42,6 +42,7 @@ import {
 } from '../../../packages/browser-service/src/service/mutationDispatcher.js';
 import type { BrowserOperationQueueObservationSummary } from '../operationQueueObservations.js';
 import { summarizeBrowserOperationQueueObservations } from '../operationQueueObservations.js';
+import { findNativeDesktopBrowser, launchNativeDesktopBrowser } from './nativeDesktopRuntime.js';
 import { findConfiguredDesktopBrowser, launchAgentBrowserRdpSession } from './agentBrowserRdpLauncher.js';
 
 type ServiceTargetMatchOptions = {
@@ -187,7 +188,7 @@ export class BrowserService extends BrowserServiceCore {
       ? !matchesManagedProfile(matchedByPort, expectedProfilePath, expectedProfileName)
       : false;
     if (matchedByPort && selectedPortProfileMismatch) {
-      if (this.getConfig().agentBrowserRdp?.desktopName) {
+      if (this.getConfig().agentBrowserRdp?.desktopName || this.getConfig().remoteViewDesktop) {
         throw new Error('Desktop-validated CDP endpoint conflicts with the managed browser registry; reconcile ownership before retrying.');
       }
       const expectedInstance = classifiedInstances.find(({ instance, alive }) =>
@@ -337,6 +338,18 @@ export class BrowserService extends BrowserServiceCore {
     const launchContext = this.resolveLaunchContext(this.serviceTarget);
     const fallbackDir = launchContext.managedBrowserProfile.directory;
     const config = this.getConfig();
+    if (config.remoteViewDesktop) {
+      const directory = options.defaultProfileDir ?? fallbackDir;
+      const existing = await findNativeDesktopBrowser(config, directory);
+      const explicitPort = options.port ?? config.remoteChrome?.port;
+      const explicitHost = options.host ?? config.remoteChrome?.host;
+      if ((explicitPort || explicitHost) && (!existing || (explicitPort && existing.cdpPort !== explicitPort) ||
+        (explicitHost && existing.cdpHost !== explicitHost))) throw new Error('Explicit CDP endpoint does not belong to the configured native desktop.');
+      if (existing) return { host: existing.cdpHost, port: existing.cdpPort, launched: false };
+      if (!options.ensurePort) return { host: undefined, port: undefined, launched: false };
+      const chrome = await launchNativeDesktopBrowser({ config, userDataDir: directory, logger: () => {}, abortSignal: options.abortSignal });
+      return { host: chrome.host, port: chrome.port, launched: true };
+    }
     if (config.agentBrowserRdp?.enabled && config.agentBrowserRdp.desktopName) {
       const remoteOptions = {
         config,

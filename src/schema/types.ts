@@ -237,16 +237,28 @@ const AGENT_BROWSER_RDP_CONFIG_SCHEMA = z.object({
   jobTimeoutMs: z.number().int().positive().optional(),
 });
 
+const nativeControlOrigin = z.url().refine(value => {
+  const url = new URL(value);
+  return url.protocol === 'http:' && (/^127\.(?:[0-9]+\.){2}[0-9]+$/.test(url.hostname) || url.hostname === '[::1]') &&
+    !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash && url.port !== '0';
+}, 'Native control requires a credential-free loopback HTTP origin.');
+const nativePresentationOrigin = z.url().refine(value => {
+  const url = new URL(value);
+  return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash && url.port !== '0';
+}, 'Native presentation requires a credential-free HTTPS origin.');
+
 // biome-ignore lint/style/useNamingConvention: public config schema name.
 export const RemoteViewConfigSchema = z.object({
+  application: z.object({ origin: nativeControlOrigin, publicOrigin: nativePresentationOrigin, appOrigin: nativePresentationOrigin, name: z.string().trim().min(1).default('auracall') }).optional(),
   defaultDesktop: z.string().trim().min(1).optional(),
   desktops: z.record(z.string().trim().min(1), z.object({
-    runtimeProfile: z.string().trim().min(1),
-    routePoolEntryId: z.string().trim().min(1),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    routePoolEntryId: z.string().trim().min(1).optional(),
+    poolName: z.string().trim().min(1).optional(),
     label: z.string().trim().min(1).optional(),
     command: z.string().trim().min(1).optional(),
     jobTimeoutMs: z.number().int().positive().optional(),
-  })).default({}).refine((desktops) => !Object.hasOwn(desktops, 'root'), 'root is reserved for the root desktop'),
+  }).refine((desktop) => desktop.poolName ? !desktop.routePoolEntryId : Boolean(desktop.runtimeProfile && desktop.routePoolEntryId), 'Configure a native poolName or a legacy runtimeProfile and routePoolEntryId')).default({}).refine((desktops) => !Object.hasOwn(desktops, 'root'), 'root is reserved for the root desktop'),
   rootDesktopUrl: z.url().refine((value) => /^https?:\/\//.test(value), 'Root desktop URL must use HTTP or HTTPS').optional(),
 });
 

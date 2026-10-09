@@ -104,6 +104,36 @@ export class RemoteViewApplication {
     return result;
   }
 
+  async acquire(poolName: string, idempotencyKey: string, sessionLabel: string): Promise<RemoteViewAssignment> {
+    const acquired = z.object({ assignmentId: identity, desktopId: identity, generation,
+      state: z.literal('active') }).parse(await this.request({ operation: 'acquire', pool_name: poolName,
+        idempotency_key: idempotencyKey, presentation: { sessionLabel } }));
+    const ready = (await this.listReadyAssignments(poolName)).filter(item => item.assignmentId === acquired.assignmentId &&
+      item.desktopId === acquired.desktopId && item.generation === acquired.generation);
+    if (ready.length !== 1 || !ready[0]) throw new Error('Remote View acquired assignment is not ready in the configured application pool.');
+    return ready[0];
+  }
+
+  async launchEnvironment(assignment: RemoteViewAssignment): Promise<Record<string, string>> {
+    const response = z.object({ schemaVersion: z.literal(1), readinessScope: z.literal('live_resource'),
+      target: viewTargetSchema, environment: z.record(z.string(), z.string()) }).parse(await this.request({
+      operation: 'launch_environment', assignment_id: assignment.assignmentId,
+      expected_generation: assignment.generation, expected_viewing_generation: assignment.viewingGeneration,
+    }));
+    const target = response.target;
+    const environment = response.environment;
+    if (target.assignmentId !== assignment.assignmentId || target.desktopId !== assignment.desktopId ||
+      target.lifecycleGeneration !== assignment.generation || target.viewingGeneration !== assignment.viewingGeneration ||
+      !/^:[0-9]+(?:\.[0-9]+)?$/.test(environment.DISPLAY ?? '') || !environment.XAUTHORITY?.startsWith('/') ||
+      environment.REMOTE_VIEW_SLOT_GENERATION !== String(assignment.viewingGeneration)) {
+      throw new Error('Remote View launch environment generation or assignment mismatch.');
+    }
+    const allowed = new Set(['DISPLAY', 'XAUTHORITY', 'REMOTE_VIEW_SLOT_GENERATION', 'WAYLAND_DISPLAY',
+      'GDK_BACKEND', 'QT_QPA_PLATFORM', 'SDL_VIDEODRIVER', 'DBUS_SESSION_BUS_ADDRESS', 'PULSE_SERVER']);
+    if (Object.keys(environment).some(key => !allowed.has(key))) throw new Error('Remote View launch environment contains unsupported variables.');
+    return environment;
+  }
+
   async issueObserveEmbed(assignment: RemoteViewAssignment, origins: { publicOrigin: string; appOrigin: string }): Promise<string> {
     const publicOrigin = httpsOrigin(origins.publicOrigin);
     const appOrigin = httpsOrigin(origins.appOrigin);

@@ -1,6 +1,7 @@
+// biome-ignore-all lint/style/useNamingConvention: Native provider fixtures use fixed POSIX environment keys.
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import { RemoteViewApplication } from '../../src/browser/service/remoteViewApplication.js';
 
 describe('native Remote View application boundary', () => {
@@ -78,4 +79,31 @@ describe('native Remote View application boundary', () => {
       expect(() => new RemoteViewApplication({ origin, application: 'auracall' })).toThrow('loopback HTTP origin');
     }
   });
+});
+
+test('native acquisition binds the configured pool and obtains a generation-qualified child environment', async () => {
+  const requests: Array<Record<string, unknown>> = [];
+  const target = { assignmentId: 'a', registrationId: 'r', desktopId: 'd', lifecycleGeneration: 2, viewingDesktopId: 'v', viewingGeneration: 7 };
+  const server = createServer(async (req, res) => {
+    const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    const { request } = JSON.parse(Buffer.concat(chunks).toString()); requests.push(request);
+    res.setHeader('Content-Type', 'application/json');
+    let data: unknown;
+    if (request.operation === 'acquire') data = { assignmentId: 'a', registrationId: 'r', poolId: 'p', desktopId: 'd', generation: 2, state: 'active' };
+    else if (request.operation === 'inventory') data = { schemaVersion: 1, registration: { consumerKey: 'auracall', registrationId: 'r' },
+      pools: [{ poolId: 'p', registrationId: 'r', name: 'main', desktopMembers: ['d'] }],
+      assignments: [{ assignmentId: 'a', registrationId: 'r', poolId: 'p', desktopId: 'd', generation: 2, state: 'active' }],
+      desktops: [{ desktopId: 'd', lifecycle: { generation: 2, state: 'ready', readinessScope: 'live_resource', allocated: true }, viewing: { desktopId: 'v', lifecycleGeneration: 2, generation: 7, publicRoute: '/1' } }] };
+    else data = { schemaVersion: 1, target, readinessScope: 'live_resource', environment: { DISPLAY: ':77', XAUTHORITY: '/private/Xauthority', REMOTE_VIEW_SLOT_GENERATION: '7', WAYLAND_DISPLAY: '' } };
+    res.end(JSON.stringify(data));
+  }).listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  try {
+    const address = server.address(); if (!address || typeof address === 'string') throw new Error('missing fixture port');
+    const app = new RemoteViewApplication({ origin: `http://127.0.0.1:${address.port}`, application: 'auracall' });
+    const assignment = await app.acquire('main', 'stable-research-acquisition', 'Research');
+    expect(await app.launchEnvironment(assignment)).toMatchObject({ DISPLAY: ':77', XAUTHORITY: '/private/Xauthority', REMOTE_VIEW_SLOT_GENERATION: '7' });
+    expect(requests[0]).toMatchObject({ operation: 'acquire', pool_name: 'main', idempotency_key: 'stable-research-acquisition' });
+    expect(requests.map(request => request.operation)).toEqual(['acquire', 'inventory', 'launch_environment']);
+  } finally { await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())); }
 });

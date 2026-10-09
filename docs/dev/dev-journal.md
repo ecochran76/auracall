@@ -53434,3 +53434,17 @@ and passes with the guarded transport. 292 browser checks pass across 12 files;
 focused gate checks pass after endpoint binding refinement. Locks are retained
 on uncertainty; no automatic abandoned-lock reclamation is implemented. Native
 viewer grant/revoke, client integration and installed acceptance remain open.
+
+### 2026-10-09 — Plan0391 native placement and client checkpoint
+
+Native named-desktop resolution now drives normal prompt and service attachment
+paths through AuraCall's existing Chrome lifecycle. Stable acquisition retains
+one exact assignment per name; two real fixture child processes share it. Child
+environment no longer mutates global DISPLAY/XAUTHORITY. Exact native process
+receipts and fresh ownership joins exclude foreign or stale browsers. The
+dedicated client mounts the provider's unchanged observe embed helper and keeps
+root access independent. 121 focused checks pass across 17 files; native wire
+red/green verifies no mutation during human control. Rendered native fixture
+smoke passes with zero page errors and zero remaining owned processes. Native
+controller grant/revoke, installed AuraCall configuration/acceptance and final
+integration remain open. See native placement/client validation receipt.

@@ -13,14 +13,15 @@ const home = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-desktop-client-sm
 setAuracallHomeDirOverrideForTest(home);
 const imageBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8ioAAAAASUVORK5CYII=';
 const desktops = [
-  { name: 'research', label: 'Research', state: 'ready' as const, browsers: [{ browserId: 'research-browser', handoffUrl: 'https://browser.example.test/remote-view/research' }] },
-  { name: 'writing', label: 'Writing', state: 'ready' as const, browsers: [{ browserId: 'writing-browser', handoffUrl: 'https://browser.example.test/remote-view/writing' }] },
+  { name: 'research', label: 'Research', state: 'ready' as const, presentation: 'native' as const, browsers: [{ browserId: 'research-browser', handoffUrl: 'https://browser.example.test/remote-view/research' }] },
+  { name: 'writing', label: 'Writing', state: 'ready' as const, presentation: 'native' as const, browsers: [{ browserId: 'writing-browser', handoffUrl: 'https://browser.example.test/remote-view/writing' }] },
   { name: 'empty', label: 'Empty desktop', state: 'empty' as const, browsers: [] },
   { name: 'unavailable', label: 'Unavailable desktop', state: 'unavailable' as const, browsers: [], message: 'Configured desktop route is unavailable.' },
 ];
 const frames: string[] = [];
 const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0, tabAffinityMaintenanceIntervalMs: 0 }, { desktopClient: {
   list: async () => ({ defaultDesktop: 'research', rootDesktopUrl: 'https://browser.example.test/root', desktops }),
+  view: async (name, browserId) => { frames.push(`${name}:${browserId}`); return { url: 'https://desktop.example.test/embed/'+(name === 'research' ? '11111111-1111-4111-8111-111111111111' : '22222222-2222-4222-8222-222222222222'), capability: 'observe' as const }; },
   capture: async (name, browserId) => { frames.push(`${name}:${browserId}`); return { imageBase64, width: 1, height: 1 }; },
 } });
 let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined;
@@ -31,14 +32,21 @@ try {
   const page = await browser.newPage();
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(String(error)));
+  await page.setRequestInterception(true);
+  page.on('request', request => {
+    if (request.url().startsWith('https://desktop.example.test/embed/')) {
+      void request.respond({ status: 200, contentType: 'text/html', body: `<html><body style="background:#122035;color:white;font:24px system-ui;padding:40px">Native Remote View fixture<script>parent.postMessage({schemaVersion:1,type:'status',state:'ready',capability:'observe'},'http://127.0.0.1:${server.port}')</script></body></html>` });
+    } else void request.continue();
+  });
   await page.goto(`http://127.0.0.1:${server.port}/desktops`);
-  await page.waitForFunction(() => document.querySelector<HTMLImageElement>('#frame')?.hidden === false);
+  await page.waitForFunction(() => document.querySelector('#native-view section')?.getAttribute('data-state') === 'ready');
   assert.equal(await page.$eval('#title', (node) => node.textContent), 'Research');
   await page.$eval('#desktops button:nth-child(2)', (node) => (node as HTMLButtonElement).click());
-  await page.waitForFunction(() => document.querySelector('#title')?.textContent === 'Writing' && document.querySelector<HTMLImageElement>('#frame')?.hidden === false);
+  await page.waitForFunction(() => document.querySelector('#title')?.textContent === 'Writing' && document.querySelector('#native-view section')?.getAttribute('data-state') === 'ready');
   assert.equal(new URL(page.url()).searchParams.get('desktop'), 'writing');
   await page.reload();
-  await page.waitForFunction(() => document.querySelector('#title')?.textContent === 'Writing' && document.querySelector<HTMLImageElement>('#frame')?.hidden === false);
+  await page.waitForFunction(() => document.querySelector('#title')?.textContent === 'Writing' && document.querySelector('#native-view section')?.getAttribute('data-state') === 'ready');
+  await page.screenshot({ path: '/tmp/auracall391-native-client.png', fullPage: true });
   await page.$eval('#desktops button:nth-child(3)', (node) => (node as HTMLButtonElement).click());
   await page.waitForFunction(() => document.querySelector('#message')?.textContent?.includes('No AuraCall browsers'));
   await page.$eval('#desktops button:nth-child(4)', (node) => (node as HTMLButtonElement).click());
@@ -46,7 +54,7 @@ try {
   assert.equal(await page.$eval('#root', (node) => (node as HTMLAnchorElement).href), 'https://browser.example.test/root');
   assert.deepEqual(errors, []);
   assert(frames.includes('research:research-browser') && frames.includes('writing:writing-browser'));
-  console.log(JSON.stringify({ scope: 'provider-free rendered client', passed: ['two-desktop-navigation', 'durable-selection-reload', 'empty-state', 'unavailable-state', 'independent-root-link'], pageErrors: errors, installedDesktopAcceptance: false }));
+  console.log(JSON.stringify({ scope: 'provider-free rendered client', passed: ['native-observe-embed', 'two-desktop-navigation', 'durable-selection-reload', 'empty-state', 'unavailable-state', 'independent-root-link'], pageErrors: errors, installedDesktopAcceptance: false }));
 } finally {
   await browser?.close();
   await server.close();

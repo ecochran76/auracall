@@ -18,6 +18,7 @@ import {
   resolveUserDataBaseDir,
 } from '../../packages/browser-service/src/chromeLifecycle.js';
 import type { BrowserLogger, ResolvedBrowserConfig } from './types.js';
+import { launchNativeDesktopBrowser } from './service/nativeDesktopRuntime.js';
 import { launchAgentBrowserRdpSession } from './service/agentBrowserRdpLauncher.js';
 
 export async function launchChrome(
@@ -31,6 +32,9 @@ export async function launchChrome(
     abortSignal?: AbortSignal;
   } = {},
 ) {
+  if (config.remoteViewDesktop) {
+    return await launchNativeDesktopBrowser({ config, userDataDir, logger, abortSignal: options.abortSignal }) as unknown as Awaited<ReturnType<typeof launchChromeCore>>;
+  }
   if (config.agentBrowserRdp?.enabled) {
     options.abortSignal?.throwIfAborted();
     const result = await launchAgentBrowserRdpSession({

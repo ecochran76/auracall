@@ -6,7 +6,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import CDP from "../browser/cdp.js";
-import { captureDesktopView, listDesktopViews } from "../browser/service/desktopClient.js";
+import { captureDesktopView, listDesktopViews, openDesktopView } from "../browser/service/desktopClient.js";
 import { renderDesktopClientPage } from "./desktopClientPage.js";
 import type { OptionValues } from "commander";
 import { ZodError, z } from "zod";
@@ -371,6 +371,7 @@ export interface ResponsesHttpServerDeps {
   desktopClient?: {
     list: () => ReturnType<typeof listDesktopViews>;
     capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
+    view?: (name: string, browserId: string) => ReturnType<typeof openDesktopView>;
   };
 	control?: ExecutionRuntimeControlContract;
 	runnersControl?: ExecutionRunnerControlContract;
@@ -1865,6 +1866,21 @@ export async function createResponsesHttpServer(
 				return;
 			}
 
+      if (url.pathname === '/v1/desktops' || url.pathname.startsWith('/v1/desktops/')) {
+        const desktopAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (desktopAuthError) { sendJson(res, 403, { error: { message: desktopAuthError } }); return; }
+      }
+      const nativeDesktopView = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/view$/);
+      if (req.method === 'GET' && nativeDesktopView) {
+        const name = decodeURIComponent(nativeDesktopView[1]);
+        const browserId = url.searchParams.get('browser');
+        if (!browserId) { sendJson(res, 400, { error: { message: 'Select an AuraCall browser to view.' } }); return; }
+        try {
+          const view = await (deps.desktopClient?.view?.(name, browserId) ?? openDesktopView({ remoteView: configuredRuntimeConfig?.remoteView, name, browserId }));
+          sendJson(res, 200, view, { 'Cache-Control': 'no-store' });
+        } catch (error) { sendJson(res, 503, { error: { message: error instanceof Error ? error.message : 'Desktop unavailable.' } }, { 'Cache-Control': 'no-store' }); }
+        return;
+      }
       if (req.method === "GET" && url.pathname === "/desktops") {
         sendHtml(res, 200, renderDesktopClientPage());
         return;
