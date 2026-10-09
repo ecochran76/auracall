@@ -135,5 +135,19 @@
     "preUpgradeChromeMissing": [],
     "preparationLauncherAbsent": true
   },
-  "acceptanceHarnessSha256": "6af487b632a4d2ab0acbd35f10a775c6265ff140b33932164e6c594ebf63d336"
+  "acceptanceHarnessSha256": "6af487b632a4d2ab0acbd35f10a775c6265ff140b33932164e6c594ebf63d336",
+  "humanMarkerVerification": {
+    "at": "2026-10-09T04:19:23.572788+00:00",
+    "command": "AURACALL_INSTALLED_DESKTOP_ACCEPTANCE=1 pnpm tsx scripts/acceptance-installed-desktop-client.ts verify",
+    "exitCode": 1,
+    "actualValues": {
+      "research": "",
+      "writing": ""
+    },
+    "expectedValues": {
+      "research": "research-391",
+      "writing": "writing-391"
+    },
+    "meaning": "Actual installed CDP read succeeded; required human viewer input is not yet present. No marker reset, new browser, takeover or release occurred."
+  }
 }
