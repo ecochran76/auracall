@@ -1,3 +1,12 @@
+## 2026-10-09 | Plan0391 inactivity handoff requirement
+
+Operator requests human control to return to view-only after external-input
+inactivity, with AuraCall paused while input is active. Governing plan/spec now
+record the revised contract, upstream activity seam, revoke-before-resume order
+and acceptance boundaries. Duration selection is pending. This is a requirement
+checkpoint, not implementation or installed acceptance; current behavior remains
+explicit release. The earlier bounded goal remains checkpointed.
+
 ## 2026-10-09 | Plan0391 actual human input verified
 
 After the verifier configuration repair, the operator reported entering the

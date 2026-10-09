@@ -9,6 +9,38 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Human input inactivity revision: 2026-10-09
+
+The operator replaces indefinite manual human release with inactivity handoff.
+AuraCall pauses while external control input is active. After a configurable
+period without external input, the viewer becomes view-only and AuraCall may
+resume after exact control-grant revocation. View-only blocks accidental input;
+new input must not silently reacquire control. Explicit Take control is required
+for the next human interaction. Explicit Release control remains an early exit.
+The inactivity duration is pending operator selection (30, 60 or 120 seconds).
+
+This revision is NOT implemented or installed. Current runtime still requires
+explicit release. Remote View owns the cross-origin input stream; its existing
+embed status contract exposes connection state and capability, not input activity.
+Parent-page events and generic native desktop idle observations cannot establish
+external-input inactivity. The existing ObserveIdle operation also reports an
+active viewer as non-idle, so it cannot implement this requirement unchanged.
+
+Implementation must add a bounded Remote View activity/idle handoff contract,
+scoped to the exact viewer/control grant and desktop generations, and connect it
+to AuraCall's existing revoke-before-resume coordinator. Inactivity begins at
+successful takeover so a never-used control grant also returns to view-only.
+Actual forwarded keyboard/mouse input resets it; pixels, status polling,
+reconnection and unrelated parent-page interaction do not. Expiry disables input
+before releasing automation admission. Browser suspension, disconnect or lost
+replies must never resume automation before exact revocation is established.
+Tests must cover continuous input, inactivity, never-used takeover, held keys or
+buttons, multiple viewers, late activity, changed grants/generations, revocation
+uncertainty, process restart and explicit reacquisition after timeout. Installed
+acceptance must prove input rejection after timeout and actual AuraCall admission
+resumption on both desktops. Existing manual-input proof does not qualify this
+new requirement. Root viewing remains independently available.
+
 ## Installed dedicated client checkpoint: 2026-10-09
 
 User-scoped runtime code cdb767f8 is adopted; API91439 serves ready Research and
