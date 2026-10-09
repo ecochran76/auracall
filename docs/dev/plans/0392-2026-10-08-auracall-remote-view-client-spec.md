@@ -13,7 +13,7 @@ period without external input, the viewer becomes view-only and AuraCall may
 resume after exact control-grant revocation. View-only blocks accidental input;
 new input must not silently reacquire control. Explicit Take control is required
 for the next human interaction. Explicit Release control remains an early exit.
-The inactivity duration is pending operator selection (30, 60 or 120 seconds).
+The operator selected an inactivity duration of 120 seconds (two minutes).
 
 This revision is NOT implemented or installed. Current runtime still requires
 explicit release. Remote View owns the cross-origin input stream; its existing

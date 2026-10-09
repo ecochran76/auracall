@@ -1,3 +1,9 @@
+## 2026-10-09 | Plan0391 inactivity duration selected
+
+Operator selected two minutes (120 seconds) without external input before
+returning human control to view-only. Plan0391 and Spec0392 record this exact
+duration. Implementation and installed timeout acceptance remain pending.
+
 ## 2026-10-09 | Plan0391 inactivity handoff requirement
 
 Operator requests human control to return to view-only after external-input
