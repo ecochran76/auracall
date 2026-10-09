@@ -1,3 +1,13 @@
+## 2026-10-09 | Plan0391 actual human input verified
+
+After the verifier configuration repair, the operator reported entering the
+requested text. Installed acceptance verification read research-391 and
+writing-391 from the two retained actual Chrome marker inputs, with exact
+installed source and ownership bindings checked. Receipt:
+notes/2026-10-09-plan0391-human-input-verification.json. This advances the human
+input gate; root desktop viewing remains pending operator confirmation.
+No browser reset, cleanup or automatic control release was performed.
+
 ## 2026-10-09 | Plan0391 reported viewer 503 repair
 
 The operator reported Service Unavailable on both desktops. The Remote View
