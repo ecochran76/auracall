@@ -22074,3 +22074,16 @@ Chrome rendered fixture pass. That fixture advances the owner's clock by
 Installed timeout adoption and root acceptance remain open. Preserve the two
 existing marker browsers and all unrelated runtime/working-tree state. Receipts:
 docs/dev/notes/2026-10-09-plan0391-input-inactivity-source-validation.json.
+
+## Turn 640 | 2026-10-09
+
+Operator requested installation after the budget checkpoint. Installed exact
+AuraCall 77030b33d and merged RemoteView source 28baf035 through source-bound
+release build/extract, install, and identity-preserving software adoption. Ten
+provider software units match binary SHA256 5984346e; doctor passes including
+registered MCP ownership. API28088 serves both retained native desktops and
+observe grants, and both actual markers remain correct. All 35 native components
+retain process identities. Resolved inactivity is 120 seconds. No takeover,
+provider prompt, ingress change, or desktop restart occurred. The actual idle
+transition and independent authenticated root visual acceptance remain OPEN.
+Receipt: docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json.

@@ -15,8 +15,12 @@ new input must not silently reacquire control. Explicit Take control is required
 for the next human interaction. Explicit Release control remains an early exit.
 The operator selected an inactivity duration of 120 seconds (two minutes).
 
-The source revision is in implementation; installation and timeout acceptance
-remain unproven. The Remote View dependency is Plan0071, issue
+The source revision is installed at AuraCall 77030b33d and Remote View 28baf035
+(merged by PR346). Both native desktops and markers are preserved, and installed
+configuration resolves to 120 seconds. Real wall-clock timeout and root visual
+acceptance remain unproven. Installation receipt:
+`docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json`.
+The Remote View dependency is Plan0071, issue
 CochranResearchGroup/remote-view#345, on feat/auracall-control-inactivity.
 The gateway records admitted keyboard/pointer input for HTTP and WebSocket and
 conditionally revokes under the owner lock. AuraCall polls that exact grant's

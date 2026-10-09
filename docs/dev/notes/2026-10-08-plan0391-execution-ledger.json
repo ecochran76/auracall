@@ -84,14 +84,17 @@
     }
   },
   "continuation_rule": "Do not rerun prepare or create more acceptance browsers while operator check is pending. On operator response, verify actual marker values after release, bind native-pixel/root attestation, then integrate only if all gates qualify. Preserve the one broad review/one remediation bounds. Stop before deadline or token checkpoint.",
-  "execution_disposition": "checkpoint: user-requested stop before three active hours; source complete, installed acceptance pending",
+  "execution_disposition": "Installation request fulfilled; prior goal remains paused and full live timeout/root acceptance remains open",
   "inactivity_revision": {
     "seconds": 120,
     "provider_issue": 345,
     "provider_pr": 346,
     "source_validation": "docs/dev/notes/2026-10-09-plan0391-input-inactivity-source-validation.json",
-    "installed": false,
-    "provider_merge": "c988cf624da81dfdb03abd08283279ff9a50614d"
+    "installed": true,
+    "provider_merge": "c988cf624da81dfdb03abd08283279ff9a50614d",
+    "installed_source": "77030b33d279b1cc52f2e7fd994d4763ce6fd7be",
+    "installed_provider_source": "28baf0359378d5ff369e3401c2cf0f8282c7effa",
+    "installed_validation": "docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json"
   },
   "resumed_turn_classification": "progress",
   "resumed_budget": {
@@ -101,6 +104,6 @@
     "token_stop_before": 2000000,
     "budgets_reset": false
   },
-  "next_packet": "Verify provider integration, install both exact source checkpoints preserving existing native/browser/account state, prove a real two-minute control-to-observe handoff and automation admission on both desktops, confirm root viewer, then integrate PR244 only after full acceptance.",
+  "next_packet": "Prove a real two-minute idle handoff and automation admission on both desktops without resetting markers; confirm independent authenticated root viewer; integrate PR244 only after remaining acceptance qualifies.",
   "final_checkpoint": "docs/dev/notes/2026-10-09-plan0391-inactivity-budget-checkpoint.md"
 }

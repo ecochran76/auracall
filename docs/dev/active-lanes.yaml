@@ -1715,7 +1715,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: cdb767f86942c57af03579604028ee5f2f647da5
+    checkpoint: 77030b33d279b1cc52f2e7fd994d4763ce6fd7be
     remote_ref: refs/remotes/origin/feat/issue240-named-desktops
     integration: merge
     work_items: [ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242]
@@ -1723,9 +1723,9 @@ lanes:
     overlaps: [P85]
     reconciled_overlaps: [P85]
     reconciliation_note: P86 preserves P85 provider behavior and paused-scheduler authority; shared prompt edits only dispatch named desktop launches.
-    blocker: Operator authenticated native viewer/input and independent root acceptance; marker values remain blank.
-    validation_status: installed-native-viewer-acceptance-blocked
+    blocker: Real installed two-minute inactivity handoff and independent authenticated root visual acceptance remain pending; both human markers verified.
+    validation_status: inactivity-installed-live-acceptance-pending
     validation_ref: docs/dev/notes/2026-10-08-plan0391-execution-ledger.json
     integration_receipt: null
-    disposition: Planning PR243 merged; native AuraCall placement, observe client and coordinated control pass source qualification; installed Chrome placement/control passes; bounded review remediation passes; installed API adopted with two owned marker browsers; authenticated pixels/input, root viewing and integration remain open.
+    disposition: Planning PR243 and provider PR346 merged; two-minute source qualified and both runtimes installed; both native desktop identities and typed markers preserved; real idle handoff, root visual acceptance and PR244 integration remain open.
     updated_at: 2026-10-09

@@ -1,3 +1,7 @@
+## 2026-10-09 — Plan0391 inactivity runtime installed
+
+Installed AuraCall 77030b33d and integrated RemoteView 28baf035 on explicit operator request. All ten provider software units adopted the verified new binary, doctor passed, 35 native components and both Research/Writing process/binding identities survived. Both observe endpoints return 200, markers match, and resolved inactivity is 120 seconds. Actual wall-clock handoff and root visual acceptance remain open. [Installed receipt](notes/2026-10-09-plan0391-inactivity-installed-validation.json).
+
 ## 2026-10-09 — Plan0391 budget checkpoint
 
 Two-minute inactivity source qualified; RemoteView PR346 merged and AuraCall PR244 remains draft. No inactivity revision installed. Stopping before the explicit three-hour limit. Restart authority and acceptance gates: [checkpoint](notes/2026-10-09-plan0391-inactivity-budget-checkpoint.md).

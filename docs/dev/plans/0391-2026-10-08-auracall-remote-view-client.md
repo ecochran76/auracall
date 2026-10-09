@@ -19,8 +19,12 @@ new input must not silently reacquire control. Explicit Take control is required
 for the next human interaction. Explicit Release control remains an early exit.
 The operator selected an inactivity duration of 120 seconds (two minutes).
 
-The source revision is in implementation; installation and timeout acceptance
-remain unproven. The Remote View dependency is Plan0071, issue
+The source revision is installed at AuraCall 77030b33d and Remote View 28baf035
+(merged by PR346). Both native desktops and markers are preserved, and installed
+configuration resolves to 120 seconds. Real wall-clock timeout and root visual
+acceptance remain unproven. Installation receipt:
+`docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json`.
+The Remote View dependency is Plan0071, issue
 CochranResearchGroup/remote-view#345, on feat/auracall-control-inactivity.
 The gateway records admitted keyboard/pointer input for HTTP and WebSocket and
 conditionally revokes under the owner lock. AuraCall polls that exact grant's
@@ -131,9 +135,12 @@ ledger records bounds, current evidence and unmet acceptance. No feature
 acceptance is claimed from the planning merge. Current implementation and
 installed API adoption have progressed through all three source packets on the
 serialized branch: 170 regressions/25 files and bounded review remediation pass.
-Installed API91439 code cdb767f8 serves two owned native desktops. Operator
-native pixels/input and root viewing plus final integration remain pending;
-all three tickets remain open. The installed-client receipt is current authority.
+Installed API28088 code 77030b33d serves both retained native desktops with
+120-second inactivity configured. RemoteView 28baf035 is integrated and adopted.
+Both typed markers are verified and preserved; actual wall-clock idle handoff,
+automation readmission, independent authenticated root visual acceptance, and
+final PR244 integration remain pending. All three tickets remain open. The
+inactivity-installed-validation receipt is current installation authority.
 
 ### Historical execution revision: 2026-10-09 (superseded by native correction)
 
