@@ -673,7 +673,13 @@ profiles can share it; different names acquire distinct assignments within the
 configured pool's capacity. Configuration changes apply to subsequent launches;
 an existing browser on a different desktop is refused rather than moved.
 Native browser receipts bind the PID, boot/start identity, selected executable,
-managed directory, display, CDP endpoint and assignment generation.
+managed directory, display, CDP endpoint and assignment generation. Configure the
+Remote View application with `inventory`, `acquire`, `release`, `observe`,
+`control` and `windows` capabilities. Chromium may flatten its process title and
+scrub its environment; AuraCall then requires a fresh native window/PID join on
+the exact desktop and both generations instead of guessing ownership from a
+missing `DISPLAY`. Minimal manual-login launches skip Chrome's first-run shell
+so that CDP can become ready; provider sign-in remains interactive.
 
 Open `/desktops` on the AuraCall HTTP service. The dedicated client lists only
 positively owned running AuraCall browsers and mounts Remote View's native

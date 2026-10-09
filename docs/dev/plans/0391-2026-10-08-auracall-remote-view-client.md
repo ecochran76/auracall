@@ -9,6 +9,39 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Installed placement/control outcome: 2026-10-09
+
+The bounded repair run passed with two real local Google Chrome processes on
+distinct native assignments, fresh window/PID ownership, same-process reuse,
+actual observe/control grants, actual CDP refusal during takeover and resumption
+after revocation. Final acceptance exits 0 and fresh OS census finds no remaining
+acceptance Chrome processes. Both borrowed assignments and all 32 preexisting
+Chrome processes remain unchanged. Remote View doctor reports ok=true. The two
+AuraCall assignments remain retained after browser cleanup. Authenticated native
+viewer pixels/input, independent root viewing, bounded review and integration
+remain OPEN; this outcome does not close any ticket.
+
+## Installed qualification revision: 2026-10-09
+
+The native AuraCall consumer is configured from the existing 10-desktop effective
+configuration; the unrelated unapplied 32-desktop source config is preserved.
+The first actual Chrome launch stopped at Chrome's first-run terms window and
+never exposed CDP. It also replaced argv with a flattened process title and
+scrubbed environ; the original ownership verifier cannot accept that process.
+The next invocation correctly refused its unretained still-running process.
+The exact failed-launch process group was terminated using its pid file,
+executable, exact managed directory/port and native window/PID proof. Browser
+profile data remains intact. These two attempts qualify no feature outcome.
+
+A bounded repair packet adds the standard no-first-run flag to minimal launches
+and supports flattened/scrubbed processes only with a fresh exact Remote View
+native window/PID/generation join. AuraCall's consumer requires `windows` for this
+proof. A real process-title fixture first failed, then passed, including wrong
+managed-directory and stale-generation rejection. Restarting only control and
+gateway adopts the application configuration; no borrowed desktop/browser is
+intentionally restarted. Re-run installed desktop acceptance only after these
+source repairs and config readback qualify, with at most two repair attempts.
+
 ## Native control source checkpoint: 2026-10-09
 
 Native client take/release now issues control only while holding the shared

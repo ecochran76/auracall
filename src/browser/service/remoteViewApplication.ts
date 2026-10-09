@@ -377,6 +377,18 @@ export class RemoteViewApplication {
 		};
 	}
 
+  async hasBrowserWindow(assignment: RemoteViewAssignment, pid: number): Promise<boolean> {
+    const observed = z.object({ schemaVersion: z.literal(1), operation: z.literal('desktop.windows'),
+      desktopId: identity, generation, viewingGeneration: generation,
+      windows: z.array(z.object({ id: z.number().int().positive(), pid: z.number().int().positive().nullable().optional() }))
+    }).parse(await this.request({ operation: 'windows', assignment_id: assignment.assignmentId,
+      expected_generation: assignment.generation, expected_viewing_generation: assignment.viewingGeneration }));
+    if (observed.desktopId !== assignment.desktopId || observed.generation !== assignment.generation || observed.viewingGeneration !== assignment.viewingGeneration) {
+      throw new Error('Remote View window ownership generation mismatch.');
+    }
+    return observed.windows.some(window => window.pid === pid);
+  }
+
 	async revokeEmbed(routeId: string, appOrigin: string): Promise<void> {
 		const result = z
 			.object({ schemaVersion: z.literal(1), routeId: identity, state: z.literal("revoked") })

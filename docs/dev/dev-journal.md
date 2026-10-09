@@ -1,3 +1,24 @@
+## 2026-10-09 | Plan 0391 installed native placement/control qualification
+
+Configured AuraCall from the existing 10-desktop effective Remote View config;
+preserved the separate unapplied 32-desktop source config. Control/gateway reload
+preserved both borrowed assignment generations and all 32 preexisting Chrome
+process identities. Private doctor reports ok=true. Real Chrome exposed two
+fixture gaps: a first-run terms window blocked CDP, and process-title/environment
+scrubbing invalidated argv/environment-only ownership. The bounded repair adds
+no-first-run to minimal launches and exact native window/PID/generation proof
+for scrubbed processes. A new real process-title fixture fails before repair and
+passes after it; 135 regressions across 23 files pass.
+
+Installed acceptance now launches real Chrome on distinct retained Research and
+Writing assignments, positively verifies process/window ownership, reuses PIDs,
+issues actual observe/control grants, rejects CDP mutation during human hold,
+and resumes after exact revocation. The final run exits 0; fresh OS readback
+finds zero acceptance Chrome processes. Both AuraCall assignments remain retained
+for explicit adoption/cleanup, with no provider prompts or infrastructure
+expansion. Authenticated native viewer pixels/input, independent root viewing,
+whole-feature bounded review and integration remain OPEN.
+
 ## 2026-10-09 | Plan 0391 native control source checkpoint
 
 Native take/release now joins the provider grant lifecycle to AuraCall's persisted

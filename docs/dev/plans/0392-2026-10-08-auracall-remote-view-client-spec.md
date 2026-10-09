@@ -7,9 +7,9 @@ Owner: Eric Cochran
 
 ## Current State
 
-Tickets #240, #241 and #242 are published. Configured launch placement and the
-passive dedicated client are in implementation; coordinated control remains
-pending. All tickets stay open until integrated and installed evidence qualifies
+Tickets #240, #241 and #242 are published. Native placement, passive embeds and coordinated control pass source checks.
+Installed two-desktop Chrome placement and API/CDP exclusion pass; authenticated
+native pixels/input, root viewing and final integration remain pending. All tickets stay open until integrated and installed evidence qualifies
 their respective outcomes.
 This is a local spec, not a claim of installed behavior.
 

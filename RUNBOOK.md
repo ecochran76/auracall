@@ -22016,3 +22016,21 @@ historical evidence. 121 focused source checks and rendered provider-free
 native client smoke pass. Root remains independently selectable. No native
 controller presentation, installed AuraCall consumer adoption or feature
 completion is claimed. Receipt: docs/dev/notes/2026-10-09-plan0391-native-placement-client-validation.json.
+
+
+## Turn 636 | 2026-10-09
+
+Plan0391 native control presentation joins exact grant issuance/revocation to
+persisted automation exclusion; explicit takeover/release and reload retention
+pass rendered fixture smoke. Installed AuraCall application configuration was
+applied to the existing 10-desktop effective configuration without infrastructure
+expansion; the separate unapplied 32-desktop source config remains untouched.
+Chrome first-run and scrubbed process ownership failures were retained and
+repaired with no-first-run plus exact current native window/PID/generation proof.
+135 regressions/23 files, typecheck, build and targeted lint pass. Actual Chrome
+acceptance passes distinct Research/Writing desktops, positive ownership,
+same-PID reuse, observe/control grants, actual CDP refusal and post-revoke resume.
+Fresh OS readback preserves 32 preexisting Chrome processes and both borrowed
+assignments; zero acceptance Chrome processes remain. Doctor is ok. Native
+authenticated pixels/input, independent root viewing, bounded review and
+integration remain OPEN. Receipts: docs/dev/notes/2026-10-09-plan0391-native-control-validation.json and docs/dev/notes/2026-10-09-plan0391-installed-native-placement-validation.json.

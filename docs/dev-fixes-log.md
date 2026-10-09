@@ -1,3 +1,16 @@
+## 2026-10-09 — Real Chromium can scrub process ownership inputs
+
+A live Google Chrome process replaced argv with a flattened title and erased
+its environment. Node fixtures retaining separate argv and DISPLAY could not
+qualify that boundary. Retain boot/start/executable identity and exact managed
+directory parsing, then require Remote View's current native window/PID join
+for the exact lifecycle/viewing generations when those inputs are scrubbed.
+Never treat a missing environment value as ownership or absence proof. A new
+process-title regression and actual two-desktop Chrome run qualify this repair.
+Chrome's first-run terms shell also prevented CDP readiness; minimal launches
+now carry the existing automation no-first-run flag. Provider authentication
+is separate and was not exercised.
+
 ## 2026-10-09 — Revocation must precede automation resumption
 
 A human viewer is an input authority, so a presentation toggle alone cannot

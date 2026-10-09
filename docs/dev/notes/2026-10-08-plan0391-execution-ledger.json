@@ -32,13 +32,13 @@
       ]
     }
   },
-  "unmet": "Installed native two-desktop placement/input/root acceptance; whole-feature review and integration",
+  "unmet": "Authenticated native viewer pixels/input and root viewing; whole-feature review and integration",
   "authority": "User explicitly requested merge and full execution; safe in-scope fixture/live verification included; unrelated authenticated provider work and infrastructure provisioning excluded",
   "progress_classification": "outcome_progress",
-  "evidence": "Native control source: 9 focused tests/6 files pass; typecheck/build pass; final rendered explicit-control/reload/release smoke passes with zero owned processes.",
-  "next_action": "Qualify installed AuraCall consumer configuration and native two-desktop acceptance, then one broad review and integration",
-  "source_checkpoint": "6d20b000051ab34f423aa38b980f6e2549539d56",
-  "last_checkpoint_at": "2026-10-09T03:18:05.034874+00:00",
+  "evidence": "135 source tests/23 files; installed two native Chrome desktops, observe/control grants, real CDP exclusion/resumption; doctor ok; fresh zero acceptance Chrome and 32 preexisting Chrome preserved",
+  "next_action": "Commit installed ownership repair checkpoint; bounded whole-feature review and authenticated native client acceptance",
+  "source_checkpoint": "6e2d85e762f5f2fa3c1adf9ce6fbf9254d0905ed",
+  "last_checkpoint_at": "2026-10-09T03:36:39.835555+00:00",
   "installed_route_readback": {
     "at": "2026-10-09T02:16:00Z",
     "command": "agent-browser --json service status",
@@ -55,8 +55,8 @@
     "remote_view_main": "e1ad20d",
     "consumer_origin": "http://127.0.0.1:19096",
     "read_only_ready_agent_browser_assignments": 2,
-    "auracall_consumer_configured": false,
+    "auracall_consumer_configured": true,
     "agent_browser_inventory_failure": "protected_browser_owner_observation_invalid",
-    "installed_acceptance": false
+    "installed_acceptance": "placement/API-CDP passed; authenticated pixels/input/root pending"
   }
 }

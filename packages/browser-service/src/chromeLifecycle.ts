@@ -1869,7 +1869,7 @@ export function buildChromeFlags(
   options: { minimal?: boolean; startMinimized?: boolean; suppressStartupWindow?: boolean } = {},
 ): string[] {
   const flags = options.minimal
-    ? [options.suppressStartupWindow ? '--no-startup-window' : '--new-window', '--hide-crash-restore-bubble']
+    ? [options.suppressStartupWindow ? '--no-startup-window' : '--new-window', '--no-first-run', '--hide-crash-restore-bubble']
     : [
         '--disable-background-networking',
         '--disable-background-timer-throttling',

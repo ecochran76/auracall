@@ -1,3 +1,4 @@
+import { RemoteViewApplication, type RemoteViewAssignment } from './remoteViewApplication.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -44,14 +45,25 @@ export class NativeDesktopStore {
   }
 }
 
-export async function observeNativeBrowser(pid: number, managedProfileDir: string, display: string): Promise<Pick<NativeDesktopBrowser, 'processStart' | 'bootId' | 'executable'>> {
+export async function observeNativeBrowser(pid: number, managedProfileDir: string, display: string, context?: { origin: string; application: string; assignment: RemoteViewAssignment }): Promise<Pick<NativeDesktopBrowser, 'processStart' | 'bootId' | 'executable'>> {
   const [stat, command, environment, bootId, executable] = await Promise.all([
     fs.readFile(`/proc/${pid}/stat`, 'utf8'), fs.readFile(`/proc/${pid}/cmdline`, 'utf8'), fs.readFile(`/proc/${pid}/environ`, 'utf8'),
     fs.readFile('/proc/sys/kernel/random/boot_id', 'utf8'), fs.realpath(`/proc/${pid}/exe`),
   ]);
   const processStart = stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19];
-  if (!processStart || !command.split('\0').some(arg => arg === `--user-data-dir=${managedProfileDir}`) ||
-    !environment.split('\0').includes(`DISPLAY=${display}`)) throw new Error('Native browser process/profile/desktop ownership mismatch.');
+  const argv = command.split('\0').filter(Boolean);
+  const escapedDirectory = managedProfileDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Chromium can replace argv with a flattened process title and erase environ.
+  // That representation requires a separate current native window/PID join.
+  const flattened = argv.length === 1 && new RegExp(`(?:^| )--user-data-dir=${escapedDirectory}(?= (?:--[A-Za-z0-9-]+(?:[= ]|$)|about:blank(?: |$))|$)`).test(argv[0] ?? '');
+  const exactArgument = argv.some(arg => arg === `--user-data-dir=${managedProfileDir}`);
+  if (!processStart || (!exactArgument && !flattened)) throw new Error('Native browser process/profile/desktop ownership mismatch.');
+  const displayRetained = environment.split('\0').includes(`DISPLAY=${display}`);
+  if (flattened || !displayRetained) {
+    if (!context || !await new RemoteViewApplication(context).hasBrowserWindow(context.assignment, pid)) {
+      throw new Error('Native browser process/profile/desktop ownership mismatch.');
+    }
+  }
   return { processStart, bootId: bootId.trim(), executable };
 }
 
@@ -59,7 +71,7 @@ export async function verifyNativeBrowser(binding: NativeDesktopBrowser): Promis
   try {
     const [stat, boot] = await Promise.all([fs.readFile(`/proc/${binding.pid}/stat`, 'utf8'), fs.readFile('/proc/sys/kernel/random/boot_id', 'utf8')]);
     if (stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19] !== binding.processStart || boot.trim() !== binding.bootId) return false;
-    const current = await observeNativeBrowser(binding.pid, binding.managedProfileDir, binding.display);
+    const current = await observeNativeBrowser(binding.pid, binding.managedProfileDir, binding.display, binding);
     return current.processStart === binding.processStart && current.bootId === binding.bootId && current.executable === binding.executable;
   } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false; throw error; }
 }
