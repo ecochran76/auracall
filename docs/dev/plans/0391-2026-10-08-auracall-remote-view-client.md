@@ -9,6 +9,18 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Bounded review remediation: 2026-10-09
+
+The one allowed broad primary-agent review found and adjudicated four blockers.
+The one allowed remediation pass verifies B1 Puppeteer admission, B2 root reuse
+refusal, B3 authoritative refused/uncertain claim handling and prototype-free
+client claims, and B4 native spec alignment. 170 regressions/25 files, build,
+typecheck, actual Chrome/Puppeteer and rendered client checks pass. Native
+pixels/human input, independent root viewing, installed AuraCall API adoption
+and integration remain OPEN. Receipts: bounded-review and
+review-remediation-validation under docs/dev/notes/2026-10-09-plan0391-*.
+Do not reopen broad discovery; any remaining verification is closed-world.
+
 ## Installed placement/control outcome: 2026-10-09
 
 The bounded repair run passed with two real local Google Chrome processes on

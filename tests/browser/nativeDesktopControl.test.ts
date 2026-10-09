@@ -15,6 +15,7 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 	const events: string[] = [];
 	let failRevocation = true;
 	let terminal = false;
+  let failIssuance = false;
 	const routeId = randomUUID();
 	const target = {
 		assignmentId: "assignment",
@@ -35,6 +36,7 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 			res.end(JSON.stringify({ schemaVersion: 1, readinessScope: "live_resource", target }));
 		else if (request.operation === "issue_view") {
 			expect(request.capability).toBe("control");
+      if (failIssuance) { res.statusCode = 503; res.end("{}"); return; }
 			if (terminal) {
 				res.statusCode = 400;
 				res.end(JSON.stringify({ code: "consumer_grant_unavailable", retryable: false }));
@@ -121,7 +123,7 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 			await pending;
 		});
 		await admitted;
-		await expect(control.take(selected, "browser", randomUUID())).rejects.toThrow("busy");
+		await expect(control.take(selected, "browser", randomUUID())).rejects.toMatchObject({ message: expect.stringContaining('busy'), claimRetained: false });
 		expect(events).toEqual([]);
 		settle?.();
 		await command;
@@ -144,7 +146,7 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 		);
 		expect(persisted).not.toContain("https://");
 		const effects = events.length;
-		await expect(control.take(selected, "browser", randomUUID())).rejects.toThrow("already held");
+		await expect(control.take(selected, "browser", randomUUID())).rejects.toMatchObject({ message: expect.stringContaining('already held'), claimRetained: false });
 		await expect(control.release(selected, "browser", randomUUID())).rejects.toThrow("stale");
 		expect(events).toHaveLength(effects);
 		await expect(control.release(selected, "browser", token)).rejects.toThrow("unavailable");
@@ -179,6 +181,12 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 			"issue_view",
 			"resumed-after-terminal-proof",
 		]);
+    terminal = false; failIssuance = true;
+    const uncertainToken = randomUUID();
+    await expect(control.take(selected, 'browser', uncertainToken)).rejects.toMatchObject({ claimRetained: true });
+    await expect(gate.withAutomation('fixture', async () => {})).rejects.toThrow('paused');
+    failIssuance = false; terminal = true;
+    await control.release(selected, 'browser', uncertainToken);
 	} finally {
 		await new Promise<void>((resolve, reject) =>
 			server.close((error) => (error ? reject(error) : resolve())),

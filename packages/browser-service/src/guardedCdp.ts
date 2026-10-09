@@ -11,6 +11,10 @@ export function setCdpCommandAdmissionResolver(resolver: typeof resolveAdmission
   resolveAdmission = resolver;
 }
 
+export async function resolveCdpCommandAdmission(endpoint: CdpEndpoint): Promise<CdpCommandAdmission | undefined> {
+  return resolveAdmission?.(endpoint);
+}
+
 function endpoint(options: unknown): CdpEndpoint {
   const input = (options && typeof options === 'object' ? options : {}) as { host?: unknown; port?: unknown; target?: unknown };
   if (typeof input.target === 'string' && /^wss?:\/\//.test(input.target)) {

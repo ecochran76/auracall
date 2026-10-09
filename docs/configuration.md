@@ -691,7 +691,7 @@ Existing ingress authentication remains in force. Scoped execution API keys do
 not authorize desktop operator access.
 
 Viewing sends no input and closing the client keeps browsers and assignments
-running. **Take control** first excludes AuraCall CDP commands and browser launches
+running. **Take control** first excludes AuraCall direct CDP and Puppeteer commands, plus browser launches
 on that desktop, then issues a native input-capable grant. A second human claim
 or an active automation command prevents takeover. **Release control** disposes
 the local viewer and revokes the exact provider grant before automation resumes.
@@ -700,6 +700,10 @@ the tab never resume automation; explicit release must obtain provider revocatio
 or terminal proof by replaying the same durable issuance identity. Reload retains
 the claim in this browser tab; **Reconnect control** reuses that claim. Durable
 private receipts contain claim and generation identities, never viewer URLs.
+A definitively refused takeover with no caller-owned claim returns to passive
+viewing; uncertain issuance retains the recovery claim. Selecting root for a
+still-running native-bound browser is refused: close that browser explicitly
+before changing its desktop placement.
 
 Coordination covers AuraCall's managed CDP and launch paths. External OS tools and
 root desktop access remain independently available. Native installed acceptance

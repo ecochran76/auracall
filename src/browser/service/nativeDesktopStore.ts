@@ -75,3 +75,14 @@ export async function verifyNativeBrowser(binding: NativeDesktopBrowser): Promis
     return current.processStart === binding.processStart && current.bootId === binding.bootId && current.executable === binding.executable;
   } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false; throw error; }
 }
+
+/** A config change cannot move an existing process to root by reusing its CDP port. */
+export async function assertNoLiveNativeDesktopBrowser(managedProfileDir: string, endpoint?: { host?: string; port?: number }): Promise<void> {
+  const canonical = (host: string | undefined) => host === 'localhost' ? '127.0.0.1' : host;
+  const candidates = (await new NativeDesktopStore().browsers()).filter(binding =>
+    path.resolve(binding.managedProfileDir) === path.resolve(managedProfileDir) ||
+    (endpoint?.port === binding.cdpPort && canonical(endpoint.host ?? '127.0.0.1') === canonical(binding.cdpHost)));
+  for (const binding of candidates) {
+    if (await verifyNativeBrowser(binding)) throw new Error('This browser is still bound to a native desktop. Close it explicitly before selecting root or changing desktop placement.');
+  }
+}

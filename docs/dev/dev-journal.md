@@ -1,3 +1,16 @@
+## 2026-10-09 | Plan 0391 bounded review remediation
+
+The single allowed broad review found four accepted blockers: raw Puppeteer
+commands bypassed human exclusion; root could reuse a native-bound browser;
+refused takeover stranded an unowned tab claim and prototype desktop names
+misbehaved; companion spec still prescribed snapshots. The single bounded
+remediation pass fixes those seams. 170 regressions across 25 files, typecheck,
+build and rendered client smoke pass. Actual Chrome on both retained desktops
+proves Puppeteer session/connection exclusion, root reuse refusal, post-revoke
+resumption and zero remaining acceptance Chrome. No delegated independent review
+is claimed. Authenticated pixels/input, independent root viewing, installed
+AuraCall API adoption and integration remain OPEN. Continue from the ledger.
+
 ## 2026-10-09 | Plan 0391 installed native placement/control qualification
 
 Configured AuraCall from the existing 10-desktop effective Remote View config;

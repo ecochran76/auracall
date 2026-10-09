@@ -6,6 +6,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import CDP from "../browser/cdp.js";
+import { NativeDesktopControlError } from "../browser/service/nativeDesktopControl.js";
 import { captureDesktopView, listDesktopViews, openDesktopView, takeDesktopControl, releaseDesktopControl } from "../browser/service/desktopClient.js";
 import { renderDesktopClientPage } from "./desktopClientPage.js";
 import type { OptionValues } from "commander";
@@ -1888,7 +1889,7 @@ export async function createResponsesHttpServer(
             await (deps.desktopClient?.releaseControl?.(name, payload.browserId, payload.token) ?? releaseDesktopControl(input));
             sendJson(res, 200, { state: 'released' }, { 'Cache-Control': 'no-store' });
           }
-        } catch (error) { sendJson(res, 409, { error: { message: error instanceof Error ? error.message : 'Desktop control unavailable.' } }, { 'Cache-Control': 'no-store' }); }
+        } catch (error) { sendJson(res, 409, { error: { message: error instanceof Error ? error.message : 'Desktop control unavailable.', ...(error instanceof NativeDesktopControlError ? { claimRetained: error.claimRetained } : {}) } }, { 'Cache-Control': 'no-store' }); }
         return;
       }
       const nativeDesktopView = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/view$/);

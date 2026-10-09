@@ -9,6 +9,7 @@ import { getAuracallHomeDir, setAuracallHomeDirOverrideForTest } from '../src/au
 import { DEFAULT_BROWSER_CONFIG } from '../src/browser/config.js';
 import { launchChrome } from '../src/browser/chromeLifecycle.js';
 import CDP from '../src/browser/cdp.js';
+import { connectGuardedPuppeteer } from '../packages/browser-service/src/guardedPuppeteer.js';
 import { NativeDesktopStore, verifyNativeBrowser } from '../src/browser/service/nativeDesktopStore.js';
 import { listDesktopViews, openDesktopView, takeDesktopControl, releaseDesktopControl } from '../src/browser/service/desktopClient.js';
 
@@ -39,14 +40,22 @@ try {
   assert(catalog.desktops.every(desktop => desktop.state === 'ready' && desktop.browsers.length === 1));
   const first = bindings[0]; const client = clients[0]; assert(first && client);
   assert.equal((await openDesktopView({ remoteView, name: 'research', browserId: first.browserId })).capability, 'observe');
+  const puppeteerBrowser = await connectGuardedPuppeteer({ browserURL: `http://${first.cdpHost}:${first.cdpPort}`, defaultViewport: null });
+  const puppeteerPage = (await puppeteerBrowser.pages())[0]; assert(puppeteerPage);
+  assert.equal(await puppeteerPage.evaluate(() => document.title), 'AuraCall research');
+  await assert.rejects(launchChrome({ ...DEFAULT_BROWSER_CONFIG, remoteViewDesktop: undefined }, first.managedProfileDir, () => {}), /still bound/);
   claim = { name: 'research', browserId: first.browserId, token: randomUUID() };
   const control = await takeDesktopControl({ remoteView, ...claim }); assert.equal(control.capability, 'control');
+  await assert.rejects(puppeteerPage.evaluate(() => { const input = document.querySelector('input'); if (!input) throw new Error('Missing marker'); input.value = 'puppeteer-during-human'; }), /paused/);
+  await assert.rejects(connectGuardedPuppeteer({ browserURL: `http://${first.cdpHost}:${first.cdpPort}` }), /paused/);
   await assert.rejects(client.Runtime.evaluate({ expression: "document.querySelector('#marker').value='automation-during-human'" }), /paused/);
   await releaseDesktopControl({ remoteView, ...claim }); claim = undefined;
   await client.Runtime.evaluate({ expression: "document.querySelector('#marker').value='automation-resumed'" });
+  assert.equal(await puppeteerPage.evaluate(() => document.querySelector('input')?.value), 'automation-resumed');
+  await puppeteerBrowser.disconnect();
   const observed = await client.Runtime.evaluate({ expression: "document.querySelector('#marker').value", returnByValue: true });
   assert.equal(observed.result.value, 'automation-resumed');
-  const receipt = { schemaVersion: 1, twoNativeDesktops: true, selectedExecutable: '/usr/bin/google-chrome', exactProcessOwnership: true, reusePreservesPid: true, observeGrant: true, takeoverBlocksActualCdp: true, revokeBeforeResume: true, authenticatedViewerPixelsAndHumanInput: false, providerPrompts: 0, infrastructureProvisioned: false,
+  const receipt = { schemaVersion: 1, twoNativeDesktops: true, selectedExecutable: '/usr/bin/google-chrome', exactProcessOwnership: true, reusePreservesPid: true, observeGrant: true, takeoverBlocksActualCdp: true, takeoverBlocksActualPuppeteer: true, rootRejectsLiveNativeReuse: true, revokeBeforeResume: true, authenticatedViewerPixelsAndHumanInput: false, providerPrompts: 0, infrastructureProvisioned: false,
     browsers: bindings.map(binding => ({ browserId: binding.browserId, desktopName: binding.desktopName, assignment: binding.assignment, pid: binding.pid, cdpPort: binding.cdpPort })) };
   await fs.writeFile(path.join(home, 'acceptance.json'), JSON.stringify(receipt, null, 2), { mode: 0o600 });
   console.log(JSON.stringify(receipt));

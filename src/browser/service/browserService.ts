@@ -42,6 +42,7 @@ import {
 } from '../../../packages/browser-service/src/service/mutationDispatcher.js';
 import type { BrowserOperationQueueObservationSummary } from '../operationQueueObservations.js';
 import { summarizeBrowserOperationQueueObservations } from '../operationQueueObservations.js';
+import { assertNoLiveNativeDesktopBrowser } from './nativeDesktopStore.js';
 import { findNativeDesktopBrowser, launchNativeDesktopBrowser } from './nativeDesktopRuntime.js';
 import { findConfiguredDesktopBrowser, launchAgentBrowserRdpSession } from './agentBrowserRdpLauncher.js';
 
@@ -375,6 +376,7 @@ export class BrowserService extends BrowserServiceCore {
       const result = await launchAgentBrowserRdpSession(remoteOptions);
       return { host: result.chrome.host, port: result.port, launched: true };
     }
+    await assertNoLiveNativeDesktopBrowser(options.defaultProfileDir ?? fallbackDir, { host: options.host ?? config.remoteChrome?.host, port: options.port ?? config.remoteChrome?.port });
     return super.resolveDevToolsTarget({
       ...options,
       defaultProfileDir: options.defaultProfileDir ?? fallbackDir,

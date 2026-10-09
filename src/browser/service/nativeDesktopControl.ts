@@ -24,6 +24,10 @@ const receiptSchema = z.object({
 });
 type Receipt = z.infer<typeof receiptSchema>;
 
+export class NativeDesktopControlError extends Error {
+  constructor(message: string, readonly claimRetained: boolean) { super(message); this.name = 'NativeDesktopControlError'; }
+}
+
 /** Only exact provider revocation permits explicit automation resumption. URLs stay ephemeral. */
 export class NativeDesktopControl {
 	constructor(
@@ -79,7 +83,7 @@ export class NativeDesktopControl {
 		token: string,
 	): Promise<{ url: string; capability: "control"; token: string }> {
 		z.string().uuid().parse(token);
-		return this.exclusive(selected, async () => {
+		try { return await this.exclusive(selected, async () => {
 			const browser = await this.browser(selected, browserId);
 			const binding = nativeBrowserGeneration(browser);
 			const gate = new DesktopControlGate(browser.assignment.desktopId, this.options.gateDirectory);
@@ -114,8 +118,14 @@ export class NativeDesktopControl {
 				receipt.issuanceKey,
 			);
 			await this.write(selected, { ...receipt, routeId: grant.routeId });
-			return { url: grant.url, capability: "control", token };
-		});
+			return { url: grant.url, capability: "control" as const, token };
+		}); } catch (error) {
+      // A definitive rejection must not strand a claim that never belonged to this caller.
+      // Unknown receipt state stays retained, including lost issuance replies.
+      let claimRetained = true;
+      try { claimRetained = (await this.read(selected))?.token === token; } catch { /* fail closed */ }
+      throw new NativeDesktopControlError(error instanceof Error ? error.message : 'Desktop control unavailable.', claimRetained);
+    }
 	}
 
 	async release(

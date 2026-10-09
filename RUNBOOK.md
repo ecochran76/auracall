@@ -22034,3 +22034,15 @@ Fresh OS readback preserves 32 preexisting Chrome processes and both borrowed
 assignments; zero acceptance Chrome processes remain. Doctor is ok. Native
 authenticated pixels/input, independent root viewing, bounded review and
 integration remain OPEN. Receipts: docs/dev/notes/2026-10-09-plan0391-native-control-validation.json and docs/dev/notes/2026-10-09-plan0391-installed-native-placement-validation.json.
+
+## Turn 637 | 2026-10-09
+
+Plan0391 used its one broad serial primary review and one bounded remediation
+pass. All four accepted blockers verify: actual Puppeteer commands are excluded
+through replies, live native profiles cannot be reused as root, definitive
+refused claims return to observe while uncertain claims retain pause, and
+Spec0392 reflects native embeds. 170 focused regressions/25 files, build,
+typecheck, rendered smoke and actual two-desktop Chrome/Puppeteer acceptance
+pass; owned acceptance processes are absent. Authenticated pixels/input, root
+viewing, installed AuraCall API adoption and integration remain OPEN. Continue
+from the execution ledger and the bounded-review/remediation receipts.

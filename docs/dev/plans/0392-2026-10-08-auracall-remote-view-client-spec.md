@@ -54,24 +54,27 @@ stops clearly rather than falling back to root desktop.
   adapters do not independently choose desktops.
 - Model desktop names separately from browser profiles and runtime profiles.
 - Global defaults and explicit browser-profile overrides resolve deterministically.
-- Named desktops resolve to exact service-owned routes and display allocations.
-  Do not use a raw DISPLAY environment value as ownership proof.
-- Reuse Agent Browser remote-view readiness, build proof, inventory and durable
-  handoff contracts. Do not persist ephemeral Guacamole provider links.
-- Preserve existing configurations until the new behavior is selected. Do not
-  move running browsers when configuration changes.
-- Start with configured existing route capacity; do not automatically provision
-  RDP users, desktops or infrastructure during browser launch.
-- Build the dedicated presentation at its owning application seam. Any missing
-  Agent Browser contract must be identified and implemented truthfully rather
-  than inferred from a successful shared-display launch.
-- Passive presentation uses Agent Browser desktop capture frames from the
-  retained remote-view browser, with exact route/display checks before exposure.
-  Frames are response-only and refresh at most once every 1.5 seconds per client.
-  Observation exposes no interactive provider iframe.
-- Viewer and controller ownership remain separate. A controller lease alone
-  does not establish that AuraCall CDP writes are excluded. The integration
-  must coordinate both or refuse conflicting handoff.
+- Named desktops use Remote View's external-application consumer API directly.
+  AuraCall owns managed Chrome processes, profiles and CDP; Remote View owns
+  assignment, display placement and native viewing. Agent Browser RDP remains
+  an explicit compatibility path with separate ownership contracts.
+- Retain assignment and exact process identities. Obtain fresh lifecycle and
+  viewing generations before launch or embed issuance; raw DISPLAY alone is
+  never ownership proof. Do not persist ephemeral viewer URLs.
+- Preserve authenticated managed profiles, selected executable/build and
+  existing browser processes. A config change requires explicit closure before
+  a live browser can change desktop placement, including returning to root.
+- Acquire only configured existing pool capacity. Do not provision desktops,
+  RDP users or infrastructure during browser launch.
+- The dedicated AuraCall browser client mounts Remote View's native embed with
+  its unchanged consumer helper. Default grants are observe-only; the client
+  renews ephemeral grants without replacing durable desktop/browser identity.
+- Explicit human takeover acquires AuraCall automation exclusion before issuing
+  a control grant. Direct CDP and Puppeteer commands share admission through
+  each protocol reply. Closing a viewer or grant expiry never resumes automation.
+- Explicit release revokes the exact grant before automation resumes. Unknown
+  issuance or revocation retains the caller's recovery claim and pause. A
+  definitive refusal with no caller-owned claim returns to passive observation.
 - A client filter is presentation scope, not a new security isolation claim.
 
 ## Testing Decisions

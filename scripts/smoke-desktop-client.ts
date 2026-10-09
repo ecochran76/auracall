@@ -7,6 +7,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import puppeteer from "puppeteer-core";
 import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
+import { NativeDesktopControlError } from "../src/browser/service/nativeDesktopControl.js";
 import { createResponsesHttpServer } from "../src/http/responsesServer.js";
 
 const home = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-desktop-client-smoke-"));
@@ -47,6 +48,7 @@ const desktops = [
 		message: "Configured desktop route is unavailable.",
 	},
 ];
+desktops.push({ name: 'constructor', label: 'Constructor desktop', state: 'ready', presentation: 'native', browsers: [{ browserId: 'constructor-browser', handoffUrl: '/desktops?desktop=constructor' }] });
 const frames: string[] = [];
 const controlEvents: string[] = [];
 let rejectRelease = true;
@@ -72,6 +74,7 @@ const server = await createResponsesHttpServer(
 			},
 			takeControl: async (name, browserId, token) => {
 				controlEvents.push(`take:${name}:${browserId}`);
+        if (name === 'constructor') throw new NativeDesktopControlError('Another controller owns this desktop.', false);
 				return {
 					url: "https://desktop.example.test/embed/33333333-3333-4333-8333-333333333333",
 					capability: "control" as const,
@@ -173,7 +176,14 @@ try {
 		await page.$eval("#root", (node) => (node as HTMLAnchorElement).href),
 		"https://browser.example.test/root",
 	);
-	assert.deepEqual(errors, []);
+	await page.$eval('#desktops button:nth-child(5)', node => (node as HTMLButtonElement).click());
+  await page.waitForFunction(() => document.querySelector('#title')?.textContent === 'Constructor desktop' && document.querySelector('#native-view section')?.getAttribute('data-state') === 'ready');
+  assert.equal(await page.$eval('#mode', node => node.textContent), 'View only');
+  await page.click('#take-control');
+  await page.waitForFunction(() => document.querySelector('#mode')?.textContent === 'View only' && document.querySelector('#native-view section')?.getAttribute('data-state') === 'ready');
+  assert.equal(await page.$eval('#release-control', node => (node as HTMLButtonElement).hidden), true);
+  assert.equal(await page.evaluate(() => Object.hasOwn(JSON.parse(sessionStorage.getItem('auracall-desktop-claims') || '{}'), 'constructor')), false);
+  assert.deepEqual(errors, []);
 	assert(
 		frames.includes("research:research-browser") && frames.includes("writing:writing-browser"),
 	);
@@ -181,7 +191,7 @@ try {
 		JSON.stringify({
 			scope: "provider-free rendered client",
 			passed: [
-				"native-observe-embed",
+				"native-observe-embed", "constructor-desktop-observe", "refused-take-clears-only-unowned-claim",
 				"explicit-control",
 				"retained-control-reload",
 				"failed-release-retains-claim",

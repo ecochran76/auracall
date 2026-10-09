@@ -10,7 +10,7 @@ import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { DEFAULT_BROWSER_CONFIG } from '../../src/browser/config.js';
 import { launchNativeDesktopBrowser } from '../../src/browser/service/nativeDesktopRuntime.js';
 import { listDesktopViews } from '../../src/browser/service/desktopClient.js';
-import { NativeDesktopStore } from '../../src/browser/service/nativeDesktopStore.js';
+import { assertNoLiveNativeDesktopBrowser, NativeDesktopStore } from '../../src/browser/service/nativeDesktopStore.js';
 
 test('native browser launch acquires one retained named desktop and passes only its child environment to the existing launcher', async () => {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-native-launch-'));
@@ -44,6 +44,9 @@ test('native browser launch acquires one retained named desktop and passes only 
     const options = { config, userDataDir: path.join(home, 'managed-research'), logger: () => {}, launch };
     const first = await launchNativeDesktopBrowser(options);
     expect(first.port).toBe(45123);
+    await expect(assertNoLiveNativeDesktopBrowser(options.userDataDir)).rejects.toThrow('still bound');
+    await expect(assertNoLiveNativeDesktopBrowser(path.join(home, 'other'), { host: 'localhost', port: first.port })).rejects.toThrow('still bound');
+    await expect(assertNoLiveNativeDesktopBrowser(path.join(home, 'other'))).resolves.toBeUndefined();
     expect(launch).toHaveBeenCalledWith(expect.objectContaining({ display: ':77', headless: false, keepBrowser: true }), options.userDataDir, expect.any(Function), expect.objectContaining({ launchEnvironment: expect.objectContaining({ DISPLAY: ':77', XAUTHORITY: '/private/Xauthority' }) }));
     expect(process.env.DISPLAY).toBe(display);
     await launchNativeDesktopBrowser({ ...options, userDataDir: path.join(home, 'managed-second') });

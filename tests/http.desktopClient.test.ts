@@ -4,12 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
+import { NativeDesktopControlError } from "../src/browser/service/nativeDesktopControl.js";
 import { createResponsesHttpServer } from "../src/http/responsesServer.js";
 
 test("the dedicated desktop app serves an owned inventory and passive frames through the operator HTTP boundary", async () => {
 	const home = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-http-desktops-"));
 	setAuracallHomeDirOverrideForTest(home);
 	const calls: string[] = [];
+  let refusal: Error | undefined;
 	const server = await createResponsesHttpServer(
 		{ host: "127.0.0.1", port: 0, tabAffinityMaintenanceIntervalMs: 0 },
 		{
@@ -48,7 +50,8 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 					};
 				},
 				takeControl: async (name, browserId, token) => {
-					calls.push(`take:${name}:${browserId}`);
+					if (refusal) throw refusal;
+          calls.push(`take:${name}:${browserId}`);
 					return {
 						url: "https://desktop.example.test/embed/11111111-1111-4111-8111-111111111111",
 						capability: "control" as const,
@@ -128,6 +131,13 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 			"take:research:owned-browser",
 			"release:research:owned-browser",
 		]);
+    refusal = new NativeDesktopControlError('Another controller owns this desktop.', false);
+    const rejected = await fetch(controlUrl, { method: 'POST', body, headers: operatorHeaders });
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toMatchObject({ error: { claimRetained: false } });
+    refusal = new Error('Issuance response lost.');
+    const unknown = await fetch(controlUrl, { method: 'POST', body, headers: operatorHeaders });
+    expect((await unknown.json()).error).not.toHaveProperty('claimRetained');
 	} finally {
 		await server.close();
 		setAuracallHomeDirOverrideForTest(null);

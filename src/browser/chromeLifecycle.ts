@@ -14,10 +14,11 @@ import {
   closeRemoteChromeTarget,
   resolveWslHost,
   buildWslFirewallHint,
-  reuseRunningChromeProfile,
+  reuseRunningChromeProfile as reuseRunningChromeProfileCore,
   resolveUserDataBaseDir,
 } from '../../packages/browser-service/src/chromeLifecycle.js';
 import type { BrowserLogger, ResolvedBrowserConfig } from './types.js';
+import { assertNoLiveNativeDesktopBrowser } from './service/nativeDesktopStore.js';
 import { launchNativeDesktopBrowser } from './service/nativeDesktopRuntime.js';
 import { launchAgentBrowserRdpSession } from './service/agentBrowserRdpLauncher.js';
 
@@ -53,6 +54,7 @@ export async function launchChrome(
       kill: async () => { logger('Keeping Agent Browser-owned remote-view browser running.'); },
     } as unknown as Awaited<ReturnType<typeof launchChromeCore>>;
   }
+  await assertNoLiveNativeDesktopBrowser(userDataDir, config.remoteChrome ?? undefined);
   return launchChromeCore(config, userDataDir, logger, {
     registryPath: path.join(getAuracallHomeDir(), 'browser-state.json'),
     onWindowsRetry: options.onWindowsRetry,
@@ -60,6 +62,11 @@ export async function launchChrome(
     ownedPorts: options.ownedPorts,
     abortSignal: options.abortSignal,
   });
+}
+
+export async function reuseRunningChromeProfile(...args: Parameters<typeof reuseRunningChromeProfileCore>) {
+  await assertNoLiveNativeDesktopBrowser(args[0]);
+  return reuseRunningChromeProfileCore(...args);
 }
 
 export {
@@ -74,6 +81,5 @@ export {
   closeRemoteChromeTarget,
   resolveWslHost,
   buildWslFirewallHint,
-  reuseRunningChromeProfile,
   resolveUserDataBaseDir,
 };

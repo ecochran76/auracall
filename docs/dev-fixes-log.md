@@ -24484,3 +24484,13 @@ bind managed directory, process boot/start/executable, display and CDP to the
 retained application assignment. The dedicated client uses the provider's
 existing observe embed; it does not reconstruct pixels or transport. Source
 and fixture rendering evidence remains separate from installed acceptance.
+
+### 2026-10-09 — Native desktop review boundary fixes
+
+Puppeteer needs its own command transport admission: each request holds the same
+physical-desktop gate through its reply, including flattened session commands.
+A connection-wide lock deadlocks mixed CDP/Puppeteer work. Changing config to
+root cannot silently adopt a live native-bound process. A positively refused
+human claim may return to observe; lost issuance/revocation keeps recovery state
+and pause. Use a prototype-free map for arbitrary configured desktop names.
+See Plan0391 bounded-review and review-remediation-validation receipts.
