@@ -9,7 +9,7 @@ Owner: Eric Cochran
 
 Tickets #240, #241 and #242 are published. Native placement, passive embeds and coordinated control pass source checks.
 Installed two-desktop Chrome placement and API/CDP exclusion pass; authenticated
-native pixels/input, root viewing and final integration remain pending. All tickets stay open until integrated and installed evidence qualifies
+native pixels/input, root viewing and final integration remain pending. The installed API now serves both owned native desktops; the operator viewer check is pending. All tickets stay open until integrated and installed evidence qualifies
 their respective outcomes.
 This is a local spec, not a claim of installed behavior.
 

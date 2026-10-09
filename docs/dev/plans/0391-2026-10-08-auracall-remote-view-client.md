@@ -9,6 +9,19 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Installed dedicated client checkpoint: 2026-10-09
+
+User-scoped runtime code cdb767f8 is adopted; API91439 serves ready Research and
+Writing browsers with actual native observe grants. Explicit new browser-profile
+selections resolve through installed config. All 21 existing launch plans remain
+unchanged; scheduler pause, 17 completion identities/pauses, background drain
+posture and all 33 pre-upgrade Chrome identities are preserved. The two blank
+marker browsers remain intentionally available after the preparation launcher
+exits. Operator authentication, native pixels/input and independent root viewing
+are pending. Do not reset markers by rerunning prepare. The installed-client
+validation receipt and acceptance-installed-desktop-client.ts verify/cleanup
+commands carry the next gate. No ticket or full-feature closure is claimed.
+
 ## Bounded review remediation: 2026-10-09
 
 The one allowed broad primary-agent review found and adjudicated four blockers.
@@ -80,9 +93,14 @@ The operator then authorized execution of the full plan, with checkpoint and
 stop before two million tokens or three hours. Packet #240 is active on
 feat/issue240-named-desktops; #241 and #242 remain dependent. The execution
 ledger records bounds, current evidence and unmet acceptance. No feature
-acceptance is claimed from the planning merge.
+acceptance is claimed from the planning merge. Current implementation and
+installed API adoption have progressed through all three source packets on the
+serialized branch: 170 regressions/25 files and bounded review remediation pass.
+Installed API91439 code cdb767f8 serves two owned native desktops. Operator
+native pixels/input and root viewing plus final integration remain pending;
+all three tickets remain open. The installed-client receipt is current authority.
 
-### Execution revision: 2026-10-09
+### Historical execution revision: 2026-10-09 (superseded by native correction)
 
 The implementation remains on one serialized branch for source qualification.
 Packets retain their dependency order; shared launch-binding retention and

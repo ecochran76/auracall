@@ -1,3 +1,18 @@
+## 2026-10-09 | Plan 0391 installed dedicated client prepared
+
+Installed code checkpoint cdb767f86942c57af03579604028ee5f2f647da5 is active in
+user-runtime; API91439 serves two ready owned desktops and actual observe embeds.
+The config adds explicit remote-view-research/writing browser profiles; all 21
+prior runtime/provider launch plans compare unchanged. Atomic adoption retained
+rollback copies, scheduler pause, all 17 completion identities/pauses, background
+drain posture, and all 33 pre-upgrade Chrome identities. Actual installed config
+resolution launched two blank marker browsers on distinct native assignments.
+They remain positively owned after the preparation launcher exits. The operator
+has been asked to authenticate, view both markers, type via explicit takeover,
+release, and confirm root viewing. No human-input or pixel proof is claimed yet.
+Use scripts/acceptance-installed-desktop-client.ts verify/cleanup; do not rerun
+prepare while the operator may be typing, because prepare resets marker pages.
+
 ## 2026-10-09 | Plan 0391 bounded review remediation
 
 The single allowed broad review found four accepted blockers: raw Puppeteer

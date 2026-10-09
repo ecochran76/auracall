@@ -22046,3 +22046,17 @@ typecheck, rendered smoke and actual two-desktop Chrome/Puppeteer acceptance
 pass; owned acceptance processes are absent. Authenticated pixels/input, root
 viewing, installed AuraCall API adoption and integration remain OPEN. Continue
 from the execution ledger and the bounded-review/remediation receipts.
+
+## Turn 638 | 2026-10-09
+
+Installed Plan0391 code cdb767f8 via staged/atomic user-runtime adoption with
+rollback copies. API91439 lists two positively owned ready native desktops and
+issues actual observe embeds. Existing 21 launch plans, scheduler pause, 17
+completion IDs/pauses, drain posture and 33 pre-upgrade Chrome identities are
+preserved. Explicit Research/Writing browser profiles launch distinct blank
+marker browsers through installed config. Both survive preparation launcher
+exit and remain intentionally available for the requested human viewer check.
+Authenticated native pixels/input, root viewing and integration remain OPEN.
+See installed-client-validation receipt and installed acceptance script. Do not
+rerun prepare before human verification; verify reads actual marker values and
+cleanup requires exact ownership plus automation admission.

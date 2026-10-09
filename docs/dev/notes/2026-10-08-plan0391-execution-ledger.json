@@ -32,13 +32,13 @@
       ]
     }
   },
-  "unmet": "Authenticated native viewer pixels/input and independent root viewing; installed AuraCall API adoption and integration",
+  "unmet": "Authenticated native viewer pixels/human input and independent root viewing; integration",
   "authority": "User explicitly requested merge and full execution; safe in-scope fixture/live verification included; unrelated authenticated provider work and infrastructure provisioning excluded",
   "progress_classification": "outcome_progress",
-  "evidence": "170 regressions/25 files; four accepted review blockers verified; actual Puppeteer/CDP exclusion and root reuse refusal; rendered refusal/constructor checks pass; zero acceptance Chrome",
-  "next_action": "Install validated candidate runtime with existing paused scheduler/completions preserved; qualify actual dedicated client",
-  "source_checkpoint": "1a49eeb3f868972e293d8f04360021dafa970961",
-  "last_checkpoint_at": "2026-10-09T03:57:55.398221+00:00",
+  "evidence": "170 regressions/25 files; all four bounded review findings verify; installed API91439 code cdb767f8 serves two ready owned native desktops; all 21 old launch plans, 17 paused completions and 33 pre-upgrade Chrome processes preserved",
+  "next_action": "Await operator viewer/input/root check while completing installed qualification; verify actual markers then integrate only if all gates pass",
+  "source_checkpoint": "cdb767f86942c57af03579604028ee5f2f647da5",
+  "last_checkpoint_at": "2026-10-09T04:14:46.287339+00:00",
   "installed_route_readback": {
     "at": "2026-10-09T02:16:00Z",
     "command": "agent-browser --json service status",
@@ -60,5 +60,21 @@
     "installed_acceptance": "placement/API-CDP passed; authenticated pixels/input/root pending"
   },
   "broad_reviews_used": 1,
-  "review_remediation_passes_used": 1
+  "review_remediation_passes_used": 1,
+  "installed_client": {
+    "code_checkpoint": "cdb767f86942c57af03579604028ee5f2f647da5",
+    "api_pid": 91439,
+    "two_owned_marker_browsers_intentionally_retained": true,
+    "human_question_pending": true,
+    "receipt": "docs/dev/notes/2026-10-09-plan0391-installed-client-validation.json"
+  },
+  "blocking_gate": {
+    "condition": "Authenticated native viewer pixels/input and independent root viewing require operator session/attestation; no authorized authenticated browser session available to the agent",
+    "first_impasse_turn": "2026-10-09 installed-client preparation and question",
+    "consecutive_impasse_goal_turns": 1,
+    "question_pending": true,
+    "do_not_repeat_prepare": true,
+    "safe_next_step": "Read actual marker values after human release; bind operator visual/root attestation; do not infer acceptance from API grants",
+    "memory_disposition": "pending closeout receipt"
+  }
 }

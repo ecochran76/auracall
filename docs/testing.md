@@ -3362,3 +3362,16 @@ restart. `pnpm tsx scripts/smoke-desktop-client.ts` renders the dedicated app wi
 fixture native embeds, exercises explicit take/release and reload, and checks
 fresh OS absence of its own browser processes. Neither qualifies installed
 Remote View input or authenticated provider behavior.
+
+Plan0391 installed dedicated-client acceptance uses
+`AURACALL_INSTALLED_DESKTOP_ACCEPTANCE=1 pnpm tsx scripts/acceptance-installed-desktop-client.ts prepare`
+against the user-scoped installed runtime and explicit `remote-view-research`
+and `remote-view-writing` browser-profile configuration. It opens only blank
+local marker pages and leaves the browsers available after the launcher exits.
+Authenticate at the real `/desktops` ingress, view both marker pages, take
+control/type `research-391` and `writing-391`/release on each, and independently
+open Root desktop. Run the same command with `verify` to check both actual marker
+values through installed CDP; visual/root attestation remains separate. `cleanup`
+closes only exact retained owned browsers and checks fresh physical absence.
+Never rerun prepare while awaiting human input: it resets the marker pages.
+Unknown or retained human control prevents cleanup commands through the same gate.

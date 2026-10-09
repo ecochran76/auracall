@@ -3,9 +3,10 @@
 - OPEN P86: [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)
   and [its spec](docs/dev/plans/0392-2026-10-08-auracall-remote-view-client-spec.md) govern the dedicated AuraCall remote-view client with multiple configured
   desktops, independent root desktop and explicit coordinated control handoff.
-  Current State: PR243 is merged. Configured launches and the passive client are
-  in source qualification; controller coordination and installed acceptance
-  remain open. Approved tickets stay #240 → #241 → #242.
+  Current State: PR243 is merged; placement, native client and controller pass
+  source/real Chrome qualification and bounded review. Installed API91439 serves
+  two owned native desktops. Authenticated pixels/input, independent root viewing
+  and PR244 integration remain open. Approved tickets stay #240 → #241 → #242.
   This registers the requested feature without changing other lane priorities.
 
 - Completed P78 / issue 131: [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)
