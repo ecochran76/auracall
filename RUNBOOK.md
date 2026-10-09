@@ -21976,3 +21976,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   this planning slice.
 - PR 142 merged the plan to canonical `main` at `fcf388fe8`. Issue 139 and
   Plan 0381 remain open for the provider-free implementation packets.
+
+## Turn 633 | 2026-10-08
+
+- Operator approved the three-packet AuraCall remote-view breakdown and requested
+  tickets followed by a repo plan. Created and verified #240, #241 and #242
+  in dependency order, with existing enhancement labels and body-linked blockers.
+- [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)
+  and [its companion spec](docs/dev/plans/0392-2026-10-08-auracall-remote-view-client-spec.md) capture multiple named desktops, global default with
+  browser-profile assignments, independent root access, passive viewing and
+  explicit control handoff coordinated with real automation admission.
+- Plan remains PLANNED. No source implementation, browser/provider activity,
+  installation, infrastructure provisioning or service restart occurred.
+  Original checkout dirty work is preserved in the separate source checkout.
