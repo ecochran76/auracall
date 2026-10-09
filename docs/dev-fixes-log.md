@@ -1,3 +1,14 @@
+## 2026-10-09 — Remote View verification must adopt the effective config
+
+A live verifier loop caches configuration at process startup. Updating the
+effective config and restarting control/gateway alone leaves that loop writing
+old-hash readiness receipts, causing gateway 503 despite healthy desktops and
+successful grant issuance. Direct verification can briefly succeed before the
+old loop overwrites it. Restart the verifier after configuration adoption and
+check multiple renewal cycles for current hash, connection links and age under
+ten seconds. Plan0391 repaired this installed failure with a verifier-only restart;
+authenticated viewing remains a separate acceptance boundary.
+
 ## 2026-10-09 — Real Chromium can scrub process ownership inputs
 
 A live Google Chrome process replaced argv with a flattened title and erased

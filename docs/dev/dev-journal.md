@@ -1,3 +1,17 @@
+## 2026-10-09 | Plan0391 reported viewer 503 repair
+
+The operator reported Service Unavailable on both desktops. The Remote View
+verifier process predated configuration adoption and continually wrote a receipt
+for the previous config hash with no connection links. Gateway admission requires
+a matching receipt no older than ten seconds, so ready browsers and successful
+consumer grant resolution did not qualify viewer availability. A direct current
+Guacamole verification succeeded; restarting only the verifier service restored
+current receipts across four samples over twenty seconds, covering slots 5 and 6.
+Fresh OS reads preserve both exact browser PID/start identities. No browser,
+control, gateway, X server or account restart was performed. Authenticated viewer,
+human input and root acceptance remain pending; the operator can reload existing
+views. Evidence: notes/2026-10-09-plan0391-viewer-unavailable-repair.json.
+
 ## 2026-10-09 | Plan0391 blocked acceptance checkpoint
 
 The authenticated native viewer/input/root gate recurred across three consecutive
