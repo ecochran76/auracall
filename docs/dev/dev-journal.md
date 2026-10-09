@@ -1,3 +1,39 @@
+## 2026-10-08 | Plan 0391 publication validation
+
+All three live tickets and their exact dependency links read back successfully.
+Plan local links and diff hygiene pass. Active planning audit adds zero findings
+relative to base 32e8c71a2; its three existing Plan 0386 state/wiring findings
+remain unchanged in the retained validation receipt. Planning is complete;
+feature remains PLANNED and implementation has not started.
+
+## 2026-10-08 | Approved tickets published; repo execution plan written
+
+Created and read back #240 (desktop configuration/launch binding), #241
+(dedicated multi-desktop client, blocked by #240), and #242 (coordinated human
+control, blocked by #241). Plan 0391 now gives packet ownership, inputs, write
+surfaces, acceptance checks, terminal conditions and source/live boundaries.
+Roadmap and runbook are wired. Feature remains PLANNED; no implementation or
+runtime activity. Ticket receipts preserve returned identities and body hashes.
+
+## 2026-10-08 | Remote-view desktop decisions confirmed
+
+Plan 0391 now records multiple AuraCall-owned named desktops, global default
+and browser-profile assignments, passive viewing with explicit coordinated
+control handoff, independent root desktop access, and no silent fallback.
+Companion spec and three dependent implementation slices are drafted. Existing
+Agent Browser route/allocation and viewer/controller contracts are building
+blocks; app presentation and automation exclusion remain implementation work.
+No runtime, provider, installation, or infrastructure changes occurred.
+
+## 2026-10-08 | Remote-view client design
+
+Plan 0391 records the accepted AuraCall-only client, global default with browser
+profile overrides, explicit remote-view failure, and continued root desktop
+access. Browser grouping and manual-control posture remain interview decisions.
+Existing shared-display remote-view launching is not dedicated-client proof.
+Design lives on feat/auracall-remote-view-client from origin/main 32e8c71a2;
+original checkout dirty work is preserved. No runtime or provider effects.
+
 ## 2026-10-08 | Content gate stops additional allowance after eight terminal
 
 Journey7 completes context and skips absent artifacts. Journey8 visits independent

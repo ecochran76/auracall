@@ -48,3 +48,19 @@ A local conversation attachment matching a currently discovered artifact ID, fil
 
 **Provider session custody**:
 A retained browser session must have a reachable caller owner. A proof-only read closes a session created on its private options; it preserves a session supplied by the caller. Deadline-scoped conversation reads and explicit-target utility wrappers return retained-session custody to their session-enabled caller.
+
+**AuraCall remote-view client**:
+An operator-facing application view dedicated to AuraCall's owned desktops and managed browsers.
+_Avoid_: Root desktop, source browser profile
+
+**Root desktop display**:
+The general desktop view available independently of the AuraCall remote-view client.
+_Avoid_: AuraCall remote-view client
+
+**AuraCall desktop**:
+A named desktop owned by AuraCall and used to display its managed browsers.
+_Avoid_: Browser profile, AuraCall runtime profile
+
+**Control handoff**:
+An explicit transfer of interaction ownership between automation and a human operator.
+_Avoid_: View selection, browser launch

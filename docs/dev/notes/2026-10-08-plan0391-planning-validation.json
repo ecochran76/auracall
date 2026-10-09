@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-09T01:44:09.980901+00:00",
+  "base": "32e8c71a2878b351490a3a32b3aec63d46c34717",
+  "command": "python3 .agents/skills/repo-policy-selector/scripts/audit_planning_contract.py --repo-root . --active-only --json",
+  "base_problems": [
+    "OPEN plan missing Current State section: 0386-2026-10-01-chatgpt-materialization-surface-repair.md",
+    "plan not wired in ROADMAP.md: 0386-2026-10-01-chatgpt-materialization-surface-repair.md",
+    "plan not wired in RUNBOOK.md: 0386-2026-10-01-chatgpt-materialization-surface-repair.md"
+  ],
+  "current_problems": [
+    "OPEN plan missing Current State section: 0386-2026-10-01-chatgpt-materialization-surface-repair.md",
+    "plan not wired in ROADMAP.md: 0386-2026-10-01-chatgpt-materialization-surface-repair.md",
+    "plan not wired in RUNBOOK.md: 0386-2026-10-01-chatgpt-materialization-surface-repair.md"
+  ],
+  "introduced_problems": [],
+  "result": "no new findings"
+}
