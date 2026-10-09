@@ -32,13 +32,13 @@
       ]
     }
   },
-  "unmet": "Native controller grant/revoke joined to automation exclusion; installed AuraCall consumer configuration and two-desktop acceptance; whole-feature review and integration",
+  "unmet": "Installed native two-desktop placement/input/root acceptance; whole-feature review and integration",
   "authority": "User explicitly requested merge and full execution; safe in-scope fixture/live verification included; unrelated authenticated provider work and infrastructure provisioning excluded",
   "progress_classification": "outcome_progress",
-  "evidence": "121 source checks pass; native observe client rendered with fixture transport and fresh zero-owned-process census; actual fixture-process/CDP wire exclusion passes",
-  "next_action": "Implement native viewer takeover and revoke-before-resume with exact durable control receipts, then qualify installed configuration and acceptance",
-  "source_checkpoint": "373e9b802d9aebc3cfd22ccea0d6d781331274ac",
-  "last_checkpoint_at": "2026-10-09T03:00:00Z",
+  "evidence": "Native control source: 9 focused tests/6 files pass; typecheck/build pass; final rendered explicit-control/reload/release smoke passes with zero owned processes.",
+  "next_action": "Qualify installed AuraCall consumer configuration and native two-desktop acceptance, then one broad review and integration",
+  "source_checkpoint": "6d20b000051ab34f423aa38b980f6e2549539d56",
+  "last_checkpoint_at": "2026-10-09T03:18:05.034874+00:00",
   "installed_route_readback": {
     "at": "2026-10-09T02:16:00Z",
     "command": "agent-browser --json service status",

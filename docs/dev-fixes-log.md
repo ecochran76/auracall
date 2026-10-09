@@ -1,3 +1,14 @@
+## 2026-10-09 — Revocation must precede automation resumption
+
+A human viewer is an input authority, so a presentation toggle alone cannot
+coordinate automation. Acquire the shared desktop gate before issuing a native
+control grant, retain a stable issuance identity before the effect, and release
+the gate only after exact provider revocation. Generic access denial and local
+expiry are insufficient; an exact terminal issuance replay can reconcile an
+expired or acknowledged-lost revocation. HTTP uncertainty, viewer disconnect and
+process restart preserve a human hold. Installed transport acceptance remains a
+separate boundary from source fixtures and rendered client checks.
+
 ## 2026-10-09 — Verify CLI syntax separately from collection schemas
 
 Agent Browser's route-pool collection contract does not imply a service

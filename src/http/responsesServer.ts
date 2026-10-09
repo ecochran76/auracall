@@ -6,7 +6,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import CDP from "../browser/cdp.js";
-import { captureDesktopView, listDesktopViews, openDesktopView } from "../browser/service/desktopClient.js";
+import { captureDesktopView, listDesktopViews, openDesktopView, takeDesktopControl, releaseDesktopControl } from "../browser/service/desktopClient.js";
 import { renderDesktopClientPage } from "./desktopClientPage.js";
 import type { OptionValues } from "commander";
 import { ZodError, z } from "zod";
@@ -372,6 +372,8 @@ export interface ResponsesHttpServerDeps {
     list: () => ReturnType<typeof listDesktopViews>;
     capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
     view?: (name: string, browserId: string) => ReturnType<typeof openDesktopView>;
+    takeControl?: (name: string, browserId: string, token: string) => ReturnType<typeof takeDesktopControl>;
+    releaseControl?: (name: string, browserId: string, token: string) => ReturnType<typeof releaseDesktopControl>;
   };
 	control?: ExecutionRuntimeControlContract;
 	runnersControl?: ExecutionRunnerControlContract;
@@ -1869,6 +1871,25 @@ export async function createResponsesHttpServer(
       if (url.pathname === '/v1/desktops' || url.pathname.startsWith('/v1/desktops/')) {
         const desktopAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (desktopAuthError) { sendJson(res, 403, { error: { message: desktopAuthError } }); return; }
+      }
+      const desktopControl = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/(control|release)$/);
+      if (req.method === 'POST' && desktopControl) {
+        const name = decodeURIComponent(desktopControl[1]);
+        let payload: { browserId: string; token: string };
+        try {
+          payload = z.object({ browserId: z.string().min(1), token: z.string().uuid() }).parse(JSON.parse(await readRequestBody(req)));
+        } catch { sendJson(res, 400, { error: { message: 'Provide a browser and control claim identity.' } }); return; }
+        try {
+          const input = { remoteView: configuredRuntimeConfig?.remoteView, name, ...payload };
+          if (desktopControl[2] === 'control') {
+            const result = await (deps.desktopClient?.takeControl?.(name, payload.browserId, payload.token) ?? takeDesktopControl(input));
+            sendJson(res, 200, result, { 'Cache-Control': 'no-store' });
+          } else {
+            await (deps.desktopClient?.releaseControl?.(name, payload.browserId, payload.token) ?? releaseDesktopControl(input));
+            sendJson(res, 200, { state: 'released' }, { 'Cache-Control': 'no-store' });
+          }
+        } catch (error) { sendJson(res, 409, { error: { message: error instanceof Error ? error.message : 'Desktop control unavailable.' } }, { 'Cache-Control': 'no-store' }); }
+        return;
       }
       const nativeDesktopView = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/view$/);
       if (req.method === 'GET' && nativeDesktopView) {

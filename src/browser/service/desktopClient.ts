@@ -1,3 +1,4 @@
+import { NativeDesktopControl } from './nativeDesktopControl.js';
 import { resolveNativeDesktopLaunch } from './desktopConfig.js';
 import { readyNativeDesktopBrowsers, nativeDesktopObserveView } from './nativeDesktopClient.js';
 import { RemoteViewConfigSchema } from '../../schema/types.js';
@@ -130,4 +131,16 @@ export async function openDesktopView(input: { remoteView: unknown; name: string
   const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
   if (!selected) throw new Error('The selected desktop does not provide a native viewer.');
   return nativeDesktopObserveView(selected, input.browserId);
+}
+
+export async function takeDesktopControl(input: { remoteView: unknown; name: string; browserId: string; token: string }): Promise<{ url: string; capability: 'control'; token: string }> {
+  const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
+  if (!selected) throw new Error('The selected desktop does not provide native control.');
+  return new NativeDesktopControl().take(selected, input.browserId, input.token);
+}
+
+export async function releaseDesktopControl(input: { remoteView: unknown; name: string; browserId: string; token: string }): Promise<void> {
+  const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
+  if (!selected) throw new Error('The selected desktop does not provide native control.');
+  await new NativeDesktopControl().release(selected, input.browserId, input.token);
 }

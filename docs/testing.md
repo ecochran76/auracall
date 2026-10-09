@@ -3352,3 +3352,13 @@ nonzero snapshot fileCount do not prove newly captured bytes.
 
 Completion conversation scope must survive disk persistence and service restart.
 Validate it in the child request before accepting a resumed scoped run.
+
+
+Plan 0391 native control boundary: `pnpm vitest run tests/browser/nativeDesktopControl.test.ts tests/browser/nativeDesktopCdp.test.ts tests/browser/desktopControlGate.test.ts tests/browser/remoteViewApplication.test.ts tests/http.desktopClient.test.ts`.
+The native controller test uses real loopback HTTP and the persisted gate to
+verify in-flight exclusion, second-human refusal, stale release rejection,
+failed-revoke pause, exact revoke-before-resume and terminal-replay recovery after
+restart. `pnpm tsx scripts/smoke-desktop-client.ts` renders the dedicated app with
+fixture native embeds, exercises explicit take/release and reload, and checks
+fresh OS absence of its own browser processes. Neither qualifies installed
+Remote View input or authenticated provider behavior.

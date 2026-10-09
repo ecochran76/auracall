@@ -1,3 +1,17 @@
+## 2026-10-09 | Plan 0391 native control source checkpoint
+
+Native take/release now joins the provider grant lifecycle to AuraCall's persisted
+desktop automation gate. Take refuses in-flight automation and another human;
+release requires exact revocation or exact issuance replay proving a terminal
+grant. Unknown responses remain paused. Claim identities survive HTTP uncertainty
+and reload; viewer URLs remain ephemeral. Rendered fixture smoke proves explicit
+take, reload retention, failed-release retention, explicit return to observe,
+multiple desktops, independent root link and zero remaining smoke processes.
+Nine focused checks pass; removing admission makes the public takeover test fail.
+Installed AuraCall consumer configuration, native two-desktop/input acceptance,
+broad review and integration remain OPEN. No provider prompts or infrastructure
+changes occurred. Continue from the execution ledger and draft PR244.
+
 ## 2026-10-08 | Plan 0391 publication validation
 
 All three live tickets and their exact dependency links read back successfully.

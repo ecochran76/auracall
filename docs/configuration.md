@@ -685,8 +685,19 @@ Existing ingress authentication remains in force. Scoped execution API keys do
 not authorize desktop operator access.
 
 Viewing sends no input and closing the client keeps browsers and assignments
-running. Explicit coordinated native control remains under implementation in
-issue #242; this checkpoint exposes passive native presentation only.
+running. **Take control** first excludes AuraCall CDP commands and browser launches
+on that desktop, then issues a native input-capable grant. A second human claim
+or an active automation command prevents takeover. **Release control** disposes
+the local viewer and revokes the exact provider grant before automation resumes.
+If the provider response is uncertain, automation stays paused. Expiry and closing
+the tab never resume automation; explicit release must obtain provider revocation
+or terminal proof by replaying the same durable issuance identity. Reload retains
+the claim in this browser tab; **Reconnect control** reuses that claim. Durable
+private receipts contain claim and generation identities, never viewer URLs.
+
+Coordination covers AuraCall's managed CDP and launch paths. External OS tools and
+root desktop access remain independently available. Native installed acceptance
+and whole-feature integration remain open under Plan 0391.
 
 Existing explicit `agentBrowserRdp` configuration remains independent. A legacy
 named desktop may still specify `runtimeProfile` plus `routePoolEntryId` instead

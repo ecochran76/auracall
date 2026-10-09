@@ -9,6 +9,17 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Native control source checkpoint: 2026-10-09
+
+Native client take/release now issues control only while holding the shared
+AuraCall desktop gate. Durable claims retain exact browser generation and stable
+provider issuance identity; a failed or ambiguous revoke leaves automation
+paused. Explicit release accepts exact revoke readback or exact issuance replay
+with `consumer_grant_unavailable`; generic access denial is insufficient. Reload
+retains the tab's claim and requires explicit reconnect or release. Source
+fixtures and rendered client checks pass; installed native transport, independent
+root, two-desktop placement and whole-feature review/integration remain OPEN.
+
 ## Current State
 
 The product decisions below are confirmed by the operator on 2026-10-08.
