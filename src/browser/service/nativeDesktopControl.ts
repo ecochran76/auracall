@@ -21,6 +21,7 @@ const receiptSchema = z.object({
 	issuanceKey: z.string().uuid(),
 	routeId: z.string().optional(),
 	revoked: z.boolean(),
+	inactivityTimeoutMs: z.number().int().positive().optional(),
 });
 type Receipt = z.infer<typeof receiptSchema>;
 
@@ -35,6 +36,7 @@ export class NativeDesktopControl {
 			directory?: string;
 			gateDirectory?: string;
 			ready?: typeof readyNativeDesktopBrowsers;
+			inactivityTimeoutMs?: number;
 		} = {},
 	) {}
 
@@ -44,7 +46,15 @@ export class NativeDesktopControl {
 	private file(selected: RemoteViewDesktopConfig): string {
 		return path.join(this.directory(), `${nativeDesktopKey(selected)}.json`);
 	}
-	private async read(selected: RemoteViewDesktopConfig): Promise<Receipt | undefined> {
+	private releasedFile(selected: RemoteViewDesktopConfig, token: string): string {
+    z.string().uuid().parse(token);
+    return path.join(`${this.directory()}-released`, `${nativeDesktopKey(selected)}-${token}.json`);
+  }
+  private async wasReleased(selected: RemoteViewDesktopConfig, browserId: string, token: string): Promise<boolean> {
+    try { const receipt = receiptSchema.parse(JSON.parse(await fs.readFile(this.releasedFile(selected, token), 'utf8'))); return receipt.token === token && receipt.browserId === browserId && receipt.revoked; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false; throw error; }
+  }
+  private async read(selected: RemoteViewDesktopConfig): Promise<Receipt | undefined> {
 		try {
 			return receiptSchema.parse(JSON.parse(await fs.readFile(this.file(selected), "utf8")));
 		} catch (error) {
@@ -81,7 +91,7 @@ export class NativeDesktopControl {
 		selected: RemoteViewDesktopConfig,
 		browserId: string,
 		token: string,
-	): Promise<{ url: string; capability: "control"; token: string }> {
+	): Promise<{ url: string; capability: "control"; token: string; inactivityTimeoutSeconds: number }> {
 		z.string().uuid().parse(token);
 		try { return await this.exclusive(selected, async () => {
 			const browser = await this.browser(selected, browserId);
@@ -102,7 +112,7 @@ export class NativeDesktopControl {
 				await gate.assertControl(token, binding);
 			} else {
 				// Persist the caller's recovery identity before a control grant can exist.
-				receipt = { token, browserId, binding, issuanceKey: randomUUID(), revoked: false };
+				receipt = { token, browserId, binding, issuanceKey: randomUUID(), revoked: false, inactivityTimeoutMs: this.options.inactivityTimeoutMs ?? 120_000 };
 				await this.write(selected, receipt);
 				try {
 					await gate.takeControl(binding, token);
@@ -118,7 +128,7 @@ export class NativeDesktopControl {
 				receipt.issuanceKey,
 			);
 			await this.write(selected, { ...receipt, routeId: grant.routeId });
-			return { url: grant.url, capability: "control" as const, token };
+			return { url: grant.url, capability: "control" as const, token, inactivityTimeoutSeconds: Math.floor((receipt.inactivityTimeoutMs ?? this.options.inactivityTimeoutMs ?? 120_000) / 1000) };
 		}); } catch (error) {
       // A definitive rejection must not strand a claim that never belonged to this caller.
       // Unknown receipt state stays retained, including lost issuance replies.
@@ -128,15 +138,32 @@ export class NativeDesktopControl {
     }
 	}
 
-	async release(
+	async status(selected: RemoteViewDesktopConfig, browserId: string, token: string): Promise<{ state: 'held' | 'released' }> {
+    if (await this.wasReleased(selected, browserId, token)) return { state: 'released' };
+    const receipt = await this.read(selected);
+    if (!receipt || receipt.token !== token || receipt.browserId !== browserId) throw new Error('Desktop control status is unknown.');
+    return { state: 'held' };
+  }
+  async expireInactive(selected: RemoteViewDesktopConfig): Promise<void> {
+    const receipt = await this.read(selected);
+    if (!receipt) return;
+    const browser = await this.browser(selected, receipt.browserId);
+    if (nativeBrowserGeneration(browser) !== receipt.binding) throw new Error('Desktop control ownership changed.');
+    const provider = new RemoteViewApplication(selected);
+    const result = receipt.routeId ? await provider.revokeInactiveEmbed(receipt.routeId, selected.appOrigin, Math.floor((receipt.inactivityTimeoutMs ?? this.options.inactivityTimeoutMs ?? 120_000) / 1000)) : undefined;
+    if (result === 'revoked' || receipt.revoked) await this.release(selected, receipt.browserId, receipt.token);
+  }
+
+  async release(
 		selected: RemoteViewDesktopConfig,
 		browserId: string,
 		token: string,
 	): Promise<void> {
 		return this.exclusive(selected, async () => {
-			const browser = await this.browser(selected, browserId);
-			const binding = nativeBrowserGeneration(browser);
 			let receipt = await this.read(selected);
+      if (!receipt && await this.wasReleased(selected, browserId, token)) return;
+      const browser = await this.browser(selected, browserId);
+      const binding = nativeBrowserGeneration(browser);
 			if (
 				!receipt ||
 				receipt.token !== token ||
@@ -180,6 +207,9 @@ export class NativeDesktopControl {
 				await this.write(selected, receipt);
 			}
 			await gate.releaseControl(token, binding);
+      const released = this.releasedFile(selected, token);
+      await fs.mkdir(path.dirname(released), { recursive: true, mode: 0o700 });
+      await fs.writeFile(released, JSON.stringify(receipt), { mode: 0o600 });
 			await fs.rm(this.file(selected));
 		});
 	}

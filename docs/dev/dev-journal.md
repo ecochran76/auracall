@@ -1,3 +1,15 @@
+## 2026-10-09 | Plan0391 authoritative inactivity handoff source packet
+
+The resumed goal advances the two-minute human-input requirement. Remote View
+now has a source dependency (Plan0071 / issue345) tracking input at both gateway
+transports with durable grant activity and conditional revoke. AuraCall source
+uses that operation before releasing its shared automation gate and polls exact
+terminal receipts to return the client to view-only. Twenty targeted tests across
+eleven files, typecheck and focused lint pass. Current canonical Remote View
+configuration-coherence repair is merged into the provider branch; full tests,
+strict Clippy, integration and installed two-minute acceptance are in progress.
+Production binaries/config and both owned marker browsers remain unchanged.
+
 ## 2026-10-09 | Plan0391 inactivity duration selected
 
 Operator selected two minutes (120 seconds) without external input before

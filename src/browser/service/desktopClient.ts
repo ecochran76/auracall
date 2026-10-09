@@ -136,11 +136,26 @@ export async function openDesktopView(input: { remoteView: unknown; name: string
 export async function takeDesktopControl(input: { remoteView: unknown; name: string; browserId: string; token: string }): Promise<{ url: string; capability: 'control'; token: string }> {
   const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
   if (!selected) throw new Error('The selected desktop does not provide native control.');
-  return new NativeDesktopControl().take(selected, input.browserId, input.token);
+  return new NativeDesktopControl({ inactivityTimeoutMs: RemoteViewConfigSchema.parse(input.remoteView ?? {}).controlInactivitySeconds * 1000 }).take(selected, input.browserId, input.token);
 }
 
 export async function releaseDesktopControl(input: { remoteView: unknown; name: string; browserId: string; token: string }): Promise<void> {
   const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
   if (!selected) throw new Error('The selected desktop does not provide native control.');
   await new NativeDesktopControl().release(selected, input.browserId, input.token);
+}
+
+export async function expireInactiveDesktopControls(remoteView: unknown): Promise<void> {
+  const config = RemoteViewConfigSchema.parse(remoteView ?? {});
+  for (const [name, desktop] of Object.entries(config.desktops)) {
+    if (!desktop.poolName) continue;
+    const selected = resolveNativeDesktopLaunch({ remoteView: config, desktop: name });
+    if (selected) await new NativeDesktopControl().expireInactive(selected);
+  }
+}
+
+export async function desktopControlStatus(input: { remoteView: unknown; name: string; browserId: string; token: string }): Promise<{ state: 'held' | 'released' }> {
+  const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
+  if (!selected) throw new Error('The selected desktop does not provide native control.');
+  return new NativeDesktopControl().status(selected, input.browserId, input.token);
 }

@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import CDP from "../browser/cdp.js";
 import { NativeDesktopControlError } from "../browser/service/nativeDesktopControl.js";
-import { captureDesktopView, listDesktopViews, openDesktopView, takeDesktopControl, releaseDesktopControl } from "../browser/service/desktopClient.js";
+import { captureDesktopView, listDesktopViews, openDesktopView, takeDesktopControl, releaseDesktopControl, expireInactiveDesktopControls, desktopControlStatus } from "../browser/service/desktopClient.js";
 import { renderDesktopClientPage } from "./desktopClientPage.js";
 import type { OptionValues } from "commander";
 import { ZodError, z } from "zod";
@@ -1849,6 +1849,16 @@ export async function createResponsesHttpServer(
 	};
 	const operatorDashboardRoutes = resolveOperatorDashboardRoutes(options.serviceRouting);
 	const server = http.createServer();
+  let expiringDesktopControls = false;
+  const desktopControlInactivityTimer = setInterval(() => {
+    if (expiringDesktopControls || deps.desktopClient || !configuredRuntimeConfig?.remoteView) return;
+    expiringDesktopControls = true;
+    void expireInactiveDesktopControls(configuredRuntimeConfig.remoteView).catch(() => {
+      // Revocation or ownership uncertainty retains automation exclusion.
+    }).finally(() => { expiringDesktopControls = false; });
+  }, 1000);
+  desktopControlInactivityTimer.unref();
+  server.once('close', () => clearInterval(desktopControlInactivityTimer));
 
 	server.on("request", async (req, res) => {
 		try {
@@ -1873,7 +1883,7 @@ export async function createResponsesHttpServer(
         const desktopAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (desktopAuthError) { sendJson(res, 403, { error: { message: desktopAuthError } }); return; }
       }
-      const desktopControl = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/(control|release)$/);
+      const desktopControl = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/(control|release|control-status)$/);
       if (req.method === 'POST' && desktopControl) {
         const name = decodeURIComponent(desktopControl[1]);
         let payload: { browserId: string; token: string };
@@ -1885,6 +1895,8 @@ export async function createResponsesHttpServer(
           if (desktopControl[2] === 'control') {
             const result = await (deps.desktopClient?.takeControl?.(name, payload.browserId, payload.token) ?? takeDesktopControl(input));
             sendJson(res, 200, result, { 'Cache-Control': 'no-store' });
+          } else if (desktopControl[2] === 'control-status') {
+            sendJson(res, 200, await desktopControlStatus(input), { 'Cache-Control': 'no-store' });
           } else {
             await (deps.desktopClient?.releaseControl?.(name, payload.browserId, payload.token) ?? releaseDesktopControl(input));
             sendJson(res, 200, { state: 'released' }, { 'Cache-Control': 'no-store' });

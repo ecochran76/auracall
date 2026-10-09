@@ -22060,3 +22060,17 @@ Authenticated native pixels/input, root viewing and integration remain OPEN.
 See installed-client-validation receipt and installed acceptance script. Do not
 rerun prepare before human verification; verify reads actual marker values and
 cleanup requires exact ownership plus automation admission.
+
+## Turn 639 | 2026-10-09
+
+Resumed Plan0391 with the operator's two-minute external-input inactivity revision.
+AuraCall source polls authoritative Remote View conditional control revocation;
+exact terminal receipts return the client to view-only and restore automation
+admission. Remote View issue345/PR346 tracks real gateway input across HTTP and
+WebSocket. Twenty AuraCall regressions across eleven files, typecheck, build and
+lint pass. Provider full Cargo suite (372 tests), strict Clippy and the native
+Chrome rendered fixture pass. That fixture advances the owner's clock by
+120001ms; it does not prove a production wall-clock timeout or operator ingress.
+Installed timeout adoption and root acceptance remain open. Preserve the two
+existing marker browsers and all unrelated runtime/working-tree state. Receipts:
+docs/dev/notes/2026-10-09-plan0391-input-inactivity-source-validation.json.

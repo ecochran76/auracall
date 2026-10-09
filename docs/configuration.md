@@ -695,9 +695,19 @@ running. **Take control** first excludes AuraCall direct CDP and Puppeteer comma
 on that desktop, then issues a native input-capable grant. A second human claim
 or an active automation command prevents takeover. **Release control** disposes
 the local viewer and revokes the exact provider grant before automation resumes.
-If the provider response is uncertain, automation stays paused. Expiry and closing
-the tab never resume automation; explicit release must obtain provider revocation
-or terminal proof by replaying the same durable issuance identity. Reload retains
+`remoteView.controlInactivitySeconds` defaults to **120 seconds** (two minutes).
+Remote View's gateway tracks actual keyboard/pointer input across every viewer
+transport for the exact control grant. When that input stops for the configured
+period, AuraCall requests conditional revocation, returns the client to view-only,
+and resumes automation only after exact terminal proof. New clicks or keystrokes
+cannot regain control; use **Take control** again. Display updates, stream
+acknowledgements, resize and connection polling do not reset the input timer.
+**Release control** remains available for immediate handoff.
+
+This requires Remote View's `revoke_inactive_view` consumer operation (Plan0071).
+If the provider response is uncertain or that operation is unavailable, automation
+stays paused. Closing a tab is not release evidence. Authorization expiry remains
+independent; exact revocation or terminal issuance replay must qualify resumption. Reload retains
 the claim in this browser tab; **Reconnect control** reuses that claim. Durable
 private receipts contain claim and generation identities, never viewer URLs.
 A definitively refused takeover with no caller-owned claim returns to passive

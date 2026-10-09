@@ -389,6 +389,13 @@ export class RemoteViewApplication {
     return observed.windows.some(window => window.pid === pid);
   }
 
+  async revokeInactiveEmbed(routeId: string, appOrigin: string, idleSeconds: number): Promise<'active' | 'revoked'> {
+    const result = z.object({schemaVersion: z.literal(1), routeId: identity, state: z.enum(['active', 'revoked'])}).parse(
+      await this.request({ operation: 'revoke_inactive_view', route_id: routeId, audience: appOrigin, idle_seconds: idleSeconds }));
+    if (result.routeId !== routeId) throw new Error('Remote View returned a different grant inactivity result.');
+    return result.state;
+  }
+
 	async revokeEmbed(routeId: string, appOrigin: string): Promise<void> {
 		const result = z
 			.object({ schemaVersion: z.literal(1), routeId: identity, state: z.literal("revoked") })

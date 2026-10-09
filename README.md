@@ -15,7 +15,9 @@ Aura-Call bundles your prompt and files so another AI can answer with real conte
 Configured [named AuraCall desktops](docs/configuration.md#named-auracall-desktops)
 use Remote View's native viewer in the dedicated `/desktops` client. Viewing is
 passive by default; explicit takeover coordinates human input with AuraCall
-browser automation. Root desktop access remains independently available.
+browser automation. After two minutes without external keyboard/pointer input,
+control returns to view-only after verified revocation, allowing automation to
+resume. Root desktop access remains independently available.
 
 ## Quick start
 

@@ -84,5 +84,21 @@
     }
   },
   "continuation_rule": "Do not rerun prepare or create more acceptance browsers while operator check is pending. On operator response, verify actual marker values after release, bind native-pixel/root attestation, then integrate only if all gates qualify. Preserve the one broad review/one remediation bounds. Stop before deadline or token checkpoint.",
-  "execution_disposition": "blocked: authenticated native viewer/input and independent root attestation require operator input"
+  "execution_disposition": "blocked: authenticated native viewer/input and independent root attestation require operator input",
+  "inactivity_revision": {
+    "seconds": 120,
+    "provider_issue": 345,
+    "provider_pr": 346,
+    "source_validation": "docs/dev/notes/2026-10-09-plan0391-input-inactivity-source-validation.json",
+    "installed": false
+  },
+  "resumed_turn_classification": "progress",
+  "resumed_budget": {
+    "tokens_used_at_checkpoint_read": 1416979,
+    "active_seconds_used_at_checkpoint_read": 10501,
+    "stop_before_active_seconds": 10800,
+    "token_stop_before": 2000000,
+    "budgets_reset": false
+  },
+  "next_packet": "Verify provider integration, install both exact source checkpoints preserving existing native/browser/account state, prove a real two-minute control-to-observe handoff and automation admission on both desktops, confirm root viewer, then integrate PR244 only after full acceptance."
 }

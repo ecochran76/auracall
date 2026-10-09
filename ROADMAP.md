@@ -4479,3 +4479,8 @@ See [docs/dev/browser-service-upgrade-backlog.md](docs/dev/browser-service-upgra
   cadence.
 
 - P18 remains paused: [Plan 0325](docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md), now held on a stable published operational branch; no live allowance was used by maintenance.
+
+Plan0391 inactivity handoff revision: operator chose 120 seconds. The source
+packet depends on Remote View PR346's gateway input tracking and conditional
+revocation. Source checks are green; installed wall-clock handoff and independent
+root viewing remain acceptance gates. This revision does not close P86.

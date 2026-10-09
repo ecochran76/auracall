@@ -19,12 +19,15 @@ new input must not silently reacquire control. Explicit Take control is required
 for the next human interaction. Explicit Release control remains an early exit.
 The operator selected an inactivity duration of 120 seconds (two minutes).
 
-This revision is NOT implemented or installed. Current runtime still requires
-explicit release. Remote View owns the cross-origin input stream; its existing
-embed status contract exposes connection state and capability, not input activity.
-Parent-page events and generic native desktop idle observations cannot establish
-external-input inactivity. The existing ObserveIdle operation also reports an
-active viewer as non-idle, so it cannot implement this requirement unchanged.
+The source revision is in implementation; installation and timeout acceptance
+remain unproven. The Remote View dependency is Plan0071, issue
+CochranResearchGroup/remote-view#345, on feat/auracall-control-inactivity.
+The gateway records admitted keyboard/pointer input for HTTP and WebSocket and
+conditionally revokes under the owner lock. AuraCall polls that exact grant's
+conditional revocation, preserves exclusion on uncertainty, and returns its
+client to an observe grant only after a terminal release receipt. Parent-page
+notifications are not used as inactivity authority. Existing source human-input
+proof does not qualify the installed timeout revision.
 
 Implementation must add a bounded Remote View activity/idle handoff contract,
 scoped to the exact viewer/control grant and desktop generations, and connect it

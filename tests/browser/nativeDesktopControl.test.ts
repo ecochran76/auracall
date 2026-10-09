@@ -16,6 +16,7 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 	let failRevocation = true;
 	let terminal = false;
   let failIssuance = false;
+  let inactive = false;
 	const routeId = randomUUID();
 	const target = {
 		assignmentId: "assignment",
@@ -62,6 +63,11 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 					},
 				}),
 			);
+    } else if (request.operation === 'revoke_inactive_view') {
+      expect(request.idle_seconds).toBe(120);
+      expect(request.route_id).toBe(routeId);
+      if (inactive) terminal = true;
+      res.end(JSON.stringify({ schemaVersion: 1, routeId, state: inactive ? 'revoked' : 'active' }));
 		} else {
 			expect(request).toEqual({
 				operation: "revoke_view",
@@ -130,6 +136,7 @@ test("native takeover admits one human, blocks automation, and resumes only afte
 		const token = randomUUID();
 		expect(await control.take(selected, "browser", token)).toEqual({
 			capability: "control",
+      inactivityTimeoutSeconds: 120,
 			token,
 			url: `https://remote.test/embed/${routeId}`,
 		});
@@ -187,6 +194,21 @@ test("native takeover admits one human, blocks automation, and resumes only afte
     await expect(gate.withAutomation('fixture', async () => {})).rejects.toThrow('paused');
     failIssuance = false; terminal = true;
     await control.release(selected, 'browser', uncertainToken);
+    terminal = false; failRevocation = false;
+    const idleToken = randomUUID();
+    await control.take(selected, 'browser', idleToken);
+    await control.expireInactive(selected);
+    await expect(gate.withAutomation('fixture', async () => {})).rejects.toThrow('paused');
+    expect(await control.status(selected, 'browser', idleToken)).toEqual({state: 'held'});
+    inactive = true;
+    await restarted.expireInactive(selected);
+    expect(await control.status(selected, 'browser', idleToken)).toEqual({state: 'released'});
+    await gate.withAutomation('fixture', async () => events.push('resumed-after-input-inactivity'));
+    const afterIdle = events.length;
+    await control.release(selected, 'browser', idleToken);
+    expect(events).toHaveLength(afterIdle);
+    await expect(control.status(selected, 'browser', randomUUID())).rejects.toThrow('unknown');
+
 	} finally {
 		await new Promise<void>((resolve, reject) =>
 			server.close((error) => (error ? reject(error) : resolve())),
