@@ -24432,3 +24432,7 @@ keep shutdown request/return distinct from actual child exit. Regression fails
 with missing journal before repair, then verifies exact generation and signal;
 write-failure coverage ensures instrumentation cannot prevent cleanup. This does
 not attribute prior incidents or cover every possible close actor.
+
+## 2026-10-10 | GPT-6 premium Power selection
+
+When6 Pro disappears from the Chat model rows, premium requires exact GPT-6 plus verified Pro Power, not merely a model-label alias. Model family recognition must admit the checked GPT-6 row; hidden inert lists cannot establish current selection. A later ordinary effort selection must not downgrade a verified premium composite. Real source UI proof selected Pro and restored Medium without sending a prompt. Plan0396 retains initial fixture/live failures.
