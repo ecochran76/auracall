@@ -1,6 +1,6 @@
 # Plan0393 | Independent app inventory and Developer-mode observation
 
-State: OPEN
+State: CLOSED
 Owner: ecochran76
 Work item: https://github.com/ecochran76/auracall/issues/225
 Branch: fix/issue225-app-inventory
@@ -17,3 +17,7 @@ Return complete app inventory when Developer-mode UI is unavailable; represent t
 ## Feedback loop and acceptance
 
 `pnpm vitest run tests/browser/chatgptDeveloperAppInventory.test.ts` is RED at the real readState seam: complete inventory currently throws missing-switch error. Rank stale switch prerequisite above incomplete inventory and attachment stall; vary only the Developer-mode observation handling. Require regression GREEN, adjacent CLI/browser gates, typecheck/build/scoped lint, independent Standards/Spec review and linked PR custody. Installed read-only apps list must return exact current account/app inventory without direct fallback before claiming live repair. Keep source, install and live results separate.
+
+## Acceptance
+
+PR248 integrated c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8. Source regression, 79 focused/adjacent tests and installed original command pass; independent Standards/Spec review has zero findings. See [bounded installed receipt](../notes/2026-10-10-plan0393-inventory-acceptance.md). Remote CI supplied no checks. Source and scoped two-module installation are accepted; live create/replace remains untested.

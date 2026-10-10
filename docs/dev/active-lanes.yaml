@@ -8,11 +8,16 @@ lanes:
     plan_ref: refs/heads/fix/issue225-app-inventory
     branch: fix/issue225-app-inventory
     target: main
-    plan_state: OPEN
-    custody_state: LOCAL
+    plan_state: CLOSED
+    custody_state: INTEGRATED
     dependencies: []
     overlaps: []
-    disposition: Public readState replay RED then GREEN; installed acceptance pending
+    checkpoint: 4d50ec8c0d798c25c1ddf7207926e1d68b812d8d
+    remote_ref: refs/remotes/origin/fix/issue225-app-inventory
+    integration_receipt: c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8
+    validation_status: installed-inventory-accepted
+    validation_ref: docs/dev/notes/2026-10-10-plan0393-inventory-acceptance.md
+    disposition: PR248 integrated; scoped two-module install and original inventory command accepted; mutation guards retained
     updated_at: 2026-10-10
   - id: P01
     objective: Reconcile AuraCall Git custody and review Oracle only as a separate reference project.

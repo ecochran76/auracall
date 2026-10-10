@@ -1,3 +1,7 @@
+## 2026-10-10 | Plan0393 installed inventory accepted
+
+PR248 integrated c629aeb0. Original installed apps list succeeds with complete 26-app inventory and unknown Developer mode; exact account and enabled Im Receipts identity qualified privately. Two compiled modules promoted with rollback custody. 79 focused/adjacent tests and independent source/installed review pass; GitHub CI reported no checks. Bounded Plan0393 closes; create/replace live acceptance remains untested. See docs/dev/notes/2026-10-10-plan0393-inventory-acceptance.md.
+
 ## 2026-10-10 | Plan0393 developer-app inventory repair
 
 Issue225 owner ecochran76 IN_PROGRESS, branch fix/issue225-app-inventory from591a11824. Reproduced installed45second timeout and missing-switch error; diagnostic stages establish complete installed inventory before settings failure. Public readState replay RED2.26seconds then GREEN; missing switch becomes unknown without mutation authority. Source checks and installed read-only acceptance remain separately tracked in Plan0393. Unrelated root work preserved.
