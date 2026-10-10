@@ -1,3 +1,13 @@
+## 2026-10-10 — Stability runtime adoption
+
+Installed source 0df5c458e after operator approval, with exact staged parity for
+584 dist files and retained previous runtime. API active PID16899 after a
+KillMode=process restart. Selected research browser PID78709 and native desktop
+records are preserved. Remote View companion installed at 1e9eb78a2; doctor
+ready and current native capture passed. Public authenticated human input still
+requires operator readback after page reload. Private deployment receipts:
+remote-view runtime receipts/desktop-stability-20261010. Integration pending.
+
 ## 2026-10-10 — Desktop stability correction
 
 Prepared refresh preservation on `fix/desktop-viewer-stability`, with companion
