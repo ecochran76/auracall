@@ -8,11 +8,13 @@ lanes:
     plan_ref: refs/heads/docs/auracall-memory-routing
     branch: docs/auracall-memory-routing
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
     dependencies: []
     overlaps: []
-    disposition: Reviewed repo route and atlas manifest publication pending
+    validation_status: atlas-published-and-retrieved
+    validation_ref: docs/dev/plans/0394-2026-10-10-memory-routing.md
+    disposition: Repo route reviewed; single atlas manifest write completed-visible and original discovery query returned auracall_main
     updated_at: 2026-10-10
   - id: P87
     objective: Repair app inventory without inferring Developer-mode mutation authority
