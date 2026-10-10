@@ -1,8 +1,8 @@
-# Plan 0394 source review
+# Plan 0395 source review
 
 Pinned base: f9c5d675466df7c46b367c576f5ccefe9680d0bd.
 Candidate: working-tree patch on fix/issue226-lifecycle-attribution.
-Serial primary review; no delegated review. Spec: Plan 0394. Standards:
+Serial primary review; no delegated review. Spec: Plan 0395. Standards:
 AGENTS.md and architecture/testing/documentation policies.
 
 ## Standards

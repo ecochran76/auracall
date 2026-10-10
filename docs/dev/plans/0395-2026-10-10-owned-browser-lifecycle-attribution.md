@@ -1,4 +1,4 @@
-# Owned-browser lifecycle attribution | 0394
+# Owned-browser lifecycle attribution | 0395
 
 State: CLOSED
 Owner: primary
@@ -45,10 +45,10 @@ durably readable, focused validation passes, and limitations are explicit.
 
 Owned launcher regression observed red (missing journal) then green. Final focused lifecycle/ownership/manual-login selection passes 31 checks
 across three files; typecheck and full build pass. Scoped lint passes. Scoped lint has two existing mock naming warnings. Serial
-Standards/Spec review is in docs/dev/reviews/0394-owned-browser-lifecycle-attribution.md.
+Standards/Spec review is in docs/dev/reviews/0395-owned-browser-lifecycle-attribution.md.
 Source instrumentation slice is complete; runtime adoption, broader close seams
 and causal attribution remain open under Issue226. No installed acceptance claim.
 
 Planning audit:392 candidates;32 errors, all pre-existing AGENTS.md references
-to absent policy targets0035–0066. No Plan0394 finding. Audit is not globally
+to absent policy targets0035–0066. No Plan0395 finding. Audit is not globally
 clean; this slice does not rewrite the unrelated policy rollout.

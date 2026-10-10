@@ -1,3 +1,7 @@
+## 2026-10-10 | Plan0394 memory routing
+
+Issue251 owner ecochran76 IN_PROGRESS. Canonical auracall_main route and routing-only manifest are documented; unresolved destination and actual service failure are separate causes. Shared Graphiti code and unrelated root work are preserved. Independent review passed; atlas job completed-visible and the original discovery query now returns auracall_main. Direct source-group repair retrieval passed. Plan0394 closes; remote CI reported no checks.
+
 ## 2026-10-10 | Missing Developer-mode switch must not erase app inventory
 
 Issue225: current ChatGPT settings redirects omit the labeled switch while installed apps remain available. Requiring that independent UI signal discarded valid inventory and could exhaust the command deadline. Report null/unknown after one bounded observation; do not retry stale settings routes or infer mutation permission. Creation/replacement still fail closed without affirmative enabled state. Public adapter replay retains unknown/true/false coverage and CLI guard regressions. PR248 and scoped two-module installation are accepted in Plan0393: original inventory command exits 0 with 26 apps; independent review passes.

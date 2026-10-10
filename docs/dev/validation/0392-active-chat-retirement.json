@@ -37,7 +37,18 @@
     "configuredChatgptTabMaintenance": true,
     "chatgptTabRetirement": true
   },
-  "live_research": "running; one new prompt, original WO tables gap",
+  "live_research": {
+    "status": "answer_observed",
+    "conversation_url": "https://chatgpt.com/c/6aca6b7e-97f8-83ea-87f4-7975f1bbefd9",
+    "source_gap": "WO original numeric tables remain unresolved",
+    "session152_unchanged": true,
+    "workflow": {
+      "workflow_id": "cwf_2196d2a882e34467bc2837e6f932e963",
+      "max_tool_calls": 40,
+      "admitted_tool_calls": 6,
+      "status": "active"
+    }
+  },
   "source_commit": "575076e29",
   "api_pid_after_restart": 30054,
   "api_pre_restart": {
@@ -63,5 +74,16 @@
     "canonicalRegistryModified": false
   },
   "wake_id": "wake_20261010_164603_0d11",
-  "wake_trigger": "/home/ecochran76/.local/share/litscout/research-notes/3hp-retirement-smoke/recovery-attention.json"
+  "wake_trigger": "/home/ecochran76/.local/share/litscout/research-notes/3hp-retirement-smoke/recovery-attention.json",
+  "integration_selected": {
+    "passed": 40,
+    "failed": 0,
+    "source_commit": "5fc4b69c4"
+  },
+  "wake_disposition": "cancelled after foreground completion review; automatic delivery unproven",
+  "integration": {
+    "pr": 250,
+    "merge_commit": "f9c5d675466df7c46b367c576f5ccefe9680d0bd",
+    "state": "merged"
+  }
 }
