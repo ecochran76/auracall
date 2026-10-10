@@ -24534,3 +24534,7 @@ root cannot silently adopt a live native-bound process. A positively refused
 human claim may return to observe; lost issuance/revocation keeps recovery state
 and pause. Use a prototype-free map for arbitrary configured desktop names.
 See Plan0391 bounded-review and review-remediation-validation receipts.
+
+### 2026-10-09 — Blank Wake and native viewer controls
+
+Chrome launch URL was configuration metadata, not navigation. Wake must explicitly navigate a blank owned page through guarded CDP; preserve every existing nonblank page. Embedded native mode changes require exact-origin coordination and fresh grant replacement; local mode acknowledgments never authorize input. Replay status after frame load to avoid a missed startup message.

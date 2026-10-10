@@ -378,6 +378,7 @@ export interface ResponsesHttpServerDeps {
     capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
     view?: (name: string, browserId: string) => ReturnType<typeof openDesktopView>;
     takeControl?: (name: string, browserId: string, token: string) => ReturnType<typeof takeDesktopControl>;
+    controlStatus?: (name: string, browserId: string, token: string) => ReturnType<typeof desktopControlStatus>;
     releaseControl?: (name: string, browserId: string, token: string) => ReturnType<typeof releaseDesktopControl>;
   };
 	control?: ExecutionRuntimeControlContract;
@@ -1913,7 +1914,7 @@ export async function createResponsesHttpServer(
             const result = await (deps.desktopClient?.takeControl?.(name, payload.browserId, payload.token) ?? takeDesktopControl(input));
             sendJson(res, 200, result, { 'Cache-Control': 'no-store' });
           } else if (desktopControl[2] === 'control-status') {
-            sendJson(res, 200, await desktopControlStatus(input), { 'Cache-Control': 'no-store' });
+            sendJson(res, 200, await (deps.desktopClient?.controlStatus?.(name, payload.browserId, payload.token) ?? desktopControlStatus(input)), { 'Cache-Control': 'no-store' });
           } else {
             await (deps.desktopClient?.releaseControl?.(name, payload.browserId, payload.token) ?? releaseDesktopControl(input));
             sendJson(res, 200, { state: 'released' }, { 'Cache-Control': 'no-store' });

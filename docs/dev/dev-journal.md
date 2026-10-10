@@ -53604,3 +53604,7 @@ red/green verifies no mutation during human control. Rendered native fixture
 smoke passes with zero page errors and zero remaining owned processes. Native
 controller grant/revoke, installed AuraCall configuration/acceptance and final
 integration remain open. See native placement/client validation receipt.
+
+### 2026-10-09 — Blank Wake and native viewer controls
+
+The native toolbar owns mode changes; duplicate parent buttons and connection status are removed. Rendered native-assets smoke passes with exact-token reload and refused/uncertain claim cases. Wake now navigates only an entirely blank owned browser; the existing Grok PID89704 has a page at https://grok.com. Source tests/typecheck/build pass; installed adoption pending.

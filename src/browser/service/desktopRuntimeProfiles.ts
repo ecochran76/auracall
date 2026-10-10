@@ -1,24 +1,28 @@
-import path from "node:path";
 import { createHash } from "node:crypto";
-import type { ResolvedUserConfig } from "../../config.js";
+import path from "node:path";
 import {
-	getCurrentRuntimeProfiles,
 	getBrowserProfile,
+	getCurrentRuntimeProfiles,
 	getRuntimeProfileBrowserProfileId,
 } from "../../config/model.js";
-import { findNativeDesktopBrowser } from "./nativeDesktopRuntime.js";
-import { nativeDesktopKey } from "./nativeDesktopStore.js";
+import type { ResolvedUserConfig } from "../../config.js";
+import CDP from "../cdp.js";
 import { launchChrome } from "../chromeLifecycle.js";
-import type { ResolvedBrowserConfig } from "../types.js";
-import { findChromeProcessUsingUserDataDir } from "../processCheck.js";
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
+import { findChromeProcessUsingUserDataDir } from "../processCheck.js";
+import type { ResolvedBrowserConfig } from "../types.js";
 import { resolveBrowserLaunchPlan } from "./browserLaunchPlan.js";
 import { listDesktopViews } from "./desktopClient.js";
-import { NativeDesktopStore, type NativeDesktopBrowser } from "./nativeDesktopStore.js";
 import {
 	applyDesktopProfileAssignments,
 	rememberDesktopProfileAssignment,
 } from "./desktopProfileAssignments.js";
+import { findNativeDesktopBrowser } from "./nativeDesktopRuntime.js";
+import {
+	type NativeDesktopBrowser,
+	NativeDesktopStore,
+	nativeDesktopKey,
+} from "./nativeDesktopStore.js";
 
 export interface DesktopRuntimeProfile {
 	runtimeProfileId: string;
@@ -160,6 +164,28 @@ export async function listDesktopRuntimeProfiles(
 	}
 	return result;
 }
+async function openBlankProviderPage(browser: NativeDesktopBrowser, url: string): Promise<void> {
+	const endpoint = { host: browser.cdpHost, port: browser.cdpPort };
+	const inspector = await CDP(endpoint);
+	let targetId: string | undefined;
+	try {
+		const { targetInfos } = await inspector.Target.getTargets();
+		const pages = targetInfos.filter((target) => target.type === "page");
+		// Preserve any existing work. Wake repairs a blank browser, never navigates a live conversation.
+		if (pages.length && pages.every((target) => target.url === "about:blank"))
+			targetId = pages[0]?.targetId;
+	} finally {
+		await inspector.close();
+	}
+	if (!targetId) return;
+	const page = await CDP({ ...endpoint, target: targetId });
+	try {
+		const result = await page.Page.navigate({ url });
+		if (result.errorText) throw new Error(`Provider page could not open: ${result.errorText}`);
+	} finally {
+		await page.close();
+	}
+}
 export async function wakeDesktopRuntimeProfile(
 	config: ResolvedUserConfig,
 	id: string,
@@ -176,13 +202,8 @@ export async function wakeDesktopRuntimeProfile(
 		const existing = (await listDesktopRuntimeProfiles(current, deps)).find(
 			(p) => p.runtimeProfileId === id,
 		);
-		if (existing?.state === "ready" && existing.desktopName && existing.browserId)
-			return {
-				runtimeProfileId: id,
-				desktopName: existing.desktopName,
-				browserId: existing.browserId,
-			};
-		if (!existing?.wakeable)
+		const ready = existing?.state === "ready" && existing.desktopName && existing.browserId;
+		if (!ready && !existing?.wakeable)
 			throw new Error(existing?.message ?? "This runtime profile cannot be awakened.");
 		const provider = providerFor(profile);
 		if (!provider) throw new Error("Select a supported browser provider.");
@@ -190,6 +211,23 @@ export async function wakeDesktopRuntimeProfile(
 			source: { kind: "user-config", config: current },
 			intent: { runtimeProfileId: id, provider },
 		});
+		if (ready) {
+			const binding = await (deps.findNative ?? findNativeDesktopBrowser)(
+				plan.launchPolicy as ResolvedBrowserConfig,
+				plan.managedBrowserProfile.directory,
+			);
+			if (!binding) throw new Error("The retained native browser is unavailable.");
+			await openBlankProviderPage(
+				binding,
+				plan.providerBinding.serviceUrl ??
+					{ chatgpt: CHATGPT_URL, gemini: GEMINI_URL, grok: GROK_URL }[provider],
+			);
+			return {
+				runtimeProfileId: id,
+				desktopName: existing.desktopName as string,
+				browserId: existing.browserId as string,
+			};
+		}
 		const familyId = getRuntimeProfileBrowserProfileId(profile);
 		const family = getBrowserProfile(current, familyId);
 		const browser = record(profile.browser);
@@ -237,6 +275,12 @@ export async function wakeDesktopRuntimeProfile(
 			throw new Error(
 				"Browser launch completed but native ownership is not ready. Inspect this profile before retrying.",
 			);
+		const binding = await (deps.findNative ?? findNativeDesktopBrowser)(
+			plan.launchPolicy as ResolvedBrowserConfig,
+			plan.managedBrowserProfile.directory,
+		);
+		if (!binding) throw new Error("The retained native browser is unavailable.");
+		await openBlankProviderPage(binding, url);
 		return { runtimeProfileId: id, desktopName: result.desktopName, browserId: result.browserId };
 	});
 }

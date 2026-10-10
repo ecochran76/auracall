@@ -1,23 +1,44 @@
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
-import { ComposedConfigSchema } from "../../src/config/schema.js";
-import { loadUserConfig } from "../../src/config.js";
-import {
-	listDesktopRuntimeProfiles,
-	wakeDesktopRuntimeProfile,
-} from "../../src/browser/service/desktopRuntimeProfiles.js";
+import type { launchChrome } from "../../src/browser/chromeLifecycle.js";
+import { resolveBrowserLaunchPlan } from "../../src/browser/service/browserLaunchPlan.js";
 import {
 	applyDesktopProfileAssignments,
 	rememberDesktopProfileAssignment,
 } from "../../src/browser/service/desktopProfileAssignments.js";
-import { resolveBrowserLaunchPlan } from "../../src/browser/service/browserLaunchPlan.js";
+import {
+	listDesktopRuntimeProfiles,
+	wakeDesktopRuntimeProfile,
+} from "../../src/browser/service/desktopRuntimeProfiles.js";
 import type { NativeDesktopBrowser } from "../../src/browser/service/nativeDesktopStore.js";
-import type { launchChrome } from "../../src/browser/chromeLifecycle.js";
+import { ComposedConfigSchema } from "../../src/config/schema.js";
+import { loadUserConfig } from "../../src/config.js";
+
+const browserPage = vi.hoisted(() => ({ url: "about:blank", navigate: vi.fn() }));
+vi.mock("../../src/browser/cdp.js", () => ({
+	default: async () => ({
+		Target: {
+			getTargets: async () => ({
+				targetInfos: [{ type: "page", targetId: "provider-page", url: browserPage.url }],
+			}),
+		},
+		Page: {
+			navigate: async ({ url }: { url: string }) => {
+				browserPage.navigate(url);
+				browserPage.url = url;
+				return {};
+			},
+		},
+		close: async () => {},
+	}),
+}));
 let home: string;
 beforeEach(async () => {
+	browserPage.url = "about:blank";
+	browserPage.navigate.mockClear();
 	home = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-runtime-rail-"));
 	setAuracallHomeDirOverrideForTest(home);
 });
@@ -217,6 +238,15 @@ test("Wake uses the exact canonical managed profile, remembers placement, and re
 		browserId: "writer-browser",
 	});
 	expect(launch).toHaveBeenCalledTimes(1);
+	expect(browserPage.navigate).toHaveBeenCalledTimes(1);
+	expect(new URL(browserPage.navigate.mock.calls[0]?.[0]).origin).toBe("https://chatgpt.com");
+	browserPage.url = "about:blank";
+	await wakeDesktopRuntimeProfile(c, "writer", "research", input);
+	expect(browserPage.navigate).toHaveBeenCalledTimes(2);
+	browserPage.url = "https://chatgpt.com/c/existing";
+	await wakeDesktopRuntimeProfile(c, "reader", "research", input);
+	expect(browserPage.navigate).toHaveBeenCalledTimes(2);
+	expect(browserPage.url).toBe("https://chatgpt.com/c/existing");
 	const explicit = config();
 	if (explicit.runtimeProfiles?.reader)
 		explicit.runtimeProfiles.reader.browser = { desktop: "root" };

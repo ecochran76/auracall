@@ -2564,3 +2564,5 @@ Name inspired by: https://ampcode.com/news/oracle
 - ✂️ [Trimmy](https://trimmy.app) — “Paste once, run once.” Flatten multi-line shell snippets so they paste and run.
 - 🟦🟩 [CodexBar](https://codexbar.app) — Keep Codex token windows visible in your macOS menu bar.
 - 🧳 [MCPorter](https://mcporter.dev) — TypeScript toolkit + CLI for Model Context Protocol servers.
+
+The dedicated desktop client uses Remote View’s native toolbar. Its view-only/interactive switch pauses AuraCall before enabling input and confirms release before resuming automation. Two minutes without actual input returns to view only. Wake opens the provider page only when the owned browser has no nonblank pages.

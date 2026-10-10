@@ -10,6 +10,20 @@ import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
 import { NativeDesktopControlError } from "../src/browser/service/nativeDesktopControl.js";
 import { createResponsesHttpServer } from "../src/http/responsesServer.js";
 
+const nativeSourceRoot = process.env.AURACALL_REMOTE_VIEW_SOURCE_ROOT;
+if (!nativeSourceRoot)
+	throw new Error(
+		"Set AURACALL_REMOTE_VIEW_SOURCE_ROOT to the matching Remote View checkout for native controls validation.",
+	);
+const nativeViewerSource = await fs.readFile(
+	path.join(nativeSourceRoot, "web/consumer-viewer.js"),
+	"utf8",
+);
+const nativeAssistanceSource = await fs.readFile(
+	path.join(nativeSourceRoot, "web/assistance.js"),
+	"utf8",
+);
+const nativeCss = await fs.readFile(path.join(nativeSourceRoot, "web/viewer.css"), "utf8");
 const home = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-desktop-client-smoke-"));
 setAuracallHomeDirOverrideForTest(home);
 const imageBase64 =
@@ -89,6 +103,7 @@ const runtimeProfiles = [
 ];
 const frames: string[] = [];
 const controlEvents: string[] = [];
+const controlTokens: string[] = [];
 let rejectRelease = true;
 const server = await createResponsesHttpServer(
 	{ host: "127.0.0.1", port: 0, tabAffinityMaintenanceIntervalMs: 0 },
@@ -123,6 +138,7 @@ const server = await createResponsesHttpServer(
 			},
 			takeControl: async (name, browserId, token) => {
 				controlEvents.push(`take:${name}:${browserId}`);
+				controlTokens.push(token);
 				if (name === "constructor")
 					throw new NativeDesktopControlError("Another controller owns this desktop.", false);
 				return {
@@ -131,6 +147,7 @@ const server = await createResponsesHttpServer(
 					token,
 				};
 			},
+			controlStatus: async () => ({ state: "held" as const }),
 			releaseControl: async (name, browserId) => {
 				controlEvents.push(`release:${name}:${browserId}`);
 				if (rejectRelease) throw new Error("Fixture revoke not confirmed.");
@@ -158,18 +175,67 @@ try {
 	page.on("pageerror", (error) => errors.push(String(error)));
 	await page.setRequestInterception(true);
 	page.on("request", (request) => {
-		if (request.url().startsWith("https://desktop.example.test/embed/")) {
-			void request.respond({
-				status: 200,
-				contentType: "text/html",
-				body: `<html><body style="background:#122035;color:white;font:24px system-ui;padding:40px">Native Remote View fixture<script>parent.postMessage({schemaVersion:1,type:'status',state:'ready',capability:'${request.url().includes("33333333") ? "control" : "observe"}'},'http://127.0.0.1:${server.port}')</script></body></html>`,
-			});
+		const url = new URL(request.url());
+		if (url.origin === "https://desktop.example.test") {
+			const capability = url.pathname.includes("33333333") ? "control" : "observe";
+			if (url.pathname.endsWith("/status"))
+				void request.respond({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({
+						state: "ready",
+						capability,
+						slot: 1,
+						generation: 1,
+						recordingContext: "fixture",
+					}),
+				});
+			else if (url.pathname === "/assets/viewer.css")
+				void request.respond({ status: 200, contentType: "text/css", body: nativeCss });
+			else
+				void request.respond({
+					status: 200,
+					contentType: "text/html",
+					body: `<!doctype html><html><head><link rel="stylesheet" href="/assets/viewer.css"></head><body id="consumer-viewer" data-route="${url.pathname.split("/")[2]}" data-capability="${capability}" data-presentation="embed" data-parent-origin="http://127.0.0.1:${server.port}"><header class="toolbar"><span id="connection-status"></span><button id="reconnect">Reconnect</button></header><main id="desktop-viewport"><div id="desktop-surface" tabindex="0"></div></main><script>
+const displayElement=document.createElement('div');displayElement.textContent='Native Remote View fixture';displayElement.style.cssText='width:800px;height:600px;background:#122035;color:white;display:grid;place-items:center;font:24px system-ui';
+const display={getElement:()=>displayElement,getWidth:()=>800,getHeight:()=>600,getScale:()=>1,scale:value=>{displayElement.style.transform='scale('+value+')';displayElement.style.transformOrigin='top left';}};
+const Guacamole={ChainedTunnel:class{},WebSocketTunnel:class{},HTTPTunnel:class{},Client:class{getDisplay(){return display;}connect(){this.onstatechange(3);}disconnect(){this.onstatechange?.(5);}sendKeyEvent(){}sendMouseState(){}},Keyboard:class{reset(){}},Mouse:class{}};
+${nativeAssistanceSource}
+${nativeViewerSource}
+</script></body></html>`,
+				});
 		} else void request.continue();
 	});
+	async function clickNativeMode() {
+		const frame = page
+			.frames()
+			.find((frame) => frame.url().startsWith("https://desktop.example.test/embed/"));
+		assert(frame, "Native viewer frame missing");
+		await frame.waitForSelector("#view-only:not([disabled])");
+		await frame.click("#view-only");
+	}
+
 	await page.goto(`http://127.0.0.1:${server.port}/desktops`);
-	await page.waitForFunction(
-		() => document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
-	);
+	await page
+		.waitForFunction(
+			() => document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
+		)
+		.catch(async (cause) => {
+			console.log(
+				JSON.stringify({
+					nativeFixtureErrors: errors,
+					nativeFrames: await Promise.all(
+						page.frames().map(async (frame) => ({
+							url: frame.url(),
+							status: await frame
+								.$eval("#connection-status", (node) => node.textContent)
+								.catch(() => null),
+						})),
+					),
+				}),
+			);
+			throw cause;
+		});
 	assert.equal(await page.$eval("#title", (node) => node.textContent), "Research");
 	await page.$eval('#desktops button[data-desktop="writing"]', (node) =>
 		(node as HTMLButtonElement).click(),
@@ -186,31 +252,42 @@ try {
 			document.querySelector("#title")?.textContent === "Writing" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
-	await page.click("#take-control");
-	await page.waitForFunction(() =>
-		document.querySelector("#mode")?.textContent?.includes("Control ·"),
-	);
-	await page.reload();
-	await page.waitForFunction(() =>
-		document.querySelector("#message")?.textContent?.includes("Control is retained"),
-	);
-	assert.equal(controlEvents.length, 1, "Reload must not silently create another control grant.");
-	await page.click("#release-control");
-	await page.waitForFunction(() =>
-		document.querySelector("#message")?.textContent?.includes("Release was not confirmed"),
-	);
-	assert.equal(
-		await page.$eval("#release-control", (node) => (node as HTMLButtonElement).hidden),
-		false,
-	);
-	rejectRelease = false;
-	await page.click("#release-control");
+	await clickNativeMode();
 	await page.waitForFunction(
 		() =>
-			document.querySelector("#mode")?.textContent === "View only" &&
+			document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
+			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
+	);
+	await page.reload();
+	await page.waitForFunction(
+		() =>
+			document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
+			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
+	);
+	assert.equal(controlEvents.length, 2, "Reload replays the retained claim.");
+	assert.equal(new Set(controlTokens).size, 1, "Reload must not create a new claim token.");
+	await clickNativeMode();
+	await page.waitForFunction(() =>
+		document.querySelector("#error")?.textContent?.includes("Release was not confirmed"),
+	);
+	assert.equal(await page.$("#release-control"), null);
+
+	rejectRelease = false;
+	await clickNativeMode();
+	await page.waitForFunction(
+		() =>
+			!Object.hasOwn(
+				JSON.parse(sessionStorage.getItem("auracall-desktop-claims") || "{}"),
+				"constructor",
+			),
+	);
+	await page.waitForFunction(
+		() =>
+			!document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
 	assert.deepEqual(controlEvents, [
+		"take:writing:writing-browser",
 		"take:writing:writing-browser",
 		"release:writing:writing-browser",
 		"release:writing:writing-browser",
@@ -236,7 +313,11 @@ try {
 	await page.waitForFunction(
 		() => document.querySelector("#workspace")?.getAttribute("data-collapsed") === "false",
 	);
-	await page.waitForFunction(() => getComputedStyle(document.getElementById("rail") as HTMLElement).transform === "matrix(1, 0, 0, 1, 0, 0)");
+	await page.waitForFunction(
+		() =>
+			getComputedStyle(document.getElementById("rail") as HTMLElement).transform ===
+			"matrix(1, 0, 0, 1, 0, 0)",
+	);
 	await page.click('[data-runtime-profile="dormant-runtime"] .wake');
 	await page.waitForFunction(
 		() =>
@@ -246,6 +327,25 @@ try {
 	);
 	assert.equal(controlEvents.at(-1), "wake:dormant-runtime");
 	assert.equal(await page.$('[data-runtime-profile="dormant-runtime"] .wake'), null);
+	await page.waitForFunction(
+		() => document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
+	);
+	const nativeFrame = page
+		.frames()
+		.find((frame) => frame.url().startsWith("https://desktop.example.test/embed/"));
+	assert(nativeFrame);
+	for (const id of [
+		"view-only",
+		"zoom-in",
+		"zoom-out",
+		"fit",
+		"actual-size",
+		"fullscreen",
+		"keyboard-button",
+		"settings",
+		"record-viewer",
+	])
+		assert(await nativeFrame.$("#" + id), "Missing native tool: " + id);
 	await page.screenshot({ path: "/tmp/auracall391-native-client.png", fullPage: true });
 	await page.$eval('#desktops button[data-desktop="empty"]', (node) =>
 		(node as HTMLButtonElement).click(),
@@ -271,17 +371,22 @@ try {
 			document.querySelector("#title")?.textContent === "Constructor desktop" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
-	assert.equal(await page.$eval("#mode", (node) => node.textContent), "View only");
-	await page.click("#take-control");
+	assert.equal(await page.$("#take-control"), null);
+	await clickNativeMode();
 	await page.waitForFunction(
 		() =>
-			document.querySelector("#mode")?.textContent === "View only" &&
+			!Object.hasOwn(
+				JSON.parse(sessionStorage.getItem("auracall-desktop-claims") || "{}"),
+				"constructor",
+			),
+	);
+	await page.waitForFunction(
+		() =>
+			!document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
-	assert.equal(
-		await page.$eval("#release-control", (node) => (node as HTMLButtonElement).hidden),
-		true,
-	);
+	assert.equal(await page.$("#release-control"), null);
+
 	assert.equal(
 		await page.evaluate(() =>
 			Object.hasOwn(
@@ -304,7 +409,9 @@ try {
 				"persisted-grouping",
 				"svg-rail-collapse",
 				"dormant-profile-wake",
-				"single-control-header",
+				"native-full-toolbar",
+				"native-mode-coordination",
+				"status-replay-handshake",
 				"native-observe-embed",
 				"constructor-desktop-observe",
 				"refused-take-clears-only-unowned-claim",
