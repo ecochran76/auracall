@@ -53663,4 +53663,4 @@ control implementation. Software adoption and public stability follow separately
 
 ### 2026-10-10 — Aura favicon and desktop discovery
 
-Create one canonical SVG favicon: crisp mint A with glowing violet halo and soft aura, visually checked at 16/32/64px. Root opens the configured console; console and operator navigation link to Desktops. Preserve installed passive-grant renewal and existing iframe handoff changes. Integration validation and installation pending.
+Create one canonical SVG favicon: crisp mint A with glowing violet halo and soft aura, visually checked at 16/32/64px. Root opens the configured console; console and operator navigation link to Desktops. Preserve installed passive-grant renewal and existing iframe handoff changes. Integration build and targeted HTTP regression pass. Installed a0ec3d5a; root console navigation, SVG GET/HEAD and asset byte parity verified, all36 non-API identities preserved and both Grok aliases ready. See favicon receipt; public authenticated acceptance remains separate.
