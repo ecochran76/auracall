@@ -66,3 +66,6 @@ _Avoid_: Browser profile, AuraCall runtime profile
 **Control handoff**:
 An explicit transfer of interaction ownership between automation and a human operator.
 _Avoid_: View selection, browser launch
+
+**Memory routing**:
+The selection of a reviewed Graphiti group and audience for qualified source-backed memory. AuraCall uses `auracall_main`. Unresolved routing is distinct from a verified memory-service failure.

@@ -1,6 +1,21 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: P88
+    objective: Make AuraCall memory routing discoverable with precise closeout evidence
+    work_items: [ecochran76/auracall#251]
+    plan: docs/dev/plans/0394-2026-10-10-memory-routing.md
+    plan_ref: refs/heads/docs/auracall-memory-routing
+    branch: docs/auracall-memory-routing
+    target: main
+    plan_state: CLOSED
+    custody_state: ACTIVE_WORKTREE
+    dependencies: []
+    overlaps: []
+    validation_status: atlas-published-and-retrieved
+    validation_ref: docs/dev/plans/0394-2026-10-10-memory-routing.md
+    disposition: Repo route reviewed; single atlas manifest write completed-visible and original discovery query returned auracall_main
+    updated_at: 2026-10-10
   - id: P87
     objective: Repair app inventory without inferring Developer-mode mutation authority
     work_items: [ecochran76/auracall#225]
