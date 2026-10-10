@@ -225,7 +225,7 @@ try {
 						capability,
 						slot: 1,
 						generation: 1,
-						recordingContext: "fixture",
+						recordingContext: {application: "fixture", sessionId: "assignment"},
 						clipboardCopy: true,
 						clipboardPaste: true,
 						audioEnabled: true,
