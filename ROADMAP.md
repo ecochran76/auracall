@@ -3,11 +3,14 @@
 - OPEN P86: [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)
   and [its spec](docs/dev/plans/0392-2026-10-08-auracall-remote-view-client-spec.md) govern the dedicated AuraCall remote-view client with multiple configured
   desktops, independent root desktop and explicit coordinated control handoff.
-  Current State: PR243 is merged; placement, native client and controller pass
-  source/real Chrome qualification and bounded review. Installed API91439 serves
-  two owned native desktops. Authenticated pixels/input, independent root viewing
-  and PR244 integration remain open. Approved tickets stay #240 → #241 → #242.
-  This registers the requested feature without changing other lane priorities.
+  Current State: PR243 and provider PR346 are merged. Both runtimes are installed;
+  two-minute never-used idle expiry passes. Compact real runtime-profile rail and
+  canonical dormant Wake pass source and rendered validation; source 48704e08d
+  is installed with seven real runtime profiles and preserved desktop/browser state.
+  Operator reports viewing works. Actual gateway input renewal, rendered idle
+  transition, independent signed-in root viewing and PR244 integration remain open.
+  Approved tickets stay #240 → #241 → #242.
+
 
 - Completed P78 / issue 131: [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)
   adds bounded terminal reconciliation for delayed account-wide ChatGPT rate

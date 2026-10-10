@@ -1715,7 +1715,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 77030b33d279b1cc52f2e7fd994d4763ce6fd7be
+    checkpoint: 48704e08de0a43bfdd4724163ea466e9d2d5b8ea
     remote_ref: refs/remotes/origin/feat/issue240-named-desktops
     integration: merge
     work_items: [ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242]
@@ -1724,8 +1724,8 @@ lanes:
     reconciled_overlaps: [P85]
     reconciliation_note: P86 preserves P85 provider behavior and paused-scheduler authority; shared prompt edits only dispatch named desktop launches.
     blocker: Installed never-used idle expiry passed; actual input renewal, rendered view-only behavior and authenticated root visual acceptance remain pending.
-    validation_status: inactivity-installed-live-acceptance-pending
-    validation_ref: docs/dev/notes/2026-10-08-plan0391-execution-ledger.json
+    validation_status: runtime-rail-installed-manual-acceptance-pending
+    validation_ref: docs/dev/notes/2026-10-09-plan0391-runtime-rail-validation.json
     integration_receipt: null
-    disposition: Planning PR243 and provider PR346 merged; two-minute source qualified and both runtimes installed; both native desktop identities and typed markers preserved; never-used idle expiry passed; actual input renewal, rendered view-only behavior, root visual acceptance and PR244 integration remain open.
+    disposition: Compact real runtime-profile rail installed at 48704e08d; seven profiles catalogued, six wakeable and Windows unavailable; 87 focused checks and rendered fixture pass; 37 process identities and both markers preserved. Dormant real-account Wake, actual input renewal, rendered idle transition, root visual acceptance and PR244 integration remain open.
     updated_at: 2026-10-09

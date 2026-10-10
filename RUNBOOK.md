@@ -22101,3 +22101,17 @@ actual gateway input, rendered view-only behavior and signed-in root viewing
 remain pending. Two concise operator questions are outstanding. No source
 acceptance is promoted to public viewer proof. Receipt:
 docs/dev/notes/2026-10-09-plan0391-installed-idle-validation.json.
+
+## Turn 642 | 2026-10-09
+
+P86 / Plan0391 gains compact runtime-profile rows, account/profile grouping,
+SVG rail collapse with reduced-motion support, and one control header. Dormant
+Wake uses canonical provider/family placement and remembers shared-family desktop
+configuration without rewriting the main config. Root-running browsers cannot
+be moved. 87 focused checks, typecheck, scoped lint, build and rendered fixture
+pass; fixture Chrome cleanup has zero remaining owned processes. Installed
+adoption at 48704e08d passes all 584 dist-file comparisons. API49216 serves seven
+real runtime profiles: six wakeable and Windows unavailable. Both observe grants,
+marker values, main config and all 37 process identities are preserved. No real
+provider-account Wake or prompt ran. Plan0391 and draft PR244 remain open. Receipt:
+docs/dev/notes/2026-10-09-plan0391-runtime-rail-validation.json.
