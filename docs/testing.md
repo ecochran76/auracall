@@ -3375,3 +3375,13 @@ values through installed CDP; visual/root attestation remains separate. `cleanup
 closes only exact retained owned browsers and checks fresh physical absence.
 Never rerun prepare while awaiting human input: it resets the marker pages.
 Unknown or retained human control prevents cleanup commands through the same gate.
+
+### Runtime-profile desktop rail
+
+Run `pnpm vitest run tests/browser/desktopRuntimeProfiles.test.ts tests/http.desktopClient.test.ts`
+for canonical Wake, shared-family placement, explicit configuration precedence,
+ownership refusal and operator authorization. `pnpm tsx scripts/smoke-desktop-client.ts`
+uses isolated provider-free Chrome and verifies compact rows, grouping persistence,
+SVG collapse, dormant Wake, and existing observe/control/release behavior. It
+prints fresh owned-process cleanup evidence. Installed catalog and served-byte
+readbacks qualify adoption separately from authenticated viewer interaction.

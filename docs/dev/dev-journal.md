@@ -1,3 +1,7 @@
+## 2026-10-09 — Compact runtime-profile desktop rail
+
+Operator reports installed viewer working and requests compact rows, SVG animated rail collapse, account/profile grouping, and dormant real runtime profile Wake. Implementing on the existing Plan0391 branch; canonical launch plans and remembered configuration placement preserve account/browser identity. Existing live browsers are not moved or closed. 87 focused checks, typecheck, scoped lint, build and the rendered rail/control fixture pass. Shared browser-family placement and live ownership verification are enforced. Staged installed adoption remains pending. Receipt: [runtime rail](notes/2026-10-09-plan0391-runtime-rail-validation.json).
+
 ## 2026-10-09 — Installed two-minute idle handoff verified
 
 Both real installed never-used control grants expired after approximately 124 seconds, automation gates reopened, fresh observe grants succeeded, and explicit retake/release passed. Actual CDP marker reads were denied while held and passed after release; both original markers and 37 borrowed process identities remain intact. No browser launched or provider prompt sent. Continued actual gateway input, rendered view-only transition, and signed-in root viewer remain pending; operator questions are outstanding. [Receipt](notes/2026-10-09-plan0391-installed-idle-validation.json).

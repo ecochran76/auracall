@@ -11,7 +11,7 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 	const home = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-http-desktops-"));
 	setAuracallHomeDirOverrideForTest(home);
 	const calls: string[] = [];
-  let refusal: Error | undefined;
+	let refusal: Error | undefined;
 	const server = await createResponsesHttpServer(
 		{ host: "127.0.0.1", port: 0, tabAffinityMaintenanceIntervalMs: 0 },
 		{
@@ -27,6 +27,24 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 				},
 			},
 			desktopClient: {
+				profiles: async () => [
+					{
+						runtimeProfileId: "writer",
+						provider: "chatgpt",
+						accountKey: "account",
+						accountLabel: "Account",
+						state: "dormant",
+						wakeable: true,
+					},
+				],
+				wakeProfile: async (id, desktopName) => {
+					calls.push(`wake:${id}:${desktopName}`);
+					return {
+						runtimeProfileId: id,
+						desktopName: desktopName ?? "research",
+						browserId: "owned-browser",
+					};
+				},
 				list: async () => ({
 					desktops: [
 						{
@@ -51,7 +69,7 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 				},
 				takeControl: async (name, browserId, token) => {
 					if (refusal) throw refusal;
-          calls.push(`take:${name}:${browserId}`);
+					calls.push(`take:${name}:${browserId}`);
 					return {
 						url: "https://desktop.example.test/embed/11111111-1111-4111-8111-111111111111",
 						capability: "control" as const,
@@ -131,13 +149,43 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 			"take:research:owned-browser",
 			"release:research:owned-browser",
 		]);
-    refusal = new NativeDesktopControlError('Another controller owns this desktop.', false);
-    const rejected = await fetch(controlUrl, { method: 'POST', body, headers: operatorHeaders });
-    expect(rejected.status).toBe(409);
-    expect(await rejected.json()).toMatchObject({ error: { claimRetained: false } });
-    refusal = new Error('Issuance response lost.');
-    const unknown = await fetch(controlUrl, { method: 'POST', body, headers: operatorHeaders });
-    expect((await unknown.json()).error).not.toHaveProperty('claimRetained');
+		const wakeUrl = `${base}/v1/desktops/profiles/writer/wake`;
+		expect((await fetch(wakeUrl, { method: "POST", body: "{}" })).status).toBe(401);
+		expect(
+			(
+				await fetch(wakeUrl, {
+					method: "POST",
+					body: "{}",
+					headers: { authorization: "Bearer scoped-api-key" },
+				})
+			).status,
+		).toBe(403);
+		expect(
+			(
+				await fetch(wakeUrl, {
+					method: "POST",
+					body: JSON.stringify({ chromePath: "/arbitrary" }),
+					headers: operatorHeaders,
+				})
+			).status,
+		).toBe(409);
+		const wake = await fetch(wakeUrl, {
+			method: "POST",
+			body: JSON.stringify({ desktopName: "research" }),
+			headers: operatorHeaders,
+		});
+		expect(await wake.json()).toMatchObject({
+			runtimeProfileId: "writer",
+			desktopName: "research",
+		});
+		expect(calls.at(-1)).toBe("wake:writer:research");
+		refusal = new NativeDesktopControlError("Another controller owns this desktop.", false);
+		const rejected = await fetch(controlUrl, { method: "POST", body, headers: operatorHeaders });
+		expect(rejected.status).toBe(409);
+		expect(await rejected.json()).toMatchObject({ error: { claimRetained: false } });
+		refusal = new Error("Issuance response lost.");
+		const unknown = await fetch(controlUrl, { method: "POST", body, headers: operatorHeaders });
+		expect((await unknown.json()).error).not.toHaveProperty("claimRetained");
 	} finally {
 		await server.close();
 		setAuracallHomeDirOverrideForTest(null);

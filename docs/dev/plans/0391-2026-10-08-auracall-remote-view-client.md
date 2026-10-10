@@ -9,6 +9,33 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Runtime-profile rail revision: 2026-10-09
+
+The operator reported the installed client working and requested a denser UX:
+remove the extra control toolbar; use a single compact header, SVG rail hide/show
+control, compact browser rows, and smooth interruptible rail motion with reduced
+motion support. Organize actual configured AuraCall runtime profiles by account
+or profile via a persisted toggle, including dormant entries and explicit Wake.
+Account grouping uses configured service identity only. Unidentified accounts
+remain explicitly unassigned; browser paths and secrets are never inventory fields.
+
+Wake opens the selected runtime profile's provider browser through its canonical
+launch plan. A configured named desktop wins; unassigned dormant profiles use the
+selected existing native desktop. Successful Wake remembers placement in the
+private `desktop-profile-assignments.json` configuration overlay. All normal
+config loads apply the same overlay, bound to runtime profile, provider and browser
+profile, while explicit operator assignments take precedence. This does not
+rewrite the user's config file or move/terminate an already-running browser.
+Remote/Windows/non-browser profiles and unowned running browser processes are
+reported with an actionable unavailable reason. No scheduler/completion wake,
+provider prompt, account inference or automatic control acquisition occurs.
+New operator-scoped route: POST /v1/desktops/profiles/{runtime_profile}/wake with
+an optional configured desktopName; GET /v1/desktops includes runtimeProfiles.
+Acceptance covers real profile/identity projection, unauthorized wake refusal,
+unknown profiles, deterministic placement persistence, no root fallback, duplicate
+wake/native ownership, compact rendered rows, grouping, rail motion and retained
+control/idle behavior. Full public handoff remains a separate viewer proof.
+
 ## Human input inactivity revision: 2026-10-09
 
 The operator replaces indefinite manual human release with inactivity handoff.

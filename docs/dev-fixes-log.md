@@ -1,3 +1,12 @@
+## 2026-10-09 — Runtime profiles can share native browser placement
+
+Desktop Wake must use the canonical managed browser directory. That directory is
+namespaced by browser family and provider, so runtime-profile aliases share one
+physical browser. Remember placement for matching aliases, ignore stale/rebound
+origin records, honor explicit operator assignments, and verify retained native
+ownership/build before reporting readiness. Refresh the API's cached configuration
+after Wake so subsequent ordinary commands use the remembered desktop.
+
 ## 2026-10-09 — Input inactivity must be observed at the gateway
 
 Cross-origin viewer input cannot be inferred from the surrounding application's

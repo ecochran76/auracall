@@ -1,3 +1,5 @@
+import { applyDesktopProfileAssignments } from "../browser/service/desktopProfileAssignments.js";
+import { listDesktopRuntimeProfiles, wakeDesktopRuntimeProfile } from '../browser/service/desktopRuntimeProfiles.js';
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -371,6 +373,8 @@ export interface ResponsesHttpServerOptions {
 export interface ResponsesHttpServerDeps {
   desktopClient?: {
     list: () => ReturnType<typeof listDesktopViews>;
+    profiles?: () => ReturnType<typeof listDesktopRuntimeProfiles>;
+    wakeProfile?: (id: string, desktopName?: string) => ReturnType<typeof wakeDesktopRuntimeProfile>;
     capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
     view?: (name: string, browserId: string) => ReturnType<typeof openDesktopView>;
     takeControl?: (name: string, browserId: string, token: string) => ReturnType<typeof takeDesktopControl>;
@@ -1883,6 +1887,19 @@ export async function createResponsesHttpServer(
         const desktopAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (desktopAuthError) { sendJson(res, 403, { error: { message: desktopAuthError } }); return; }
       }
+      const runtimeProfileWake = url.pathname.match(/^\/v1\/desktops\/profiles\/([^/]+)\/wake$/);
+      if (req.method === 'POST' && runtimeProfileWake) {
+        try {
+          const input = z.object({ desktopName: z.string().min(1).optional() }).strict().parse(JSON.parse(await readRequestBody(req)));
+          const id = decodeURIComponent(runtimeProfileWake[1]);
+          const result = deps.desktopClient?.wakeProfile ? await deps.desktopClient.wakeProfile(id, input.desktopName)
+            : resolvedUserConfig ? await wakeDesktopRuntimeProfile(resolvedUserConfig, id, input.desktopName) : undefined;
+          if (!result) throw new Error('Runtime profile configuration is unavailable.');
+          if (!deps.desktopClient && resolvedUserConfig) await applyDesktopProfileAssignments(resolvedUserConfig);
+          sendJson(res, 200, result, { 'Cache-Control': 'no-store' });
+        } catch (error) { sendJson(res, 409, { error: { message: error instanceof Error ? error.message : 'Runtime profile wake unavailable.' } }); }
+        return;
+      }
       const desktopControl = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/(control|release|control-status)$/);
       if (req.method === 'POST' && desktopControl) {
         const name = decodeURIComponent(desktopControl[1]);
@@ -1921,7 +1938,8 @@ export async function createResponsesHttpServer(
       }
       if (req.method === "GET" && url.pathname === "/v1/desktops") {
         const catalog = await (deps.desktopClient?.list() ?? listDesktopViews({ remoteView: configuredRuntimeConfig?.remoteView }));
-        sendJson(res, 200, catalog, { "Cache-Control": "no-store" });
+        const runtimeProfiles = await (deps.desktopClient?.profiles?.() ?? (deps.desktopClient ? Promise.resolve([]) : resolvedUserConfig ? listDesktopRuntimeProfiles(resolvedUserConfig) : Promise.resolve([])));
+        sendJson(res, 200, { ...catalog, runtimeProfiles }, { "Cache-Control": "no-store" });
         return;
       }
       const desktopFrame = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/frame$/);

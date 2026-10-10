@@ -681,9 +681,23 @@ the exact desktop and both generations instead of guessing ownership from a
 missing `DISPLAY`. Minimal manual-login launches skip Chrome's first-run shell
 so that CDP can become ready; provider sign-in remains interactive.
 
-Open `/desktops` on the AuraCall HTTP service. The dedicated client lists only
-positively owned running AuraCall browsers and mounts Remote View's native
-observe-only embed. Selecting another desktop disposes the old viewer, and
+Open `/desktops` on the AuraCall HTTP service. The compact left rail lists configured AuraCall runtime profiles, grouped by
+**Account** or **Profile**, alongside positively owned running AuraCall browsers.
+The SVG header control hides or restores the rail with a short slide; grouping
+and collapse preferences survive reload. Reduced-motion preferences are honored.
+The selected browser mounts Remote View's native observe-only embed.
+
+**Wake** opens a dormant local browser runtime profile on its configured native
+desktop, or the selected existing desktop when no placement is configured. It
+uses the same managed browser directory, browser family, provider and configured
+account identity as ordinary AuraCall commands. Remembered placement lives in
+`~/.auracall/desktop-profile-assignments.json`; runtime profiles sharing the same
+browser family and provider share placement. Explicit operator configuration
+wins. Existing running browsers are preserved; profiles running outside the
+native desktops show an actionable unavailable state. Windows and remote browser
+profiles cannot be awakened here. Wake opens the provider page for interactive
+sign-in; it does not send a prompt or start background jobs. Takeover remains an
+explicit action in the single header. Selecting another desktop disposes the old viewer, and
 reload preserves the selected desktop/browser through AuraCall's own URL.
 Fresh presentation routes are issued after exact assignment/generation readback;
 opaque provider routes are temporary and never become durable browser identity.

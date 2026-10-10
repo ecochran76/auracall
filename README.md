@@ -17,7 +17,9 @@ use Remote View's native viewer in the dedicated `/desktops` client. Viewing is
 passive by default; explicit takeover coordinates human input with AuraCall
 browser automation. After two minutes without external keyboard/pointer input,
 control returns to view-only after verified revocation, allowing automation to
-resume. Root desktop access remains independently available.
+resume. A compact, collapsible rail groups real runtime profiles by account or
+profile; **Wake** opens dormant local browser profiles on the selected desktop.
+Root desktop access remains independently available.
 
 ## Quick start
 
