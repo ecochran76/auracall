@@ -1,6 +1,6 @@
-## 2026-10-10 | Plan0394 memory routing
+## 2026-10-10 | Plan0395 memory routing
 
-Issue251 owner ecochran76 IN_PROGRESS. Canonical auracall_main route and routing-only manifest are documented; unresolved destination and actual service failure are separate causes. Shared Graphiti code and unrelated root work are preserved. Independent review passed; atlas job completed-visible and the original discovery query now returns auracall_main. Direct source-group repair retrieval passed. Plan0394 closes; remote CI reported no checks.
+Issue251 owner ecochran76 IN_PROGRESS. Canonical auracall_main route and routing-only manifest are documented; unresolved destination and actual service failure are separate causes. Shared Graphiti code and unrelated root work are preserved. Independent review passed; atlas job completed-visible and the original discovery query now returns auracall_main. Direct source-group repair retrieval passed. Plan0395 closes; remote CI reported no checks.
 
 ## 2026-10-10 | Plan0393 installed inventory accepted
 
@@ -53396,6 +53396,22 @@ next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
 the same parent and retained settled idle lease/one known target. No source
 change or acceptance closure claimed.
 
+## 2026-10-10 — Plan 0395 lifecycle attribution source slice
+
+Asked LitScout exact tab for current evidence; received direct handoff at
+/tmp/litscout-issue226-evidence-readout.md. Latest run remained alive through
+answer capture, then browser disappeared after observation ended. Original
+event wake delivered after scheduler-version repair; historical active loss
+remains unattributed. Isolated branch fix/issue226-lifecycle-attribution starts
+from merged active-chat guard f9c5d6754. Launcher regression red: missing durable
+journal. Added owned launch/shutdown/child-exit observations and persistence-failure
+coverage; focused validation and typecheck recorded in Plan0395. Source only;
+no runtime installation or live provider effect.
+Memory disposition: not_durable until source qualification completes.
+
+Plan0395 final source qualification:31 focused checks, typecheck, full build
+and diff hygiene pass; scoped lint has two existing mock naming warnings.
+Serial source review has zero blocking findings; installation remains unrun.
 ## 2026-10-10 | Issue226 active-response protection qualified
 
 PR250 mergedf9c5d6754; installed narrow overlay and API guard qualified. Live active ChatGPT response refused cleanup; isolated expired-lease maintenance on that real tab made zero closes. Post-repair research completed with numeric-table access limitation and unchanged Session152. Automatic wake delivery and original disappearance attribution remain unproven. Plan0392 closed for bounded protection repair.

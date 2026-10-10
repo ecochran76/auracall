@@ -889,3 +889,18 @@ when present. It accepts HTTP(S) and WS(S) with an explicit positive port and
 rejects credentials, query strings and fragments. Invalid canonical endpoints
 fail closed. Older inventory with `cdpHost` and `cdpPort` remains supported.
 Focused source validation does not establish actual installed client success.
+
+### Owned browser lifecycle observations
+
+When a browser registry path is configured, browser-service appends owned launch,
+shutdown-request/return and child-exit observations to `<registryPath>.lifecycle.jsonl`
+(mode 0600 on creation). Each row carries UTC time, owner PID, browser PID,
+Linux process start ticks when available, port, launch generation and a SHA-256
+fingerprint of the managed browser profile path. Child exits include exit code
+and signal. `[browser-lifecycle]` logs carry the same observations; persistence
+failures are reported without preventing cleanup.
+
+A shutdown return is not proof of process exit. Adopted handles do not expose
+owned child exit callbacks. Pre-readiness failures, external process deaths,
+direct CDP Browser.close and per-target retirement are outside this journal.
+This source change requires runtime adoption before installed evidence is expected.

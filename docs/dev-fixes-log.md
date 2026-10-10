@@ -24422,3 +24422,13 @@ match can miss the process. A parent collector result can precede asynchronous
 child publication, and pause does not establish child absence. Re-read the
 durable child before another resume; observe an existing running child to
 terminal without creating or claiming a second child.
+
+## 2026-10-10 — Preserve owned-browser exit attribution (#226)
+
+An owned child exit previously removed its registry generation without retaining
+exit code/signal. Shutdown handles similarly lacked durable generation-bound
+request observations. Append structured lifecycle rows beside the registry and
+keep shutdown request/return distinct from actual child exit. Regression fails
+with missing journal before repair, then verifies exact generation and signal;
+write-failure coverage ensures instrumentation cannot prevent cleanup. This does
+not attribute prior incidents or cover every possible close actor.
