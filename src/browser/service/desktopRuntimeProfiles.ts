@@ -101,7 +101,9 @@ export async function listDesktopRuntimeProfiles(
 			const directory = plan.managedBrowserProfile.directory;
 			if (
 				/\\\\|^[A-Za-z]:/.test(plan.launchPolicy.chromePath ?? "") ||
-				plan.launchPolicy.remoteChrome
+				plan.launchPolicy.remoteChrome ||
+				/\.exe$/i.test(plan.launchPolicy.chromePath ?? "") ||
+				plan.launchPolicy.wslChromePreference === "windows"
 			)
 				throw new Error("This browser runs outside the local native desktop runtime.");
 			const matching = bindings.filter(

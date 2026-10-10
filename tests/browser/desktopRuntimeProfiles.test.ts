@@ -150,6 +150,8 @@ test("running root browsers and Windows runtime profiles cannot be moved or awak
 	if (!windowsFamily) throw new Error("Missing fixture browser profile");
 	windowsFamily.chromePath = "C:\\Chrome\\chrome.exe";
 	expect((await listDesktopRuntimeProfiles(win, deps()))[0]?.wakeable).toBe(false);
+	windowsFamily.chromePath = "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe";
+	expect((await listDesktopRuntimeProfiles(win, deps()))[0]?.wakeable).toBe(false);
 });
 test("Wake uses the exact canonical managed profile, remembers placement, and repeated Wake returns the ready browser", async () => {
 	const c = config();
