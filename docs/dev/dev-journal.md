@@ -53391,3 +53391,20 @@ archive reads match local bytes. Monitor2 stopped before child and interrupted
 next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
 the same parent and retained settled idle lease/one known target. No source
 change or acceptance closure claimed.
+
+## 2026-10-10 — Plan 0394 lifecycle attribution source slice
+
+Asked LitScout exact tab for current evidence; received direct handoff at
+/tmp/litscout-issue226-evidence-readout.md. Latest run remained alive through
+answer capture, then browser disappeared after observation ended. Original
+event wake delivered after scheduler-version repair; historical active loss
+remains unattributed. Isolated branch fix/issue226-lifecycle-attribution starts
+from merged active-chat guard f9c5d6754. Launcher regression red: missing durable
+journal. Added owned launch/shutdown/child-exit observations and persistence-failure
+coverage; focused validation and typecheck recorded in Plan0394. Source only;
+no runtime installation or live provider effect.
+Memory disposition: not_durable until source qualification completes.
+
+Plan0394 final source qualification:31 focused checks, typecheck, full build
+and diff hygiene pass; scoped lint has two existing mock naming warnings.
+Serial source review has zero blocking findings; installation remains unrun.
