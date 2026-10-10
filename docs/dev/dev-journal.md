@@ -53391,3 +53391,7 @@ archive reads match local bytes. Monitor2 stopped before child and interrupted
 next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
 the same parent and retained settled idle lease/one known target. No source
 change or acceptance closure claimed.
+
+## 2026-10-10 | Issue226 active-response protection qualified
+
+PR250 mergedf9c5d6754; installed narrow overlay and API guard qualified. Live active ChatGPT response refused cleanup; isolated expired-lease maintenance on that real tab made zero closes. Post-repair research completed with numeric-table access limitation and unchanged Session152. Automatic wake delivery and original disappearance attribution remain unproven. Plan0392 closed for bounded protection repair.
