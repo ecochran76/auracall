@@ -6,6 +6,10 @@ changes, changed selection or recovery, while preserving exact retained claims.
 The full rendered fixture independently times out at dormant-profile Wake on
 unchanged source; the bounded stability run covers refresh, input and release.
 
+## 2026-10-10 — Root desktop discovery and favicon
+
+The root API URL previously returned404. It now redirects to the configured console, which exposes Desktops alongside the operator dashboard link. One canonical glowing SVG supplies the favicon to all three web clients and is copied into the installed runtime.
+
 ## 2026-10-10 — Browser close and API lifecycle
 
 Rail close targets a freshly verified owned browser through guarded CDP, reconciles transport disconnect against original process identity, and retains native desktop and managed data. Refused closes retain the row. The API user service uses KillMode=process so software restarts do not implicitly close its persistent managed browsers.

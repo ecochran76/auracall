@@ -1885,6 +1885,17 @@ export async function createResponsesHttpServer(
 				return;
 			}
 
+      if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/") {
+        res.writeHead(302, {Location: operatorDashboardRoutes.consolePath, "Cache-Control":"no-store"});
+        res.end();
+        return;
+      }
+      if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/favicon.svg") {
+        const icon = await fs.readFile(new URL("../assets/auracall.svg", import.meta.url));
+        res.writeHead(200, {"Content-Type":"image/svg+xml", "Cache-Control":"public, max-age=3600"});
+        res.end(req.method === "HEAD" ? undefined : icon);
+        return;
+      }
       if (url.pathname === '/v1/desktops' || url.pathname.startsWith('/v1/desktops/')) {
         const desktopAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (desktopAuthError) { sendJson(res, 403, { error: { message: desktopAuthError } }); return; }

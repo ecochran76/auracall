@@ -2573,3 +2573,5 @@ The desktop mode switch retains the native viewer page and its settings while
 changing between observation and control. Only the authorized desktop transport
 reconnects. Input remains blocked during the change, and AuraCall resumes
 automation only after control-grant revocation is confirmed.
+
+Open the AuraCall root URL to reach the console, then select **Desktops** to open the browser client. Console, operator dashboard and desktop client share AuraCall's glowing halo favicon.

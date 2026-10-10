@@ -53660,3 +53660,7 @@ scheduled refresh. Scheduled passive refresh now renews the opaque grant inside
 the existing native iframe; visibility and active-control retention remain.
 Rendered red/green coverage proves renewed URL with same iframe and no duplicate
 control implementation. Software adoption and public stability follow separately.
+
+### 2026-10-10 — Aura favicon and desktop discovery
+
+Create one canonical SVG favicon: crisp mint A with glowing violet halo and soft aura, visually checked at 16/32/64px. Root opens the configured console; console and operator navigation link to Desktops. Preserve installed passive-grant renewal and existing iframe handoff changes. Integration validation and installation pending.
