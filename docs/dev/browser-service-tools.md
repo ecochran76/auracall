@@ -255,6 +255,13 @@ ID, consume the aggregate interaction governor, and close before the lease is
 idled. Developer App prompt submission continues through the separate
 conversation-affinity executor rather than turning the utility tab into a chat.
 
+Expired ChatGPT tab cleanup checks visible provider activity immediately before
+closing. Active response or tool-approval controls preserve the page even when
+its lease is settled (for example, a CDP-submitted chat). Missing/ambiguous DOM
+or failed activity probes defer closure. This applies to maintenance's lost-lease
+cleanup and ordinary foreground/utility retirement. Cleanup does not click or
+navigate. A lease alone does not prove that the provider response is inactive.
+
 Before a ChatGPT foreground or live-follow affinity acquisition, AuraCall also
 reconciles expired idle leases for that exact runtime/account/managed browser
 scope. A target is closed only after exact workload identity verification, and

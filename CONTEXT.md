@@ -48,3 +48,6 @@ A local conversation attachment matching a currently discovered artifact ID, fil
 
 **Provider session custody**:
 A retained browser session must have a reachable caller owner. A proof-only read closes a session created on its private options; it preserves a session supplied by the caller. Deadline-scoped conversation reads and explicit-target utility wrappers return retained-session custody to their session-enabled caller.
+
+**Provider response activity**:
+The observed running response or pending tool approval on a provider page. This can differ from lease effect state after an external/CDP submission. TTL cleanup must not infer provider inactivity from a settled lease; active or unknown ChatGPT activity preserves its tab.

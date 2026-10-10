@@ -24246,3 +24246,7 @@ Plan 0390 installed acceptance (2026-10-05): final source 3e58471b2, actual
 follow/child/follow same target, three extras closed after five real minutes,
 retained follow survives, native shutdown and zero fences verified. Durable
 receipts are under docs/dev/evidence/plan0390/. No provider journey consumed.
+
+## 2026-10-10 | Prevent TTL cleanup from treating external ChatGPT activity as settled
+
+Issue226: lease bookkeeping can remain settled while an externally submitted response is active. A read-only provider activity probe now guards ChatGPT close operations, including lost-lease maintenance. Probe errors preserve tabs. Original incident browser loss remains unproven; local protection tests are not incident attribution or live continuation proof.
