@@ -1,6 +1,19 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: P87
+    objective: Repair app inventory without inferring Developer-mode mutation authority
+    work_items: [ecochran76/auracall#225]
+    plan: docs/dev/plans/0393-2026-10-10-developer-app-inventory.md
+    plan_ref: refs/heads/fix/issue225-app-inventory
+    branch: fix/issue225-app-inventory
+    target: main
+    plan_state: OPEN
+    custody_state: LOCAL
+    dependencies: []
+    overlaps: []
+    disposition: Public readState replay RED then GREEN; installed acceptance pending
+    updated_at: 2026-10-10
   - id: P01
     objective: Reconcile AuraCall Git custody and review Oracle only as a separate reference project.
     plan: docs/dev/plans/0308-2026-08-22-repository-git-true-up-oracle-reference-review.md

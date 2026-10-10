@@ -1,3 +1,5 @@
+- Open P87: [Plan0393](docs/dev/plans/0393-2026-10-10-developer-app-inventory.md) repairs issue225 app inventory independently of missing Developer-mode UI; source regression passes, installed verification pending.
+
 # Aura-Call Roadmap
 
 - Planned P86: [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)

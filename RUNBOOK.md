@@ -21989,3 +21989,7 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Plan remains PLANNED. No source implementation, browser/provider activity,
   installation, infrastructure provisioning or service restart occurred.
   Original checkout dirty work is preserved in the separate source checkout.
+
+## Turn | 2026-10-10 | Plan0393
+
+Issue225 installed apps list reproduces45second timeout and missing-switch failure. Complete app data precedes settings failure. Minimal public adapter replay RED2.26seconds, then GREEN when missing control reports unknown; affirmative mutation guards retained. Private live evidence stays outside Git. Isolated worktree preserves unrelated root changes; source/build/review and installed acceptance remain distinct.

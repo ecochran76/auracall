@@ -1,3 +1,7 @@
+## 2026-10-10 | Plan0393 developer-app inventory repair
+
+Issue225 owner ecochran76 IN_PROGRESS, branch fix/issue225-app-inventory from591a11824. Reproduced installed45second timeout and missing-switch error; diagnostic stages establish complete installed inventory before settings failure. Public readState replay RED2.26seconds then GREEN; missing switch becomes unknown without mutation authority. Source checks and installed read-only acceptance remain separately tracked in Plan0393. Unrelated root work preserved.
+
 ## 2026-10-08 | Plan 0391 publication validation
 
 All three live tickets and their exact dependency links read back successfully.

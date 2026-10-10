@@ -1,3 +1,7 @@
+## 2026-10-10 | Missing Developer-mode switch must not erase app inventory
+
+Issue225: current ChatGPT settings redirects omit the labeled switch while installed apps remain available. Requiring that independent UI signal discarded valid inventory and could exhaust the command deadline. Report null/unknown after one bounded observation; do not retry stale settings routes or infer mutation permission. Creation/replacement still fail closed without affirmative enabled state. Public adapter replay retains unknown/true/false coverage and CLI guard regressions. Installed acceptance is pending in Plan0393.
+
 ## 2026-10-08 — Recognize the captured rich ChatGPT composer for reads
 
 Conversation readiness must recognize the observed DIV with data-composer-markdown,
