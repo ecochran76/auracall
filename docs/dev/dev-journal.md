@@ -1,3 +1,7 @@
+## 2026-10-09 — Installed two-minute idle handoff verified
+
+Both real installed never-used control grants expired after approximately 124 seconds, automation gates reopened, fresh observe grants succeeded, and explicit retake/release passed. Actual CDP marker reads were denied while held and passed after release; both original markers and 37 borrowed process identities remain intact. No browser launched or provider prompt sent. Continued actual gateway input, rendered view-only transition, and signed-in root viewer remain pending; operator questions are outstanding. [Receipt](notes/2026-10-09-plan0391-installed-idle-validation.json).
+
 ## 2026-10-09 — Plan0391 inactivity runtime installed
 
 Installed AuraCall 77030b33d and integrated RemoteView 28baf035 on explicit operator request. All ten provider software units adopted the verified new binary, doctor passed, 35 native components and both Research/Writing process/binding identities survived. Both observe endpoints return 200, markers match, and resolved inactivity is 120 seconds. Actual wall-clock handoff and root visual acceptance remain open. [Installed receipt](notes/2026-10-09-plan0391-inactivity-installed-validation.json).

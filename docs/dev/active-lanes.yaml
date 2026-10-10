@@ -1723,9 +1723,9 @@ lanes:
     overlaps: [P85]
     reconciled_overlaps: [P85]
     reconciliation_note: P86 preserves P85 provider behavior and paused-scheduler authority; shared prompt edits only dispatch named desktop launches.
-    blocker: Real installed two-minute inactivity handoff and independent authenticated root visual acceptance remain pending; both human markers verified.
+    blocker: Installed never-used idle expiry passed; actual input renewal, rendered view-only behavior and authenticated root visual acceptance remain pending.
     validation_status: inactivity-installed-live-acceptance-pending
     validation_ref: docs/dev/notes/2026-10-08-plan0391-execution-ledger.json
     integration_receipt: null
-    disposition: Planning PR243 and provider PR346 merged; two-minute source qualified and both runtimes installed; both native desktop identities and typed markers preserved; real idle handoff, root visual acceptance and PR244 integration remain open.
+    disposition: Planning PR243 and provider PR346 merged; two-minute source qualified and both runtimes installed; both native desktop identities and typed markers preserved; never-used idle expiry passed; actual input renewal, rendered view-only behavior, root visual acceptance and PR244 integration remain open.
     updated_at: 2026-10-09

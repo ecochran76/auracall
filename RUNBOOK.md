@@ -22087,3 +22087,17 @@ retain process identities. Resolved inactivity is 120 seconds. No takeover,
 provider prompt, ingress change, or desktop restart occurred. The actual idle
 transition and independent authenticated root visual acceptance remain OPEN.
 Receipt: docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json.
+
+## Turn 641 | 2026-10-09
+
+Operator authorized installed acceptance. Both retained native marker browsers
+passed real 120-second never-used takeover expiry (Research124840ms, Writing124417ms),
+with initial automation exclusion and post-revocation admission. A real installed
+CDP read was rejected while held and succeeded after release; both marker values
+remain correct. Fresh observe grants and explicit retake/release passed. All 35
+native components and two marker browser process identities were preserved.
+Root capture succeeds locally; public ingress requires authentication. Continued
+actual gateway input, rendered view-only behavior and signed-in root viewing
+remain pending. Two concise operator questions are outstanding. No source
+acceptance is promoted to public viewer proof. Receipt:
+docs/dev/notes/2026-10-09-plan0391-installed-idle-validation.json.

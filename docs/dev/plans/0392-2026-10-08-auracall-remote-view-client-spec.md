@@ -17,8 +17,12 @@ The operator selected an inactivity duration of 120 seconds (two minutes).
 
 The source revision is installed at AuraCall 77030b33d and Remote View 28baf035
 (merged by PR346). Both native desktops and markers are preserved, and installed
-configuration resolves to 120 seconds. Real wall-clock timeout and root visual
-acceptance remain unproven. Installation receipt:
+configuration resolves to 120 seconds. Real never-used control grants expire
+after about 124 seconds on both desktops; automation/CDP access resumes and
+explicit retake/release passes. Actual input extending the deadline, rendered
+view-only behavior, and signed-in root viewing remain unproven. Idle receipt:
+`docs/dev/notes/2026-10-09-plan0391-installed-idle-validation.json`.
+Installation receipt:
 `docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json`.
 The Remote View dependency is Plan0071, issue
 CochranResearchGroup/remote-view#345, on feat/auracall-control-inactivity.

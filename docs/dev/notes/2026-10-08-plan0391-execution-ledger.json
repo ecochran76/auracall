@@ -94,7 +94,9 @@
     "provider_merge": "c988cf624da81dfdb03abd08283279ff9a50614d",
     "installed_source": "77030b33d279b1cc52f2e7fd994d4763ce6fd7be",
     "installed_provider_source": "28baf0359378d5ff369e3401c2cf0f8282c7effa",
-    "installed_validation": "docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json"
+    "installed_validation": "docs/dev/notes/2026-10-09-plan0391-inactivity-installed-validation.json",
+    "installed_idle_validation": "docs/dev/notes/2026-10-09-plan0391-installed-idle-validation.json",
+    "never_used_real_120_second_expiry": "passed both desktops; about 124 seconds including polling"
   },
   "resumed_turn_classification": "progress",
   "resumed_budget": {
@@ -104,6 +106,6 @@
     "token_stop_before": 2000000,
     "budgets_reset": false
   },
-  "next_packet": "Prove a real two-minute idle handoff and automation admission on both desktops without resetting markers; confirm independent authenticated root viewer; integrate PR244 only after remaining acceptance qualifies.",
+  "next_packet": "Verify actual input resets the installed idle deadline, rendered client switches to observe and blocks input until explicit retake, and signed-in root viewer. Operator questions pending. Keep original browser/account state and markers; PR244 remains draft.",
   "final_checkpoint": "docs/dev/notes/2026-10-09-plan0391-inactivity-budget-checkpoint.md"
 }
