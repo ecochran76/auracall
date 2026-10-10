@@ -17,3 +17,9 @@ Prevent maintenance from closing an active ChatGPT response, including expired l
 ## Acceptance
 
 Actual maintenance replay must fail before the fix and pass afterward for active and unknown provider activity. Ordinary inactive cleanup still works. Read-only provider activity probe never navigates or clicks. Retained incident artifacts remain unchanged. A later installed ChatGPT/LitScout run must distinguish protection proof from incident attribution.
+
+## Qualification checkpoint
+
+Code575076e29; PR250 open.40 selected checks, typecheck and TypeScript build pass. Three-module overlay installed only after both existing modules matched source base, preserving unrelated runtime updates; rollback backup retained. API restarted from idle/no foreground work, fresh PID30054. Installed guard recognized a real active ChatGPT response and refused close. Installed maintenance on that real tab with an isolated expired fixture lease preserved it with zero close calls; canonical registry untouched. This is not an elapsed canonical-TTL close experiment.
+
+Single post-repair ChatGPT/LitScout prompt is running in conversation6aca6b7e-97f8-83ea-87f4-7975f1bbefd9, targeting the unresolved WO patent numerical tables. Wake wake_20261010_164603_0d11 watches recovery-attention.json and distinguishes intervention from answer completion. Observer session21192, private research-notes/3hp-retirement-smoke. Do not submit another prompt. Final research outcome, automatic continuation and source integration remain pending.
