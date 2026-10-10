@@ -127,6 +127,7 @@ import {
 	ensureChatgptComposerTool,
 	ensureLoggedIn,
 	ensureModelSelection,
+	shouldApplyChatgptThinkingTime,
 	ensureNotBlocked,
 	ensurePromptReady,
 	fingerprintAssistantResponseText,
@@ -2623,7 +2624,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 		// Handle thinking time selection if specified
 		const thinkingTime = config.thinkingTime;
 		const thinkingModel = modelStrategy === "current" ? observedModel : config.desiredModel;
-		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(thinkingModel)) {
+		if (chatgptMode === "chat" && thinkingTime && shouldApplyChatgptThinkingTime(thinkingModel, observedModel)) {
 			const proModeGate = isChatgptProModelTarget(thinkingModel)
 				? await raceWithDisconnect(
 						assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy),
@@ -3953,7 +3954,7 @@ async function runRemoteBrowserMode(
 		// Handle thinking time selection if specified
 		const thinkingTime = config.thinkingTime;
 		const thinkingModel = modelStrategy === "current" ? observedModel : config.desiredModel;
-		if (chatgptMode === "chat" && thinkingTime && shouldApplyThinkingTime(thinkingModel)) {
+		if (chatgptMode === "chat" && thinkingTime && shouldApplyChatgptThinkingTime(thinkingModel, observedModel)) {
 			const proModeGate = isChatgptProModelTarget(thinkingModel)
 				? await assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy)
 				: null;
@@ -4939,6 +4940,7 @@ export { syncCookies } from "./cookies.js";
 export {
 	captureAssistantMarkdown,
 	ensureModelSelection,
+	shouldApplyChatgptThinkingTime,
 	ensureNotBlocked,
 	ensurePromptReady,
 	navigateToChatGPT,
@@ -4964,10 +4966,6 @@ function isWebSocketClosureError(error: Error): boolean {
 	);
 }
 
-function shouldApplyThinkingTime(desiredModel: string | null | undefined): boolean {
-	if (!desiredModel) return false;
-	return /\b(sol|thinking|pro)\b/i.test(desiredModel);
-}
 
 export function formatThinkingLog(
 	startedAt: number,

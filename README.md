@@ -12,6 +12,12 @@
 
 Aura-Call bundles your prompt and files so another AI can answer with real context. Its default API model is the durable `openai:frontier` alias, currently backed by GPT-6 Astra; exact provider model IDs remain available as explicit pins. Browser automation uses capability-oriented selectors such as `chatgpt:fast`, `chatgpt:reasoning-high`, and `chatgpt:premium`, or `--browser-model-strategy current` to preserve the active ChatGPT model. GPT-5.2 and Sol/Terra/Luna spellings remain compatibility inputs but are no longer advertised as durable configuration. API remains the most reliable path, and `--copy` is an easy manual fallback.
 
+On the current GPT-6 Chat picker, `chatgpt:premium` selects GPT-6 and verifies
+its **Pro** Power setting. Existing standalone **6 Pro** pickers remain supported.
+The verified premium choice takes precedence over ordinary thinking-time settings;
+`--browser-model-strategy current` continues to preserve the current model.
+If Pro cannot be verified, AuraCall fails before prompt submission.
+
 ## Quick start
 
 Primary local install: `pnpm run install:user-runtime` builds the current

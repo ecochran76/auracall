@@ -53415,3 +53415,7 @@ Serial source review has zero blocking findings; installation remains unrun.
 ## 2026-10-10 | Issue226 active-response protection qualified
 
 PR250 mergedf9c5d6754; installed narrow overlay and API guard qualified. Live active ChatGPT response refused cleanup; isolated expired-lease maintenance on that real tab made zero closes. Post-repair research completed with numeric-table access limitation and unchanged Session152. Automatic wake delivery and original disappearance attribution remain unproven. Plan0392 closed for bounded protection repair.
+
+## 2026-10-10 | Plan0396 GPT-6 premium mapping
+
+Current UI selection-and-restore proved GPT-6 Power4 Pro. Added fallback from absent6 Pro row, exact GPT-6 family recognition, non-inert model-list navigation and verified fifth-slot selection. Shared post-model effort guard protects premium across CLI and workbench. Live source selector now selects GPT-6 Pro and restores Medium; zero provider sends. Root dirty work preserved. Source acceptance separate from installation and active-chat TTL. Memory disposition forbidden.

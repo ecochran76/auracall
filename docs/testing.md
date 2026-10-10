@@ -3352,3 +3352,5 @@ nonzero snapshot fileCount do not prove newly captured bytes.
 
 Completion conversation scope must survive disk persistence and service restart.
 Validate it in the child request before accepting a resumed scoped run.
+
+- GPT-6 premium Power and downgrade protection: `pnpm vitest run tests/browser/modelSelection.test.ts tests/browser/thinkingTime.test.ts tests/browser/chatgptDeveloperAppLifecycle.test.ts tests/browser/browserModeExports.test.ts tests/browser/pageActions.test.ts`. Captured DOM fixtures cover checked GPT-6 recognition and available/unavailable Pro slot; source live selector-and-restore proof does not establish provider execution or lease-expiry acceptance.
