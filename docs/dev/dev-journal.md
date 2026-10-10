@@ -53647,3 +53647,8 @@ automation pause/revoke and inactivity handoff unchanged. Regression fixtures
 prove same-iframe takeover/release, native keyboard/mouse and released input
 exclusion. The helper/adapter also restarts transport after status authorization
 recovers. Installed human acceptance remains required.
+
+Installed the bounded handoff repair, preserving all native desktop records and
+the selected browser. The public page serves the new coordination; doctor/MCP
+readbacks pass. The authenticated operator input verdict remains pending. See
+`notes/2026-10-10-embedded-viewer-handoff-installed.md` for source and runtime proof.
