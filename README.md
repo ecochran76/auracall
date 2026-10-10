@@ -19,7 +19,7 @@ browser automation. After two minutes without external keyboard/pointer input,
 control returns to view-only after verified revocation, allowing automation to
 resume. A compact, collapsible rail groups real runtime profiles by account or
 profile; **Wake** opens dormant local browser profiles on the selected desktop.
-Root desktop access remains independently available.
+Connected embedded viewers stay mounted during routine refreshes and when returning to the tab. Switching interaction capability replaces the viewer. Root desktop access remains independently available.
 
 ## Quick start
 

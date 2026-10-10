@@ -1,3 +1,10 @@
+## 2026-10-10 — Desktop stability correction
+
+Prepared refresh preservation on `fix/desktop-viewer-stability`, with companion
+Remote View reconnect input restoration. Focused HTTP/control tests and TypeScript
+check pass. Installed human acceptance is pending; baseline full rendered smoke
+has a dormant-Wake timeout, preserved separately from the stability verdict.
+
 ## 2026-10-09 — Real-profile Wake incorrectly used RDP validation
 
 Operator reports Wake fails with an Agent Browser RDP family-declaration error.

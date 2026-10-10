@@ -1,3 +1,11 @@
+## 2026-10-10 — Preserve connected embedded viewers during refresh
+
+Periodic polling and visibility return must not destroy a selected connected
+viewer or replay its control acquisition. Replace the viewer for explicit mode
+changes, changed selection or recovery, while preserving exact retained claims.
+The full rendered fixture independently times out at dormant-profile Wake on
+unchanged source; the bounded stability run covers refresh, input and release.
+
 ## 2026-10-10 — Browser close and API lifecycle
 
 Rail close targets a freshly verified owned browser through guarded CDP, reconciles transport disconnect against original process identity, and retains native desktop and managed data. Refused closes retain the row. The API user service uses KillMode=process so software restarts do not implicitly close its persistent managed browsers.

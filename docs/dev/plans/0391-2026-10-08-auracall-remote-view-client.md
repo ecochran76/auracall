@@ -9,6 +9,18 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Bounded stability repair: 2026-10-10
+
+Branch `fix/desktop-viewer-stability` preserves a ready or connecting selected
+native viewer during periodic refresh and visibility return. Explicit confirmed
+release still replaces control with observation. Failed viewers retain the
+existing recovery path. No browser lifecycle, claim authority or timeout change.
+Remote View companion `fix/consumer-control-reconnect` restores input locked by
+a transient access failure only after same-grant authorization and transport
+recovery; a mode request cancels that intent. Installed adoption and human input
+acceptance remain pending. Full rendered smoke has an independently reproduced
+baseline timeout at dormant-profile Wake; bounded stability excludes that axis.
+
 ## Native toolbar correction and Wake repair: 2026-10-09
 
 Operator rejects duplicated AuraCall takeover controls and the reduced native

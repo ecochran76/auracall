@@ -259,6 +259,14 @@ ${primaryViewerSource}
 		await frame.click("#view-only");
 	}
 
+	await page.evaluateOnNewDocument(() => {
+		const schedule = window.setTimeout.bind(window);
+		window.setTimeout = ((callback: TimerHandler, delay?: number, ...args: unknown[]) => {
+			if (delay === 240000 && typeof callback === "function")
+				(window as unknown as { stabilityRefresh: () => void }).stabilityRefresh = callback as () => void;
+			return schedule(callback, delay, ...args);
+		}) as typeof window.setTimeout;
+	});
 	await page.goto(`http://127.0.0.1:${server.port}/desktops`);
 	await page
 		.waitForFunction(
@@ -313,6 +321,25 @@ ${primaryViewerSource}
 			document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
+	await page.evaluate(() => {
+		(window as unknown as { stabilityFrame: Element | null }).stabilityFrame = document.querySelector("#native-view iframe");
+		(window as unknown as { stabilityRefresh: () => void }).stabilityRefresh();
+	});
+	await page.waitForNetworkIdle();
+	assert.equal(await page.evaluate(() => document.querySelector("#native-view iframe") ===
+		(window as unknown as { stabilityFrame: Element | null }).stabilityFrame), true,
+		"Periodic refresh must retain the connected control viewer.");
+	// Returning to the page must retain the connected control iframe and claim.
+	await page.evaluate(() => {
+		const frame = document.querySelector("#native-view iframe");
+		(window as unknown as { stabilityFrame: Element | null }).stabilityFrame = frame;
+		document.dispatchEvent(new Event("visibilitychange"));
+	});
+	await page.waitForNetworkIdle();
+	assert.equal(await page.evaluate(() => document.querySelector("#native-view iframe") ===
+		(window as unknown as { stabilityFrame: Element | null }).stabilityFrame), true,
+		"Visibility refresh must retain the connected control viewer.");
+	assert.equal(controlEvents.length, 1, "Visibility refresh must not replay takeover.");
 	await page.reload();
 	await page.waitForFunction(
 		() =>
@@ -396,6 +423,10 @@ ${primaryViewerSource}
 		"release:writing:writing-browser",
 		"release:writing:writing-browser",
 	]);
+	if (process.env.AURACALL_DESKTOP_STABILITY_ONLY === "1") {
+		assert.deepEqual(errors, []);
+		console.log(JSON.stringify({scope:"provider-free rendered stability",passed:["periodic-control-viewer-retained","visibility-control-viewer-retained","native-keyboard-and-mouse","control-claim-replay","failed-release-retained","release-to-observe"],pageErrors:errors,installedDesktopAcceptance:false}));
+	} else {
 	assert.equal(await page.$(".toolbar"), null, "No duplicate control toolbar.");
 	assert.equal(await page.$$eval(".profile-row[data-runtime-profile]", (rows) => rows.length), 3);
 	await page.click("#group-profile");
@@ -555,6 +586,7 @@ ${primaryViewerSource}
 			installedDesktopAcceptance: false,
 		}),
 	);
+	}
 } finally {
 	await browser?.close();
 	await server.close();
