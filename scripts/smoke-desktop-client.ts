@@ -125,6 +125,7 @@ const runtimeProfiles = [
 	},
 ];
 const frames: string[] = [];
+let observeGrantSequence = 0;
 const controlEvents: string[] = [];
 const controlTokens: string[] = [];
 let rejectRelease = true;
@@ -169,8 +170,8 @@ const server = await createResponsesHttpServer(
 					url:
 						"https://desktop.example.test/embed/" +
 						(name === "research"
-							? "11111111-1111-4111-8111-111111111111"
-							: "22222222-2222-4222-8222-222222222222"),
+							? "11111111-1111-4111-8111-"
+							: "22222222-2222-4222-8222-") + String(++observeGrantSequence).padStart(12, "0"),
 					capability: "observe" as const,
 				};
 			},
@@ -262,7 +263,9 @@ ${primaryViewerSource}
 	await page.evaluateOnNewDocument(() => {
 		const schedule = window.setTimeout.bind(window);
 		window.setTimeout = ((callback: TimerHandler, delay?: number, ...args: unknown[]) => {
-			if (delay === 240000 && typeof callback === "function")
+			if (delay !== undefined && delay >= 100000 && delay <= 240000)
+				(window as unknown as { nativeRefreshDelay: number }).nativeRefreshDelay = delay;
+			if (delay !== undefined && delay > 230000 && delay <= 240000 && typeof callback === "function")
 				(window as unknown as { stabilityRefresh: () => void }).stabilityRefresh = callback as () => void;
 			return schedule(callback, delay, ...args);
 		}) as typeof window.setTimeout;
@@ -296,6 +299,35 @@ ${primaryViewerSource}
 			);
 			throw cause;
 		});
+	// Expiring passive grants must renew through the existing iframe. Advance
+	// the actual scheduled callback, retaining the real parent/child handshake.
+	const passiveViewsBefore = frames.length;
+	await page.evaluate(() => {
+		(window as unknown as { renewalFrame: Element | null }).renewalFrame = document.querySelector('#native-view iframe');
+		(window as unknown as { stabilityRefresh: () => void }).stabilityRefresh();
+	});
+	await page.waitForNetworkIdle();
+	assert.equal(frames.length, passiveViewsBefore + 1, 'Scheduled passive refresh must issue a new grant before expiry.');
+	assert.equal(await page.evaluate(() => document.querySelector('#native-view iframe') ===
+		(window as unknown as { renewalFrame: Element | null }).renewalFrame), true,
+		'Passive grant renewal must preserve the native iframe.');
+	await page.waitForFunction(() => document.querySelector('#native-view section')?.getAttribute('data-state') === 'ready');
+	// Visibility return must retain the original renewal deadline rather than
+	// postponing an expiring grant by another four minutes.
+	await page.evaluate(() => {
+		const clock = Date.now;
+		(window as unknown as { fixtureClock: () => number }).fixtureClock = clock;
+		Date.now = () => clock() + 120000;
+		document.dispatchEvent(new Event('visibilitychange'));
+	});
+	await page.waitForNetworkIdle();
+	const remainingDelay = await page.evaluate(() => {
+		const w = window as unknown as { fixtureClock: () => number; nativeRefreshDelay: number };
+		Date.now = w.fixtureClock;
+		return w.nativeRefreshDelay;
+	});
+	assert(remainingDelay > 110000 && remainingDelay <= 120000,
+		'Visibility return must preserve the passive grant renewal deadline.');
 	for (const id of ["refresh", "browser", "browser-label", "title"])
 		assert.equal(await page.$(`#${id}`), null);
 	assert.equal(await page.$("body > header"), null);
@@ -433,7 +465,7 @@ ${primaryViewerSource}
 	]);
 	if (process.env.AURACALL_DESKTOP_STABILITY_ONLY === "1") {
 		assert.deepEqual(errors, []);
-		console.log(JSON.stringify({scope:"provider-free rendered stability",passed:["periodic-control-viewer-retained","visibility-control-viewer-retained","native-keyboard-and-mouse","control-claim-replay","failed-release-retained","same-iframe-mode-transitions","release-to-observe-input-blocked"],pageErrors:errors,installedDesktopAcceptance:false}));
+		console.log(JSON.stringify({scope:"provider-free rendered stability",passed:["passive-grant-renewed-in-place","periodic-control-viewer-retained","visibility-control-viewer-retained","native-keyboard-and-mouse","control-claim-replay","failed-release-retained","same-iframe-mode-transitions","release-to-observe-input-blocked"],pageErrors:errors,installedDesktopAcceptance:false}));
 	} else {
 	assert.equal(await page.$(".toolbar"), null, "No duplicate control toolbar.");
 	assert.equal(await page.$$eval(".profile-row[data-runtime-profile]", (rows) => rows.length), 3);

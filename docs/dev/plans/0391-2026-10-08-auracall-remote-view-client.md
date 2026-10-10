@@ -9,6 +9,19 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Passive grant renewal correction: 2026-10-10
+
+The ready-view retention guard also skipped the scheduled four-minute refresh,
+so five-minute observation grants expired while the iframe remained mounted.
+Scheduled refresh must request a fresh passive grant through replaceGrant;
+visibility refresh and active control retain their existing behavior. Do not
+extend control claims or rebuild the viewer. The rendered fixture advances the
+actual timer, issues a distinct observation grant and proves same-iframe renewal,
+with existing control retention and input exclusion checks. Remote View companion
+PR370 removes per-protocol-message native OS health probes while retaining fresh
+owner grant checks and the primary viewer health cadence. Installed public
+stability remains an independent gate.
+
 ## Embedded grant handoff follow-up: 2026-10-10
 
 The operator confirms primary Remote View is responsive. The embedded path

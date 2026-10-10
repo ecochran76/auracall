@@ -1012,3 +1012,9 @@ Under the hood, pruning removes entire session directories (metadata + logs). Th
   and `1h30m` are accepted.
 - Defaults: `auto` = 60 m for `gpt-5.1-pro`; non-pro API models use `120s` if you don’t set a value.
 - Heartbeat messages print the live remaining time so you can see when the client-side deadline will fire.
+
+### Native viewer observation renewal
+
+The desktop client renews passive observation grants every four minutes through
+the existing native viewer. Its iframe and native settings remain mounted.
+Control claims retain their existing verified release and inactivity rules.

@@ -24562,3 +24562,9 @@ a desktop disconnect. Preserve the native page and validate a replacement opaque
 grant against the exact desktop binding before reconnecting its transport. A
 status poll previously stopped transport without restarting it after successful
 access; recovery must establish transport before restoring control input.
+
+## 2026-10-10 | Retention must preserve grant renewal
+
+Keeping a ready iframe must not suppress the timer that renews its expiring
+passive grant. Use the existing same-iframe grant handoff on scheduled observation
+refresh; ordinary visibility return should retain the connected native viewer.

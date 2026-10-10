@@ -53652,3 +53652,11 @@ Installed the bounded handoff repair, preserving all native desktop records and
 the selected browser. The public page serves the new coordination; doctor/MCP
 readbacks pass. The authenticated operator input verdict remains pending. See
 `notes/2026-10-10-embedded-viewer-handoff-installed.md` for source and runtime proof.
+
+## 2026-10-10 | Passive embed grant renewal
+
+Signed-in inspection reproduced expiry after the ready-view guard skipped its
+scheduled refresh. Scheduled passive refresh now renews the opaque grant inside
+the existing native iframe; visibility and active-control retention remain.
+Rendered red/green coverage proves renewed URL with same iframe and no duplicate
+control implementation. Software adoption and public stability follow separately.
