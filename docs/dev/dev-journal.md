@@ -53616,3 +53616,7 @@ Installed native controls/Wake checkpoint: AuraCall decad6233 and Remote View 96
 The user requests the primary native control design. Remote View PR352 removes reconstructed embed controls and reuses primary chrome/viewer.js with a grant-only adapter. The rendered fixture now exercises pointer cycling, document keyboard capture and mobile edits; exact mode coordination and root-link regressions pass. Installation/identity readback remains pending upstream; AuraCall API runtime has no source change.
 
 Installed parity checkpoint: Remote View fa1cca0 adopted by 13 software units, doctor ready. Primary and embedded controls share native source/markup. All 39 tracked processes retained, no API restart; rendered pointer/keyboard/mobile/grant checks pass. Public authenticated acceptance remains unverified by the fixture.
+
+### 2026-10-10 — Rail-only browser management
+
+Remove redundant top navigation, refresh and opaque browser selector. Add accessible close actions to ready native browser rows, release the caller's exact control claim first, and confirm browser process exit under the automation gate. Retain desktop/data and show dormant runtime profile Wake actions. API service KillMode=process preserves browsers across software adoption. Targeted ownership/auth tests pass; rendered and installation checks pending.

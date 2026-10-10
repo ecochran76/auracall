@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import CDP from "../browser/cdp.js";
 import { NativeDesktopControlError } from "../browser/service/nativeDesktopControl.js";
-import { captureDesktopView, listDesktopViews, openDesktopView, takeDesktopControl, releaseDesktopControl, expireInactiveDesktopControls, desktopControlStatus } from "../browser/service/desktopClient.js";
+import { captureDesktopView, closeDesktopBrowser, listDesktopViews, openDesktopView, takeDesktopControl, releaseDesktopControl, expireInactiveDesktopControls, desktopControlStatus } from "../browser/service/desktopClient.js";
 import { renderDesktopClientPage } from "./desktopClientPage.js";
 import type { OptionValues } from "commander";
 import { ZodError, z } from "zod";
@@ -375,6 +375,7 @@ export interface ResponsesHttpServerDeps {
     list: () => ReturnType<typeof listDesktopViews>;
     profiles?: () => ReturnType<typeof listDesktopRuntimeProfiles>;
     wakeProfile?: (id: string, desktopName?: string) => ReturnType<typeof wakeDesktopRuntimeProfile>;
+    closeBrowser?: (name: string, browserId: string) => ReturnType<typeof closeDesktopBrowser>;
     capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
     view?: (name: string, browserId: string) => ReturnType<typeof openDesktopView>;
     takeControl?: (name: string, browserId: string, token: string) => ReturnType<typeof takeDesktopControl>;
@@ -1887,6 +1888,18 @@ export async function createResponsesHttpServer(
       if (url.pathname === '/v1/desktops' || url.pathname.startsWith('/v1/desktops/')) {
         const desktopAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (desktopAuthError) { sendJson(res, 403, { error: { message: desktopAuthError } }); return; }
+      }
+      const desktopClose = url.pathname.match(/^\/v1\/desktops\/([^/]+)\/close$/);
+      if (req.method === 'POST' && desktopClose) {
+        let payload: {browserId:string};
+        try { payload = z.object({browserId:z.string().min(1)}).strict().parse(JSON.parse(await readRequestBody(req))); }
+        catch { sendJson(res,400,{error:{message:'Select an owned browser to close.'}});return; }
+        try {
+          const name=decodeURIComponent(desktopClose[1]);
+          const result=await (deps.desktopClient?.closeBrowser?.(name,payload.browserId) ?? closeDesktopBrowser({remoteView:configuredRuntimeConfig?.remoteView,name,browserId:payload.browserId}));
+          sendJson(res,200,result,{'Cache-Control':'no-store'});
+        } catch(error) {sendJson(res,409,{error:{message:error instanceof Error?error.message:'Browser close was not confirmed.'}},{'Cache-Control':'no-store'});}
+        return;
       }
       const runtimeProfileWake = url.pathname.match(/^\/v1\/desktops\/profiles\/([^/]+)\/wake$/);
       if (req.method === 'POST' && runtimeProfileWake) {

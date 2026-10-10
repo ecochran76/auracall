@@ -128,11 +128,26 @@ const frames: string[] = [];
 const controlEvents: string[] = [];
 const controlTokens: string[] = [];
 let rejectRelease = true;
+let rejectClose = true;
 const server = await createResponsesHttpServer(
 	{ host: "127.0.0.1", port: 0, tabAffinityMaintenanceIntervalMs: 0 },
 	{
 		desktopClient: {
 			profiles: async () => runtimeProfiles,
+			closeBrowser: async (name, id) => {
+				controlEvents.push(`close:${name}:${id}`);
+				if (rejectClose) throw Error("Fixture browser close was not confirmed.");
+				const desktop = desktops.find((x) => x.name === name);
+				assert(desktop);
+				desktop.browsers = desktop.browsers.filter((x) => x.browserId !== id);
+ if (!desktop.browsers.length) desktop.state = "empty";
+				for (const profile of runtimeProfiles.filter((x) => x.browserId === id)) {
+					profile.state = "dormant";
+					profile.browserId = undefined;
+					profile.wakeable = true;
+				}
+				return { state: "closed" as const };
+			},
 			wakeProfile: async (id) => {
 				assert.equal(id, "dormant-runtime");
 				controlEvents.push(`wake:${id}`);
@@ -273,20 +288,23 @@ ${primaryViewerSource}
 			);
 			throw cause;
 		});
-	assert.equal(await page.$eval("#title", (node) => node.textContent), "Research");
+	for (const id of ["refresh", "browser", "browser-label", "title"])
+		assert.equal(await page.$(`#${id}`), null);
+	assert.equal(await page.$("body > header"), null);
+	assert.equal(await page.$eval("#content", (node) => node.getAttribute("aria-label")), "Research");
 	await page.$eval('#desktops button[data-desktop="writing"]', (node) =>
 		(node as HTMLButtonElement).click(),
 	);
 	await page.waitForFunction(
 		() =>
-			document.querySelector("#title")?.textContent === "Writing" &&
+			document.querySelector("#content")?.getAttribute("aria-label") === "Writing" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
 	assert.equal(new URL(page.url()).searchParams.get("desktop"), "writing");
 	await page.reload();
 	await page.waitForFunction(
 		() =>
-			document.querySelector("#title")?.textContent === "Writing" &&
+			document.querySelector("#content")?.getAttribute("aria-label") === "Writing" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
 	await clickNativeMode();
@@ -379,7 +397,7 @@ ${primaryViewerSource}
 		"release:writing:writing-browser",
 	]);
 	assert.equal(await page.$(".toolbar"), null, "No duplicate control toolbar.");
-	assert.equal(await page.$$eval(".profile-row", (rows) => rows.length), 3);
+	assert.equal(await page.$$eval(".profile-row[data-runtime-profile]", (rows) => rows.length), 3);
 	await page.click("#group-profile");
 	assert.equal(
 		await page.$eval("#group-profile", (node) => node.getAttribute("aria-pressed")),
@@ -454,7 +472,7 @@ ${primaryViewerSource}
 	);
 	await page.waitForFunction(
 		() =>
-			document.querySelector("#title")?.textContent === "Constructor desktop" &&
+			document.querySelector("#content")?.getAttribute("aria-label") === "Constructor desktop" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
 	assert.equal(await page.$("#take-control"), null);
@@ -482,6 +500,22 @@ ${primaryViewerSource}
 		),
 		false,
 	);
+	await page.$eval('[data-runtime-profile="writing-runtime"] .profile-select', (node) =>
+		(node as HTMLButtonElement).click(),
+	);
+	await page.click('[data-runtime-profile="writing-runtime"] .close-browser');
+	await page.waitForFunction(() =>
+		document.getElementById("error")?.textContent?.includes("close was not confirmed"),
+	);
+	assert(await page.$('[data-runtime-profile="writing-runtime"] .close-browser'));
+	rejectClose = false;
+	await page.click('[data-runtime-profile="writing-runtime"] .close-browser');
+	await page.waitForFunction(() =>
+		document.querySelector('[data-runtime-profile="writing-runtime"] .wake'),
+	);
+	assert.equal(controlEvents.at(-1), "close:writing:writing-browser");
+	assert(await page.$('[data-runtime-profile="dormant-runtime"] .wake'));
+	assert.equal(await page.$('[data-runtime-profile="writing-runtime"] .close-browser'), null);
 	assert.deepEqual(errors, []);
 	assert(
 		frames.includes("research:research-browser") && frames.includes("writing:writing-browser"),
@@ -495,6 +529,8 @@ ${primaryViewerSource}
 				"persisted-grouping",
 				"svg-rail-collapse",
 				"dormant-profile-wake",
+				"no-redundant-top-navigation",
+				"rail-browser-close-and-wake",
 				"native-full-toolbar",
 				"shared-primary-pointer-cycle",
 				"shared-document-keyboard",

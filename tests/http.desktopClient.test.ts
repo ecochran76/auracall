@@ -27,6 +27,10 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 				},
 			},
 			desktopClient: {
+				closeBrowser: async (name, browserId) => {
+					calls.push(`close:${name}:${browserId}`);
+					return { state: "closed" as const };
+				},
 				profiles: async () => [
 					{
 						runtimeProfileId: "writer",
@@ -186,6 +190,29 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 		refusal = new Error("Issuance response lost.");
 		const unknown = await fetch(controlUrl, { method: "POST", body, headers: operatorHeaders });
 		expect((await unknown.json()).error).not.toHaveProperty("claimRetained");
+		const closeUrl = `${base}/v1/desktops/research/close`;
+		const closeBody = JSON.stringify({ browserId: "owned-browser" });
+		expect((await fetch(closeUrl, { method: "POST", body: closeBody })).status).toBe(401);
+		expect(
+			(
+				await fetch(closeUrl, {
+					method: "POST",
+					body: closeBody,
+					headers: { authorization: "Bearer scoped-api-key" },
+				})
+			).status,
+		).toBe(403);
+		expect(
+			(await fetch(closeUrl, { method: "POST", body: "{}", headers: operatorHeaders })).status,
+		).toBe(400);
+		const closed = await fetch(closeUrl, {
+			method: "POST",
+			body: closeBody,
+			headers: operatorHeaders,
+		});
+		expect(closed.headers.get("cache-control")).toBe("no-store");
+		expect(await closed.json()).toEqual({ state: "closed" });
+		expect(calls.at(-1)).toBe("close:research:owned-browser");
 	} finally {
 		await server.close();
 		setAuracallHomeDirOverrideForTest(null);

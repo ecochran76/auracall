@@ -452,3 +452,7 @@ missing configuration fails before browser launch. Capacity acquisition within
 that configured application pool is ordinary desktop use, not installation or
 network provisioning. Release and cleanup require exact process/assignment
 readback; closing a viewer does not release the desktop.
+
+## Rail-only browser management correction
+
+Remove the redundant AuraCall top header, refresh button and raw browser-ID selector. Keep native Remote View toolbar unchanged. The left rail selects each browser with runtime profile/account labels; unprofiled rows use desktop label and local ordinal. Move the SVG rail toggle into a persistent rail handle. Add an operator-only close action bound to the configured desktop and exact owned native browser identity. Release the caller’s retained human claim before close, keep other claims fail-closed, send guarded CDP Browser.close, and confirm the original process exited before reporting closed. Never stop the shared desktop or delete the managed browser directory; aliases of the closed browser become dormant and may Wake. Validate authorization, stale/foreign IDs, graceful-close confirmation and rendered rail actions. Installation must preserve live browsers through API package adoption.

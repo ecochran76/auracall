@@ -1,3 +1,7 @@
+## 2026-10-10 — Browser close and API lifecycle
+
+Rail close targets a freshly verified owned browser through guarded CDP, reconciles transport disconnect against original process identity, and retains native desktop and managed data. Refused closes retain the row. The API user service uses KillMode=process so software restarts do not implicitly close its persistent managed browsers.
+
 ## 2026-10-09 — Native Wake must not impose legacy RDP metadata
 
 Native Remote View owns its Chrome launch directly. Reusing the Agent Browser

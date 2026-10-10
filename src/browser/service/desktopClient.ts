@@ -1,3 +1,6 @@
+import fs from "node:fs/promises";
+import { setTimeout as delay } from "node:timers/promises";
+import CDP from "../cdp.js";
 import { NativeDesktopControl } from './nativeDesktopControl.js';
 import { resolveNativeDesktopLaunch } from './desktopConfig.js';
 import { readyNativeDesktopBrowsers, nativeDesktopObserveView } from './nativeDesktopClient.js';
@@ -158,4 +161,30 @@ export async function desktopControlStatus(input: { remoteView: unknown; name: s
   const selected = resolveNativeDesktopLaunch({ remoteView: input.remoteView, desktop: input.name });
   if (!selected) throw new Error('The selected desktop does not provide native control.');
   return new NativeDesktopControl().status(selected, input.browserId, input.token);
+}
+
+/** Close only the currently verified AuraCall browser; retain desktop and managed data. */
+export async function closeDesktopBrowser(input: { remoteView: unknown; name: string; browserId: string }): Promise<{ state: "closed" }> {
+  const selected = resolveNativeDesktopLaunch({remoteView:input.remoteView,desktop:input.name});
+  if (!selected) throw new Error("Browser close requires a configured native AuraCall desktop.");
+  const matches = (await readyNativeDesktopBrowsers(selected)).filter(item => item.browserId === input.browserId);
+  const binding = matches.length === 1 ? matches[0] : undefined;
+  if (!binding) throw new Error("Select a ready AuraCall-owned browser to close.");
+  const client = await CDP({host:binding.cdpHost,port:binding.cdpPort});
+  let failure: unknown;
+  try { await client.Browser.close(); } catch (error) { failure = error; }
+  finally { await client.close().catch(() => undefined); }
+  for (let attempt=0;attempt<40;attempt++) {
+    try {
+      const stat = await fs.readFile(`/proc/${binding.pid}/stat`, "utf8");
+      const start = stat.slice(stat.lastIndexOf(")")+2).split(" ")[19];
+      if (start !== binding.processStart) return {state:"closed"};
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return {state:"closed"};
+      throw error;
+    }
+    if (failure) throw new Error("Browser close was not confirmed. Refresh the browser inventory before retrying.", {cause:failure});
+    await delay(100);
+  }
+  throw new Error("Browser close was not confirmed; the owned process is still running.");
 }
