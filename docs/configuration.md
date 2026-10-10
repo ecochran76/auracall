@@ -678,7 +678,8 @@ Remote View application with `inventory`, `acquire`, `release`, `observe`,
 `control` and `windows` capabilities. Chromium may flatten its process title and
 scrub its environment; AuraCall then requires a fresh native window/PID join on
 the exact desktop and both generations instead of guessing ownership from a
-missing `DISPLAY`. Minimal manual-login launches skip Chrome's first-run shell
+missing `DISPLAY`. Native launch resolves the configured local executable directly; it does not
+require Agent Browser RDP family/build declarations. Minimal manual-login launches skip Chrome's first-run shell
 so that CDP can become ready; provider sign-in remains interactive.
 
 Open `/desktops` on the AuraCall HTTP service. The compact left rail lists configured AuraCall runtime profiles, grouped by

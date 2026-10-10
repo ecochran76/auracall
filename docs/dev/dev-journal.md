@@ -5,8 +5,11 @@ The native launcher called RDP-specific compatibility validation before starting
 Chrome. A native-path regression with ordinary null family/build metadata
 reproduces the exact error; resolving the selected executable directly removes
 the RDP dependency while retaining exact executable/process/assignment checks.
-28 focused tests pass, including legacy RDP checks. Build, installed adoption and
-one bounded real-profile Wake remain pending. Native-toolbar restoration and a
+28 focused tests, typecheck, lint and build pass. Installed source d6d047f86
+matches all 584 dist files. Real default/Grok Wake on Research returns 200 in
+6052ms, observe succeeds, the shared alias and normal configuration retain
+placement, and all 37 original process identities and markers are preserved.
+One real browser remains intentionally available; no provider prompt was sent. Native-toolbar restoration and a
 single native mode switch remain a separate open client correction.
 
 ## 2026-10-09 — Compact runtime-profile desktop rail

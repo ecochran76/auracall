@@ -5,8 +5,9 @@
   desktops, independent root desktop and explicit coordinated control handoff.
   Current State: PR243 and provider PR346 are merged. Both runtimes are installed;
   two-minute never-used idle expiry passes. Compact real runtime-profile rail and
-  canonical dormant Wake pass source and rendered validation; source 48704e08d
-  is installed with seven real runtime profiles and preserved desktop/browser state.
+  canonical dormant Wake pass source and rendered validation; source d6d047f86
+  is installed with seven real runtime profiles; real default/Grok Wake succeeds.
+  Full native toolbar and single coordinated native mode switch remain open.
   Operator reports viewing works. Actual gateway input renewal, rendered idle
   transition, independent signed-in root viewing and PR244 integration remain open.
   Approved tickets stay #240 → #241 → #242.

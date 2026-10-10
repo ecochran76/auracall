@@ -22115,3 +22115,16 @@ real runtime profiles: six wakeable and Windows unavailable. Both observe grants
 marker values, main config and all 37 process identities are preserved. No real
 provider-account Wake or prompt ran. Plan0391 and draft PR244 remain open. Receipt:
 docs/dev/notes/2026-10-09-plan0391-runtime-rail-validation.json.
+
+## Turn 643 | 2026-10-09
+
+P86 native Wake called legacy Agent Browser RDP compatibility validation, rejecting
+normal real profiles without family/build declarations. Native-path regression
+reproduces the exact operator error and passes after resolving the selected
+executable directly. 28 focused tests, typecheck, lint and build pass. Installed
+d6d047f86 matches 584 dist files; real default/Grok Wake succeeds on Research in
+6052ms. Observe, shared-alias placement and normal config readback pass. All 37
+original process identities and markers survive; one real browser remains owned
+and available. Native full-toolbar restoration and a single coordinated native
+mode switch remain OPEN. Receipt:
+docs/dev/notes/2026-10-09-plan0391-native-wake-repair.json.

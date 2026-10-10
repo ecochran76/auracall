@@ -5,6 +5,21 @@ Lane: P86
 Parent: Plan 0391
 Owner: Eric Cochran
 
+## Native toolbar correction and Wake repair: 2026-10-09
+
+Operator rejects duplicated AuraCall takeover controls and the reduced native
+viewer toolbar. The desired client retains Remote View's full native controls;
+its single view-only/interactive switch coordinates AuraCall pause, exact grant
+revocation and the two-minute inactivity handoff. This supersedes the earlier
+separate AuraCall Take control/Release UI. That cross-client coordination and
+native toolbar restoration are still OPEN.
+
+Real runtime-profile Wake incorrectly used legacy Agent Browser RDP validation.
+Native launch now resolves the selected executable directly and retains exact
+executable/process/assignment checks. Installed source d6d047f86 passes real
+Grok Wake, observe and shared-alias placement while preserving all original
+marker/runtime process identities. See native-wake-repair receipt.
+
 ## Runtime-profile rail revision: 2026-10-09
 
 The operator reported the installed client working and requested a denser UX:
