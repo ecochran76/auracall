@@ -110,6 +110,12 @@ Avoid using plain `profile` when the meaning is ambiguous.
 - Windows-specific work:
   - `docs/windows-work.md`
 
+## Graphiti memory routing
+
+- Canonical repository group: `auracall_main`; local user agents only, local-user-only export.
+- Read [docs/graphiti-memory.md](docs/graphiti-memory.md) for discovery, qualified closeout and privacy rules.
+- An unresolved atlas route is not proof of service unavailability. Prefer the explicit repo route and report the exact failed boundary.
+
 ## Policy Loading Contract
 
 - `AGENTS.md` is a routing surface, not a one-time pointer.
