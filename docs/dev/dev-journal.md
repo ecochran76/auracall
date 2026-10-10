@@ -53283,6 +53283,9 @@ background drain is unpaused. No provider journey consumed, one remains.
 Plan 0390 CLOSED; Plan 0386 broader asset acceptance remains OPEN.
 Memory disposition unavailable: no qualified AuraCall Graphiti destination.
 
+## 2026-10-10 | Issue226 active chat retirement
+
+Isolated fix/issue226-active-chat-retirement worktree; root dirty edits preserved. Production maintenance red replay closes an expired unowned active/unknown response. Provider activity guard now covers maintenance's lost path and shared ChatGPT retirement, preserving active and unknown while cleaning inactive pages.40 selected checks pass; typecheck and compilation pass. Actual prior disappearance remains unattributed (already-missing, zero recorded closes). Runtime qualification and live continuation remain pending. Plan0392 owns the bounded repair.
 ### 2026-10-07T11:00Z — endpoint denial repair installed
 
 PR227 merged as873ad09bffb and installed with worker SHA256 parity. API53966,
