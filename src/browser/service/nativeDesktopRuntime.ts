@@ -5,7 +5,6 @@ import { launchChrome as launchChromeCore } from '../../../packages/browser-serv
 import { findChromeProcessUsingUserDataDir } from '../../../packages/browser-service/src/processCheck.js';
 import { getAuracallHomeDir } from '../../auracallHome.js';
 import type { BrowserLogger, ResolvedBrowserConfig } from '../types.js';
-import { resolveAgentBrowserRdpCompatibility } from './agentBrowserRdpLauncher.js';
 import { RemoteViewApplication } from './remoteViewApplication.js';
 import { NativeDesktopStore, nativeDesktopKey, observeNativeBrowser, verifyNativeBrowser, type NativeDesktopBrowser } from './nativeDesktopStore.js';
 import { DesktopControlGate } from './desktopControlGate.js';
@@ -14,8 +13,9 @@ interface NativeChromeHandle { pid?: number; port: number; host?: string; kill: 
 type NativeLaunch = (config: ResolvedBrowserConfig, directory: string, logger: BrowserLogger, options: Parameters<typeof launchChromeCore>[3]) => Promise<NativeChromeHandle>;
 
 async function expectedNativeExecutable(config: ResolvedBrowserConfig): Promise<string> {
-  const compatibility = resolveAgentBrowserRdpCompatibility(config);
-  const expectedPath = await fs.realpath(compatibility.chromePath);
+  const chromePath = config.chromePath?.trim();
+  if (!chromePath) throw new Error('Native Remote View requires a resolved local Chrome or Chromium executable path.');
+  const expectedPath = await fs.realpath(chromePath);
   const sibling = path.join(path.dirname(expectedPath), 'chrome');
   return path.basename(expectedPath).startsWith('google-chrome') && await fs.stat(sibling).then(stat => stat.isFile(), () => false)
     ? fs.realpath(sibling) : expectedPath;

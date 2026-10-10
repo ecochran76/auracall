@@ -12,7 +12,7 @@ import { launchNativeDesktopBrowser } from '../../src/browser/service/nativeDesk
 import { listDesktopViews } from '../../src/browser/service/desktopClient.js';
 import { assertNoLiveNativeDesktopBrowser, NativeDesktopStore } from '../../src/browser/service/nativeDesktopStore.js';
 
-test('native browser launch acquires one retained named desktop and passes only its child environment to the existing launcher', async () => {
+test('native browser launch needs no RDP-only family/build declarations and preserves retained ownership and child environment', async () => {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-native-launch-'));
   setAuracallHomeDirOverrideForTest(home);
   const target = { assignmentId: 'a', registrationId: 'r', desktopId: 'd', lifecycleGeneration: 2, viewingDesktopId: 'v', viewingGeneration: 7 };
@@ -31,7 +31,7 @@ test('native browser launch acquires one retained named desktop and passes only 
   }).listen(0, '127.0.0.1'); await once(server, 'listening');
   try {
     const address = server.address(); if (!address || typeof address === 'string') throw new Error('missing fixture port');
-    const config = { ...DEFAULT_BROWSER_CONFIG, browserFamily: 'chrome' as const, browserBuild: 'stock_chrome' as const, chromePath: '/bin/true',
+    const config = { ...DEFAULT_BROWSER_CONFIG, chromePath: '/bin/true',
       remoteViewDesktop: { desktopName: 'research', poolName: 'main', application: 'auracall', origin: `http://127.0.0.1:${address.port}`, publicOrigin: 'https://desktop.example.test', appOrigin: 'https://aura.example.test' } };
     // The binary contract is exercised with a named fixture executable; no provider browser is launched.
     const executable = path.join(home, 'google-chrome'); await fs.symlink(process.execPath, executable); config.chromePath = executable;

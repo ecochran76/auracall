@@ -1,0 +1,21 @@
+{
+  "scope": "real runtime-profile Wake RDP validation failure",
+  "reportedError": "agent-browser RDP launch requires browserFamily to be explicitly set to chrome or chromium.",
+  "cause": "native expectedNativeExecutable called the legacy RDP compatibility helper",
+  "reproduction": {
+    "command": "pnpm vitest run tests/browser/nativeDesktopRuntime.test.ts",
+    "resultBefore": "failed with exact reported error",
+    "minimalCondition": "native launch with resolved Chrome path and ordinary null browserFamily/browserBuild"
+  },
+  "fix": "resolve selected native executable directly; retain exact process/executable/assignment verification",
+  "validation": {
+    "focusedTests": 28,
+    "files": 3,
+    "legacyRdpTests": 21,
+    "typecheck": "passed",
+    "build": "passed",
+    "scopedLint": "passed"
+  },
+  "installed": "pending staged adoption",
+  "nativeToolbarCorrection": "still open; restore native controls and connect native mode switch to automation coordination"
+}

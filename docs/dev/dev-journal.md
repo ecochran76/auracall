@@ -1,3 +1,14 @@
+## 2026-10-09 — Real-profile Wake incorrectly used RDP validation
+
+Operator reports Wake fails with an Agent Browser RDP family-declaration error.
+The native launcher called RDP-specific compatibility validation before starting
+Chrome. A native-path regression with ordinary null family/build metadata
+reproduces the exact error; resolving the selected executable directly removes
+the RDP dependency while retaining exact executable/process/assignment checks.
+28 focused tests pass, including legacy RDP checks. Build, installed adoption and
+one bounded real-profile Wake remain pending. Native-toolbar restoration and a
+single native mode switch remain a separate open client correction.
+
 ## 2026-10-09 — Compact runtime-profile desktop rail
 
 Operator reports installed viewer working and requests compact rows, SVG animated rail collapse, account/profile grouping, and dormant real runtime profile Wake. Implementing on the existing Plan0391 branch; canonical launch plans and remembered configuration placement preserve account/browser identity. Existing live browsers are not moved or closed. 87 focused checks, typecheck, scoped lint, build and the rendered rail/control fixture pass. Shared browser-family placement and live ownership verification are enforced. Installed source 48704e08d serves the new UI and seven real runtime profiles (six wakeable, one Windows unavailable). API49216 retains both observe endpoints, unchanged markers and all 37 process identities. Actual provider-account Wake remains fixture-qualified; no provider prompt or scheduler change occurred. Receipt: [runtime rail](notes/2026-10-09-plan0391-runtime-rail-validation.json).

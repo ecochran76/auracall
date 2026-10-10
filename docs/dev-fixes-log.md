@@ -1,3 +1,12 @@
+## 2026-10-09 — Native Wake must not impose legacy RDP metadata
+
+Native Remote View owns its Chrome launch directly. Reusing the Agent Browser
+RDP compatibility helper required family/build declarations absent from ordinary
+real runtime profiles, so provider-free Wake mocks passed while real Wake failed
+before launch. Resolve the canonical selected executable directly, retain
+physical executable and assignment verification, and exercise the native launch
+boundary with normal null family/build metadata. Keep RDP validation in RDP.
+
 ## 2026-10-09 — Runtime profiles can share native browser placement
 
 Desktop Wake must use the canonical managed browser directory. That directory is
