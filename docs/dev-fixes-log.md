@@ -24554,3 +24554,11 @@ Chrome launch URL was configuration metadata, not navigation. Wake must explicit
 ### 2026-10-10 — Share native control implementation
 
 Matching button names does not establish native viewer parity. Consumer transport must plug into the primary viewer control implementation and shared markup. Rendered tests must exercise pointer mode, keyboard focus and mobile edits, in addition to presence and grant coordination.
+
+## 2026-10-10 | Embedded viewer reload and stopped recovery
+
+Mode changes recreated the entire iframe, discarding native UI state and showing
+a desktop disconnect. Preserve the native page and validate a replacement opaque
+grant against the exact desktop binding before reconnecting its transport. A
+status poll previously stopped transport without restarting it after successful
+access; recovery must establish transport before restoring control input.

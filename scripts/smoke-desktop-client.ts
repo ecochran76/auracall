@@ -315,10 +315,11 @@ ${primaryViewerSource}
 			document.querySelector("#content")?.getAttribute("aria-label") === "Writing" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
+	await page.evaluate(() => { (window as unknown as { modeFrame: Element | null }).modeFrame = document.querySelector('#native-view iframe'); });
 	await clickNativeMode();
 	await page.waitForFunction(
 		() =>
-			document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
+			document.querySelector("#native-view section")?.getAttribute("data-capability") === "control" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
 	await page.evaluate(() => {
@@ -340,10 +341,11 @@ ${primaryViewerSource}
 		(window as unknown as { stabilityFrame: Element | null }).stabilityFrame), true,
 		"Visibility refresh must retain the connected control viewer.");
 	assert.equal(controlEvents.length, 1, "Visibility refresh must not replay takeover.");
+	assert.equal(await page.evaluate(() => document.querySelector('#native-view iframe') === (window as unknown as { modeFrame: Element | null }).modeFrame),true,'Initial takeover must keep the iframe document.');
 	await page.reload();
 	await page.waitForFunction(
 		() =>
-			document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
+			document.querySelector("#native-view section")?.getAttribute("data-capability") === "control" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
 	assert.equal(controlEvents.length, 2, "Reload replays the retained claim.");
@@ -397,6 +399,7 @@ ${primaryViewerSource}
 	for (const id of ["clipboard-paste", "clipboard-copy", "audio-volume-control"])
 		assert(await interactiveFrame.$(`#${id}`));
 
+	await page.evaluate(() => { (window as unknown as { modeFrame: Element | null }).modeFrame = document.querySelector('#native-view iframe'); });
 	await clickNativeMode();
 	await page.waitForFunction(() =>
 		document.querySelector("#error")?.textContent?.includes("Release was not confirmed"),
@@ -414,9 +417,14 @@ ${primaryViewerSource}
 	);
 	await page.waitForFunction(
 		() =>
-			!document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
+			document.querySelector("#native-view section")?.getAttribute("data-capability") === "observe" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
+	assert.equal(await page.evaluate(() => document.querySelector('#native-view iframe') === (window as unknown as { modeFrame: Element | null }).modeFrame),true,'Release must keep the iframe document.');
+	const observeFrame=page.frames().find(frame=>frame.url().startsWith('https://desktop.example.test/embed/'));assert(observeFrame);
+	const beforeObserveInput=await observeFrame.evaluate(()=>(window as unknown as NativeFixtureWindow).fixtureInput.length);
+	await observeFrame.evaluate(()=>{const w=window as unknown as NativeFixtureWindow;w.fixtureKeyboards[0].onkeydown(97);});
+	assert.equal(await observeFrame.evaluate(()=>(window as unknown as NativeFixtureWindow).fixtureInput.length),beforeObserveInput,'Released observation must reject keyboard input.');
 	assert.deepEqual(controlEvents, [
 		"take:writing:writing-browser",
 		"take:writing:writing-browser",
@@ -425,7 +433,7 @@ ${primaryViewerSource}
 	]);
 	if (process.env.AURACALL_DESKTOP_STABILITY_ONLY === "1") {
 		assert.deepEqual(errors, []);
-		console.log(JSON.stringify({scope:"provider-free rendered stability",passed:["periodic-control-viewer-retained","visibility-control-viewer-retained","native-keyboard-and-mouse","control-claim-replay","failed-release-retained","release-to-observe"],pageErrors:errors,installedDesktopAcceptance:false}));
+		console.log(JSON.stringify({scope:"provider-free rendered stability",passed:["periodic-control-viewer-retained","visibility-control-viewer-retained","native-keyboard-and-mouse","control-claim-replay","failed-release-retained","same-iframe-mode-transitions","release-to-observe-input-blocked"],pageErrors:errors,installedDesktopAcceptance:false}));
 	} else {
 	assert.equal(await page.$(".toolbar"), null, "No duplicate control toolbar.");
 	assert.equal(await page.$$eval(".profile-row[data-runtime-profile]", (rows) => rows.length), 3);
@@ -517,7 +525,7 @@ ${primaryViewerSource}
 	);
 	await page.waitForFunction(
 		() =>
-			!document.querySelector("#native-view iframe")?.getAttribute("src")?.includes("33333333") &&
+			document.querySelector("#native-view section")?.getAttribute("data-capability") === "observe" &&
 			document.querySelector("#native-view section")?.getAttribute("data-state") === "ready",
 	);
 	assert.equal(await page.$("#release-control"), null);

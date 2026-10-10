@@ -2568,3 +2568,8 @@ Name inspired by: https://ampcode.com/news/oracle
 The dedicated desktop client uses Remote View’s native toolbar. Its view-only/interactive switch pauses AuraCall before enabling input and confirms release before resuming automation. Two minutes without actual input returns to view only. Wake opens the provider page only when the owned browser has no nonblank pages.
 
 The desktop client uses the left rail for navigation, grouping and browser actions. Close ends the selected AuraCall-owned browser while retaining its desktop and managed browser data; its runtime profiles become dormant and can be woken again. API service restarts preserve managed browsers.
+
+The desktop mode switch retains the native viewer page and its settings while
+changing between observation and control. Only the authorized desktop transport
+reconnects. Input remains blocked during the change, and AuraCall resumes
+automation only after control-grant revocation is confirmed.

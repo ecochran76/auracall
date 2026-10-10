@@ -53637,3 +53637,13 @@ Installed parity checkpoint: Remote View fa1cca0 adopted by 13 software units, d
 ### 2026-10-10 — Rail-only browser management
 
 Remove redundant top navigation, refresh and opaque browser selector. Add accessible close actions to ready native browser rows, release the caller's exact control claim first, and confirm browser process exit under the automation gate. Retain desktop/data and show dormant runtime profile Wake actions. API service KillMode=process preserves browsers across software adoption. Targeted ownership/auth tests pass; rendered and installation checks pending.
+
+## 2026-10-10 | Embedded desktop grant handoff
+
+The primary Remote View works for the operator; the AuraCall embed remains
+sluggish and reloads on mode changes. Replace grants inside the existing native
+iframe instead of rebuilding its page. Keep immutable-grant authorization,
+automation pause/revoke and inactivity handoff unchanged. Regression fixtures
+prove same-iframe takeover/release, native keyboard/mouse and released input
+exclusion. The helper/adapter also restarts transport after status authorization
+recovers. Installed human acceptance remains required.

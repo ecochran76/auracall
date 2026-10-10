@@ -9,6 +9,19 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
+## Embedded grant handoff follow-up: 2026-10-10
+
+The operator confirms primary Remote View is responsive. The embedded path
+still reloads on each mode change and treats status interruptions as terminal.
+Reuse the mounted native iframe and replace its authorized grant in place, with
+same-origin and exact desktop-binding checks. Retain automation exclusion until
+confirmed revoke, and keep input locked until the new control transport is ready.
+Only the grant transport reconnects; the viewer page, toolbar and settings stay
+mounted. Preserve the last display while connecting. Acceptance is bounded
+consumer/helper regression, rendered native takeover/release without iframe
+replacement, input exclusion after release, and installed software/process
+readback. Native desktop/browser processes and configurations remain untouched.
+
 ## Bounded stability repair: 2026-10-10
 
 Branch `fix/desktop-viewer-stability` preserves a ready or connecting selected
