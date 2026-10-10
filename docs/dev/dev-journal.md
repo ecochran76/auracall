@@ -53614,3 +53614,5 @@ Installed native controls/Wake checkpoint: AuraCall decad6233 and Remote View 96
 ### 2026-10-10 — Primary viewer control parity
 
 The user requests the primary native control design. Remote View PR352 removes reconstructed embed controls and reuses primary chrome/viewer.js with a grant-only adapter. The rendered fixture now exercises pointer cycling, document keyboard capture and mobile edits; exact mode coordination and root-link regressions pass. Installation/identity readback remains pending upstream; AuraCall API runtime has no source change.
+
+Installed parity checkpoint: Remote View fa1cca0 adopted by 13 software units, doctor ready. Primary and embedded controls share native source/markup. All 39 tracked processes retained, no API restart; rendered pointer/keyboard/mobile/grant checks pass. Public authenticated acceptance remains unverified by the fixture.
