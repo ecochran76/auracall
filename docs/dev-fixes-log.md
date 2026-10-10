@@ -24538,3 +24538,7 @@ See Plan0391 bounded-review and review-remediation-validation receipts.
 ### 2026-10-09 — Blank Wake and native viewer controls
 
 Chrome launch URL was configuration metadata, not navigation. Wake must explicitly navigate a blank owned page through guarded CDP; preserve every existing nonblank page. Embedded native mode changes require exact-origin coordination and fresh grant replacement; local mode acknowledgments never authorize input. Replay status after frame load to avoid a missed startup message.
+
+### 2026-10-10 — Share native control implementation
+
+Matching button names does not establish native viewer parity. Consumer transport must plug into the primary viewer control implementation and shared markup. Rendered tests must exercise pointer mode, keyboard focus and mobile edits, in addition to presence and grant coordination.

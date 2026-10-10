@@ -53610,3 +53610,7 @@ integration remain open. See native placement/client validation receipt.
 The native toolbar owns mode changes; duplicate parent buttons and connection status are removed. Rendered native-assets smoke passes with exact-token reload and refused/uncertain claim cases. Wake now navigates only an entirely blank owned browser; the existing Grok PID89704 has a page at https://grok.com. Source tests/typecheck/build pass; installed adoption pending.
 
 Installed native controls/Wake checkpoint: AuraCall decad6233 and Remote View 964887a adopted; local API/new native assets verified. 37 original processes retained; API-owned Grok replaced after service restart, now PID78709 at grok.com. See native-controls-installed receipt; authenticated public acceptance remains open.
+
+### 2026-10-10 — Primary viewer control parity
+
+The user requests the primary native control design. Remote View PR352 removes reconstructed embed controls and reuses primary chrome/viewer.js with a grant-only adapter. The rendered fixture now exercises pointer cycling, document keyboard capture and mobile edits; exact mode coordination and root-link regressions pass. Installation/identity readback remains pending upstream; AuraCall API runtime has no source change.

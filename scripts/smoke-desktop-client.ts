@@ -10,6 +10,19 @@ import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
 import { NativeDesktopControlError } from "../src/browser/service/nativeDesktopControl.js";
 import { createResponsesHttpServer } from "../src/http/responsesServer.js";
 
+interface NativeFixtureWindow {
+	// biome-ignore lint/style/useNamingConvention: Exact Remote View browser global.
+	RemoteViewConsumer?: unknown;
+	fixtureErrors?: string[];
+	fixtureInput: unknown[][];
+	fixtureKeyboards: Array<{
+		element: Document | HTMLElement;
+		onkeydown: (key: number) => boolean;
+		onkeyup: (key: number) => boolean;
+	}>;
+	fixtureMice: Array<{ onmousedown?: (state: { x: number; y: number; left: boolean }) => void }>;
+}
+
 const nativeSourceRoot = process.env.AURACALL_REMOTE_VIEW_SOURCE_ROOT;
 if (!nativeSourceRoot)
 	throw new Error(
@@ -19,6 +32,16 @@ const nativeViewerSource = await fs.readFile(
 	path.join(nativeSourceRoot, "web/consumer-viewer.js"),
 	"utf8",
 );
+const primaryViewerSource = await fs.readFile(path.join(nativeSourceRoot, "web/viewer.js"), "utf8");
+const nativeGatewaySource = await fs.readFile(
+	path.join(nativeSourceRoot, "src/gateway/server.rs"),
+	"utf8",
+);
+const chromeLiteral = nativeGatewaySource.match(
+	/fn viewer_chrome_html\(index: u32\) -> String \{\s*format!\(\s*("(?:[^"\\]|\\.)*")/s,
+)?.[1];
+if (!chromeLiteral) throw Error("Shared native viewer chrome missing");
+const nativeChrome = JSON.parse(chromeLiteral).replaceAll("{index}", "1");
 const nativeAssistanceSource = await fs.readFile(
 	path.join(nativeSourceRoot, "web/assistance.js"),
 	"utf8",
@@ -188,6 +211,9 @@ try {
 						slot: 1,
 						generation: 1,
 						recordingContext: "fixture",
+						clipboardCopy: true,
+						clipboardPaste: true,
+						audioEnabled: true,
 					}),
 				});
 			else if (url.pathname === "/assets/viewer.css")
@@ -196,12 +222,15 @@ try {
 				void request.respond({
 					status: 200,
 					contentType: "text/html",
-					body: `<!doctype html><html><head><link rel="stylesheet" href="/assets/viewer.css"></head><body id="consumer-viewer" data-route="${url.pathname.split("/")[2]}" data-capability="${capability}" data-presentation="embed" data-parent-origin="http://127.0.0.1:${server.port}"><header class="toolbar"><span id="connection-status"></span><button id="reconnect">Reconnect</button></header><main id="desktop-viewport"><div id="desktop-surface" tabindex="0"></div></main><script>
+					body: `<!doctype html><html><head><link rel="stylesheet" href="/assets/viewer.css"></head><body id="consumer-viewer" data-route="${url.pathname.split("/")[2]}" data-capability="${capability}" data-presentation="embed" data-parent-origin="http://127.0.0.1:${server.port}" data-slot="1" data-generation="1">${nativeChrome}<script>
 const displayElement=document.createElement('div');displayElement.textContent='Native Remote View fixture';displayElement.style.cssText='width:800px;height:600px;background:#122035;color:white;display:grid;place-items:center;font:24px system-ui';
 const display={getElement:()=>displayElement,getWidth:()=>800,getHeight:()=>600,getScale:()=>1,scale:value=>{displayElement.style.transform='scale('+value+')';displayElement.style.transformOrigin='top left';}};
-const Guacamole={ChainedTunnel:class{},WebSocketTunnel:class{},HTTPTunnel:class{},Client:class{getDisplay(){return display;}connect(){this.onstatechange(3);}disconnect(){this.onstatechange?.(5);}sendKeyEvent(){}sendMouseState(){}},Keyboard:class{reset(){}},Mouse:class{}};
+window.fixtureInput=[];window.fixtureKeyboards=[];window.fixtureMice=[];window.fixtureErrors=[];window.addEventListener('error',event=>window.fixtureErrors.push(event.message));
+class Mouse {constructor(element){this.element=element;this.currentState={};window.fixtureMice.push(this);}};Mouse.Touchscreen=class extends Mouse{};Mouse.Touchpad=class extends Mouse{};Mouse.State=class{constructor(state){Object.assign(this,state);}};
+const Guacamole={Tunnel:{State:{OPEN:1,UNSTABLE:2,CLOSED:3}},AudioContextFactory:{getAudioContext:()=>null},AudioPlayer:{getSupportedTypes:()=>[]},ChainedTunnel:class{},WebSocketTunnel:class{},HTTPTunnel:class{},Client:class{getDisplay(){return display;}connect(){this.onstatechange(3);}disconnect(){this.onstatechange?.(5);}sendKeyEvent(...args){window.fixtureInput.push(['key',...args]);}sendMouseState(...args){window.fixtureInput.push(['mouse',...args]);}},Keyboard:class{constructor(element){this.element=element;window.fixtureKeyboards.push(this);}reset(){}},Mouse};
 ${nativeAssistanceSource}
 ${nativeViewerSource}
+${primaryViewerSource}
 </script></body></html>`,
 				});
 		} else void request.continue();
@@ -227,6 +256,14 @@ ${nativeViewerSource}
 					nativeFrames: await Promise.all(
 						page.frames().map(async (frame) => ({
 							url: frame.url(),
+							diagnostic: await frame.evaluate(() => ({
+								adapter: typeof (window as unknown as NativeFixtureWindow).RemoteViewConsumer,
+								errors: (window as unknown as NativeFixtureWindow).fixtureErrors,
+								keys: (window as unknown as NativeFixtureWindow).fixtureKeyboards?.length,
+								buttons: document.querySelectorAll("button").length,
+								mode: document.querySelector("#settings")?.getAttribute("data-mode"),
+								scripts: [...document.scripts].map((x) => x.textContent?.length),
+							})),
 							status: await frame
 								.$eval("#connection-status", (node) => node.textContent)
 								.catch(() => null),
@@ -266,6 +303,55 @@ ${nativeViewerSource}
 	);
 	assert.equal(controlEvents.length, 2, "Reload replays the retained claim.");
 	assert.equal(new Set(controlTokens).size, 1, "Reload must not create a new claim token.");
+	const interactiveFrame = page.frames().find((frame) => frame.url().includes("33333333"));
+	assert(interactiveFrame);
+	await interactiveFrame.waitForSelector("#view-only:not([disabled])");
+	assert.deepEqual(
+		await interactiveFrame.evaluate(() => {
+			const w = window as unknown as NativeFixtureWindow;
+			const settings = document.getElementById("settings") as HTMLButtonElement;
+			const modes = [settings.dataset.mode];
+			for (let i = 0; i < 3; i++) {
+				settings.click();
+				modes.push(settings.dataset.mode);
+			}
+			const surface = document.getElementById("desktop-surface") as HTMLElement;
+			surface.focus();
+			const keyboard = w.fixtureKeyboards[0];
+			keyboard.onkeydown(97);
+			keyboard.onkeyup(97);
+			const mouse = w.fixtureMice.find((x) => typeof x.onmousedown === "function");
+			mouse?.onmousedown?.({ x: 4, y: 5, left: true });
+			return {
+				modes,
+				documentKeyboard: keyboard.element === document,
+				duplicateSettingsPanel: !!document.getElementById("settings-panel"),
+				events: w.fixtureInput.map((x) => x[0]),
+				errors: w.fixtureErrors,
+			};
+		}),
+		{
+			modes: ["mouse", "touchscreen", "touchpad", "mouse"],
+			documentKeyboard: true,
+			duplicateSettingsPanel: false,
+			events: ["key", "key", "mouse"],
+			errors: [],
+		},
+	);
+	await interactiveFrame.click("#keyboard-button");
+	await interactiveFrame.type("#mobile-keyboard-input", "hi");
+	assert.equal(
+		await interactiveFrame.evaluate(
+			() =>
+				(window as unknown as NativeFixtureWindow).fixtureInput.filter((x) => x[0] === "key")
+					.length,
+		),
+		6,
+	);
+	await interactiveFrame.click("#keyboard-close");
+	for (const id of ["clipboard-paste", "clipboard-copy", "audio-volume-control"])
+		assert(await interactiveFrame.$(`#${id}`));
+
 	await clickNativeMode();
 	await page.waitForFunction(() =>
 		document.querySelector("#error")?.textContent?.includes("Release was not confirmed"),
@@ -345,7 +431,7 @@ ${nativeViewerSource}
 		"settings",
 		"record-viewer",
 	])
-		assert(await nativeFrame.$("#" + id), "Missing native tool: " + id);
+		assert(await nativeFrame.$(`#${id}`), `Missing native tool: ${id}`);
 	await page.screenshot({ path: "/tmp/auracall391-native-client.png", fullPage: true });
 	await page.$eval('#desktops button[data-desktop="empty"]', (node) =>
 		(node as HTMLButtonElement).click(),
@@ -410,6 +496,10 @@ ${nativeViewerSource}
 				"svg-rail-collapse",
 				"dormant-profile-wake",
 				"native-full-toolbar",
+				"shared-primary-pointer-cycle",
+				"shared-document-keyboard",
+				"shared-mobile-text-editing",
+				"shared-clipboard-audio-controls",
 				"native-mode-coordination",
 				"status-replay-handshake",
 				"native-observe-embed",
