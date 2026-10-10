@@ -51,3 +51,18 @@ A retained browser session must have a reachable caller owner. A proof-only read
 
 **Provider response activity**:
 The observed running response or pending tool approval on a provider page. This can differ from lease effect state after an external/CDP submission. TTL cleanup must not infer provider inactivity from a settled lease; active or unknown ChatGPT activity preserves its tab.
+**AuraCall remote-view client**:
+An operator-facing application view dedicated to AuraCall's owned desktops and managed browsers.
+_Avoid_: Root desktop, source browser profile
+
+**Root desktop display**:
+The general desktop view available independently of the AuraCall remote-view client.
+_Avoid_: AuraCall remote-view client
+
+**AuraCall desktop**:
+A named desktop owned by AuraCall and used to display its managed browsers.
+_Avoid_: Browser profile, AuraCall runtime profile
+
+**Control handoff**:
+An explicit transfer of interaction ownership between automation and a human operator.
+_Avoid_: View selection, browser launch

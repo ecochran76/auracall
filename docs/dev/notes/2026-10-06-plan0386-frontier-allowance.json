@@ -1,0 +1,131 @@
+{
+  "schema": "auracall_plan0386_frontier_allowance.v1",
+  "objective": "Qualify provider-free fixture/test mapping and execute changed-frontier acceptance on wsl-chrome-3",
+  "authority": "Fresh user allowance of five live journeys; prior completed goal is not reused",
+  "runtimeProfile": "wsl-chrome-3",
+  "sourceBase": "5cceb03e016e47ef16ea33a7fac5b3f8b45b9748",
+  "maxLiveJourneys": 5,
+  "usedLiveJourneys": 5,
+  "liveJourneys": [
+    {
+      "number": 1,
+      "purpose": "qualify real root-index epoch before unscoped follow",
+      "startedAt": "2026-10-06T19:46:42.540Z",
+      "request": {
+        "provider": "chatgpt",
+        "runtimeProfile": "wsl-chrome-3",
+        "sweepMode": "steady_follow",
+        "requestedPhase": "root-conversations",
+        "explicitRefresh": true,
+        "collectorTimeoutMs": 600000
+      },
+      "error": "API 500 {\"error\":{\"message\":\"Provider traffic governor is required before physical action: provider:chatgpt:connect-tab.\",\"type\":\"server_error\"}}",
+      "outcome": "admission_denied_before_connect_tab",
+      "observerEndedAt": "2026-10-06T19:47:06.464Z",
+      "cleanup": {
+        "ownedChromeRoots": 0,
+        "activeLeases": 0,
+        "idleLeases": 1,
+        "schedulerPaused": true,
+        "existingCompletionsPaused": 16
+      }
+    },
+    {
+      "number": 2,
+      "startedAt": "2026-10-06T23:38:23.389Z",
+      "purpose": "normal unscoped follow with automatic maxItems1 child",
+      "request": {
+        "provider": "chatgpt",
+        "runtimeProfile": "wsl-chrome-3",
+        "sweepMode": "steady_follow",
+        "materializationPolicy": "full_missing_assets",
+        "materializationAssetKinds": [
+          "artifacts"
+        ],
+        "materializationMaxItems": 1,
+        "materializationRefreshSnapshot": true,
+        "materializationForce": false
+      },
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "endedAt": "2026-10-06T23:38:38.637Z",
+      "jobId": "hmj_751709d6ec9b4bf7b5a0844727a20a05",
+      "outcome": "not_accepted_custody_stop",
+      "stopReason": "observer_guard",
+      "childOutcome": "skipped",
+      "parentOutcome": "paused",
+      "providerWorkSettledAt": "2026-10-06T23:42:06.138Z",
+      "receipt": "docs/dev/notes/2026-10-06-plan0386-frontier-journey2.json"
+    },
+    {
+      "number": 3,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T01:03:51.306Z",
+      "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+      "purpose": "installed normal unscoped follow and frontier-restricted automatic child",
+      "beforePassCount": 1,
+      "endedAt": "2026-10-07T01:08:04.577Z",
+      "jobId": "hmj_4fc66a83d66f4d698f3d43684eab6093",
+      "outcome": "succeeded",
+      "stopReason": null
+    },
+    {
+      "number": 4,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T01:12:02.919Z",
+      "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 2,
+      "endedAt": "2026-10-07T01:17:39.964Z",
+      "jobId": "hmj_3c654c287b34465cbd32e2c6ef42be87",
+      "outcome": "succeeded",
+      "stopReason": null
+    },
+    {
+      "number": 5,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T01:19:04.578Z",
+      "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 3,
+      "endedAt": "2026-10-07T01:24:42.192Z",
+      "jobId": "hmj_4805a8c050e24925807015260d6cd681",
+      "outcome": "skipped",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey5.json"
+    }
+  ],
+  "schedulerResumeAuthorized": false,
+  "normalPolicy": {
+    "maxPageReadsPerCycle": 4,
+    "maxConversationRowsPerCycle": 30,
+    "maxArtifactRowsPerCycle": 24,
+    "maxBrowserInteractionsPerMinute": 6,
+    "newTransferLimit": 1,
+    "force": false
+  },
+  "stopConditions": [
+    "provider warning/429/CAPTCHA",
+    "identity or custody mismatch",
+    "unknown provider outcome",
+    "admission denial",
+    "five journeys exhausted"
+  ],
+  "qualificationStage": "Provider-free fixture mapping and frontier handoff fix qualified; installed proof pending",
+  "executionStopped": true,
+  "stopReason": "five_journey_allowance_exhausted",
+  "stopClearance": {
+    "authority": "User: continue",
+    "at": "2026-10-06T23:38:16.336707+00:00",
+    "remainingJourneys": 4,
+    "seam": "normal unscoped steady-follow completion"
+  },
+  "remainingJourneys": 0,
+  "stopClearances": [
+    {
+      "authority": "User: continue after Agent Browser ownership readback",
+      "at": "2026-10-07T01:01:03.031757+00:00",
+      "remainingJourneys": 3,
+      "preflight": "zero active jobs/leases/native browser; guard clear; scheduler and all completions paused"
+    }
+  ]
+}

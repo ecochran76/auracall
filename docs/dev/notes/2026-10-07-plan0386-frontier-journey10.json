@@ -1,0 +1,29 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 10,
+  "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+  "runtimeProfile": "wsl-chrome-3",
+  "apiPid": 98818,
+  "outcome": "PAUSED_BEFORE_PROVIDER_ON_DISCOVERED_PRIOR_DENIAL",
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "beforePassCount": 7,
+  "finalPassCount": 7,
+  "beforeStatus": "idle_waiting",
+  "afterStatus": "paused",
+  "newChild": false,
+  "observerAttachments": 0,
+  "observerTraffic": {
+    "requests": 0,
+    "documents": 0,
+    "responses": 0,
+    "http429": 0
+  },
+  "downloads": 0,
+  "warnings": [],
+  "endedAt": "2026-10-07T10:47:59.058Z",
+  "limitations": [
+    "Journey10 started before full journey9 entry inspection exposed the denial. It remains conservatively charged.",
+    "Only the owned observation controller was stopped; the paused API operation and browser custody were preserved."
+  ],
+  "noWiderAcceptanceClaim": true
+}

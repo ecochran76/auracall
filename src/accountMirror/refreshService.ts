@@ -74,6 +74,7 @@ import type {
 import { createAccountMirrorStatusRegistry } from "./statusRegistry.js";
 
 export interface AccountMirrorRefreshRequest {
+	conversationIds?: string[] | null;
 	provider?: AccountMirrorProvider | null;
 	runtimeProfileId?: string | null;
 	sweepMode?: "steady_follow" | "full_sweep" | null;
@@ -552,6 +553,7 @@ export function createAccountMirrorRefreshService(input: {
 						sweepMode: normalizeSweepMode(request.sweepMode),
 						materializationPolicy: request.materializationPolicy ?? null,
 						requestedPhase,
+						conversationIds: request.conversationIds,
 						limits: {
 							maxPageReadsPerCycle:
 								development?.maxConversations ?? target.limits.maxPageReadsPerCycle,
@@ -625,7 +627,24 @@ export function createAccountMirrorRefreshService(input: {
 					provider,
 					boundIdentityKey: target.expectedIdentityKey ?? collection.detectedIdentityKey,
 					collection,
+					scoped: Boolean(request.conversationIds?.length),
 				});
+				if (request.conversationIds?.length) {
+					const prior = target.metadataEvidence;
+					collectionWithPriorManifests.evidence = {
+						...collectionWithPriorManifests.evidence,
+						projectSampleIds: prior?.projectSampleIds ?? [],
+						conversationSampleIds: prior?.conversationSampleIds ?? [],
+						truncated: prior?.truncated ?? { projects: true, conversations: true, artifacts: true },
+						projectConversations: prior?.projectConversations,
+						attachmentInventory: prior?.attachmentInventory,
+						conversationFreshnessFrontier: prior?.conversationFreshnessFrontier,
+						providerIndexEpoch: prior?.providerIndexEpoch,
+						routeProgress: prior?.routeProgress,
+						assetInventory: prior?.assetInventory,
+						collectorProgress: prior?.collectorProgress,
+					};
+				}
 				const completedAt = now();
 				const providerCooldown = await readAccountMirrorProviderCooldown({
 					provider,
@@ -673,17 +692,21 @@ export function createAccountMirrorRefreshService(input: {
 					runtimeProfileId,
 					explicitRefresh: true,
 				});
-				const refreshedBackfillLedger = deriveAccountMirrorBackfillLedger({
-					provider,
-					runtimeProfileId,
-					browserProfileId: target.browserProfileId,
-					boundIdentityKey:
-						target.expectedIdentityKey ?? collectionWithPriorManifests.detectedIdentityKey ?? "",
-					updatedAt: completedAt.toISOString(),
-					previous: target.backfillLedger,
-					evidence: collectionWithPriorManifests.evidence,
-					mirrorCompleteness: preliminaryMirrorStatus.entries[0]?.mirrorCompleteness ?? null,
-				});
+				const refreshedBackfillLedger = request.conversationIds?.length
+					? target.backfillLedger
+					: deriveAccountMirrorBackfillLedger({
+							provider,
+							runtimeProfileId,
+							browserProfileId: target.browserProfileId,
+							boundIdentityKey:
+								target.expectedIdentityKey ??
+								collectionWithPriorManifests.detectedIdentityKey ??
+								"",
+							updatedAt: completedAt.toISOString(),
+							previous: target.backfillLedger,
+							evidence: collectionWithPriorManifests.evidence,
+							mirrorCompleteness: preliminaryMirrorStatus.entries[0]?.mirrorCompleteness ?? null,
+						});
 				registry.mergeState(
 					{ provider, runtimeProfileId },
 					{
@@ -2163,6 +2186,7 @@ async function mergeCollectionWithPersistedCatalog(input: {
 	provider: AccountMirrorProvider;
 	boundIdentityKey: string | null;
 	collection: AccountMirrorMetadataCollectorResult;
+	scoped?: boolean;
 }): Promise<AccountMirrorMetadataCollectorResult> {
 	const existing = await input.persistence.readCatalog({
 		provider: input.provider,
@@ -2178,7 +2202,7 @@ async function mergeCollectionWithPersistedCatalog(input: {
 		});
 	}
 	const projects =
-		input.collection.evidence.truncated.projects === true
+		input.scoped || input.collection.evidence.truncated.projects === true
 			? mergeById(existing.projects, input.collection.manifests.projects)
 			: [...input.collection.manifests.projects];
 	const manifests = {

@@ -1,0 +1,188 @@
+{
+  "schema": "auracall_plan0386_frontier_allowance.v1",
+  "runtimeProfile": "wsl-chrome-3",
+  "schedulerResumeAuthorized": false,
+  "normalPolicy": {
+    "maxPageReadsPerCycle": 4,
+    "maxConversationRowsPerCycle": 30,
+    "maxArtifactRowsPerCycle": 24,
+    "maxBrowserInteractionsPerMinute": 6,
+    "newTransferLimit": 1,
+    "force": false
+  },
+  "objective": "Continue unchanged normal unscoped frontier acceptance with six additional journeys plus the user four-journey refill",
+  "authority": "User: continue with an additional 6 journeys",
+  "sourceBase": "cd1ec3945a730290896f0170594dd9d863866113",
+  "installedSource": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "maxLiveJourneys": 10,
+  "journeyOffset": 5,
+  "usedLiveJourneys": 10,
+  "remainingJourneys": 0,
+  "liveJourneys": [
+    {
+      "number": 6,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T02:19:01.954Z",
+      "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 4,
+      "endedAt": "2026-10-07T02:23:09.998Z",
+      "jobId": "hmj_26bf0fd6422e4e928fd44c262ddef2f3",
+      "outcome": "skipped",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey6.json"
+    },
+    {
+      "number": 7,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T02:27:36.334Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 5,
+      "endedAt": "2026-10-07T02:34:21.900Z",
+      "jobId": "hmj_06df733ff2c84c02b760f475b8f02770",
+      "outcome": "skipped",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey7.json"
+    },
+    {
+      "number": 8,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T02:34:57.083Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 6,
+      "endedAt": "2026-10-07T02:41:27.942Z",
+      "jobId": null,
+      "outcome": "paused",
+      "stopReason": "observer_custody_or_guard",
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey8.json"
+    },
+    {
+      "number": 9,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T10:43:16.717Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 6,
+      "endedAt": "2026-10-07T10:45:15.897Z",
+      "jobId": "hmj_44d119c8f2ee4d0f8ed18dee46f4ad5b",
+      "outcome": "skipped",
+      "stopReason": "crawler_endpoint_admission_denial",
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey9.json",
+      "semanticOutcome": "ADMISSION_DENIED_WITH_LEGACY_SKIPPED_PROJECTION"
+    },
+    {
+      "number": 10,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T10:46:39.665Z",
+      "sourceCommit": "89697e28fbccd488cb2f88b24a7fbccb040c72bc",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 7,
+      "outcome": "PAUSED_BEFORE_PROVIDER_ON_DISCOVERED_PRIOR_DENIAL",
+      "endedAt": "2026-10-07T10:47:59.058Z",
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey10.json"
+    },
+    {
+      "number": 11,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T13:59:16.995Z",
+      "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 7,
+      "endedAt": "2026-10-07T14:05:16.447Z",
+      "jobId": "hmj_8c4cd50ecc34472fb2b35addc0892b82",
+      "outcome": "succeeded",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey11.json"
+    },
+    {
+      "number": 12,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T14:06:33.632Z",
+      "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 8,
+      "endedAt": "2026-10-07T14:12:21.257Z",
+      "jobId": "hmj_d66742ffdc1a42d39e218235ed824860",
+      "outcome": "succeeded",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey12.json"
+    },
+    {
+      "number": 13,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T14:13:04.312Z",
+      "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 9,
+      "endedAt": "2026-10-07T14:21:22.741Z",
+      "jobId": "hmj_1d5be27e7a6046848468a662a5c7bc05",
+      "outcome": "succeeded",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey13.json"
+    },
+    {
+      "number": 14,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T14:22:42.161Z",
+      "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 10,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey14.json",
+      "endedAt": "2026-10-07T14:30:20.599Z",
+      "jobId": "hmj_3215576bd0104c5db76f14edc1dfa555",
+      "outcome": "succeeded",
+      "stopReason": null
+    },
+    {
+      "number": 15,
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "startedAt": "2026-10-07T14:32:01.846Z",
+      "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+      "purpose": "unchanged-index continuation and captured-family preservation at normal eligibility",
+      "beforePassCount": 11,
+      "endedAt": "2026-10-07T14:39:24.426Z",
+      "jobId": "hmj_09d2dac221964b9c8a3f0cf27cde640a",
+      "outcome": "succeeded",
+      "stopReason": null,
+      "receipt": "docs/dev/notes/2026-10-07-plan0386-frontier-journey15.json"
+    }
+  ],
+  "executionStopped": true,
+  "stopConditions": [
+    "provider warning/429/CAPTCHA",
+    "identity or custody mismatch",
+    "unknown provider outcome",
+    "admission denial",
+    "ten additional journeys exhausted (six plus user four-journey refill)"
+  ],
+  "priorAllowance": "docs/dev/notes/2026-10-06-plan0386-frontier-allowance.json",
+  "installedWorkerSha256": "556f4ff68f05fbec7537b64a42603a39c932d6fe0127af633dfd459e2a00657f",
+  "apiPid": 53966,
+  "stopClearances": [
+    {
+      "authority": "User: try again",
+      "at": "2026-10-07T10:43:03.134907+00:00",
+      "preflight": "API98818 zero restarts; installed worker hash unchanged; exact native browser absent; zero active/idle leases/jobs; profile guard clear",
+      "remainingJourneys": 3
+    },
+    {
+      "authority": "User clarifies LitScout owned the browser/profile lock and its closure was agreed; standing continuation plus four additional journeys",
+      "at": "2026-10-07T13:59:01.450691+00:00",
+      "preflight": "API53966; exact managed native absent; zero jobs/held leases; scheduler and 17 parents paused; profile guard clear",
+      "causalEvidence": "Operator attribution to agreed LitScout closure; OS signal attribution remains unobserved",
+      "remainingJourneys": 5
+    }
+  ],
+  "stopReason": "ten_additional_journeys_exhausted",
+  "allowanceExtensions": [
+    {
+      "authority": "User: you might as well refill with another four Journeys",
+      "addedJourneys": 4,
+      "previousMaxLiveJourneys": 6,
+      "newMaxLiveJourneys": 10
+    }
+  ],
+  "originalObjective": "Continue unchanged normal unscoped frontier acceptance with six additional journeys"
+}

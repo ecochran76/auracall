@@ -1,0 +1,78 @@
+{
+  "schema": "auracall_plan0386_refill_final_readback.v1",
+  "at": "2026-10-07T14:41:26.771Z",
+  "installedSource": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "apiPid": 53966,
+  "additionalAllowance": {
+    "initial": 6,
+    "refill": 4,
+    "used": 10,
+    "remaining": 0
+  },
+  "latestJourneys": [
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "artifacts": [
+    {
+      "journey": 11,
+      "size": 38789,
+      "mimeType": "application/zip",
+      "sha256": "97e318f2c4077d3de8f6b22add3865328ccd3c4886df49ba61f33e6d3d048b17",
+      "archiveHttpStatus": 200,
+      "archiveItemId": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6abc6682-8034-83ea-993d-a020008cc3ff:download-dom_message-1_0"
+    },
+    {
+      "journey": 12,
+      "size": 66392,
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "sha256": "afc81ea7ed5e8df216fc90d74ba56ce1d7afbc42d3e0f9e6087b0b505533c6b4",
+      "archiveHttpStatus": 200,
+      "archiveItemId": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6abc6682-8034-83ea-993d-a020008cc3ff:download-dom_message-1_1"
+    },
+    {
+      "journey": 13,
+      "size": 26284,
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "sha256": "7bced25cabc0e560924d086750f376fd210fb67904e75bf029c3372a4463651b",
+      "archiveHttpStatus": 200,
+      "archiveItemId": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6abc6682-8034-83ea-993d-a020008cc3ff:download-dom_message-3_0"
+    },
+    {
+      "journey": 14,
+      "size": 17174,
+      "mimeType": "application/zip",
+      "sha256": "52112eb2942199004c38dba1582a4747b3a6b9d36515c6731c36cbcfcdb71348",
+      "archiveHttpStatus": 200,
+      "archiveItemId": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6abc6682-8034-83ea-993d-a020008cc3ff:download-dom_message-3_1"
+    },
+    {
+      "journey": 15,
+      "size": 1723452,
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "sha256": "a40a11930bfa40194202e562f28ba68fb24bfcc194ecd1bc7d19ac756c20469c",
+      "archiveHttpStatus": 200,
+      "archiveItemId": "history-generated-artifact:chatgpt:eric.cochran_soylei.com:6abc6682-8034-83ea-993d-a020008cc3ff:download-dom_message-3_2"
+    }
+  ],
+  "uniqueHashes": 5,
+  "uniqueArchiveItems": 5,
+  "baselineFilesStable": 8,
+  "normalPolicyVerified": true,
+  "schedulerPaused": true,
+  "parentPaused": true,
+  "priorPausedCount": 16,
+  "activeJobs": 0,
+  "heldLeases": 0,
+  "nativeManagedBrowserAbsent": true,
+  "broaderMatrix": "OPEN",
+  "limitations": [
+    "Journeys8–10 preserve stopped/denied and conservatively charged outcomes.",
+    "Latest five captures do not establish the full independent changed-index/quiet-complete matrix.",
+    "Journey14 monitor reattached without another provider start; timestamp ordering limit remains in its receipt."
+  ],
+  "memoryDisposition": "unavailable"
+}

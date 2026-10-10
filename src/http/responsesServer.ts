@@ -2814,6 +2814,7 @@ export async function createResponsesHttpServer(
 				const body = await readRequestBody(req);
 				const payload = ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA.parse(JSON.parse(body || "{}"));
 				const result = accountMirrorCompletionService.start({
+					conversationIds: payload.conversationIds,
 					provider: payload.provider,
 					runtimeProfileId: payload.runtimeProfile,
 					maxPasses: payload.maxPasses,
@@ -8620,27 +8621,35 @@ const ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA = z
 		}
 	});
 
-const ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA = z.object({
-	provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
-	runtimeProfile: z.string().trim().min(1).optional(),
-	maxPasses: z.number().int().positive().max(500).optional(),
-	sweepMode: z.enum(["steady_follow", "full_sweep"]).optional(),
-	sweep_mode: z.enum(["steady_follow", "full_sweep"]).optional(),
-	materializationPolicy: z
-		.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
-		.optional(),
-	materialization_policy: z
-		.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
-		.optional(),
-	materializationAssetKinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
-	materialization_asset_kinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
-	materializationMaxItems: z.number().int().positive().max(500).optional(),
-	materialization_max_items: z.number().int().positive().max(500).optional(),
-	materializationRefreshSnapshot: z.boolean().optional(),
-	materialization_refresh_snapshot: z.boolean().optional(),
-	materializationForce: z.boolean().optional(),
-	materialization_force: z.boolean().optional(),
-});
+const ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA = z
+	.object({
+		conversationIds: z.array(z.string().trim().min(1)).min(1).max(100).optional(),
+		provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),
+		runtimeProfile: z.string().trim().min(1).optional(),
+		maxPasses: z.number().int().positive().max(500).optional(),
+		sweepMode: z.enum(["steady_follow", "full_sweep"]).optional(),
+		sweep_mode: z.enum(["steady_follow", "full_sweep"]).optional(),
+		materializationPolicy: z
+			.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
+			.optional(),
+		materialization_policy: z
+			.enum(["metadata_only", "recent_missing_assets", "full_missing_assets"])
+			.optional(),
+		materializationAssetKinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+		materialization_asset_kinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
+		materializationMaxItems: z.number().int().positive().max(500).optional(),
+		materialization_max_items: z.number().int().positive().max(500).optional(),
+		materializationRefreshSnapshot: z.boolean().optional(),
+		materialization_refresh_snapshot: z.boolean().optional(),
+		materializationForce: z.boolean().optional(),
+		materialization_force: z.boolean().optional(),
+	})
+	.refine(
+		(value) =>
+			!value.conversationIds ||
+			(value.sweepMode ?? value.sweep_mode ?? "steady_follow") === "steady_follow",
+		{ message: "conversationIds requires steady_follow.", path: ["conversationIds"] },
+	);
 
 const ACCOUNT_MIRROR_RECONCILIATION_REQUEST_SCHEMA = z.object({
 	provider: z.enum(["chatgpt", "gemini", "grok"]).optional(),

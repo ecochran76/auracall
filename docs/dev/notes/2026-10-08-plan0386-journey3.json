@@ -1,0 +1,23 @@
+{
+  "schema": "auracall_plan0386_resume_observation.v1",
+  "journey": 3,
+  "number": 3,
+  "startedAt": "2026-10-08T10:58:57.293Z",
+  "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+  "beforePassCount": 1,
+  "purpose": "normal unscoped index qualification and automatic child acceptance",
+  "status": "observed_terminal",
+  "endedAt": "2026-10-08T11:01:02.517060+00:00",
+  "outcome": "conservatively_charged_resume_of_existing_child",
+  "jobId": "hmj_2850a1a042df4049ad4a21d7180b6ac8",
+  "childStatus": "skipped",
+  "afterPassCount": 1,
+  "limitation": "Child queued after journey2 pause and was already running before journey3 resume. Journey3 did not create a new child; monitor replaced without another provider start.",
+  "priorChildCreatedAt": "2026-10-08T10:56:54.495Z",
+  "priorChildCompletedAt": "2026-10-08T10:59:01.099Z",
+  "newChildCreated": false,
+  "providerAcceptanceClaim": false,
+  "monitorCorrection": "Watch a before-existing child when it was running at entry. Stop on terminal new child irrespective of collector passCount advancing. Do not treat initial collector result alone as terminal.",
+  "parentStatusAfterControl": "paused",
+  "sourceRepair": false
+}

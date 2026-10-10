@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "dependency_representation": "Issue body links; native planning mutations are outside the target registry allowlist.",
+  "tickets": [
+    {
+      "action": "create",
+      "repository": "ecochran76/auracall",
+      "host": "github.com",
+      "actor": "ecochran76",
+      "idempotency_key": "auracall-plan0391-desktop-binding",
+      "number": 240,
+      "url": "https://github.com/ecochran76/auracall/issues/240",
+      "created_at": "2026-10-09T01:42:17Z",
+      "readback_at": "2026-10-09T01:42:18.655210+00:00",
+      "title": "Configure named AuraCall desktops and bind browser launches",
+      "state": "OPEN",
+      "labels": [
+        "enhancement"
+      ],
+      "body_sha256": "1eeea793fd65bdc2722e64fcd3b6b295f06b00fb67f11bab9cf5d2f1511de828",
+      "blocked_by": [],
+      "operator_authority": "User: yes. write the tickets and then a repo plan",
+      "preflight_ok": true,
+      "before": "No duplicate candidate for the idempotency key",
+      "readback_verified": true
+    },
+    {
+      "action": "create",
+      "repository": "ecochran76/auracall",
+      "host": "github.com",
+      "actor": "ecochran76",
+      "idempotency_key": "auracall-plan0391-desktop-client",
+      "number": 241,
+      "url": "https://github.com/ecochran76/auracall/issues/241",
+      "created_at": "2026-10-09T01:42:21Z",
+      "readback_at": "2026-10-09T01:42:21.604568+00:00",
+      "title": "Display AuraCall-owned desktops in a dedicated remote-view client",
+      "state": "OPEN",
+      "labels": [
+        "enhancement"
+      ],
+      "body_sha256": "aba4b7551e3a90da2abf12da2ea2c102bf9242c76e108766fd03d19d71a325a6",
+      "blocked_by": [
+        240
+      ],
+      "operator_authority": "User: yes. write the tickets and then a repo plan",
+      "preflight_ok": true,
+      "before": "No duplicate candidate for the idempotency key",
+      "readback_verified": true
+    },
+    {
+      "action": "create",
+      "repository": "ecochran76/auracall",
+      "host": "github.com",
+      "actor": "ecochran76",
+      "idempotency_key": "auracall-plan0391-control-handoff",
+      "number": 242,
+      "url": "https://github.com/ecochran76/auracall/issues/242",
+      "created_at": "2026-10-09T01:42:23Z",
+      "readback_at": "2026-10-09T01:42:24.412132+00:00",
+      "title": "Coordinate explicit desktop control handoff with AuraCall automation",
+      "state": "OPEN",
+      "labels": [
+        "enhancement"
+      ],
+      "body_sha256": "060c0075afc3de3778d844b169053890e3865b30b3741b3833fe03fda4bc20e2",
+      "blocked_by": [
+        241
+      ],
+      "operator_authority": "User: yes. write the tickets and then a repo plan",
+      "preflight_ok": true,
+      "before": "No duplicate candidate for the idempotency key",
+      "readback_verified": true
+    }
+  ]
+}

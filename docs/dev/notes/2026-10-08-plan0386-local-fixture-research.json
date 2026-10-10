@@ -1,0 +1,43 @@
+{
+  "schema": "auracall_plan0386_local_fixture_research.v1",
+  "at": "2026-10-08T10:49:00Z",
+  "cacheOnly": true,
+  "providerDetection": false,
+  "rows": 348,
+  "metadataCompleteCandidates": 23,
+  "readableCandidatesWithJobChecksums": 23,
+  "baselineA": {
+    "conversationId": "6ab19c99-9d4c-83ea-9024-6f56150107a0",
+    "metadataComplete": true,
+    "manifestSummary": [
+      {
+        "kind": "file-fetch-manifest.json",
+        "entries": 2,
+        "states": {
+          "materialized": 2
+        },
+        "allReadable": true
+      },
+      {
+        "kind": "artifact-fetch-manifest.json",
+        "entries": 1,
+        "states": {
+          "materialized": 1
+        },
+        "allReadable": true
+      }
+    ]
+  },
+  "independentChangedB": "requires current index comparison; no synthetic mutation authorized",
+  "providerFreeValidation": {
+    "tests": 260,
+    "files": 5,
+    "seconds": 4.8,
+    "result": "passed"
+  },
+  "limitations": [
+    "Historical job entry membership checked using conversation-qualified archive/provider IDs",
+    "Current manifests define the retained inventory; historical extra files do not establish current completeness",
+    "No fresh provider index observed during local research"
+  ]
+}

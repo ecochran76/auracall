@@ -143,6 +143,12 @@ configured conversation-read, page-refresh, or renavigation cooldown has
 elapsed before provider work begins. Its snapshot and asset operations then
 share one job-scoped interaction governor.
 
+For ChatGPT steady follow, supplied collector detail and retained-reference
+IDs constrain the automatic child's conversation selection as well as snapshot
+reuse. An explicit operator conversation scope takes precedence. A qualified
+empty frontier does not fall back to account-wide reconciliation. Full sweeps
+retain their account-wide selection contract.
+
 When completion-owned materialization becomes terminal, its `completedAt`
 provider-work boundary starts a fresh collector minimum interval. The
 completion cursor persists that settlement timestamp across restarts, and the
@@ -241,6 +247,12 @@ reads and conversation execution reuse it with revision-fenced claims. A second
 concurrent operation receives explicit process contention before opening another
 page; a provider action still requires its own admission and account identity.
 Conversation changes navigate the same owned target under the existing governor.
+A resumed detail pass freezes its one-row traffic budget for the row selected
+by the persisted cursor, using the same normalized cursor indices as the reader.
+A single-visit ChatGPT context read reuses an already ready conversation when
+the conversation ID and expected project ID match, including project URLs with
+a title slug. A slug difference alone does not spend another navigation; a
+different project still requires the normal governed navigation.
 An explicit exact-existing-page request refuses an incompatible retained
 live-follow tab instead of opening another page.
 
@@ -273,3 +285,33 @@ Maintenance checks retained idle process bindings for native PID liveness. A
 stopped owner loses retention and becomes eligible for ordinary TTL retirement.
 A living active retained follow may outlive its old absolute TTL while its
 heartbeat remains fresh; heartbeat expiry still fences stale active ownership.
+
+## Explicit conversation scope
+
+`POST /v1/account-mirrors/completions` accepts optional `conversationIds`
+(nonempty IDs, at most 100) with `sweepMode: "steady_follow"`. The scope is
+persisted on the completion and reaches both detail collection and its
+automatically queued materialization child. Cached conversation metadata is
+retained, unrelated cursor offsets are ignored, and unrelated account-library
+catchup is omitted. The account identity and normal traffic, cadence, warning
+and cache rules still apply. `full_sweep` with a scope is rejected.
+`materializationMaxItems` continues to limit new transfers rather than
+verified cache reuses. Use `materializationForce: false` for an unchanged repeat.
+
+### Frontier retry fairness
+
+Frontier-scoped reconciliation applies the existing retry rotation within the
+supplied IDs. A settled skipped attempt with zero attempted assets, no guard
+and no materialized candidate moves behind unattempted work in the same retry
+lane. Ties preserve collector order; force mode bypasses rotation. Account,
+provider, runtime browser profile and selected asset-kind boundaries remain
+unchanged. No target or transfer budget is increased, and no row outside the
+frontier becomes eligible. This does not mark metadata-only rows complete.
+
+### Endpoint-denial projection
+
+A crawler-target verification denial caused by a missing browser endpoint is
+failed retryable materialization, preserving its exact diagnostic. It must not
+project a refreshed, routeable file snapshot or a benign empty-inventory skip.
+This classification does not authorize relaunch, adoption, forced retry or
+closing another workflow's browser. Native loss causality remains separate.

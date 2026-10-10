@@ -1,0 +1,151 @@
+{
+  "schema": "auracall_plan0386_goal_control.v1",
+  "objective": "Complete Plan0386",
+  "authority": "User goal 2026-10-08: research then fresh allowance of 8 journeys; no implementation theater; stop/checkpoint before 2h or 1MM tokens",
+  "startedAt": "2026-10-08T10:45:23Z",
+  "checkpointDeadline": "2026-10-08T12:40:00Z",
+  "runtimeProfile": "wsl-chrome-3",
+  "maxLiveJourneys": 8,
+  "usedLiveJourneys": 8,
+  "remainingJourneys": 0,
+  "liveJourneys": [
+    {
+      "number": 1,
+      "startedAt": "2026-10-08T10:50:39.584Z",
+      "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+      "beforePassCount": 12,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T10:51:52.043Z",
+      "jobId": null,
+      "childStatus": null,
+      "afterPassCount": 12,
+      "error": {
+        "message": "Chrome DevTools 127.0.0.1:45015 did not become ready",
+        "code": null
+      },
+      "outcome": "failed_browser_readiness",
+      "stopResolvedBy": "display feedback loop: :923 timeout; :0.0 responsive; exact browser-family display repaired; native browser/leases/control clear before service config reload"
+    },
+    {
+      "number": 2,
+      "startedAt": "2026-10-08T10:54:51.462Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 0,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T10:56:53.163Z",
+      "jobId": null,
+      "childStatus": null,
+      "afterPassCount": 1,
+      "error": null
+    },
+    {
+      "number": 3,
+      "startedAt": "2026-10-08T10:58:57.293Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 1,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:01:02.517060+00:00",
+      "outcome": "conservatively_charged_resume_of_existing_child",
+      "jobId": "hmj_2850a1a042df4049ad4a21d7180b6ac8",
+      "childStatus": "skipped",
+      "afterPassCount": 1,
+      "limitation": "Child queued after journey2 pause and was already running before journey3 resume. Journey3 did not create a new child; monitor replaced without another provider start."
+    },
+    {
+      "number": 4,
+      "startedAt": "2026-10-08T11:01:40.306Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 1,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:08:08.295Z",
+      "jobId": "hmj_b403983f180246bca9a74946cf184a6c",
+      "childStatus": "skipped",
+      "afterPassCount": 2,
+      "error": null
+    },
+    {
+      "number": 5,
+      "startedAt": "2026-10-08T11:20:28.139Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 2,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:22:43.392Z",
+      "jobId": "hmj_abc4d9e0f1f14359a4d8165a62cd38c7",
+      "childStatus": "skipped",
+      "afterPassCount": 3,
+      "error": null,
+      "outcome": "collector_cursor_budget_denial_child_skipped",
+      "limitation": "Parent paused after collector limit0 denial; child terminal observed separately after monitor exited on parent pause."
+    },
+    {
+      "number": 6,
+      "startedAt": "2026-10-08T11:26:57.972Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 3,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:31:47.287Z",
+      "jobId": "hmj_eda66dc3f4764bea8e473c2865970def",
+      "childStatus": "skipped",
+      "afterPassCount": 4,
+      "error": null
+    },
+    {
+      "number": 7,
+      "startedAt": "2026-10-08T11:33:24.450Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 4,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:40:40.066Z",
+      "jobId": "hmj_9ced31c4acca435883718322aa3d920d",
+      "childStatus": "succeeded",
+      "afterPassCount": 5,
+      "error": null
+    },
+    {
+      "number": 8,
+      "startedAt": "2026-10-08T11:43:01.003Z",
+      "parentId": "acctmirror_completion_7aeaa36f-60ad-49cc-9e29-7877ba6329ca",
+      "beforePassCount": 5,
+      "purpose": "normal unscoped index qualification and automatic child acceptance",
+      "status": "observed_terminal",
+      "endedAt": "2026-10-08T11:49:31.763Z",
+      "jobId": "hmj_a304c547e3374315b7f45d78fee89a8b",
+      "childStatus": "succeeded",
+      "afterPassCount": 6,
+      "error": null
+    }
+  ],
+  "sourceCommit": "873ad09bffb0295e631ef48ea3f6e8851e0db160",
+  "gates": [
+    "independent changed-index + quiet-complete matrix",
+    "deferred/guarded persistence evidence",
+    "bounded scheduler continuation after gate1"
+  ],
+  "hardStops": [
+    "warning/429/CAPTCHA",
+    "identity/custody mismatch",
+    "unknown terminal outcome",
+    "admission failure",
+    "8 journeys",
+    "checkpoint deadline"
+  ],
+  "policy": {
+    "maxItems": 1,
+    "force": false,
+    "interactionsPerMinute": 6,
+    "explicitConversationScope": false,
+    "globalSchedulerResume": false
+  },
+  "progress": "All eight journeys terminal; two verified Markdown captures (6172 and10860 bytes), baseline A and earlier capture unchanged. Source repairs installed and exercised. Independent changed-B/quiet-complete and dependent scheduler acceptance remain OPEN. No ninth journey authorized.",
+  "latestJourneyStart": "2026-10-08T12:25:00Z",
+  "finalRuntimeSourceCommit": "5b05f5371a6de1cca103d35145dc51a076d8131f",
+  "checkpointAt": "2026-10-08T11:51:18.612Z",
+  "planState": "OPEN"
+}

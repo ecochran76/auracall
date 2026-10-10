@@ -87,12 +87,12 @@ export function createAccountMirrorCompletionStore(input: {
 				if (isMissingFileError(error)) return [];
 				throw error;
 			}
-				const recordPaths = entries
-					.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-					.map((entry) => path.join(rootDir, entry.name));
-				const records = (await readStoredRecordsBounded(recordPaths)).filter(
-					(record): record is AccountMirrorCompletionStoredRecord => record !== null,
-				);
+			const recordPaths = entries
+				.filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+				.map((entry) => path.join(rootDir, entry.name));
+			const records = (await readStoredRecordsBounded(recordPaths)).filter(
+				(record): record is AccountMirrorCompletionStoredRecord => record !== null,
+			);
 			const operations = records
 				.map((record) => record.operation)
 				.filter((operation) => !options.activeOnly || isActiveOperation(operation))
@@ -176,6 +176,16 @@ function parseOperation(value: unknown): AccountMirrorCompletionOperation {
 		id: readRequiredString(value.id, "id"),
 		provider: readProvider(value.provider),
 		runtimeProfileId: readRequiredString(value.runtimeProfileId, "runtimeProfileId"),
+		conversationIds: Array.isArray(value.conversationIds)
+			? [
+					...new Set(
+						value.conversationIds
+							.filter((id): id is string => typeof id === "string")
+							.map((id) => id.trim())
+							.filter(Boolean),
+					),
+				]
+			: undefined,
 		mode: value.mode === "bounded" ? "bounded" : "live_follow",
 		sweepMode: readSweepMode(value.sweepMode),
 		phase: value.phase === "steady_follow" ? "steady_follow" : "backfill_history",

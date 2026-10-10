@@ -1,0 +1,48 @@
+{
+  "at": "2026-10-08T13:13:04.342Z",
+  "cacheOnly": true,
+  "providerDetection": false,
+  "rows": 349,
+  "baselineRows": 348,
+  "indexedRankSampleSize": 30,
+  "sampledCompleteCandidates": [],
+  "newRows": [
+    {
+      "id": "6ac76440-d80c-83e9-8b84-df32c009247d",
+      "metadataComplete": false,
+      "fingerprint": "sha256:8c95b1270c949e30f14e2ffa305234e1",
+      "fileCount": 0,
+      "hasCachedContext": true,
+      "contextItemKeys": [
+        "provider",
+        "conversationId",
+        "messages"
+      ],
+      "metadataKeys": [
+        "indexObservedAt",
+        "indexSource",
+        "indexRank",
+        "conversationFingerprint",
+        "changeFrontierState"
+      ]
+    }
+  ],
+  "positiveRows": [
+    {
+      "id": "6a95f944-cda8-83ea-b270-f6d13c8533df",
+      "metadataComplete": false,
+      "fingerprint": "sha256:fbe9b4f117e77f3eff0c545ecd6bf286",
+      "indexRank": 0
+    },
+    {
+      "id": "6a95ef46-fb90-83ea-a0c9-33e5a50649dc",
+      "metadataComplete": false,
+      "fingerprint": "sha256:b7806afc8a55b1290498abf94497257a",
+      "indexRank": 1
+    }
+  ],
+  "limitations": [
+    "Persisted indexRank locates the prior sample; no fresh provider sample was read.",
+    "No provider read or content mutation; missing downloadability cannot be inferred from absent context."
+  ]
+}

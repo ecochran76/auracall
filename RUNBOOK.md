@@ -1,3 +1,7 @@
+## 2026-10-10 | Plan0393 installed inventory accepted
+
+PR248 integrated c629aeb0. Original installed apps list succeeds with complete 26-app inventory and unknown Developer mode; exact account and enabled Im Receipts identity qualified privately. Two compiled modules promoted with rollback custody. 79 focused/adjacent tests and independent source/installed review pass; GitHub CI reported no checks. Bounded Plan0393 closes; create/replace live acceptance remains untested. See docs/dev/notes/2026-10-10-plan0393-inventory-acceptance.md.
+
 # RUNBOOK
 
 ## Turn 631 | 2026-09-28
@@ -21976,3 +21980,20 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   this planning slice.
 - PR 142 merged the plan to canonical `main` at `fcf388fe8`. Issue 139 and
   Plan 0381 remain open for the provider-free implementation packets.
+
+## Turn 633 | 2026-10-08
+
+- Operator approved the three-packet AuraCall remote-view breakdown and requested
+  tickets followed by a repo plan. Created and verified #240, #241 and #242
+  in dependency order, with existing enhancement labels and body-linked blockers.
+- [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)
+  and [its companion spec](docs/dev/plans/0392-2026-10-08-auracall-remote-view-client-spec.md) capture multiple named desktops, global default with
+  browser-profile assignments, independent root access, passive viewing and
+  explicit control handoff coordinated with real automation admission.
+- Plan remains PLANNED. No source implementation, browser/provider activity,
+  installation, infrastructure provisioning or service restart occurred.
+  Original checkout dirty work is preserved in the separate source checkout.
+
+## Turn | 2026-10-10 | Plan0393
+
+Issue225 installed apps list reproduces45second timeout and missing-switch failure. Complete app data precedes settings failure. Minimal public adapter replay RED2.26seconds, then GREEN when missing control reports unknown; affirmative mutation guards retained. Private live evidence stays outside Git. Isolated worktree preserves unrelated root changes; source/build/review and installed acceptance remain distinct.

@@ -1,3 +1,142 @@
+## 2026-10-10 | Missing Developer-mode switch must not erase app inventory
+
+Issue225: current ChatGPT settings redirects omit the labeled switch while installed apps remain available. Requiring that independent UI signal discarded valid inventory and could exhaust the command deadline. Report null/unknown after one bounded observation; do not retry stale settings routes or infer mutation permission. Creation/replacement still fail closed without affirmative enabled state. Public adapter replay retains unknown/true/false coverage and CLI guard regressions. PR248 and scoped two-module installation are accepted in Plan0393: original inventory command exits 0 with 26 apps; independent review passes.
+
+## 2026-10-08 — Recognize the captured rich ChatGPT composer for reads
+
+Conversation readiness must recognize the observed DIV with data-composer-markdown,
+contenteditable=true, role=textbox and exact Ask ChatGPT label. Existing textarea
+and plus-button probes miss it on a canonical owned root route and request a second
+navigation under a one-visit budget. Public adapter regression reproduces exact
+limit1 denial; the narrow selector permits reads without another navigation.
+Wrong project and unrelated editor stay rejected. Readiness is not proof that
+messages or downloadable assets exist.398 focused checks/typecheck/lint qualify
+source; installed continuation remains separate.
+
+## 2026-10-08 — Do not admit a no-op navigation fallback
+
+After Page.navigate reaches the exact requested URL, a slow surface can exhaust
+the primary readiness wait. The location.assign fallback already skips assignment
+on that URL, but previously reserved another physical navigation before checking.
+A one-navigation governor rejects that no-op. The shared browser-service helper
+now retains the bounded fallback readiness wait without a second admission when
+location.href exactly equals the target. Different routes still require admission;
+never-ready surfaces remain failures. Public regression red→green and330 affected
+checks qualify source behavior; live causality and Plan0386 acceptance are separate.
+
+## 2026-10-08 — Freeze the detail budget for the resumed cursor row
+
+A requested detail continuation can retain a nonzero conversation cursor.
+Freezing the first frontier row while reading the resumed row denies the
+legitimate navigation at limit0. The existing collector continuation fixture,
+with the real traffic-plan governor, reproduces the denial. Budget selection
+now uses the same normalized conversation/project cursor indices as the reader.
+The one-row traffic plan, per-row limits and continuation order remain intact.
+159 affected tests, typecheck and touched lint qualify the source repair;
+installed live acceptance remains a separate gate.
+
+## 2026-10-08 — Reuse ready single-visit project conversation routes
+
+Canonical project URLs omit optional title slugs. The generic URL equality
+check can therefore navigate again after a governed conversation visit, even
+when the exact conversation and project readiness predicate already passes.
+A public adapter regression fails on the exhausted one-navigation budget.
+For single-visit context reads only, check existing semantic readiness with a
+bounded read before navigation. A different project still consumes navigation
+and cannot expose its payload under an exhausted budget. Live attribution of
+the observed collector failure and wider Plan0386 acceptance remain separate.
+
+## 2026-10-07 — Missing endpoint is admission failure, not empty inventory
+
+Journey9's legacy skipped result contains no artifact ID or child identity
+proof: crawler target verification lacked its endpoint after observed CDP loss.
+The existing startup-denial fixture reproduces a benign skip and falsely
+refreshed/routeable file snapshot for that exact error. Narrow classification
+now returns failed retryable evidence and unknown routeability. 173 focused
+completion/worker tests, typecheck and touched lint pass. This fixes projection,
+not native lifecycle loss; live acceptance is unproven. Journey10 was paused
+while idle, with no provider traffic, but remains conservatively charged.
+
+## 2026-10-07 — Rotate zero-asset retries inside supplied frontiers
+
+Journeys5/6 selected the same metadata-only row while a retained partial family
+remained. Existing rotation fixture reproduced the scoped path repeating rows
+1/2 instead of advancing to3/4. The selected-ID branch now uses the existing
+retry-lane timestamp evidence; selected-conversation attempt receipts participate
+in that evidence. Rotation remains inside supplied IDs and force preserves
+order. 172 focused completion/worker tests, typecheck and touched lint pass.
+Installed acceptance remains separate until successor source is installed.
+
+## 2026-10-07 — Frontier scope and completion are separate evidence
+
+Installed PR221 children now match the collector frontier and reuse retained
+snapshots. With maxItems1, successive live passes capture different missing
+files from one partial conversation while preserving previous bytes. Successful
+capture and readable archive projection do not qualify a complete quiet row.
+Keep row completeness, index/detail fingerprints, route visits, child snapshot
+counts, file integrity and archive availability as separate readbacks. Passive
+observer cleanup disconnects precede durable terminal timestamps; fresh native
+and lease/job census establishes absence separately.
+
+## 2026-10-06 | Bind normal ChatGPT child selection to collector frontier
+
+Snapshot reuse IDs alone do not restrict reconciliation selection. Normal
+unscoped follow selected an older conversation outside its eleven reusable
+references and refreshed it. Bind ChatGPT steady-follow child scope to the
+supplied frontier, preserve explicit scope/full sweep, and skip a qualified
+empty frontier. Extend the existing normal completion fixture; direct RED
+assertions precede the fix. 171 focused tests, typecheck and touched lint pass.
+Physical page fanout and unattributed browser restart remain separate live
+acceptance blockers; the source fix is not installed proof.
+
+## 2026-10-06 | Verify positive capture separately from repeat suppression
+
+A real normal scoped follow and automatic child captured 22,744 readable JSON
+bytes on one shared tab. Unchanged resume preserved size/hash/mtime and one
+manifest/archive entry, with zero second downloads. Cached archive asset HTTP200
+independently returned the same bytes. Preserve earlier zero-capture failures
+and terminal observer cleanup error; test totals alone are not acceptance.
+
+## 2026-10-06 | Preserve explicit conversation scope across completion persistence
+
+Operation serialization must retain conversationIds. Losing it on disk changes
+a scoped paused follow into account-wide work after service restart. Verify the
+real store round trip, not only in-memory propagation. Preserve legacy unscoped
+records and normalize string IDs. Live byte/repeat acceptance remains open.
+
+## 2026-10-06 | Bound title-family exclusions to explicit conversation scope
+
+Title-only family signatures from another conversation can suppress a genuinely
+missing same-named generated asset. For explicit conversation scope, qualify
+archive, terminal-job and completed-catalog seeds against that scope. Preserve
+same-conversation cache suppression and existing unscoped behavior. Regression
+covers all three seed paths; source validation does not prove captured bytes.
+
+## 2026-10-05 | Select the asset lane from retained control type
+
+A generated ChatGPT download control is an artifact candidate. Files-only
+materialization can return no-materializable-file while that control remains
+in artifact inventory. Snapshot fileCount currently counts file result entries,
+including a skipped sentinel, so it is not proof of a refreshed downloadable
+file. Check exact candidate/entry/byte evidence. Corrected artifacts acceptance
+is pending; retain the failed files-only controller result.
+
+## 2026-10-05 | Reachable browser endpoint can conceal a crashed renderer
+
+Chromium150 failed a Blink local_frame_view layout DCHECK during the selected
+ChatGPT context read. Browser.getVersion and HTTP target listing remained
+responsive while Page/Runtime commands timed out. Preserve Chrome stderr and
+collector deadline evidence; endpoint health alone cannot prove a usable tab.
+A scoped Chromium153 binary change is under live verification, not yet a
+validated capture fix.
+
+## 2026-10-05 | Transfer limits do not constrain conversation selection
+
+A one-transfer follow must carry explicit conversation scope into both the
+collector and child worker. Applying maxItems alone still reconciles unrelated
+account candidates. Persist the scope, discard unrelated cursor offsets, and
+preserve identity/traffic/cache guards; source tests do not prove live capture.
+
 ## 2026-10-05 — retained follow ownership after process death
 
 A retained follow exemption belongs to a living process. Generic reconciliation
@@ -24250,3 +24389,32 @@ receipts are under docs/dev/evidence/plan0390/. No provider journey consumed.
 ## 2026-10-10 | Prevent TTL cleanup from treating external ChatGPT activity as settled
 
 Issue226: lease bookkeeping can remain settled while an externally submitted response is active. A read-only provider activity probe now guards ChatGPT close operations, including lost-lease maintenance. Probe errors preserve tabs. Original incident browser loss remains unproven; local protection tests are not incident attribution or live continuation proof.
+### 2026-10-07 — reconcile live monitor recovery separately from provider restart
+
+A private journey monitor can read partially written observer JSON. Reattach to
+the existing operation after a fresh authoritative readback; do not resume it
+or increment its journey allowance again. Atomic observer writes and tolerant
+reads avoid that monitor-only race. Reconcile ledger terminal fields from the
+existing raw terminal receipt because separately parsed journey objects do not
+mutate the ledger entry. Journey14 proves one provider start/capture despite
+monitor recovery; its original monitor error and timestamp limitation remain.
+
+### 2026-10-07 — distinguish continuation from frontier acceptance
+
+Repeated successful capped captures at one unchanged partial/deferred index
+fingerprint qualify continuation and file integrity. They cannot substitute
+for an independently changed-index epoch or a complete quiet repeat. Cache
+metadata marked complete identifies fixture candidates; qualify readable
+bytes, manifest/archive identity and retained integrity before using them as
+complete-role acceptance evidence. See the Plan0386 acceptance review.
+
+### 2026-10-08 — qualify display readiness and late child observation
+
+An exact browser family pointed to unavailable display923; a five-second
+xdpyinfo probe timed out while0.0 responded under the same X authority.
+Changing only that display restored real startup. Normalize combined Chromium
+command lines when matching exact managed-browser ownership; an argv-only
+match can miss the process. A parent collector result can precede asynchronous
+child publication, and pause does not establish child absence. Re-read the
+durable child before another resume; observe an existing running child to
+terminal without creating or claiming a second child.

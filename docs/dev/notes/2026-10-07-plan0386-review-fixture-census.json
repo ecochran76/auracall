@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-07T18:03:17.050Z",
+  "runtimeProfile": "wsl-chrome-3",
+  "cacheOnly": true,
+  "providerDetection": false,
+  "rows": 348,
+  "completenessCounts": {
+    "unknown": 204,
+    "none": 117,
+    "partial": 4,
+    "complete": 23
+  },
+  "completeCandidateCount": 23
+}

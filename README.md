@@ -715,7 +715,17 @@ Terminology note:
   into durable work state; stale-epoch bundles are ignored.
   A durable detail fingerprint also marks that conversation as eligible for
   retained-snapshot materialization. Completion combines those retained rows
-  with rows visited in the current pass, so asset work consumes cached detail
+  with rows visited in the current pass. ChatGPT steady-follow children are
+  restricted to that supplied conversation set; a qualified empty frontier
+  queues no child even when the account-wide backlog contains older work.
+  Browser startup or missing-endpoint admission denials fail materialization
+  with retryable diagnostics; they do not count as empty inventories or
+  establish a refreshed, routeable conversation snapshot.
+  Within a nonempty frontier, zero-asset skipped retries rotate behind
+  unattempted conversations on later jobs, preventing one metadata-only row
+  from repeatedly consuming the target budget. Force mode keeps supplied order.
+  Explicit conversation scope takes precedence, and explicit full sweeps keep
+  account-wide selection. Asset work consumes cached detail
   and manifest evidence without reopening or refreshing the conversation.
   Materialization checkpoints the aggregate row outcome and physical artifact
   resolution/download counters. Per-entry availability remains authoritative:

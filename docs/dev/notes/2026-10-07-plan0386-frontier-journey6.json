@@ -1,0 +1,166 @@
+{
+  "schema": "auracall_plan0386_frontier_live_journey.v1",
+  "journey": 6,
+  "newAllowanceUsed": 1,
+  "sourceCommit": "28645128088175304c087171405fe069bbc8795f",
+  "runtimeProfile": "wsl-chrome-3",
+  "apiPid": 53363,
+  "parentId": "acctmirror_completion_0fb168c6-c0a1-471f-8e77-416440f64a3f",
+  "jobId": "hmj_26bf0fd6422e4e928fd44c262ddef2f3",
+  "outcome": "skipped",
+  "selectedConversationId": "6abc7f01-1e50-83ea-afd5-764491da2727",
+  "frontierSetMatches": true,
+  "frontierConversationCount": 12,
+  "childSnapshotRefreshes": 0,
+  "metrics": {
+    "conversations": 1,
+    "materialized": 0,
+    "duplicateAliases": 0,
+    "skipped": 1,
+    "failed": 0,
+    "eligibleCandidates": 11,
+    "selectedCandidates": 1,
+    "materializedCandidates": 0
+  },
+  "collectorIdentityVerdict": "match",
+  "childIdentityVerdict": null,
+  "detailIds": [],
+  "selectedRow": {
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:5f535bbc621c2c74fa8f41ac385abca1",
+      "epochId": "sha256:b02078e83c4abd6275bf3fe2cfd18b65",
+      "indexFingerprint": "sha256:3c8a675b35fd1838853733d2bada1693",
+      "detailFingerprint": "sha256:5c3035b4ea4776fc66e0a1a81d29c387",
+      "action": "materialize_retained",
+      "outcome": "deferred",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T02:25:05.546Z",
+      "checkpointedAt": "2026-10-07T02:23:05.546Z",
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 1,
+        "downloads": 0,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 5,
+        "downloads": 0,
+        "duplicates": 0
+      }
+    }
+  },
+  "capturedRow": {
+    "assetCompleteness": "partial",
+    "state": {
+      "object": "account_mirror_conversation_work_state",
+      "version": 1,
+      "conversationKey": "sha256:3207f9925ea83c3edc9ea2973f9af8fa",
+      "epochId": "sha256:b02078e83c4abd6275bf3fe2cfd18b65",
+      "indexFingerprint": "sha256:bf3ac4d2010366aaa35921f4e7ed9130",
+      "detailFingerprint": "sha256:7a344c89b2242d72bfb787cebe31430d",
+      "action": null,
+      "outcome": "pending",
+      "assetAvailability": "unknown",
+      "retryNotBefore": "2026-10-07T01:19:32.560Z",
+      "checkpointedAt": null,
+      "physicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 0,
+        "reloads": 0,
+        "snapshotRefreshes": 0,
+        "artifactResolutions": 0,
+        "downloads": 0,
+        "duplicates": 0
+      },
+      "lifetimePhysicalActivity": {
+        "targetsCreated": 0,
+        "navigations": 1,
+        "reloads": 0,
+        "snapshotRefreshes": 1,
+        "artifactResolutions": 4,
+        "downloads": 2,
+        "duplicates": 0
+      }
+    }
+  },
+  "assets": [],
+  "priorFiles": [
+    {
+      "fromJourney": 3,
+      "size": 320512,
+      "mtimeNs": "1791335279407370801",
+      "sha256": "873de618ebe8ca3c22f8676b115b6567d394d3a07c2e053be6b9278af7ab3ea4",
+      "unchanged": true
+    },
+    {
+      "fromJourney": 4,
+      "size": 315434,
+      "mtimeNs": "1791335850954709133",
+      "sha256": "aaacf841ab8059d006b8df525c1be8403e86552794f3c1b73475b572f797da77",
+      "unchanged": true
+    },
+    {
+      "fromJourney": "prior-scoped",
+      "size": 22744,
+      "mtimeNs": "1791257064434898332",
+      "sha256": "0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7",
+      "unchanged": true
+    }
+  ],
+  "observer": {
+    "attachments": [
+      {
+        "at": "2026-10-07T02:21:03.912Z",
+        "targetId": "F23B5F2AFEEDA706F54DECD550FEFA67",
+        "leaseId": "f6e8a9bc-95bd-407f-b979-33cf286e5a27",
+        "port": 45015,
+        "nativePid": 53705
+      }
+    ],
+    "maxPhysicalPages": 1,
+    "routes": [
+      {
+        "at": "2026-10-07T02:21:03.914Z",
+        "kind": "initial_frame",
+        "conversationId": null,
+        "targetId": "F23B5F2AFEEDA706F54DECD550FEFA67"
+      },
+      {
+        "at": "2026-10-07T02:21:04.239Z",
+        "kind": "top_frame_navigation",
+        "conversationId": null,
+        "targetId": "F23B5F2AFEEDA706F54DECD550FEFA67"
+      }
+    ],
+    "downloads": [],
+    "warnings": [],
+    "errors": [
+      {
+        "at": "2026-10-07T02:23:06.241Z",
+        "error": "connect ECONNREFUSED 127.0.0.1:45015"
+      }
+    ],
+    "traffic": {
+      "requests": 242,
+      "documents": 1,
+      "responses": 239,
+      "http429": 0
+    }
+  },
+  "providerWorkNotBefore": "2026-10-07T02:23:08.422Z",
+  "completedAt": "2026-10-07T02:23:07.755Z",
+  "limitations": [
+    "Full changed-index and quiet-complete-row matrix requires independent row preconditions; skipped/capture results alone do not prove it.",
+    "Observer cleanup disconnects and any navigation before providerWorkNotBefore remain explicit limitations."
+  ],
+  "noWiderAcceptanceClaim": true
+}

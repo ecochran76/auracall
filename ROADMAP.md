@@ -1,4 +1,12 @@
+- Completed P87: [Plan0393](docs/dev/plans/0393-2026-10-10-developer-app-inventory.md) repairs issue225 app inventory independently of missing Developer-mode UI; PR248 integrated; original installed inventory passes with 26 apps and independent review.
+
 # Aura-Call Roadmap
+
+- Planned P86: [Plan 0391](docs/dev/plans/0391-2026-10-08-auracall-remote-view-client.md)
+  and [its spec](docs/dev/plans/0392-2026-10-08-auracall-remote-view-client-spec.md) govern the dedicated AuraCall remote-view client with multiple configured
+  desktops, independent root desktop and explicit coordinated control handoff.
+  Approved tickets are #240 → #241 → #242; implementation has not started.
+  This registers the requested feature without changing other lane priorities.
 
 - Completed P78 / issue 131: [Plan 0378](docs/dev/plans/0378-2026-09-29-chatgpt-rate-limit-terminal-reconciliation.md)
   adds bounded terminal reconciliation for delayed account-wide ChatGPT rate

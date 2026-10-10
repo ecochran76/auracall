@@ -238,6 +238,8 @@ const CHATGPT_CONVERSATION_PROMPT_INPUT_LABEL = resolveBundledServiceUiLabel(
 	"Chat with ChatGPT",
 );
 const CHATGPT_CONVERSATION_PROMPT_INPUT_SELECTOR = `textarea[aria-label=${JSON.stringify(CHATGPT_CONVERSATION_PROMPT_INPUT_LABEL)}]`;
+const CHATGPT_CONVERSATION_RICH_PROMPT_INPUT_SELECTOR =
+	'div[data-composer-markdown][contenteditable="true"][role="textbox"][aria-label="Ask ChatGPT"]';
 const CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR = resolveBundledServiceDomSelector(
 	"chatgpt",
 	"conversation_turn_section",
@@ -3609,6 +3611,7 @@ function buildConversationSurfaceReadyExpression(
     );
     const hasComposer = Boolean(
       document.querySelector(${JSON.stringify(CHATGPT_CONVERSATION_PROMPT_INPUT_SELECTOR)}) ||
+      document.querySelector(${JSON.stringify(CHATGPT_CONVERSATION_RICH_PROMPT_INPUT_SELECTOR)}) ||
       document.querySelector('[data-testid="composer-plus-btn"]'),
     );
     return hasTurns || hasComposer ? route : null;
@@ -9049,6 +9052,24 @@ async function ensureChatgptConversationSurfaceReadyForRead(
 		throw new Error(
 			`ChatGPT active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
 		);
+	}
+	if (options?.accountMirrorSingleConversationVisit) {
+		// Project slugs may differ from the canonical URL after the governed visit.
+		// Reuse only a ready surface whose conversation and project both match.
+		recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+		const ready = await withChatgptTimeout(
+			client.Runtime.evaluate({
+				expression: buildConversationSurfaceReadyExpression(conversationId, projectId),
+				returnByValue: true,
+				timeout: 10_000,
+			}),
+			10_000,
+			`Timed out checking the active ChatGPT conversation ${conversationId} surface.`,
+		);
+		if (ready.result.value && !ready.exceptionDetails) {
+			recordBrowserScrapeProviderAction(options, "chatgpt.skipSameRouteNavigation");
+			return;
+		}
 	}
 	await navigateToChatgptConversation(client, conversationId, projectId, options);
 }

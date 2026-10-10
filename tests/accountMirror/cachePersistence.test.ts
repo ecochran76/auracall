@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createAccountMirrorPersistence } from "../../src/accountMirror/cachePersistence.js";
+import { planAccountMirrorChangeFrontier } from "../../src/accountMirror/changeFrontierPlanner.js";
+import { normalizeAccountMirrorConversationWorkState } from "../../src/accountMirror/changeFrontierState.js";
+import { deriveAccountMirrorConversationFreshness } from "../../src/accountMirror/conversationFreshness.js";
 import { createAccountMirrorStatusRegistry } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { createCacheStore } from "../../src/browser/llmService/cache/store.js";
@@ -240,7 +243,10 @@ describe("account mirror cache persistence", () => {
 		}
 	});
 
-	test("round-trips same-epoch work and rolls physical counters at the next epoch", async () => {
+	test.each([
+		"complete",
+		"deferred",
+	] as const)("round-trips %s work and retry horizon at the next epoch", async (outcome) => {
 		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-mirror-frontier-state-"));
 		setAuracallHomeDirOverrideForTest(homeDir);
 		const cacheStore = createCacheStore("dual");
@@ -269,8 +275,9 @@ describe("account mirror cache persistence", () => {
 						changeFrontierState: {
 							...workState,
 							action: "visit_once",
-							outcome: "complete",
-							assetAvailability: "available",
+							outcome,
+							assetAvailability: outcome === "complete" ? "available" : "unknown",
+							retryNotBefore: outcome === "deferred" ? "2026-04-29T14:00:00.000Z" : null,
 							checkpointedAt: "2026-04-29T12:00:11.000Z",
 							physicalActivity: {
 								targetsCreated: 1,
@@ -292,8 +299,9 @@ describe("account mirror cache persistence", () => {
 						metadata: {
 							changeFrontierState: {
 								action: "visit_once",
-								outcome: "complete",
-								assetAvailability: "available",
+								outcome,
+								assetAvailability: outcome === "complete" ? "available" : "unknown",
+								retryNotBefore: outcome === "deferred" ? "2026-04-29T14:00:00.000Z" : null,
 								physicalActivity: { navigations: 1, downloads: 1 },
 							},
 						},
@@ -314,7 +322,8 @@ describe("account mirror cache persistence", () => {
 							changeFrontierState: {
 								action: null,
 								outcome: "pending",
-								assetAvailability: "available",
+								assetAvailability: outcome === "complete" ? "available" : "unknown",
+								retryNotBefore: outcome === "deferred" ? "2026-04-29T14:00:00.000Z" : null,
 								physicalActivity: { navigations: 0, downloads: 0 },
 								lifetimePhysicalActivity: { navigations: 1, downloads: 1 },
 							},
@@ -322,6 +331,46 @@ describe("account mirror cache persistence", () => {
 					},
 				],
 			});
+			if (outcome === "deferred") {
+				// Reopen the store so eligibility comes from persisted state, not the writer.
+				const reopened = createCacheStore("dual");
+				const reloaded = (await reopened.readConversations(context)).items[0];
+				if (!reloaded) throw new Error("Expected reloaded guarded conversation");
+				const reloadedWork = normalizeAccountMirrorConversationWorkState(
+					reloaded.metadata?.changeFrontierState,
+				);
+				if (!reloadedWork) throw new Error("Expected reloaded frontier state");
+				const freshness = deriveAccountMirrorConversationFreshness({
+					conversationId: reloaded.id,
+					item: reloaded,
+					target: {},
+				});
+				const plan = (now: string) =>
+					planAccountMirrorChangeFrontier({
+						epochId: reloadedWork.epochId,
+						now,
+						rows: [{ workState: reloadedWork, freshness }],
+					});
+				expect(plan("2026-04-29T13:59:59.999Z").decisions).toEqual([
+					{
+						conversationKey: reloadedWork.conversationKey,
+						checkpointKey: reloadedWork.conversationKey,
+						action: "defer",
+						reason: "retry_not_before",
+					},
+				]);
+				expect(plan("2026-04-29T14:00:00.000Z").decisions).toEqual([
+					{
+						conversationKey: reloadedWork.conversationKey,
+						checkpointKey: reloadedWork.conversationKey,
+						action: "visit_once",
+						reason: "detail_or_index_changed",
+					},
+				]);
+				await expect(reopened.readConversations(context)).resolves.toMatchObject({
+					items: [{ metadata: { changeFrontierState: reloadedWork } }],
+				});
+			}
 		} finally {
 			await rm(homeDir, { recursive: true, force: true });
 		}

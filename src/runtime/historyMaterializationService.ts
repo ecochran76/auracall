@@ -2734,6 +2734,8 @@ async function materializeReconciliation(input: {
 			for (const item of entry.manifests.conversations) {
 				const conversationId = readCatalogStringField(item, ["id", "conversationId"]);
 				if (!conversationId || !catalogConversationHasCompleteSelectedAssets(item)) continue;
+				if (selectedConversationIdSet.size > 0 && !selectedConversationIdSet.has(conversationId))
+					continue;
 				for (const signature of catalogEntriesConversationAssetFamilySignatures(
 					catalog.entries,
 					conversationId,
@@ -2761,7 +2763,25 @@ async function materializeReconciliation(input: {
 			);
 		});
 		eligibleCandidates += eligibleConversationIds.length;
-		for (const conversationId of eligibleConversationIds) {
+		const retryAttemptedAt =
+			input.request.force === true
+				? new Map<string, string>()
+				: await reconciliationRetryAttemptedAtByConversationId({
+						jobs: priorJobs,
+						request: input.request,
+						selectedKinds,
+					});
+		// Keep the supplied frontier closed while rotating zero-asset retries behind
+		// unattempted work. Stable ties preserve collector ordering.
+		const orderedConversationIds = [...eligibleConversationIds].sort((left, right) => {
+			const leftAttemptedAt = retryAttemptedAt.get(left);
+			const rightAttemptedAt = retryAttemptedAt.get(right);
+			if (!leftAttemptedAt && rightAttemptedAt) return -1;
+			if (leftAttemptedAt && !rightAttemptedAt) return 1;
+			if (leftAttemptedAt && rightAttemptedAt) return leftAttemptedAt.localeCompare(rightAttemptedAt);
+			return 0;
+		});
+		for (const conversationId of orderedConversationIds) {
 			if (consumedTargetBudget >= maxTargets) break;
 			const assetFamilySignatures = selectedCatalogAssetFamilySignatures.get(conversationId) ?? [];
 			if (
@@ -5364,7 +5384,9 @@ async function materializedArchiveAssetFamilySignatures(input: {
 		limit: 500,
 	});
 	const signatures = new Set<string>();
+	const scopedIds = new Set(normalizeConversationIds(input.request.conversationIds));
 	for (const item of archive.items) {
+		if (scopedIds.size > 0 && !scopedIds.has(item.providerConversationId ?? "")) continue;
 		const provider = normalizeProviderId(item.provider);
 		if (
 			input.request.boundIdentityKey &&
@@ -5391,9 +5413,17 @@ async function terminalVolatileAssetFamilySignatures(input: {
 	selectedKinds: HistoryMaterializationAssetKind[];
 }): Promise<string[]> {
 	const signatures = new Set<string>();
+	const scopedIds = new Set(normalizeConversationIds(input.request.conversationIds));
 	const jobs = input.jobs ?? (await input.jobStore?.listJobs()) ?? [];
 	for (const job of jobs) {
 		if (isActiveStatus(job.status)) continue;
+		if (scopedIds.size > 0) {
+			const priorIds = normalizeConversationIds(job.request.conversationIds);
+			if (priorIds.length === 0 && job.result?.target?.conversationId)
+				priorIds.push(job.result.target.conversationId);
+			// Flattened account-wide results cannot attribute a title-only family to this scope.
+			if (priorIds.length === 0 || priorIds.some((id) => !scopedIds.has(id))) continue;
+		}
 		if (input.request.provider && job.request.provider !== input.request.provider) continue;
 		if (
 			input.request.runtimeProfile &&
@@ -5812,7 +5842,8 @@ async function reconciliationRetryAttemptedAtByConversationId(input: {
 		}
 		for (const attempt of job.result?.attempts ?? []) {
 			if (
-				attempt.origin !== "reconciliation_candidate" ||
+				(attempt.origin !== "reconciliation_candidate" &&
+				attempt.origin !== "selected_conversation_id") ||
 				attempt.status !== "skipped" ||
 				attempt.accounting.assetsAttempted !== 0 ||
 				attempt.accounting.candidateMaterialized ||
@@ -6064,7 +6095,9 @@ function unsupportedEntry(
 	target: HistoryMaterializationTarget | null,
 ): HistoryMaterializationManifestEntry {
 	const reason = formatHistoryMaterializationFailureReason({ target, error });
-	const startupDenied = reason.startsWith("Live-follow browser startup control denied:");
+	const startupDenied =
+		reason.startsWith("Live-follow browser startup control denied:") ||
+		reason === "Live-follow crawler target cannot be verified without its browser endpoint.";
 	return {
 		kind,
 		providerId: null,

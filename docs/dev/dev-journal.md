@@ -1,3 +1,385 @@
+## 2026-10-10 | Plan0393 installed inventory accepted
+
+PR248 integrated c629aeb0. Original installed apps list succeeds with complete 26-app inventory and unknown Developer mode; exact account and enabled Im Receipts identity qualified privately. Two compiled modules promoted with rollback custody. 79 focused/adjacent tests and independent source/installed review pass; GitHub CI reported no checks. Bounded Plan0393 closes; create/replace live acceptance remains untested. See docs/dev/notes/2026-10-10-plan0393-inventory-acceptance.md.
+
+## 2026-10-10 | Plan0393 developer-app inventory repair
+
+Issue225 owner ecochran76 IN_PROGRESS, branch fix/issue225-app-inventory from591a11824. Reproduced installed45second timeout and missing-switch error; diagnostic stages establish complete installed inventory before settings failure. Public readState replay RED2.26seconds then GREEN; missing switch becomes unknown without mutation authority. Source checks and installed read-only acceptance remain separately tracked in Plan0393. Unrelated root work preserved.
+
+## 2026-10-08 | Plan 0391 publication validation
+
+All three live tickets and their exact dependency links read back successfully.
+Plan local links and diff hygiene pass. Active planning audit adds zero findings
+relative to base 32e8c71a2; its three existing Plan 0386 state/wiring findings
+remain unchanged in the retained validation receipt. Planning is complete;
+feature remains PLANNED and implementation has not started.
+
+## 2026-10-08 | Approved tickets published; repo execution plan written
+
+Created and read back #240 (desktop configuration/launch binding), #241
+(dedicated multi-desktop client, blocked by #240), and #242 (coordinated human
+control, blocked by #241). Plan 0391 now gives packet ownership, inputs, write
+surfaces, acceptance checks, terminal conditions and source/live boundaries.
+Roadmap and runbook are wired. Feature remains PLANNED; no implementation or
+runtime activity. Ticket receipts preserve returned identities and body hashes.
+
+## 2026-10-08 | Remote-view desktop decisions confirmed
+
+Plan 0391 now records multiple AuraCall-owned named desktops, global default
+and browser-profile assignments, passive viewing with explicit coordinated
+control handoff, independent root desktop access, and no silent fallback.
+Companion spec and three dependent implementation slices are drafted. Existing
+Agent Browser route/allocation and viewer/controller contracts are building
+blocks; app presentation and automation exclusion remain implementation work.
+No runtime, provider, installation, or infrastructure changes occurred.
+
+## 2026-10-08 | Remote-view client design
+
+Plan 0391 records the accepted AuraCall-only client, global default with browser
+profile overrides, explicit remote-view failure, and continued root desktop
+access. Browser grouping and manual-control posture remain interview decisions.
+Existing shared-display remote-view launching is not dedicated-client proof.
+Design lives on feat/auracall-remote-view-client from origin/main 32e8c71a2;
+original checkout dirty work is preserved. No runtime or provider effects.
+
+## 2026-10-08 | Content gate stops additional allowance after eight terminal
+
+Journey7 completes context and skips absent artifacts. Journey8 visits independent
+B once and fails `messages not found`; PR238 removes the prior readiness denial
+but does not establish content. Its child skips another retained row. Frozen
+nested-failure gate stops controller55649 before9; eight charged/terminal, two
+unused. Parent/scheduler paused and zero active jobs/browser processes/held
+leases/controls at fresh stop. A and earlier capture bytes preserved. Plan0386
+and ten-journey objective remain incomplete. [Stop receipt](notes/2026-10-08-plan0386-ten-journey-stop.json).
+
+## 2026-10-08 | PR238 installed; remaining four journeys resumed
+
+Canonical/installed sourcec6710b169 includes captured rich-composer selector.
+Adapter hash5c893ff21d2f1fb86ee4dcbeff4c927ec1fdd509931704cd2892038cd3a07861;
+shared UI/collector hashes retain PR237/PR233 values. API12677, parent paused at
+pass11 and scheduler paused with zero active jobs before resume. Journey7 resumes
+under original allowance/deadline. Controller55649 owns journeys7–10; poll that
+existing handle. Earlier journey8 Markdown archive still HTTP200/hash matching;
+its partial manifest ID change remains explicit. No live B acceptance claim.
+
+## 2026-10-08 | Captured rich editor reproduces root readiness denial
+
+Journey6 repeats B admission denial on PR237; controller stops before7. Two
+read-only owned-page snapshots capture canonical root route, no rendered turns,
+and exact editable DIV Ask ChatGPT composer missed by textarea/plus readiness.
+Public adapter fixture reproduces limit1; exact selector repair passes398 focused
+checks/typecheck/lint. No claim of actual B content/assets. Journey6 child captures
+32,096 valid JSON bytes on another retained row; local/archive hash matches,
+previously absent path frozen. Earlier bytes/mtime unchanged; one partial manifest
+changes IDs. [Repair](notes/2026-10-08-plan0386-rich-composer-repair.md).
+
+## 2026-10-08 | Installed successor journey5 terminal
+
+Root context completes on PR237 installed source09e508924. Pass9→10, one
+observed root-conversation document, one page, zero429/downloads/snapshots.
+Automatic child skips no downloadable artifact. Prior source repro qualifies
+no-op admission defect; this live success does not prove journey3 causality.
+Controller18679 owns remaining journeys serially; do not start duplicate work.
+
+## 2026-10-08 | PR237 installed; remaining journeys resumed
+
+Canonical/installed source09e508924 includes qualified no-op fallback repair;
+shared UI hashc7d7d83603813ab9dbdc822d34000bed53efaf556dc59bde70faee62b3098790.
+API85906 restarted under paused parent/scheduler and zero active jobs/browser
+controls. Journey5 resumes same parent from pass9. Six unused at repair entry;
+prior charges/failure and original deadline retained. Controller now stops on
+nested failed collector diagnostics. Source proof is not live-cause proof.
+Controller handle18679 owns journeys5–10; poll existing handle before new starts.
+
+## 2026-10-08 | Reproduced no-op fallback admission defect
+
+A public navigateAndSettle fixture reproduces exact detail/page_navigate limit1:
+one navigation reaches the URL, surface readiness arrives after primary wait,
+and location-assign fallback requests a second admission even though its own
+expression would return already-there. Exact-URL fallback now waits within the
+existing fallback deadline without a new physical admission. Different routes
+retain governed mutation; never-ready surfaces still fail bounded. 330 focused
+checks pass. This qualifies the source defect, not exact live causality.
+Install/in-envelope continuation remains separate; six journeys still unused.
+
+## 2026-10-08 | Renewed admission stop after four charged journeys
+
+Journeys1/2 skipped no-artifact rows. Journey3's completed refresh contains a
+failed context diagnostic for the independently added row: detail/page_navigate
+limit1. Automatic child selects another retained row and skips. Controller
+missed nested failure and started journey4; stopped it idle before eligibility,
+zero browser/provider effects. Four charged, six preserved. Controller replay
+red→green qualifies nested failure containment only; ready-root public adapter
+probe passes but does not reproduce live readiness. No product patch or retry.
+Parent/scheduler paused, native browser/controls clear, baseline assets unchanged.
+[Checkpoint](notes/2026-10-08-plan0386-ten-journey-checkpoint.md).
+
+## 2026-10-08 | Additional ten-journey allowance active
+
+User authorizes ten additional normal unscoped journeys toward Plan0386.
+New control ledger keeps the earlier eight immutable. Installed source5b05f5371
+matches canonical adapter/collector hashes. API7729 has zero restarts; preflight
+shows no managed browser processes or held controls. Global scheduler remains
+paused. Existing parent resumes from pass6; maxItems1, artifacts, forcefalse and
+provider traffic limits remain unchanged. Stop on warnings/429, identity/custody
+mismatch, admission failure or unknown outcome. Checkpoint every two terminal
+journeys and within two hours; no provider content creation.
+
+## 2026-10-08 | Post-checkpoint local fixture research
+
+User requested ask-matt research continuation. Fresh read-only installed cache
+census: 349 rows, zero metadata-complete candidates in retained indexRank0–29;
+positive capture rows remain incomplete. Sole independent new row has zero file
+records, so downloadable missing B remains unqualified. No browser allowance
+renewed or used. [Research](notes/2026-10-08-plan0386-postcheckpoint-research.md)
+records sources, stopping rule and exact next qualification boundary.
+
+## 2026-10-08 | Eight-journey terminal checkpoint
+
+PR232/233 merged and installed; all eight charged journeys terminal. Journeys7/8
+capture 6,172 and 10,860 verified Markdown bytes, with matching local/job/archive
+hashes and zero child snapshots. Original assets and journey7 capture remain
+unchanged. Final runtime readback shows scheduler/parents paused, no active
+materialization jobs, native browser processes or held controls. Plan0386 stays
+OPEN: independently changed B, normal quiet A/B, mixed guard/reload and dependent
+scheduler acceptance remain. No ninth journey. Focused tests, typecheck and lint
+pass; guarded-only real collector/completion probe records zero effects.
+[Checkpoint](notes/2026-10-08-plan0386-eight-journey-checkpoint.md).
+
+## 2026-10-08 | Installed route/cursor proof and horizon reload qualification
+
+Journey6 on PR233 merge5b05f5371 completes the resumed third conversation read,
+with one observed canonical document navigation followed by a same-project slug
+and skipSameRouteNavigation. Child reuses retained context, settles skipped with
+no materializable artifact, zero attempted assets, snapshots or transfers.
+Native browser and held lease/control absence verified before journey7.
+Six of eight charged at journey6 terminal; journey7 now awaits normal minimum
+interval. Existing temporary-store round-trip fixture now composes reopen,
+normalization, freshness and planner eligibility immediately before/at horizon.
+99 focused checks, typecheck and lint pass. Full G physical-effect composition,
+changed/quiet acceptance and scheduler gate remain open.
+
+## 2026-10-08 | Cursor traffic key mismatch reproduced
+
+PR232 merge c9ccbe202 installed with adapter SHA3d6e87e8 and API73847.
+Journey5 resumes the second row but the frozen plan authorizes the first,
+causing detail/page_navigate limit0. Parent paused; child observed separately
+through terminal skipped, zero materializations. Five charged; three remain.
+Existing requested-detail continuation test extended with the actual governor
+fails with that exact denial. Selecting the budget key from the same normalized
+persisted cursor as the reader passes159 affected tests, typecheck and lint.
+No budget increased. Changed/quiet acceptance and slug live attribution remain
+unproven. Global scheduler stays paused.
+
+## 2026-10-08 | Single-visit project route regression qualified
+
+Fresh journeys1–4 are charged; four remain. Journey4 repeats the collector
+`detail/page_navigate` limit1 failure and its automatic child settles skipped,
+zero materializations. Parent and global scheduler remain paused; no active
+jobs or held leases/controls, and exact managed Chrome root is absent.
+A public context-read regression reproduces a second navigation solely because
+a ready same-project URL contains a slug. The narrow single-visit preflight
+reuses the existing project/conversation readiness predicate; wrong-project
+payload reads remain denied. This is local defect evidence, not yet proof of
+journey4 causality or the changed/quiet acceptance matrix. Installation and
+remaining bounded journeys follow validation, without increasing any budget.
+
+## 2026-10-07 | Cleared custody stop; endpoint denial discovered
+
+User try again clears prior stop after exact native absence, zero active/idle
+leases/jobs, clear guard and API98818/hash parity. Journey9 collects on one
+page and queues a matching-frontier child. Endpoint disappears10:44:59; child
+projects skipped with endpoint-verification denial, zero attempted assets and
+no child identity proof. Earlier ordinary/concrete-skip interpretation corrected
+in receipt; no quiet/rotation live acceptance follows. Journey10 started before
+full entry inspection, then paused idle at unchanged pass count with zero
+attachments/traffic. Used5/6 additional; one remains under admission stop.
+Existing denial fixture extended: direct RED falsely reports refreshed/routeable
+file snapshot. Narrow error classification passes173 focused tests, typecheck,
+lint. Browser-loss causality and installed successor proof remain open.
+
+## 2026-10-07 | Installed retry repair; external supervisor custody stop
+
+PR223 merge89697e28f installed with worker SHA cad74b6a, API98818 zero restarts.
+Journey7 selects retained B instead of prior metadata-only row, but skips a
+concrete download reference with unknown availability. Zero new transfers and
+snapshots; files stable, one page and clean terminal browser/job/lease readback.
+Collector order also changed, so this is not isolated live rotation causality.
+Journey8 stops at three physical pages before child/download; parent paused.
+Native80577 belongs to Python supervisor80554 from litscout-0553-integration.
+Other page lease binds exited82030; a third has a tab deadline. This is external
+profile concurrency, not proof of child fanout. Agent Browser route is historical.
+No external adoption/kill/close or scheduler resume attempted. Used3/6 additional,
+three remain under explicit custody stop. External browser absence is not claimed.
+Source qualification and narrower live evidence remain; wider matrix OPEN.
+
+## 2026-10-07 | Journey6 confirms frontier retry starvation
+
+Journey6 skipped the same metadata-only row as5, zero transfers/snapshots and
+one page with no warnings. Prior files stable; cleanup has no root/leases/jobs.
+Used1/6 additional, five remain. Existing rotation fixture extended to supplied
+frontier: direct RED repeated rows1/2 instead of3/4. Bounded repair reuses retry
+lane evidence, preserves frontier and budgets, and includes selected-ID receipts.
+172 focused tests, typecheck and touched lint pass. Installation and journey7
+pending; broader changed/quiet matrix remains OPEN.
+
+## 2026-10-07 | Six additional frontier journeys authorized
+
+User adds six journeys on wsl-chrome-3. Separate ledger preserves exhausted
+prior allowance; global numbers6-11, new used0/6. Normal unscoped parent,
+maxItems1 and cooldowns retained. API53363 zero restarts; no active jobs/leases
+or exact managed browser; prior16 completions and scheduler remain paused.
+Installed completion SHA e78b81a7 matches canonical PR221. Complete changed/
+quiet matrix remains open; no synthetic completeness or provider content edits.
+
+## 2026-10-07 | Installed frontier handoff and deferred continuation
+
+Operator continue cleared the custody stop. Canonical PR221 merge 286451280
+installed with completion SHA e78b81a7; API53363 zero restarts. Journey3 captured
+320,512 valid DOCX bytes; journey4 continued the same partial row with 315,434
+valid DOCX bytes. Both archive responses match local hashes. Each automatic
+child exactly uses the collector frontier and performs zero snapshot refreshes.
+One physical page, no observed warning or HTTP429; fresh cleanup shows no
+managed Chrome root, leases or jobs. Prior capture and retained JSON preserved.
+B remains partial/deferred; isolated changed-index and complete quiet-row
+acceptance remain OPEN. Journey5 settled skipped on a different metadata-only row; zero transfers.
+All5 journeys used; no further provider execution authorized.
+Scheduler and all prior operator pauses preserved. Curated journey3/4 receipts
+retain observer cleanup disconnects and child navigation timing limitations.
+Final API53363 zero restarts, parent/all16 prior completions and scheduler
+paused, zero active/idle/retiring leases/jobs and no exact managed Chrome root.
+Both DOCX hashes/mtimes and retained JSON remain stable. Final readback receipt
+is notes/2026-10-07-plan0386-frontier-final-readback.json. Memory unavailable:
+focused atlas discovery supplied no qualified AuraCall destination.
+
+## 2026-10-06 | Normal frontier journey2 and bounded child-scope repair
+
+User cleared admission stop. Normal unscoped follow verified account identity
+and refreshed a changed index, then automatic child skipped without transfers.
+Child selected outside collector reuse IDs; physical pages peaked3. Parent
+paused and running child settled. Later new Chrome root custody unattributed.
+Used2/5; no further journeys after new custody stop. All16 prior completions
+and scheduler pauses preserved by direct readback.
+
+Existing completion fixture extended: direct RED for unrestricted child, then
+RED for quiet-frontier fallback. Source repair binds available ChatGPT frontier
+and skips qualified empty frontier. 171 focused tests and touched lint pass.
+No reinstall or positive/quiet live claim; custody/page fanout remains open.
+
+## 2026-10-06 | Frontier qualification stopped at admission
+
+312 focused provider-free tests pass, with typecheck and touched-file lint.
+Journey1 of five: standalone root-index refresh denied connect-tab because
+its request lacks the live-follow affinity governor. Zero observer traffic and
+no owned Chrome root after the attempt. Source mapping identifies the missing
+operation ID at the standalone route; completion-path tests remain separate.
+Frozen admission stop observed. No child, download or live acceptance claim;
+four unused journeys do not authorize crossing that stop.
+
+## 2026-10-06 | Fresh five-journey frontier qualification
+
+User renews fixture qualification and live execution on wsl-chrome-3 with five
+new journeys. 312 distinct focused tests pass; durable deferred horizon persists across epochs.
+Typecheck and touched-file lint pass. Exact current preflight
+API28526, all16 pauses and scheduler preserved, no active leases; touched module
+parity matches installed source. Root-index fixture qualification comes before
+normal unscoped follow; the prior readable asset does not make its unknown
+conversation completeness true. Allowance ledger starts at zero of five.
+
+## 2026-10-06 | Changed-frontier acceptance spec prepared
+
+Plan0386 now contains a PLANNED bounded changed-frontier spec: existing normal
+follow seam, A/B/C/G fixture roles, changed/unchanged/deferred/guarded evidence
+matrix and explicit live authority gate. Explicit scope cannot prove freshness
+selection. Prior closed Plan0381/Issue139 contracts are reused. No source code,
+provider call, scheduler resume or remote issue/label mutation. Next action is
+provider-free fixture qualification; live B is not yet qualified.
+
+## 2026-10-06 | Plan0386 bounded spec reconciliation
+
+Primary Standards/Spec review pins PR213 baseline to PR217 head. Corrected stale
+P85 capture/repeat blocker and added current-state summary; preserved history.
+Four-step packet accepted. Wider gate is automatic changed-frontier handling,
+then dependent scheduler continuation. Next is one evidence/spec packet, no
+implementation or live effects in this turn. Review note records adjudication.
+
+## 2026-10-06 03:34 UTC | Bounded positive capture and unchanged repeat ACCEPTED
+
+Same parent bc5f1711 resumed unchanged at normal eligibility. Automatic repeat
+child f939e08c skipped without materialization or duplicate aliases. File bytes,
+SHA-256 and mtime remain unchanged; one manifest and one available archive entry
+with stable ID. Zero repeat download events, one shared physical target. Cached
+asset API returns HTTP200, 22,744 readable JSON bytes and matching hash.
+One observer ECONNREFUSED at browser cleanup retained as a limitation. API28526
+zero restarts; scheduler/all16 operations paused; zero active/idle leases.
+The requested four-step packet is ACCEPTED; wider Plan0386 remains separately
+governed. Durable curated receipt records failures, repairs and acceptance.
+
+## 2026-10-06 03:25 UTC | Positive scoped capture; repeat pending
+
+Current main 6f4224e7e installed with completion-store and worker SHA-256 parity.
+Fresh scoped normal follow bc5f1711 automatically created child ee23feb8.
+Exact missing first_pass_readout.json captured: 22,744 readable JSON bytes,
+SHA-256 0e1ae99aa22fecd427f0736118292beefe7a96f70d6dd641a95ec25b1bde5ba7.
+One physical target shared parent/child, one observed download, one manifest
+entry and one available archive entry. Same-parent unchanged repeat resumed;
+normal eligibility 03:29:27Z respected. Repeat acceptance remains OPEN.
+
+## 2026-10-06 | Restart stripped explicit follow scope
+
+Installed PR215 worker parity passed. Resumed parent 70dee5b3 created child
+hmj_bcae5ce8aa924efda4ea2846dcf6e3e7, failed page_navigate budget limit1, zero
+bytes. Persisted completion omitted conversationIds; restart hydrated an
+unscoped request. This run cannot prove scoped capture. Parent paused, evidence
+retained. Disk round-trip regression fails before completion-store repair and passes after.
+All 72 completion-service tests, typecheck and touched-file lint pass.
+
+## 2026-10-06 | Scoped terminal-family repair; live acceptance open
+
+Artifacts child hmj_59818104fba844f59b96d9fefefeb5d9 skipped with zero bytes
+despite fresh exact-conversation download controls. Parent and child shared one
+physical target; identity matched. Foreign conversations supplied title-only
+terminal family exclusions. Explicit scope now filters archive, prior-job and
+completed catalog seeds; unscoped and same-conversation suppression remain.
+Primary validation: 97 worker tests and typecheck pass. Closed-world reviewer
+confirmed the corrected seed-loop placement. Capture/repeat remain OPEN.
+
+## 2026-10-05 20:08 UTC | Correct generated-asset lane pending normal eligibility
+
+Chromium153 runs metadata and automatic children without the Chromium150
+renderer crash. ZIP child b2222350 selected one conversation but skipped with
+no downloadable file. Replacement first_pass_readout.json has a retained
+download control, no conversation file binding/local bytes/archive item.
+Controller files-only child 146539ac also skipped: generated download controls
+belong to artifacts. Preserve both zero-capture results. Snapshot fileCount=1
+counts the skipped sentinel entry, not refreshed downloadable inventory.
+Corrected normal artifacts follow 70dee5b3 awaits the normal minimum interval;
+no eligibility bypass. Positive capture and unchanged reuse remain OPEN.
+
+## 2026-10-05 19:48 UTC | Renderer crash blocks first scoped acceptance
+
+Current-main PR214 source 43734fc16 is installed with seven-module parity.
+Normal scoped follow e3a13c6e failed its outer 15-minute collector deadline;
+no automatic child or captured asset. Chromium150 logged fatal local_frame_view
+layout assertion at 19:33:07Z; page-command reads timed out while browser CDP
+endpoint stayed healthy. Resource readback showed no memory pressure/OOM.
+Failed receipt retained. Exact owned browser closed and native absence verified.
+Only wsl-chrome-3 family chromePath changed to local Chromium153 binary, with
+backup and checksum. New normal follow 6cd88e3a is active; no acceptance claim.
+Scheduler and unrelated operator pauses remain. Curated current-main acceptance
+receipt contains the first failure and scoped runtime repair.
+
+## 2026-10-05 | Current-main scoped automatic asset acceptance
+
+PR213 merged at c568cf3e6. Fresh runtime readback: API46019, zero restarts,
+scheduler/all twelve completions paused, zero fenced leases or active jobs,
+provider guard clear. Existing maxItems=1 cannot constrain conversation scope.
+Explicit-scope regressions fail on original source and pass after propagation
+through normal follow/detail/automatic child; 171 focused checks pass; 15 HTTP completion checks pass. Review found and
+repaired unscanned project/backfill replacement, verified by one bounded reviewer. Live
+new-byte capture and unchanged repeat remain pending. Source packet belongs to
+Issue165 on fix/issue165-scoped-follow-acceptance; preexisting dirty root preserved.
+
 ## 2026-10-05 02:39 UTC | PR208 installed; fourth control confirms one-page cold startup
 
 Installed f019076aeb53f83ab08690f93fa11e809afc9bd4 with exact parity for
@@ -52904,3 +53286,108 @@ Memory disposition unavailable: no qualified AuraCall Graphiti destination.
 ## 2026-10-10 | Issue226 active chat retirement
 
 Isolated fix/issue226-active-chat-retirement worktree; root dirty edits preserved. Production maintenance red replay closes an expired unowned active/unknown response. Provider activity guard now covers maintenance's lost path and shared ChatGPT retirement, preserving active and unknown while cleaning inactive pages.40 selected checks pass; typecheck and compilation pass. Actual prior disappearance remains unattributed (already-missing, zero recorded closes). Runtime qualification and live continuation remain pending. Plan0392 owns the bounded repair.
+### 2026-10-07T11:00Z — endpoint denial repair installed
+
+PR227 merged as873ad09bffb and installed with worker SHA256 parity. API53966,
+NRestarts0; scheduler/parent/prior16 completions paused, no active jobs, native
+managed browser or held leases. 173 focused tests, typecheck and touched lint
+pass. Corrected journey9 admission-denial interpretation and idle-paused10
+remain charged: five of six used, one unused. Browser-loss cause and broader
+Plan0386 matrix remain OPEN. No provider retry during installation. Durable
+qualification: docs/dev/notes/2026-10-07-plan0386-endpoint-denial-qualification.md.
+Memory disposition unavailable: no qualified group from focused discovery.
+
+### 2026-10-07 — journey9 retained-tab loss audit
+
+Stored lease revision6 proves closes0/already-missing after observed endpoint
+loss, with both expiry deadlines later than loss. Operator reason is absence
+reconciliation, not attribution to a human close. TTL retirement is unsupported
+as the cause; no matching PID/target close evidence in service append log.
+Browser-loss origin remains unknown, so no sixth provider journey is started.
+See endpoint-denial-qualification.md for exact timestamps and source mapping.
+
+### 2026-10-07T13:58Z — operator custody clarification and refill
+
+User confirms LitScout owned the browser/profile lock and closure was agreed,
+then authorizes four more journeys. Fresh exact-profile clearance: no native
+browser/jobs/held leases, Agent Browser holderCount0, profile available, clear
+provider guard, all17 parents and scheduler paused. Allowance increases6→10:
+five used, five to run serially as global journeys11–15. API53966 and installed
+worker873ad09b remain current. Prior raw denial evidence remains preserved.
+
+### 2026-10-07T14:05Z — frontier journey11 capture
+
+Journey11 selected6abc6682 and captured one valid ZIP, local/manifest/cached
+archive hashes matching. Frontier12 IDs matches; prior files remain unchanged.
+One page, no warning; result generated14:05:10.062Z before cleanup endpoint
+refusal14:05:10.551Z. Terminal parent paused, zero jobs/native/held leases.
+Additional allowance6/10 used, four remain. Broader matrix stays OPEN.
+
+### 2026-10-07T14:12Z — frontier journey12 continuation
+
+Journey12 captured a valid DOCX container in the same6abc6682 family after11
+ZIP. Local/manifest/archive hashes match; all prior captured files unchanged.
+Frontier12 IDs matches, one page/no warning. Result precedes normal cleanup
+endpoint refusal; terminal parent paused, no native/jobs/held leases. Used7/10,
+three remain. This is positive continuation, not full changed/quiet matrix.
+
+### 2026-10-07T14:21Z — frontier journey13 continuation
+
+Journey13 captures a second DOCX from6abc6682 with local/manifest/archive
+parity and unchanged earlier files. Closed12-ID frontier, one page/no warning.
+Generated result precedes cleanup disconnect; terminal census clear. Used8/10,
+two remain. No wider changed/quiet-complete acceptance claimed.
+
+### 2026-10-07T14:30Z — frontier journey14 and monitor recovery
+
+Journey14 captured a valid ZIP, with local/manifest/archive parity and prior
+files unchanged. Frontier12 IDs matches, one page/no warning; terminal census
+clear. Private monitor partial-JSON failure was reattached to existing journey
+without resume/charge; future observer saves are atomic and reads tolerate
+transient failures. Both stored result/completion precede cleanup disconnect,
+but job completion precedes generatedAt468ms; preserve that timestamp limit.
+Used9/10, one remains. No wider acceptance claimed.
+
+### 2026-10-07T14:39Z — refill execution finished
+
+Journey15 captured a valid DOCX with local/manifest/archive parity. Latest
+journeys11–15 all succeeded on matched12-ID frontier, one physical page each,
+normal maxItems1/forcefalse/6 interactions per minute, zero provider warnings.
+Two ZIP and three DOCX hashes/archive identities are distinct. Fresh cached
+download readback for all five: HTTP200 and exact bytes/hash. All eight retained
+files keep their hashes/mtimeNs. Final API53966/NRestarts0, all parents/scheduler
+paused; zero native managed browser, jobs and held leases.
+Allowance10/10 used, zero remain. Journey14 ledger end fields reconciled from
+its terminal raw receipt after monitor recovery; no extra resume/charge. Wider
+Plan0386 changed/quiet-complete acceptance remains OPEN. Memory unavailable:
+no qualified group from focused discovery. Final durable readback under notes.
+
+### 2026-10-07 — closed-world acceptance review
+
+Reviewed 6a07668e4..6de281107, matching PR230 merge tree. Fresh five-file
+provider-free run: 260 tests passed. No accepted Standards defect. Missing
+isolated changed-B and quiet-complete live evidence block Plan0386 closeout;
+composed guard/reload remains needs_evidence. Cache-only census found 23
+metadata-complete candidates among 348 rows; local integrity qualification is
+the next packet. Provider allowance remains exhausted; scheduler gate separate.
+Review: notes/2026-10-07-plan0386-acceptance-review.md.
+
+### 2026-10-08 — Plan0386 fresh eight-journey goal
+
+Local research qualifies readable manifest baseline A among23 candidates;
+260 fresh provider-free checks pass. Current B needs a new index comparison.
+Fresh allowance8, used0; checkpoint deadline12:40UTC, before user two-hour
+limit. Normal unscoped completion, maxItems1/forcefalse/6 interactions per
+minute; global scheduler stays paused until separate dependent gate is ready.
+Source and API identity revalidated; native exact managed browser absent.
+Control: notes/2026-10-08-plan0386-eight-journey-control.json.
+
+### 2026-10-08T10:59Z — display repaired, index qualification observed
+
+Outcome progress: normal root index adds one genuine row, no existing
+fingerprint changes. Blocker reduction: unavailable display923 replaced by
+responsive0.0 in the exact browser family; journey2 proves startup. A's three
+archive reads match local bytes. Monitor2 stopped before child and interrupted
+next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
+the same parent and retained settled idle lease/one known target. No source
+change or acceptance closure claimed.

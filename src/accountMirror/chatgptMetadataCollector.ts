@@ -128,6 +128,7 @@ function resolveCollectorDetailCallTimeoutMs(
 export const resolveCollectorDetailCallTimeoutMsForTest = resolveCollectorDetailCallTimeoutMs;
 
 export interface AccountMirrorMetadataCollectorInput {
+	conversationIds?: string[] | null;
 	provider: AccountMirrorProvider;
 	runtimeProfileId: string;
 	expectedIdentityKey: string;
@@ -632,12 +633,14 @@ export function createChatgptAccountMirrorMetadataCollector(
 				projectCount: projects.items.length,
 				conversations,
 			});
-			const attachmentCursor = selectAttachmentInventoryCursorForRequestedPhase(
-				input.provider,
-				input.sweepMode,
-				requestedPhase,
-				input.previousEvidence ?? null,
-			);
+			const attachmentCursor = input.conversationIds?.length
+				? null
+				: selectAttachmentInventoryCursorForRequestedPhase(
+						input.provider,
+						input.sweepMode,
+						requestedPhase,
+						input.previousEvidence ?? null,
+					);
 			const legacyFrontier = honorRequestedDetailPhase
 				? {
 						detailConversations: requestedDetailConversations,
@@ -732,19 +735,30 @@ export function createChatgptAccountMirrorMetadataCollector(
 				? createProviderInteractionBudgetYieldCause()
 				: null;
 			if (input.providerTrafficPlanController) {
+				const selectedConversation =
+					frontier.detailConversations[
+						normalizeCursorIndex(
+							detailAttachmentCursor?.nextConversationIndex,
+							frontier.detailConversations.length,
+						)
+					];
+				const selectedProject =
+					projects.items[
+						normalizeCursorIndex(detailAttachmentCursor?.nextProjectIndex, projects.items.length)
+					];
 				const selectedDetailWorkKey = chatgptAccountLibraryRead
 					? "scope:account-library"
-					: prioritizeDetailConversations && frontier.detailConversations[0]
+					: prioritizeDetailConversations && selectedConversation
 						? createAccountMirrorProviderTrafficWorkKey(
 								"conversation",
-								frontier.detailConversations[0].id,
+								selectedConversation.id,
 							)
-						: projects.items[0]
-							? createAccountMirrorProviderTrafficWorkKey("project", projects.items[0].id)
-							: frontier.detailConversations[0]
+						: selectedProject
+							? createAccountMirrorProviderTrafficWorkKey("project", selectedProject.id)
+							: selectedConversation
 								? createAccountMirrorProviderTrafficWorkKey(
 										"conversation",
-										frontier.detailConversations[0].id,
+										selectedConversation.id,
 									)
 								: null;
 				freezeAccountMirrorDetailTrafficPlan(input.providerTrafficPlanController, {
@@ -1362,21 +1376,23 @@ export function selectProjectConversationCursorForRequestedPhase(
 export function resolveRequestedDetailPhaseConversations(
 	input: Pick<
 		AccountMirrorMetadataCollectorInput,
-		"provider" | "previousEvidence" | "requestedPhase" | "previousConversations"
+		"provider" | "previousEvidence" | "requestedPhase" | "previousConversations" | "conversationIds"
 	>,
 ): Conversation[] {
 	if (input.requestedPhase !== "detail-inventory") return [];
-	const ids = uniqueStrings([
-		input.previousEvidence?.attachmentInventory?.conversationDetail?.conversationId ?? "",
-		...(input.previousEvidence?.conversationFreshnessFrontier?.selectedConversationIds ?? []),
-		...(input.previousEvidence?.collectorProgress?.attachmentCursor?.conversationDetail
-			?.conversationId
-			? [
-					input.previousEvidence.collectorProgress.attachmentCursor.conversationDetail
-						.conversationId,
-				]
-			: []),
-	]);
+	const ids = input.conversationIds?.length
+		? uniqueStrings(input.conversationIds)
+		: uniqueStrings([
+				input.previousEvidence?.attachmentInventory?.conversationDetail?.conversationId ?? "",
+				...(input.previousEvidence?.conversationFreshnessFrontier?.selectedConversationIds ?? []),
+				...(input.previousEvidence?.collectorProgress?.attachmentCursor?.conversationDetail
+					?.conversationId
+					? [
+							input.previousEvidence.collectorProgress.attachmentCursor.conversationDetail
+								.conversationId,
+						]
+					: []),
+			]);
 	const retained = new Map(
 		input.previousConversations?.map((conversation) => [conversation.id, conversation]),
 	);
