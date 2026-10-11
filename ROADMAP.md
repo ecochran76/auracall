@@ -4494,3 +4494,7 @@ plan. A future migration needs an explicit precedence contract; no runtime chang
 operator's runtime > browser profile > global decision following Plan0402. The
 launch plan owns resolution and stored execution consumes it. Provider-free source
 acceptance is separate from source integration and installed/live adoption.
+
+- Plan0404 source acceptance CLOSED: owned browser exit before CDP readiness now
+  classified with recovery guidance; installation and historical exit attribution
+  remain separate. Issue226 remains open.

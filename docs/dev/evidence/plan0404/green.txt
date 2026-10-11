@@ -1,0 +1,50 @@
+
+ RUN  v4.0.16 /home/ecochran76/workspace.local/auracall-issue226-readiness
+
+ ❯ tests/browser-service/chromeLifecycleOwnership.test.ts (10 tests | 1 failed | 9 skipped) 199ms
+     × classifies an owned browser exit before CDP readiness with scoped recovery instruction 197ms
+     ↓ persists owned shutdown and exit attribution for the same browser generation
+     ↓ keeps owned shutdown working when durable observations cannot be written
+     ↓ removes managed restore inputs before cold process launch; endpoint-only=true
+     ↓ removes managed restore inputs before cold process launch; endpoint-only=false
+     ↓ keeps shutdown ownership when reusing a registry instance started by the current run
+     ↓ keeps shutdown ownership when re-adopting a live process started by the current run
+     ↓ still skips shutdown for genuinely reused registry instances
+     ↓ retires the matching registry generation when owned Chrome exits
+     ↓ retires the matching owned generation during SIGTERM cleanup
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/browser-service/chromeLifecycleOwnership.test.ts > chromeLifecycle ownership > classifies an owned browser exit before CDP readiness with scoped recovery instruction
+AssertionError: expected BrowserDebuggerReadinessError: Chrome Dev… { …(6) } to match object { …(5) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+- {
++ BrowserDebuggerReadinessError {
+    "code": "BROWSER_PROCESS_EXITED_BEFORE_CDP",
+    "exitCode": 1,
+    "processId": 44567,
+-   "profileDirectory": "/tmp/chrome-dead-readiness-kvgZf6/managed/chatgpt",
++   "profileDirectory": undefined,
+    "recoveryAction": "inspect_browser_launch_diagnostics",
+  }
+
+ ❯ tests/browser-service/chromeLifecycleOwnership.test.ts:146:4
+    144|    const { chromeLifecycle } = await importChromeLifecycleWithMocks({ …
+    145|    const directory = path.join(root, "managed", "chatgpt");
+    146|    await expect(chromeLifecycle.launchChrome({
+       |    ^
+    147|     chromePath: "/usr/bin/google-chrome", chromeProfile: "Default", ma…
+    148|     managedProfileRoot: path.join(root, "managed"), headless: true,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  22:13:07
+   Duration  482ms (transform 212ms, setup 45ms, import 52ms, tests 199ms, environment 0ms)
+

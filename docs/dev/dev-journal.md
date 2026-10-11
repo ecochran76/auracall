@@ -53459,3 +53459,9 @@ remain separate gates. No provider request or wake created.
 Plan0399: qualified model-ID defect reproduced at CLI run-option seam and real dry-run; slash-qualified exact ID now bypasses fuzzy aliases, preserving case. Focused96 tests/typecheck/targeted lint pass. Isolated fix/qualified-model-id; no provider or installed changes.
 
 Plan0401: retained new-conversation absolute deadline failure reproduced on current main; success-boundary timestamp gate repaired. Focused53 tests/typecheck/targeted lint PASS. Source only; separate installed/live gates.
+
+Plan0404 source acceptance: reproduced generic readiness error after owned child
+exit through public launchChrome. Typed observed-exit/unproven-exit classification
+and scoped recovery instruction implemented. WSL directory forwarding fixed.
+45 focused/adjacent tests, typecheck pass; serial review0 blocking. No install/live
+or provider effects; historical exit attribution and wider Issue226 remain open.

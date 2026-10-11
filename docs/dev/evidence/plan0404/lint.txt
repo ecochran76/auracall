@@ -1,0 +1,26 @@
+tests/browser-service/chromeLifecycleOwnership.test.ts:79:3 lint/style/useNamingConvention ━━━━━━━━━━
+
+  ! This object member name should be in camelCase or snake_case.
+  
+    77 │ 	}));
+    78 │ 	vi.doMock("chrome-launcher", () => ({
+  > 79 │ 		Launcher: class {
+       │ 		^^^^^^^^
+    80 │ 			pid = 44567;
+    81 │ 			port = 9222;
+  
+
+tests/browser-service/chromeLifecycleOwnership.test.ts:122:3 lint/style/useNamingConvention ━━━━━━━━━━
+
+  ! This object member name should be in camelCase or snake_case.
+  
+    120 │ 			() => "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+    121 │ 		),
+  > 122 │ 		WINDOWS_LOOPBACK_REMOTE_HOST: "windows-loopback",
+        │ 		^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    123 │ 	}));
+    124 │ 
+  
+
+Checked 2 files in 583ms. No fixes applied.
+Found 2 warnings.

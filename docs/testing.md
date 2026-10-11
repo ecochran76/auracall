@@ -3383,3 +3383,9 @@ Absolute-deadline regression: `pnpm vitest run tests/browser/chatgptAffinityExec
 includes new/existing conversation results at and just after the deadline without
 running timer callbacks. Success must be rejected, aggregate outcome remains
 unknown, and the existing registry ownership fence remains intact.
+
+For owned browser exit before CDP readiness classification, run
+`pnpm vitest run tests/browser-service/chromeLifecycle.test.ts tests/browser-service/chromeLifecycleOwnership.test.ts`.
+The public launchChrome fixture protects typed observed-exit diagnostics; unready
+CDP without child-exit evidence must not be reported as a proven browser exit.
+This provider-free check does not establish historical exit attribution.

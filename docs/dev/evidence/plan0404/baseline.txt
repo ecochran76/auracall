@@ -1,0 +1,11 @@
+
+ RUN  v4.0.16 /home/ecochran76/workspace.local/auracall-launch-plan
+
+ ✓ tests/browser-service/chromeLifecycle.test.ts (19 tests) 42ms
+ ✓ tests/browser-service/chromeLifecycleOwnership.test.ts (9 tests) 355ms
+
+ Test Files  2 passed (2)
+      Tests  28 passed (28)
+   Start at  22:11:08
+   Duration  666ms (transform 363ms, setup 127ms, import 285ms, tests 397ms, environment 0ms)
+

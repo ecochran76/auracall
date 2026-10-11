@@ -1,0 +1,22 @@
+{
+  "baseline": "8aa11f18a4bba84e9ba67c88e69f4ed3916d3588",
+  "tier": "focused_and_adjacent",
+  "passedTests": 45,
+  "testFiles": 4,
+  "durationSeconds": 3.02,
+  "typecheck": "passed",
+  "lint": "passed with2existing mock-export naming warnings; package source excluded by repo configuration",
+  "sourceSha256": {
+    "packages/browser-service/src/chromeLifecycle.ts": "0637f973009665343c4d57186d0a0b60bd4a094484cb3c50e7b9a57a4fc6745d",
+    "tests/browser-service/chromeLifecycleOwnership.test.ts": "b5e71df702b152a858e468a513bb61e390f247341549a9edaf96a68d51845a15",
+    "tests/browser-service/chromeLifecycle.test.ts": "02a44f23ba556bd6a22cc93b3b6bc9cdb05f6fa380047a57e7a54c6bb15e94a3"
+  },
+  "red": "red.txt",
+  "intermediateProfileContextFailure": "green.txt",
+  "green": "green-profile-context.txt",
+  "acceptance": "acceptance-tests.txt",
+  "review": "review.md",
+  "providerSubmissions": 0,
+  "installedChanges": 0,
+  "scope": "owned launch-time failure classification; historical exit actor unresolved"
+}

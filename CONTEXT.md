@@ -69,3 +69,10 @@ _Avoid_: View selection, browser launch
 
 **Memory routing**:
 The selection of a reviewed Graphiti group and audience for qualified source-backed memory. AuraCall uses `auracall_main`. Unresolved routing is distinct from a verified memory-service failure.
+
+### Browser debugger readiness failure
+
+A failure to establish the launch CDP endpoint. An observed owned-child exit is
+`BROWSER_PROCESS_EXITED_BEFORE_CDP`; endpoint failure without child-exit proof is
+`BROWSER_CDP_NOT_READY`. Neither identifies the actor causing an exit. Recovery
+instruction directs launch-diagnostic inspection, not automatic process restart.
