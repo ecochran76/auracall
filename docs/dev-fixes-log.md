@@ -24479,3 +24479,11 @@ Raw user-config resolution must apply the manual-login default before binding an
 explicit service managed directory; otherwise scoped cookies and reattachment
 lose custody. A derived profile cookie path is not an explicit bootstrap request:
 respect cookieSync, including runtime false. Public regressions retain both risks.
+
+### 2026-10-10 | Classify owned browser exit before CDP readiness
+
+Plan0404 replaces generic launch-readiness error with typed observed-child-exit
+or unproven-exit diagnostics and inspection guidance. Read owned child state only
+at failed readiness; retain profile directory across WSL launcher bypass. Public
+launchChrome regression goes red before fix and green afterward;45 adjacent tests
+pass. No restart added, no installed/live proof, no prior exit actor inferred.

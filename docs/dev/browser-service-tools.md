@@ -904,3 +904,13 @@ A shutdown return is not proof of process exit. Adopted handles do not expose
 owned child exit callbacks. Pre-readiness failures, external process deaths,
 direct CDP Browser.close and per-target retirement are outside this journal.
 This source change requires runtime adoption before installed evidence is expected.
+
+### Browser launch readiness failures
+
+Failed launch readiness returns `BrowserDebuggerReadinessError`. Code
+`BROWSER_PROCESS_EXITED_BEFORE_CDP` requires an observed exit code or signal from
+the owned child. `BROWSER_CDP_NOT_READY` preserves an unready endpoint without
+claiming browser exit. `processId`, `exitCode`, `exitSignal` and `profileDirectory`
+carry available launch context; `recoveryAction=inspect_browser_launch_diagnostics`
+directs inspection before an AuraCall retry. The error does not authorize restart
+of an unverified browser owner and does not attribute who caused an exit.

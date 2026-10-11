@@ -22032,3 +22032,10 @@ explicit runtime directory and cookie opt-in. Resolver owns canonical/legacy fie
 stored executor consumes one projection. Final focused/adjacent207 tests pass.
 No provider/installed/live changes. Source review/PR and integration remain distinct.
 Memory forbidden; no durable-memory update requested.
+
+## Turn 636 | 2026-10-10
+
+Plan0404: original Issue226 readiness classification isolated after reconciling
+existing successful active-expiry acceptance. Public launchChrome red/green
+reproducer, typed child-exit versus unproven-exit diagnostics, WSL scope forwarding.
+45 focused/adjacent tests and typecheck pass. No provider/install effects.

@@ -1,0 +1,49 @@
+
+ RUN  v4.0.16 /home/ecochran76/workspace.local/auracall-issue226-readiness
+
+ ❯ tests/browser-service/chromeLifecycleOwnership.test.ts (10 tests | 1 failed | 9 skipped) 205ms
+     × classifies an owned browser exit before CDP readiness with scoped recovery instruction 203ms
+     ↓ persists owned shutdown and exit attribution for the same browser generation
+     ↓ keeps owned shutdown working when durable observations cannot be written
+     ↓ removes managed restore inputs before cold process launch; endpoint-only=true
+     ↓ removes managed restore inputs before cold process launch; endpoint-only=false
+     ↓ keeps shutdown ownership when reusing a registry instance started by the current run
+     ↓ keeps shutdown ownership when re-adopting a live process started by the current run
+     ↓ still skips shutdown for genuinely reused registry instances
+     ↓ retires the matching registry generation when owned Chrome exits
+     ↓ retires the matching owned generation during SIGTERM cleanup
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/browser-service/chromeLifecycleOwnership.test.ts > chromeLifecycle ownership > classifies an owned browser exit before CDP readiness with scoped recovery instruction
+AssertionError: expected Error: Chrome DevTools 127.0.0.1:9222 did… to match object { …(5) }
+
+- Expected
++ Received
+
+- {
+-   "code": "BROWSER_PROCESS_EXITED_BEFORE_CDP",
+-   "exitCode": 1,
+-   "managedProfileDir": "/tmp/chrome-dead-readiness-JbO8TC/managed/chatgpt",
+-   "processId": 44567,
+-   "recoveryAction": "inspect_browser_launch_diagnostics",
++ Error {
++   "message": "Chrome DevTools 127.0.0.1:9222 did not become ready",
+  }
+
+ ❯ tests/browser-service/chromeLifecycleOwnership.test.ts:146:4
+    144|    const { chromeLifecycle } = await importChromeLifecycleWithMocks({ …
+    145|    const directory = path.join(root, "managed", "chatgpt");
+    146|    await expect(chromeLifecycle.launchChrome({
+       |    ^
+    147|     chromePath: "/usr/bin/google-chrome", chromeProfile: "Default", ma…
+    148|     managedProfileRoot: path.join(root, "managed"), headless: true,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  22:12:12
+   Duration  491ms (transform 215ms, setup 51ms, import 55ms, tests 205ms, environment 0ms)
+
