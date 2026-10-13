@@ -53366,3 +53366,17 @@ archive reads match local bytes. Monitor2 stopped before child and interrupted
 next detail pass; limitation preserved, stopping rule corrected. Journey3 uses
 the same parent and retained settled idle lease/one known target. No source
 change or acceptance closure claimed.
+## 2026-10-13 | Plan0386 diagnosis reanchor
+
+Recovered newer October8–9 receipts from the acceptance worktree: journey9
+stopped on HTTP429, one old journey unused, original retry window expired.
+Current API98570 and CLI share the issue253 installation; scheduler/all17
+completions paused, provider guard clear, selected managed browser absent.
+One user-authorized zero-retry/30-second direct context diagnostic failed before
+message reading: owned target remained at ChatGPT root rather than conversation.
+Afterward native browser absent, running completions0, one settled idle lease
+preserved. Four single-visit tests and one selected retry-classification test
+pass, but neither reproduces historical missing messages. No source repair or
+automatic acceptance claim. Next is a local public route-handoff reproducer;
+full materialization acceptance remains OPEN. See
+notes/2026-10-13-plan0386-diagnosis-reanchor.md.
