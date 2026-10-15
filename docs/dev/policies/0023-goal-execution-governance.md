@@ -2,6 +2,19 @@
 
 ## Policy
 
+- Treat user resource ceilings as cumulative hard limits covering reasoning,
+  tools, workers, validation, documentation, and closeout. Before execution,
+  reserve capacity for a minimal recoverable checkpoint and define an earlier
+  implementation stop threshold. Check the available meter before each bounded
+  work unit and after expensive operations; start a unit only when its bounded
+  cost plus the closeout reserve fits. When usage is unavailable or delayed,
+  use a conservative observable work/time bound and report the uncertainty.
+- At the implementation stop threshold, save the smallest recoverable state
+  and end execution within the user ceiling. Defer optional review, broader
+  tests, publication, and extended handoff writing when they would consume
+  the reserve. Resource exhaustion overrides automatic continuation; resuming
+  or renaming a packet does not renew a user ceiling without user authority.
+
 - Apply this policy when autonomous work is expected to span multiple bounded
   slices, context windows, sessions, or human/runtime gates.
 - Preserve the user-approved objective as the stable goal contract. Do not
@@ -158,3 +171,20 @@ Recommended companion modules:
 - `subagent-workflow-optimization`
 - `validation-and-handoff`
 - `commit-and-push-cadence`
+
+## Local Resource Control
+
+For future explicitly authorized autonomous execution windows:
+- Meter check: before each work unit and after expensive validation or review.
+- Implementation stop: the earlier of 50% of the authorized token ceiling or
+  80% of the authorized wall-clock ceiling; retain the remainder for recovery.
+- Work unit bound: one unresolved decision or one implementation/validation
+  slice, with a meter check before another begins.
+- If the observed closeout cost exceeds the reserve, reduce the next unit and
+  checkpoint immediately; report the breach rather than claiming compliance.
+- Keep a single compact checkpoint with source revision, unmet acceptance,
+  evidence locators, usage, and next action. Defer optional closeout work.
+
+These are agent operating controls. Host-level aggregate counters and automatic
+stopping are unverified; these documents do not implement runtime enforcement.
+The paused issue165 resource window remains paused and receives no new budget.

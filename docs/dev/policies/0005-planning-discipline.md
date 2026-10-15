@@ -2,6 +2,12 @@
 
 ## Policy
 
+- Maintain one compact working state with unresolved decisions, current
+  evidence locators, and the next bounded action. Update changes at material
+  boundaries. Reuse settled decisions and unchanged evidence; reopen them only
+  for new evidence, changed scope, or an applicable freshness trigger. Keep
+  detailed history in canonical artifacts and read the needed excerpt.
+
 - Give each investigation a discovery-call and returned-byte budget proportional
   to its question. Start with one focused graph query and one relevant source
   lookup, expanding for named unresolved questions. Prefer relevant diffs,

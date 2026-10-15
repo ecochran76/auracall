@@ -1,3 +1,10 @@
+## 2026-10-14 | Governance resource controls and read-only policy pilot
+
+Plan0422: four reviewed shared policy amendments adopted in this isolated
+checkout; policy-investigation pilot admitted with five drift/scope cases.
+Host stopping, fresh Codex-client binding and whole-turn savings unverified.
+Issue165 remains paused; no browser/provider effects. See dated adoption note.
+
 ## 2026-10-14 | Project-route reuse integrated and installed
 
 PR321/source ddea20ec7/merge a3d143e4a.267focused checks, typecheck/build pass;

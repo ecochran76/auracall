@@ -1,0 +1,10 @@
+{
+  "status": "pass",
+  "cases": {
+    "current": "pass",
+    "changed_source": "pass",
+    "added_policy": "pass",
+    "missing_policy": "pass",
+    "out_of_scope_task": "pass"
+  }
+}
