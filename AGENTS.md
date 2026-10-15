@@ -134,6 +134,19 @@ Use the existing single-context `CONTEXT.md` authority. See `docs/agents/domain.
 
 Follow `docs/dev/policies/` and `docs/agents/codex-stack.md`, `docs/agents/codex-code-discovery.md`, and `docs/agents/runtime-proof.md`.
 
+## Policy Context Pilot
+
+For single-agent read-only governance investigation, call `gov_policy` with
+profile `policy-investigation`, task kind `investigation`, and
+`include_source_text:true` on first use or after context loss. Consume all
+selected canonical text. Retain the exact packet for digest freshness checks.
+Scope excludes implementation, browser/provider activity, release, integration,
+and resuming autonomous goals. For other tasks, scope changes, unavailable,
+stale, invalid, or fallback-required results, read the relevant canonical
+policies directly. Policy source or inventory changes invalidate admission;
+review applicability before rebuilding `.governance/policy-context.json`.
+See `docs/dev/policies/0035-policy-context-pilot.md` for the pilot contract.
+
 ## Policy Loading Contract
 
 - `AGENTS.md` is a routing surface, not a one-time pointer.

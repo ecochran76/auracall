@@ -1,0 +1,189 @@
+{
+  "args": [
+    "--root",
+    "/home/ecochran76/workspace.local/auracall-governance-resource-pilot",
+    "--include",
+    "AGENTS.md",
+    "--include",
+    "docs/dev/policies/**/*.md"
+  ],
+  "checked_at": "2026-10-15T03:37:17.680334+00:00",
+  "command": "/home/ecochran76/.local/share/governance-context/current/venv/bin/governance-context-mcp",
+  "config_path": "/home/ecochran76/workspace.local/auracall-governance-resource-pilot/.codex/config.toml",
+  "effective_includes": [
+    "AGENTS.md",
+    "docs/dev/policies/**/*.md"
+  ],
+  "failures": [],
+  "fresh_session": {
+    "fallback_reads": [
+      {
+        "path": "AGENTS.md",
+        "sha256": "5488f01bf86cab9e6e71d74dcf2f8bd1aebfa8e9da32a79e77dc8c66e0f54011"
+      },
+      {
+        "path": "docs/dev/policies/0001-policy-management.md",
+        "sha256": "4ec8229b6efa6aa25e3e637595217785a51cfdc91f4fd5fddf17772787ba245e"
+      },
+      {
+        "path": "docs/dev/policies/0002-policy-upgrade-management.md",
+        "sha256": "cbf54a7d31d2663a4b8cd77c8da4d45e4c25e001c2c7c52a37c2723dcb34a993"
+      },
+      {
+        "path": "docs/dev/policies/0003-policy-adoption-feedback-loop.md",
+        "sha256": "580927df64dcff736248bc6916014c4cfef55ce35521464a011a8414491203f3"
+      },
+      {
+        "path": "docs/dev/policies/0004-notes-and-memories.md",
+        "sha256": "95a0088d8cdebb4fd481e62814b134b672e610a7c8032db05964062261f76d3b"
+      },
+      {
+        "path": "docs/dev/policies/0005-planning-discipline.md",
+        "sha256": "321d3b643d6e5ce9bc5a501c34fe9bffea39d763679872d4aa45596eb55e9237"
+      },
+      {
+        "path": "docs/dev/policies/0006-parallel-plan-design.md",
+        "sha256": "93e0e5a14bacc564bc72f67e195629b253474078f8651471f129a1112fae6a64"
+      },
+      {
+        "path": "docs/dev/policies/0007-roadmap-runbook-governance.md",
+        "sha256": "797207d9dabca07c905871b2bbbebf2c3b0a33259e051901d85d921fba09545d"
+      },
+      {
+        "path": "docs/dev/policies/0008-architecture-guardrails.md",
+        "sha256": "d5c6726baecb392542bf96ca12992fc0ff72e43caa1859ef95340340325a3e45"
+      },
+      {
+        "path": "docs/dev/policies/0009-documentation-change-control.md",
+        "sha256": "a1699e49e1a1319f09558be8388a2ee1ef843f738019d0b63f2a5f8c1d13f25d"
+      },
+      {
+        "path": "docs/dev/policies/0010-git-worktree-hygiene.md",
+        "sha256": "ddb3ece0c2dd14f3a6a30ae9cf2b229525130a14d006bee1275f45c2597b8d19"
+      },
+      {
+        "path": "docs/dev/policies/0011-commit-history-discipline.md",
+        "sha256": "ced63076b82cd883e6721693c55a3b1ed0674fd98bd677c377b6aaa6cd7e8e27"
+      },
+      {
+        "path": "docs/dev/policies/0012-branch-and-integration-strategy.md",
+        "sha256": "34db40ab0431054b5df30952b82463f81f49b324b2cef602097ae6be00c85fcd"
+      },
+      {
+        "path": "docs/dev/policies/0013-commit-and-push-cadence.md",
+        "sha256": "3d8e9feeb694e938b044ebacdda210743b8ce8ef81c19f517ab969788230ade2"
+      },
+      {
+        "path": "docs/dev/policies/0014-multi-agent-reconciliation.md",
+        "sha256": "c018268e5df7d353313470dd8c6e54c0adb5f1e343be4919de62df59e675facf"
+      },
+      {
+        "path": "docs/dev/policies/0015-subagent-workflow-optimization.md",
+        "sha256": "4a18f495d010c3884ae088e5bf21fdfe0dd842eaf6a6197bdb70dd6979b81ace"
+      },
+      {
+        "path": "docs/dev/policies/0016-versioning-and-release.md",
+        "sha256": "03b8511397935437c37c4caa12f30072fc317b3039765fc914c2ebb67bb53ad1"
+      },
+      {
+        "path": "docs/dev/policies/0017-turn-closeout.md",
+        "sha256": "0b19d11a0e7f272a8a03fe85b059ac28cb6968d2788bf79fbbaee395cb37a30e"
+      },
+      {
+        "path": "docs/dev/policies/0018-validation-and-handoff.md",
+        "sha256": "e63edb9c2a8e7aa58a86c4a1d65da9898365d97029c4e5f0a0a36e7931618959"
+      },
+      {
+        "path": "docs/dev/policies/0019-upstream-fork-maintenance.md",
+        "sha256": "0f6c0b25440e824bc22b77fa8863246effcf6333c157715379060fa8621a7784"
+      },
+      {
+        "path": "docs/dev/policies/0020-lint-warning-debt.md",
+        "sha256": "0a8b8ea2725303317161d6a7110147597ee003231371013d46d7288ea3f71cf1"
+      },
+      {
+        "path": "docs/dev/policies/0021-graph-backed-memory-usage.md",
+        "sha256": "d8428cb15b39afd8ce38996039602537526386bf66609fb54d2de18384ef6ce2"
+      },
+      {
+        "path": "docs/dev/policies/0022-codegraph-usage.md",
+        "sha256": "0f19d43197fc545d0a21716dd8adc6c3e6574a74a1d651ba18d7ce7d279813e1"
+      },
+      {
+        "path": "docs/dev/policies/0023-goal-execution-governance.md",
+        "sha256": "d8742af6b79cb575392492fdfe2007dc29d9b6e1f197e0dff267b2814f7245c1"
+      },
+      {
+        "path": "docs/dev/policies/0024-policy-harvest-loop.md",
+        "sha256": "25783622a5609819c2dd9c6c7b3a66a7f90024f85a20612f62100f68b61bf78e"
+      },
+      {
+        "path": "docs/dev/policies/0025-subagent-runtime-governance.md",
+        "sha256": "aeff31d51ed82dcd629919e9e96c13474e2851ffd1927823161b69e2e622a391"
+      },
+      {
+        "path": "docs/dev/policies/0026-memory-service-runtime-governance.md",
+        "sha256": "4198785499d00db709f0e3e7be0fd4d6404d3e77f9d34ae3fde5edefcd042299"
+      },
+      {
+        "path": "docs/dev/policies/0027-preview-artifact-review.md",
+        "sha256": "437c52c2ce1f7a06c851ca6136ef36c1efc466be16c68428db4271cd09fe5a52"
+      },
+      {
+        "path": "docs/dev/policies/0028-active-lane-coordination.md",
+        "sha256": "9ed3c2cc7ec0d63c01e8de782955165c76c6353a6a375020dea5528ac4481469"
+      },
+      {
+        "path": "docs/dev/policies/0029-code-testing-discipline.md",
+        "sha256": "b6b00d3f554b0f9d062024a8671cae3d414871f52f070069d47bd3a19d256199"
+      },
+      {
+        "path": "docs/dev/policies/0030-model-selection-and-calibration.md",
+        "sha256": "819d113f019cf9a66ba3f2e3df39581d67097db3c78ca1d6a0294ff7276a8638"
+      },
+      {
+        "path": "docs/dev/policies/0031-work-item-traceability.md",
+        "sha256": "e7a325222ac7abb5d3df3cf4abb00dddccc73cff9c024f41d64d4541e9c763fb"
+      },
+      {
+        "path": "docs/dev/policies/0032-collaborative-development-workflow.md",
+        "sha256": "8e03ab9bb671164da549347f2f36e5437a9838ff7690c6ba0b6594fd02f42cac"
+      },
+      {
+        "path": "docs/dev/policies/0033-forge-issue-reporting.md",
+        "sha256": "bd4b0c82a96089131933f05207cbe50c56aab4f3879e07341e28885b5eb4a62c"
+      },
+      {
+        "path": "docs/dev/policies/0034-github-issue-operations.md",
+        "sha256": "7543bcccc6e038725e0c58be31179405d4c03b91e4737057a43c0b2c1cd44520"
+      },
+      {
+        "path": "docs/dev/policies/0035-policy-context-pilot.md",
+        "sha256": "8ce8e1784ebfa923f030ba90fe7ec35be9da30f82373183fb68a0a746eb7d39e"
+      }
+    ],
+    "tools": [
+      "gov_list",
+      "gov_outline",
+      "gov_policy",
+      "gov_read",
+      "gov_search"
+    ]
+  },
+  "installed_version": "0.0.5.dev0",
+  "policy": {
+    "applicable": true,
+    "decision_digest": "74c96a41e944e74fdd8987995f155a44ea5e3ba59139b39dc449eeedc55c80af",
+    "fallback_required": false,
+    "policy_digest": "8704d4f8b16ad00aa8d8a569f3507f2783efcf284b8deaca49c8f242b0066ea0",
+    "status": "current"
+  },
+  "profile": "policy-investigation",
+  "receipt_digest": "7e05aad388bbe79a7fcfe5a80092a488a618d96f0a8c9c121db2616f15e971b2",
+  "repo_root": "/home/ecochran76/workspace.local/auracall-governance-resource-pilot",
+  "resolved_command": "/home/ecochran76/.local/share/governance-context/releases/4f0ef58/venv/bin/governance-context-mcp",
+  "schema_version": 1,
+  "server_name": "governance",
+  "status": "admitted",
+  "task_kind": "investigation"
+}

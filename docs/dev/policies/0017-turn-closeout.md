@@ -2,6 +2,11 @@
 
 ## Policy
 
+- Fund closeout from the goal's reserved resource capacity. Save one concise
+  recoverable checkpoint and reference existing validation and history instead
+  of reproducing them. Report the measured final usage and any ceiling breach;
+  a stop announcement alone does not prove that execution stopped in budget.
+
 - End-of-turn closeout should be compact and should use inline labels instead
   of standalone section headers when the content is short.
 - Default order: `Status + Verification`, `Plan + Audit`, optional

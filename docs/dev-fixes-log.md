@@ -1,3 +1,10 @@
+## 2026-10-14 — Closeout consumes the resource ceiling
+
+A stop announcement is not a budget stop. Account for reasoning, tools, tests
+and closeout cumulatively; reserve checkpoint capacity before starting another
+unit. Keep one compact working state and reuse unchanged evidence. Plan0422
+adopts explicit controls; host-level automatic enforcement remains unverified.
+
 ## 2026-10-14 — Canonical project URLs can cause needless navigation (#165)
 
 ChatGPT project URLs can carry a human-readable suffix after the stable project
