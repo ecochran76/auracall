@@ -55523,3 +55523,13 @@ new-chat metadata not committed; no quiet repeat or activation. Single late even
 during Fetch.disable reproduces the exact cleanup failure. Added an outcome barrier
 for queued events during domain shutdown; genuine disable failure remains fatal.
 Validation and another bounded staged acceptance follow. Raw failed packet retained.
+
+## 2026-10-18 — Capacity-wait entry cancellation bypasses normalization
+
+11917b044 native retry has no late shutdown commands, but fails earlier on raw
+native abort at the budget-wait entry.44charged/peak30,0uncertain backend records,
+0new warnings. Public-authority red11ms reproduces cancellation during warning
+snapshot: the nonasync wait helper throws before .catch attaches. Async helper
+keeps that entry abort on the existing typed no-send path. No dispatch occurred
+in regression; genuinely dispatched uncertainty remains protected. No new-chat
+capture or quiet repeat; runtime707 remains globally active and scheduler paused.

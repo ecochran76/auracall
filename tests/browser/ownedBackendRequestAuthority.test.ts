@@ -201,3 +201,25 @@ test("concurrent capacity waits share only unfinished advisory reads", async () 
 		await results;
 	}
 });
+
+test("native cancellation while reading budget warnings remains a proven no-send", async () => {
+	const ledger = createInMemoryProviderInteractionLedger();
+	const cancellation = new AbortController();
+	const authority = createOwnedBackendRequestAuthority({
+		ledger,
+		scope: { provider: "chatgpt", tenantKey: "account", runtimeProfileId: "a", managedBrowserProfile: "/managed" },
+		workloadId: "cancel-warning", operationId: "cancel-warning", tabLeaseId: "cancel-warning",
+		backendRequestLimit: 1, budgetWaitTimeoutMs: 130000,
+		abortSignal: cancellation.signal, assertOwnedLease: async () => undefined,
+	});
+	const effect = vi.fn(async () => undefined);
+	await authority.admit(`sha256:${"a".repeat(64)}`, effect);
+	vi.spyOn(ledger, "listActiveProviderWarnings").mockImplementation(async () => {
+		cancellation.abort(new DOMException("Native backend request cancelled.", "AbortError"));
+		return [];
+	});
+	await expect(authority.admit(`sha256:${"b".repeat(64)}`, effect)).rejects.toMatchObject({
+		name: "ProviderBackendRequestCancelledBeforeDispatchError",
+	});
+	expect(effect).toHaveBeenCalledTimes(1);
+});

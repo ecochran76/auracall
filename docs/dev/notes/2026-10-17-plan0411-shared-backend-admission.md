@@ -814,3 +814,25 @@ Regression green44ms; failed-disable companion protects conservative cleanup.
 
 Shutdown repair validation:125 affected tests/5files, typecheck, targeted lint and
 full production build PASS. No new provider trial is graded from these source checks.
+
+## 2026-10-18 — Normalize cancellation at budget wait entry
+
+Staged11917b044 full584-file parity and fresh native checks passed. Unscoped
+parent34cc51e1-9bb4-4a18-b916-dae5a5537fa5 fails after81440ms with Owned backend
+request admission failed:44charged/peak30,4proven no-send,0uncertain backend
+records,0new warnings. No late failRequest follows Fetch.disable; this trial
+reaches a separate native-cancellation edge before shutdown. Full page coverage,
+69requestWillBeSent events/45responses do not imply wire budget violations.
+No context/capture/child/pass, no global activation or quiet repeat. Private packet:
+live-fetch-shutdown-11917b044-20261018. Original failures and frozen records retained.
+
+Public owned-authority regression cancels during listActiveProviderWarnings after
+a saturated permit, without dispatching a second effect. Before repair it returns
+raw AbortError: Native backend request cancelled instead of the typed proven-no-send
+error (11ms red). waitForBackendBudget threw synchronously at entry, bypassing its
+caller's attached Promise.catch normalizer. Making that helper async routes entry
+abort through the existing rejection handler. No post-send uncertainty or warning
+failure is reclassified. Local green and affected verification follow.
+
+Wait-entry repair validation:19focused tests then126affected tests/5files PASS
+(47.88s); typecheck, targeted lint, full production build and diff check PASS.

@@ -230,7 +230,7 @@ export function createOwnedBackendRequestAuthority(input: {
 	};
 }
 
-function waitForBackendBudget(ms: number, signal?: AbortSignal): Promise<void> {
+async function waitForBackendBudget(ms: number, signal?: AbortSignal): Promise<void> {
 	signal?.throwIfAborted();
 	return new Promise((resolve, reject) => {
 		const finish = () => {

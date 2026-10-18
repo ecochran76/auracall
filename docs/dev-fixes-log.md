@@ -1,3 +1,11 @@
+## 2026-10-18 — Keep wait-entry abort on the Promise rejection path
+
+A helper called as wait(...).catch(normalize) must return a rejected promise even
+when its signal is already aborted at entry. A synchronous throw bypasses that
+normalizer and can poison shared request state with a false unknown failure.
+Make the budget-wait helper async; retain typed pre-send cancellation and genuine
+after-send uncertainty. Test cancellation during the preceding awaited warning read.
+
 ## 2026-10-18 — Fence paused events during Fetch shutdown
 
 A queued native Fetch.requestPaused event can arrive while its owning Fetch.disable
