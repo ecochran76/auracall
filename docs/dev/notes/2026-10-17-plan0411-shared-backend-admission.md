@@ -459,8 +459,8 @@ capacity wait. auracall-api.service restarted onto that exact package; API healt
 Original17paused subscriptions remain paused;2historical subscriptions recovered
 paused,19paused total,0queued/running. Original indefiniteHTTP429 and tab16's
 frozen outcome-unknown reservation are verified intact. No prompt resubmission
-or provider canary. No managed browser process was present in the activation snapshots; no browser
-was signalled or launched. Existing MCP processes, if any, are listed in the verification receipt.
+or provider canary. The activation local /proc snapshot found no matching process; it did not prove
+absence on the managed native desktop. No browser was signalled or launched. Existing MCP processes, if any, are listed in the verification receipt.
 
 Original main checkout fast-forwarded while preserving its tracked local notes.
 Seven colliding untracked historical drafts were moved to private backups; current
@@ -468,3 +468,27 @@ integrated canonical documents now occupy their paths. Other untracked artifacts
 remain untouched. Backup manifest and activation/config/wrapper/API receipts:
 `~/.auracall/diagnostics/plan0411/activation-eed0f23e1/`.
 Activation is complete; live-follow/three-workload acceptance remains OPEN.
+
+## 2026-10-18 — Activated live-follow acceptance FAIL at warning deadline
+
+One explicitly authorized unscoped metadata-only pass on installed7070532aa:
+parent acctmirror_completion_7368216d-5391-4fe0-8fc2-9ba51dafba86 failed with
+`Owned ChatGPT warning check timed out after 10000ms.` Zero passes, no child,
+no content/artifact capture. Owned blank-target startup Network coverage complete;
+0observed backend requests/responses and0shared charged starts; no observed429
+or new shared warning. Harness exit0 means observation completed, not acceptance.
+
+Trace: caller cancellation reaches the pending warning probe. After11.135s that
+probe fails WebSocket CLOSED, following the10s warning wrapper's finally-close.
+The wrapper in configuredLiveFollowAffinity starts its timer before CDP admission;
+its timing boundary is the next provider-free investigation, not a completed fix.
+No live retry. Main API healthy, scheduler paused,19paused subscriptions preserved,
+0queued/running. The old01:21warning was released for this explicit test with exact
+scope/reason and history retained; no new throttle stop was manufactured.
+
+Fresh native readiness verifies browser20905/CDP45015; local /proc snapshots were
+not a complete managed-desktop census. No restart/login reset/Answer now/consent
+or prompt resubmission. Terminal wake cancelled after foreground result consumption.
+Private durable acceptance and raw trace:
+`~/.auracall/diagnostics/plan0411/live-accept-20261018T1105/acceptance.json`.
+Plan0411/P92 acceptance remains OPEN.
