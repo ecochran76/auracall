@@ -55543,3 +55543,15 @@ One normal unscoped continuation now permits up to6passes/10minutes, stopping af
 candidate capture/commit. No seeded scope, prompts, artifact transfer, global switch
 or main scheduler resume. Exact private runner and checkpoint under diagnostics/
 plan0411/live-capture-continuation-caadc05dd-20261018. Full Plan0411 still OPEN.
+
+## 2026-10-18 — Capture continuation fails; uncertain effect retained
+
+Normal6pass/10minute continuation fails in147s before first commit:65charged,
+peak30/min,1uncertain backend request,0warnings. SDK-invoked continuation gets
+Invalid InterceptionId without matching native cancellation evidence. Later route
+recovery hits one-navigation budget; delayed-ready public seam did not reproduce
+that recovery, so speculative test edits were retained privately and restored.
+No new source fix, reset, suppression or provider retry. Fresh final native window
+valid; main paused/idle/0warnings,0trial active leases; original tab16 frozen unknown
+preserved. Full live acceptance remains OPEN; global707 unchanged. Next native
+trace/replay must qualify interception lifecycle before another acceptance attempt.

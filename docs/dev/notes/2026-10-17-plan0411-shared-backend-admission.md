@@ -857,3 +857,34 @@ Known candidate ID only controls the observer stop, never product selection.
 Plan0411 current revision records this under the user's coarse-constraint correction.
 Packet live-capture-continuation-caadc05dd-20261018; result pending. Main remains
 paused/idle; original frozen tab16 is preserved. All previous consumed wakes cancelled.
+
+## 2026-10-18 — Normal capture continuation stops on transport uncertainty
+
+Continuation parent4930e214-0ad4-473d-83f6-c55accab7b23 fails in146982ms before
+its first pass commits, despite allowing up to6passes.65charged starts,peak30/min,
+1proven no-send,1uncertain backend reservation;0new warnings,64observed responses
+(status200/204), full exact-page Network coverage.104request start events are not
+wire sends. Error: Conversation read and retained-session cleanup failed.
+Original failed packet remains live-capture-continuation-caadc05dd-20261018.
+
+Exact uncertain continuation's SDK send starts13:40:55.024 and Chrome rejects
+Invalid InterceptionId at13:40:55.025. Its hashed Network ID has no matching native
+loadingFailed event in this packet. Thus the before-SDK cancellation proof cannot
+qualify it. Preserve reservationd8266e5a-b239-4311-aaa1-5f96fa4f4944 as settled/
+outcome-unknown and charged; do not suppress the error, clear history or blindly
+retry. Later route recovery hits detail/page_navigate limit1. A delayed-readiness
+variant at the existing public-adapter seam did not reproduce extra navigation;
+no speculative route fix was applied. Its patch and green diagnostic logs remain
+privately retained, and the maintained test is restored unchanged.
+
+Final fresh13:45:33UTC readback verifies browser38213/CDP45015 and its native
+window, main scheduler paused/0queued/0running/0warnings,0active/idle leases for
+trial process65567. Original tab16 reservation222c6246-e16f-4309-8b7c-a754a6391b67
+remains frozen/outcome-unknown. Consumed Wakec8050803e42140e798443e9effcded80
+cancelled. Global runtime remains7070532aa. Exact new-chat index discovery is
+proved by prior completed packet; content capture/quiet repeat/concurrent LitScout
+acceptance remain OPEN. Next boundary is a trustworthy native interception
+lifecycle replay/trace, including successful/failed Network completion correlated
+to client/session identity. Existing trace cannot establish the uncertain effect;
+no further live acceptance retry was spent without a qualified diagnosis.
+Memory disposition: forbidden; no explicit user memory-update request.

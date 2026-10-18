@@ -1096,3 +1096,12 @@ work and measure that result. Quiet comparison follows only verified capture;
 concurrent LitScout qualification remains separate/unproven. Evidence:
 ../notes/2026-10-17-plan0411-shared-backend-admission.md and private diagnostic packet
 live-capture-continuation-caadc05dd-20261018.
+
+Continuation terminal: FAIL before first pass commits (146982ms,65charged,peak30,
+1uncertain backend request,0warnings). The SDK-invoked continuation was rejected
+with Invalid InterceptionId without matching native loadingFailed evidence; later
+route recovery hits the detail navigation budget. No speculative route fix or live
+retry. Unknown retained/charged, main paused/idle, native browser/window verified,
+original tab16 frozen record preserved. Discovery passed in preceding packet;
+content capture/quiet repeat/concurrent acceptance remain OPEN. Next exact boundary
+is native interception lifecycle correlation, not a larger limit or ignored error.
