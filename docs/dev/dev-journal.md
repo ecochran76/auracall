@@ -55881,3 +55881,15 @@ awaited (2testsPASS). This narrows cause toward harness lifetime, without claimi
 productiondesktoplatency or nativehardstopcleanup repaired. Typecheck/targetedlint
 PASS. User-scoped packetlive-idle-parking-17abfbe90-20261018T1900 contains exact
 terminal/headerjournals/correctedledgerderivation/finalreadback/successorhashes.
+
+
+### 2026-10-18 — Public pause versus provider release acknowledgement
+
+A real completion/refresh integration holds affinity cleanup after collector
+cancellation. Parent pause returns immediately while operation release and
+provider_work_released remain pending. Releasing cleanup produces both the
+operation release and lifecycle acknowledgement; parent stays paused/pass0.
+All125refresh/completiontests,typecheck,targetedlintPASS. Successor privateharness
+requires this explicit acknowledgement plus noactiveownedlease before hardstop
+terminal; actualbranch/syntaxPASS, no native rerun. This closes an offlineobserver
+seam, not the missingcapture or actual desktopcleanup acceptance gates.

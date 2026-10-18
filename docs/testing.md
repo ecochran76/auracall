@@ -3724,3 +3724,8 @@ The native idle-page fixture covers awaited cancellation as well as success.
 A paused completion parent alone is insufficient cleanup proof: live observers
 must wait for owned provider work to release before ending their process. The
 real desktop-admission hard-stop path remains a separate live qualification.
+
+`pnpm vitest run tests/accountMirror/refreshService.test.ts -t 'completion pause returns before refresh affinity cleanup'`
+qualifies the public completion/refresh ordering: pause is responsive before
+cleanup finishes; wait for `provider_work_released` and released tab custody before
+ending an observer process. This fixture does not replace live desktop proof.

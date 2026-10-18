@@ -24,6 +24,7 @@ import {
 	readPreviousAccountMirrorFilesForTest,
 	writeChatgptRateLimitCensusGuardForTest,
 } from "../../src/accountMirror/refreshService.js";
+import { createAccountMirrorCompletionService } from "../../src/accountMirror/completionService.js";
 import { createAccountMirrorStatusRegistry } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import {
@@ -607,6 +608,115 @@ describe("account mirror refresh service", () => {
 				lastDispatcherBlockedBy: null,
 			},
 		});
+	});
+
+	test("completion pause returns before refresh affinity cleanup releases provider ownership", async () => {
+		const affinityConfig = {
+			...config,
+			auracallProfile: "default",
+			browser: { tabConcurrencyMode: "tab-affinity" },
+		};
+		const registry = createAccountMirrorStatusRegistry({ config: affinityConfig });
+		let enteredCollector!: () => void;
+		const collectorEntered = new Promise<void>((resolve) => {
+			enteredCollector = resolve;
+		});
+		let enteredCleanup!: () => void;
+		const cleanupEntered = new Promise<void>((resolve) => {
+			enteredCleanup = resolve;
+		});
+		let releaseCleanup!: () => void;
+		const cleanupReleased = new Promise<void>((resolve) => {
+			releaseCleanup = resolve;
+		});
+		const release = vi.fn(async () => undefined);
+		const completeFailure = vi.fn(async () => {
+			enteredCleanup();
+			await cleanupReleased;
+		});
+		const refreshService = createAccountMirrorRefreshService({
+			config: affinityConfig,
+			registry,
+			dispatcher: createBrowserOperationDispatcher(),
+			metadataCollector: {
+				collect: async (
+					input: AccountMirrorMetadataCollectorInput,
+				): Promise<AccountMirrorMetadataCollectorResult> => {
+					enteredCollector();
+					return new Promise((_resolve, reject) => {
+						if (input.abortSignal?.aborted) reject(input.abortSignal.reason);
+						else
+							input.abortSignal?.addEventListener(
+								"abort",
+								() => reject(input.abortSignal?.reason),
+								{ once: true },
+							);
+					});
+				},
+			},
+			persistence: createNoopPersistence(),
+			providerGuardCensus: async () => null,
+			liveFollowAffinityFactory: async () =>
+				({
+					tabAffinity: { host: "127.0.0.1", port: 45011, targetId: "owned-cleanup" },
+					interactionGovernor: { beforeInteraction: async () => undefined, finish: vi.fn() },
+					operation: {
+						acquired: true,
+						operation: {
+							id: "pause-cleanup",
+							key: "tab-lease:pause-cleanup",
+							managedProfileDir: "/managed/chatgpt",
+							serviceTarget: "chatgpt",
+							kind: "browser-execution",
+							operationClass: "shared-read",
+							ownerPid: process.pid,
+							ownerCommand: "account-mirror-live-follow:pause-cleanup",
+							startedAt: new Date().toISOString(),
+							updatedAt: new Date().toISOString(),
+						},
+						release,
+					},
+					completeSuccess: vi.fn(),
+					completeFailure,
+				}) as never,
+		});
+		const completion = createAccountMirrorCompletionService({
+			registry,
+			refreshService,
+			generateId: () => "pause-cleanup",
+		});
+		try {
+			completion.start({
+				provider: "chatgpt",
+				runtimeProfileId: "default",
+				maxPasses: 1,
+				materializationPolicy: "metadata_only",
+			});
+			await collectorEntered;
+			expect(completion.control({ id: "pause-cleanup", action: "pause" })?.status).toBe("paused");
+			await cleanupEntered;
+			expect(release).not.toHaveBeenCalled();
+			expect(
+				completion
+					.read("pause-cleanup")
+					?.lifecycleEvents?.some((event) => event.type === "provider_work_released"),
+			).not.toBe(true);
+			expect(completion.read("pause-cleanup")).toMatchObject({ status: "paused", passCount: 0 });
+			releaseCleanup();
+			await vi.waitFor(() => expect(release).toHaveBeenCalledOnce());
+			await vi.waitFor(() =>
+				expect(
+					completion
+						.read("pause-cleanup")
+						?.lifecycleEvents?.some((event) => event.type === "provider_work_released"),
+				).toBe(true),
+			);
+			expect(completeFailure).toHaveBeenCalledOnce();
+			expect(completion.read("pause-cleanup")).toMatchObject({ status: "paused", passCount: 0 });
+		} finally {
+			releaseCleanup();
+			completion.control({ id: "pause-cleanup", action: "cancel" });
+		}
 	});
 
 	test.each([
