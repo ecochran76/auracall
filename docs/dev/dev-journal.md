@@ -55893,3 +55893,31 @@ All125refresh/completiontests,typecheck,targetedlintPASS. Successor privateharne
 requires this explicit acknowledgement plus noactiveownedlease before hardstop
 terminal; actualbranch/syntaxPASS, no native rerun. This closes an offlineobserver
 seam, not the missingcapture or actual desktopcleanup acceptance gates.
+
+
+### 2026-10-18 — Qualify admission; finish exact owned trial cleanup
+
+All 67 interactions on the stranded trial tab are settled: one navigation and
+66 backend requests. None is frozen or uncertain. Preflight initially blocked on
+stored automation owner 8124, although fresh /proc evidence showed that process
+was absent. Public atomic admission already recovers this case; the diagnostic
+preflight's private-owner read was the defect. No production gate reset or code
+change was needed. The stale record is preserved privately.
+
+Fresh native-window, target and custody checks confirmed an empty draft, inactive
+generation and no human-verification surface on the exact trial-created tab.
+The first apply attempt stopped before effects on a process-existence check;
+fresh reads then confirmed the trial PIDs absent. One close command completed
+asynchronously. Immediate readback still saw the target; later readback confirmed
+it absent. No close was resent. Public releaseLost reconciled only that lease as
+released/closed. Sixteen pages remain; warning state and all 200 preexisting
+frozen/unknown ledger records are unchanged. This is explicit post-trial cleanup,
+not proof that the original runner parked its page.
+
+All 49 desktop-gate/refresh tests pass, including recovery of an actually reaped
+automation PID and preservation of a human lease with an absent PID. Public
+summary checks confirm only the latest event: operator_paused while cleanup is
+held, then provider_work_released afterward. No additional completion API field
+is required. Future private preflight-v2 uses bounded public admission; executed
+scripts and their evidence remain unchanged. No provider retry, historical-page
+cleanup or scheduler resume occurred.

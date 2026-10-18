@@ -25766,3 +25766,15 @@ cancellation parks correctly in isolation. A successor observer waits for active
 owned leases to release before treating hard-stop pause as terminal; offline
 actual-branch red/green verifies that gate, not a native live repair. Also filter
 backend-window metrics by interactionClass: logical starts are separate costs.
+
+
+### 2026-10-18 — Private ownership reads are not admission checks
+
+A live-diagnostic preflight treated stored automationowner8124 as authoritative
+after its process exited. Public atomic admission already qualifies absence and
+recovers automation custody; human/invalid custody stays protected. Use that
+interface rather than resetting files or adding a competing gate. Real-reaped-PID
+regressions cover automation recovery and human preservation. Also reconcile an
+asynchronous target close by fresh same-target readback; an immediate live entry
+is not grounds to resend the close. Exact trial cleanup leaves16oldpages and all
+warning/frozenunknown history preserved.

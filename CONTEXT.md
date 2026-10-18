@@ -159,3 +159,10 @@ or account network-idle proof.
 
 
 Settled read-only live-follow crawler pages are parked on about:blank before custody becomes idle. Parking requires fresh exact ownership, an allowed current route, a top-level blank document commit and a blank URL readback. Outcome-unknown and human/identity-protected pages retain preservation semantics. This bounds newly owned page lifetime; it does not meter preexisting or manually owned pages.
+
+Desktop ownership files are stored evidence, not live admission authority. Use
+bounded public desktop automation admission to qualify current control; atomic
+acquisition can recover an absent Linux automation owner. Human and malformed
+ownership remain fenced. Completion monitoring summaries expose only the latest
+lifecycle event; after pause, wait for current provider-work release and released
+active tab custody before ending the observer process.

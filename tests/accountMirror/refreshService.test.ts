@@ -24,7 +24,10 @@ import {
 	readPreviousAccountMirrorFilesForTest,
 	writeChatgptRateLimitCensusGuardForTest,
 } from "../../src/accountMirror/refreshService.js";
-import { createAccountMirrorCompletionService } from "../../src/accountMirror/completionService.js";
+import {
+	createAccountMirrorCompletionService,
+	projectAccountMirrorCompletionForMonitoring,
+} from "../../src/accountMirror/completionService.js";
 import { createAccountMirrorStatusRegistry } from "../../src/accountMirror/statusRegistry.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import {
@@ -696,6 +699,13 @@ describe("account mirror refresh service", () => {
 			expect(completion.control({ id: "pause-cleanup", action: "pause" })?.status).toBe("paused");
 			await cleanupEntered;
 			expect(release).not.toHaveBeenCalled();
+			const pausedRead = completion.read("pause-cleanup");
+			if (!pausedRead) throw new Error("Paused completion missing");
+			expect(
+				projectAccountMirrorCompletionForMonitoring(pausedRead).lifecycleEvents?.map(
+					(event) => event.type,
+				),
+			).toEqual(["operator_paused"]);
 			expect(
 				completion
 					.read("pause-cleanup")
@@ -712,6 +722,13 @@ describe("account mirror refresh service", () => {
 				).toBe(true),
 			);
 			expect(completeFailure).toHaveBeenCalledOnce();
+			const releasedRead = completion.read("pause-cleanup");
+			if (!releasedRead) throw new Error("Released completion missing");
+			expect(
+				projectAccountMirrorCompletionForMonitoring(releasedRead).lifecycleEvents?.map(
+					(event) => event.type,
+				),
+			).toEqual(["provider_work_released"]);
 			expect(completion.read("pause-cleanup")).toMatchObject({ status: "paused", passCount: 0 });
 		} finally {
 			releaseCleanup();

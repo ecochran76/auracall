@@ -313,3 +313,10 @@ Use passive network evidence before interpreting a zero counter as account idle.
 
 
 Settled read-only owned live-follow crawlers now park on about:blank before becoming idle; reuse still requires fresh process/target custody verification. Do not apply this cleanup to existing uncertain pages or human-verification/identity stops. Source qualification is not installed activation; retain current warnings and keep the global scheduler paused pending bounded live acceptance.
+
+For desktop readiness, use bounded public admission after fresh native process/
+window verification. Do not call the gate's private stored-owner reader as an
+admission test: an exited automation process can leave a stale record that atomic
+acquisition already knows how to recover. Preserve human and invalid ownership.
+After exact target close, allow bounded readback for asynchronous disappearance;
+reconcile the same target before considering another close command.
