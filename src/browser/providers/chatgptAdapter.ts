@@ -4554,9 +4554,8 @@ async function connectToChatgptTab(
 				}
 				await navigateToChatgptUrl(client, preferredUrl, undefined, options);
 				if (
-					currentUrl === "about:blank" &&
 					options.accountMirrorInventory &&
-					options.providerTrafficGovernor?.admitBackendRequest
+					resolveProviderTrafficGovernor(client)?.admitBackendRequest
 				) {
 					await waitForChatgptAuthenticatedStartup(client, options);
 				}

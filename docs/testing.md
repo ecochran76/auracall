@@ -3691,3 +3691,17 @@ This exercises the public proof call with real guarded CDP and desktop gate,
 contention introduced at identity reading, cancellation, human ownership, and
 cancellation with native-style continuous backend admission. Passing this does
 not establish live-follow completion or resolve the retained provider429.
+
+### Conversation navigation while startup requests await account capacity
+
+The public service/affinity/real-interceptor fixture in
+`tests/browser/backendRequestAdmission.test.ts` includes `mode=context-startup`.
+It begins on an existing signed-in page, models asynchronous navigation, and holds
+one startup request for nine seconds independently of readiness probes. The DOM
+has no messages until that request continues. With the original blank-page-only
+wait, extraction fails with `messages not found`; the owned startup wait now also
+covers conversation navigation, and extraction begins after that admission drains.
+The fixture disables context retry/cache fallback and expects one navigation plus
+ordered startup/payload requests. This case intentionally spans the five-second
+empty-message window; run it alone for focused feedback. Existing cancellation,
+warning, wrong-route and after-send uncertainty cases remain required companions.

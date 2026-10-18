@@ -55575,3 +55575,16 @@ runner69383/meter69385; private packet live-document-replacement-9a056a006-20261
 and checkpoint.json bind identity/next step. Additional metadata-only client/frame/
 document/Network completion trace is present. Wake1d663c7153844c438ca9931901396dc0
 is pending_time, so foreground supervision is retained. Result pending; no activation.
+
+## 2026-10-18 — Conversation navigation also needs owned startup draining
+
+Document replacement fix9a056a006 holds live (88charged,peak30,0uncertain/0warnings),
+but context extraction fails before UI messages appear. Read-only inspection of
+exact retained target preserves its lost fence; browser-tools helper left a proven
+abandoned empty transition, preserved reversibly, then supported gate recovery
+passes. Native browser/window preserved, no warning or conversation-fence reset. Existing reader
+extracts both messages from later captured DOM in isolated Chrome; no selector fix.
+Public context/affinity/interceptor replay reproduces exact messages-not-found on
+nonblank navigation while startup is queued; ready-DOM control passes. Extend the
+existing startup wait to owned conversation navigation, keeping caller cancellation
+and all limits. Final independently delayed queue test passes; broader checks next.

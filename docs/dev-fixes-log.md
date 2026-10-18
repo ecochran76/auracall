@@ -1,3 +1,13 @@
+## 2026-10-18 — Drain owned startup after conversation navigation
+
+A signed-in document can expose its composer while conversation startup requests
+still await account capacity. Waiting only after about:blank misses ordinary
+conversation navigation, allowing the empty-message window to expire prematurely.
+Use the existing authenticated/pending-admission wait after owned inventory
+navigation, resolving the actual client's governor. Keep caller cancellation and
+all request/navigation limits. A public context read with independently delayed
+startup reproduces messages-not-found before repair and succeeds afterward.
+
 ## 2026-10-18 — Document replacement can invalidate Fetch without loadingFailed
 
 Do not rely only on Network.loadingFailed to cancel requests waiting for account

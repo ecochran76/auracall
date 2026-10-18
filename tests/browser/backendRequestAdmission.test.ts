@@ -38,6 +38,7 @@ const fixture = vi.hoisted(() => ({
 				asyncBootstrap?: boolean;
 				bootstrapReady?: boolean;
 				onStartupProbe?: () => void;
+				requireBootstrapForMessages?: boolean;
 				failRead?: boolean;
 				abortRead?: () => void;
 				beforeIdentity?: () => void;
@@ -171,9 +172,10 @@ vi.mock("chrome-remote-interface", () => ({
 						}
 						if (fixture.page.failRead) throw new Error("fixture public read failed");
 						value = {
-							messages: [{ role: "assistant", text: "Known fixture answer" }],
+							messages: fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady
+								? [] : [{ role: "assistant", text: "Known fixture answer" }],
 							nextOffset: null,
-							totalMessages: 1,
+							totalMessages: fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady ? 0 : 1,
 						};
 					}
 					return { result: { value } };
@@ -2120,25 +2122,28 @@ test.each([
 	"async-startup",
 	"optimistic-startup",
 	"startup-cancel",
+	"context-startup",
 ])("live-follow bootstrap warning check shares interceptor ownership; mode=%s", async (mode) => {
 	const warning = mode === "warning";
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-follow-warning-"));
 	setAuracallHomeDirOverrideForTest(home);
 	fixture.clients = [];
 	fixture.page = {
-		url: "about:blank",
+		url: mode === "context-startup" ? "https://chatgpt.com/" : "about:blank",
 		navigations: [],
 		bootstrapRequests: 1,
 		payloadReads: 0,
 		closeAttempts: 0,
 		visibleWarning: warning,
 		asyncBootstrap:
-			mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel",
+			mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel" || mode === "context-startup",
 		bootstrapReady: mode === "optimistic-startup",
+		requireBootstrapForMessages: mode === "context-startup",
 	};
 	const gate = new DesktopControlGate("follow-warning");
 	const holds: Array<Awaited<ReturnType<typeof gate.holdAutomation>>> = [];
 	const controller = new AbortController();
+	let queuedStartupTimer: ReturnType<typeof setTimeout> | undefined;
 	setCdpCommandAdmissionResolver(async () => ({
 		run: (_command, effect, options) => gate.withAutomation("generation", effect, options),
 		hold: async (options) => {
@@ -2199,7 +2204,7 @@ test.each([
 	} as never);
 	const timer = setTimeout(
 		() => controller.abort(new Error("Live-follow warning blocked behind its own interceptor")),
-		5000,
+		mode === "context-startup" ? 13000 : 5000,
 	);
 	try {
 		const affinity = await createConfiguredLiveFollowAffinity({
@@ -2212,15 +2217,16 @@ test.each([
 		});
 		if (!affinity) throw new Error("Missing affinity");
 		registry.list.mockResolvedValue([lease]);
-		if (mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel") {
+		if (mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel" || mode === "context-startup") {
 			let release!: () => void;
 			const ready = new Promise<void>((resolve) => {
 				release = resolve;
 			});
 			fixture.page.onStartupProbe =
-				mode === "startup-cancel"
+				mode === "context-startup" ? undefined : mode === "startup-cancel"
 					? () => controller.abort(new Error("fixture startup cancelled"))
 					: release;
+			let admissionIndex = 0;
 			const originalAdmit = affinity.providerTrafficGovernor.admitBackendRequest;
 			if (!originalAdmit) throw new Error("Missing request admission");
 			affinity.providerTrafficGovernor.admitBackendRequest = async (
@@ -2229,7 +2235,9 @@ test.each([
 				signal,
 				context,
 			) => {
-				await new Promise<void>((resolve, reject) => {
+				if (mode === "context-startup" && admissionIndex === 0)
+					queuedStartupTimer = setTimeout(release, 9000);
+				if (mode !== "context-startup" || admissionIndex++ === 0) await new Promise<void>((resolve, reject) => {
 					if (signal?.aborted) {
 						reject(new ProviderBackendRequestCancelledBeforeDispatchError());
 						return;
@@ -2247,15 +2255,18 @@ test.each([
 		const service = ChatgptService.create(config, {
 			browserService: BrowserService.fromConfig(config, "chatgpt"),
 		});
-		const identity = service.getProviderSessionProof({
+		const listOptions = {
 			...affinity.tabAffinity,
 			tabTargetId: affinity.tabAffinity.targetId,
 			interactionGovernor: affinity.interactionGovernor,
 			providerTrafficGovernor: affinity.providerTrafficGovernor,
 			accountMirrorInventory:
-				mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel",
+				mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel" || mode === "context-startup",
 			abortSignal: controller.signal,
-		});
+		};
+		const identity = mode === "context-startup"
+			? service.getConversationContext("fixture-conversation", { refresh: true, retryAttempts: 0, allowCacheFallback: false, listOptions: { ...listOptions, accountMirrorSingleConversationVisit: true } })
+			: service.getProviderSessionProof(listOptions);
 		if (warning) {
 			await expect(identity).rejects.toThrow("Too many requests");
 			expect(fixture.page.navigations).toEqual([]);
@@ -2265,6 +2276,12 @@ test.each([
 			await expect(identity).rejects.toThrow("fixture startup cancelled");
 			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
 			await affinity.completeFailure(new Error("fixture startup cancelled"));
+		} else if (mode === "context-startup") {
+			await expect(identity).resolves.toMatchObject({ messages: [{ role: "assistant", text: "Known fixture answer" }] });
+			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/c/fixture-conversation"]);
+			expect(fixture.page.bootstrapReady).toBe(true);
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual(["bootstrap-0", "payload-1"]);
+			await affinity.completeSuccess();
 		} else {
 			await expect(identity).resolves.toMatchObject({ verdict: "match" });
 			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/"]);
@@ -2277,6 +2294,7 @@ test.each([
 		const human = await gate.takeControl("generation");
 		await gate.releaseControl(human.token, "generation");
 	} finally {
+		clearTimeout(queuedStartupTimer);
 		clearTimeout(timer);
 		controller.abort();
 		await Promise.all(holds.map((held) => held.close()));

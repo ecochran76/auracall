@@ -297,3 +297,9 @@ cooldown deadline, while action-specific pacing remains active in the child.
 It adds no blanket quiet period merely because metadata collection finished.
 Historical generic failed/skipped results remain in history and do not prove
 terminal unavailability or suppress newly discovered retrievable inventory.
+
+For owned account-mirror conversation navigation, authenticated UI startup includes
+the requests waiting for the shared backend budget. Context extraction waits for
+that startup queue to drain under the existing caller cancellation. A valid auth
+session alone does not mean the new document has rendered its conversation yet;
+waiting for request capacity is distinct from losing login state.

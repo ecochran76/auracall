@@ -923,3 +923,55 @@ Affected validation:129tests/5files PASS (49.63s), typecheck, targeted lint and 
 production build PASS. No isolated fixture browser/profile processes remain.
 Native after-send and foreign-frame controls retain their prior semantics. Exact
 new production source is staged next; original account uncertainty is not rewritten.
+
+## 2026-10-18 — Native replacement fix holds; nonblank startup wait was missing
+
+Staged9a056a006 continuation120c0a7a-9d5b-4783-93ec-39f8f81684d8 ends failed in
+175577ms with one pass accounted,88charged/peak30,1proven no-send,0uncertain
+backend records/0new warnings. The previous stale continuation race does not recur.
+The next independent boundary is explicit messages-not-found on a pending chat;
+exact candidate capture/quiet acceptance remain unproved. Raw packet retains full
+exact-page coverage. No earlier uncertain reservation was cleared.
+
+Exact retained failed target is present on its expected conversation route. A new
+request-authority acquisition rejects target-owned, so the existing lost fence is
+preserved. Observation-only browser-tools then fails during parallel Puppeteer
+page initialization with desktop busy. Its ownerPID82132 is absent; an unchanged
+empty transition directory inode12133397/mtime14:30:49.139 prevents supported
+recovery. Preserved original owner bytes and empty directory under the private
+inspection-transition-recovery packet; rechecked owner identity/absence, exact
+inode/mtime/emptiness and main paused/idle before moving only that empty directory.
+Supported gate acquisition/release then verifies the current native window and
+leaves no owner. No browser, provider-warning or conversation-fence reset occurred.
+The finished helper needed no signal; attempted PID validation found it already
+absent. A bounded exact-target guarded DOM observation then completes read-only.
+
+Retained DOM has two visible message units, no login/CAPTCHA/error/response-running
+surface. Existing production message reader extracts both user and assistant from
+that DOM in isolated outbound-blocked Chrome. Thus a selector change is not
+qualified. The DOM became available after the failed read; no raw content enters Git.
+
+A public context-read/real affinity/interceptor replay starts on a nonblank page,
+models asynchronous navigation and holds one UI startup request. The collector's
+actual retryAttempts0/cache-fallback-disabled contract reproduces messages-not-found
+in5.31-7.37s; ready-DOM control passes. Initial default-retry prototype instead
+reached its caller abort and is retained as non-qualifying. Final independent
+nine-second queue release (not triggered by a readiness probe) also passes with
+repair. Exact pristine-source red verification and source hash/diff are retained
+alongside native-interception-fixture-20261018/context-*.log.
+
+The connection now applies the existing authenticated startup/pending-admission
+wait after owned inventory conversation navigation as well as blank-page startup,
+using the actual client's backend governor. Caller cancellation bounds the wait;
+no provider ceiling, navigation allowance or data deadline is raised. Context
+parsing starts only after startup admission drains. Temporary DEBUG-context logs
+are removed before validation. Broader verification/live recheck follow.
+
+Final timing regression waits for an independent nine-second queue release and
+uses the actual collector's single-visit/retry0/cache-fallback-disabled options.
+Exact committed pre-fix source reproduces messages-not-found; SHA/diff readback
+proves that source substitution and restoration. Fixed read returns the expected
+message with one navigation, startup before payload, and no cache fallback.
+150affected tests/8files PASS (58.54s wall), typecheck, targeted lint, full build and
+diff hygiene PASS. Tagged temporary context diagnostics are removed. Separate
+native cancellation and wrong-route/deadline contracts stay green.

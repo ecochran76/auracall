@@ -46,6 +46,9 @@ exhaustion; uncertainty or a provider warning requires a hard stop. Document rep
 cancels queued requests from that exact frame before continuation; only the guarded
 transport can prove no SDK send. Requests whose SDK send already began retain
 conservative uncertainty.
+Owned account-mirror navigations retain startup admission until the signed-in UI
+is ready and pending startup requests drain, before context data reads begin.
+The caller cancellation still bounds that wait.
 
 A configured authority factory reports `backendRequestAdmissionEnabled` when its
 new authorities admit backend requests. This is cleanup capability metadata, not
