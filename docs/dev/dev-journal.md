@@ -55566,3 +55566,12 @@ and unregisters its listener. Native replay now sends0obsolete continuations;
 fresh replacement-document request still works. Outbound blocked, no provider
 requests or auth. Broader validation/build pending. Original uncertain/frozen
 records and global707 remain unchanged; full Plan0411 acceptance OPEN.
+
+Staged9a056a006 now passes584compiled-file parity/runtime contract and the same
+isolated native replay, including a new request from the replacement document.
+Native/browser/window preflight14:18:52UTC passes, main paused/idle,0warnings.
+Original bounded unscoped6pass/10minute capture continuation runs in process69386,
+runner69383/meter69385; private packet live-document-replacement-9a056a006-20261018
+and checkpoint.json bind identity/next step. Additional metadata-only client/frame/
+document/Network completion trace is present. Wake1d663c7153844c438ca9931901396dc0
+is pending_time, so foreground supervision is retained. Result pending; no activation.

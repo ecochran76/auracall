@@ -1105,3 +1105,21 @@ retry. Unknown retained/charged, main paused/idle, native browser/window verifie
 original tab16 frozen record preserved. Discovery passed in preceding packet;
 content capture/quiet repeat/concurrent acceptance remain OPEN. Next exact boundary
 is native interception lifecycle correlation, not a larger limit or ignored error.
+
+## 2026-10-18 | Document replacement cancellation repair
+
+Native isolated Chrome plus the real interceptor reproduces the previous missing
+loadingFailed failure twice. One document commit invalidates the old paused Fetch
+ID; removing navigation makes control green. Live trace has that exact ordering.
+Source9a056a006 cancels queued requests by exact frame on document replacement;
+guarded before-SDK proof and after-send uncertainty remain unchanged.129affected
+tests/5files, typecheck/lint/full build PASS. Staged584-file parity/runtime contract
+and isolated native old/fresh request controls PASS. Original uncertain reservation
+is retained/charged; no warning release or global switch.
+
+Same normal unscoped6pass/10minute capture continuation now runs against9a056a006,
+with fresh14:18:52UTC native/browser/window verification, main paused/idle and
+0warnings. Shared30/min, original cache/cursors, metadata_only/maxItems1/forcefalse;
+no seeded provider ID or prompt. Private packet live-document-replacement-9a056a006-
+20261018 adds client/frame/document/Network completion correlation. Result pending;
+capture, quiet repeat and simultaneous LitScout acceptance remain OPEN.
