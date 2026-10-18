@@ -55841,3 +55841,14 @@ andtypecheckPASS. Read-only current catalog retains375conversations; missing-cha
 candidate remains indexed/deferred at frontier position5, withoutdetailfingerprint;
 the first row iscomplete. No ID seeded or cursor modified; provider selection
 still must capture actualcontent. Raw native/catalog evidence stays user-scoped.
+
+
+### 2026-10-18 — Bind successor capture verdict to actual evidence
+
+Private successor evaluator now requires exactmissingchat/nonemptytext and known
+finalerror tail, committedpass, freshpersistedcompletedetail/fingerprint and no
+hardstop/429/observationgaps. Genericparentcompletion cannot pass. Oldactual429
+receipt rejects; offlinepositive/9negativecases pass; actualheadercallbacks and
+syntax remainPASS. Quietrepeat,filetransfer and concurrentqualification remain
+separateOPENgates. No provider/control/warningrelease effect. Hashes/checkpoint
+updated under user-scoped diagnostics/plan0411.
