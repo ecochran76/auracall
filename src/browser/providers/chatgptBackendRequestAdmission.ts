@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type Protocol from "devtools-protocol";
 import {
+	CdpCommandCancelledBeforeSendError,
 	holdCdpCommandAdmission,
 	withCdpCommandTimeout,
 } from "../../../packages/browser-service/src/guardedCdp.js";
@@ -55,6 +56,18 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	let closing = false;
 	const cancellation = new AbortController();
 	const failures: unknown[] = [];
+	const nativeRequests = new Map<string, Set<AbortController>>();
+	const cancelledNativeRequests = new Set<string>();
+	const nativeFailure = (event: Protocol.Network.LoadingFailedEvent) => {
+		if (event.canceled !== true) return;
+		cancelledNativeRequests.add(event.requestId);
+		for (const controller of nativeRequests.get(event.requestId) ?? [])
+			controller.abort(new DOMException("Native backend request cancelled.", "AbortError"));
+	};
+	const observesNativeFailure = typeof client.Network.loadingFailed === "function";
+	const nativeSubscription: unknown = observesNativeFailure
+		? client.Network.loadingFailed(nativeFailure)
+		: undefined;
 	const failPausedRequest = async (requestId: string, knownNotDispatched: boolean) => {
 		try {
 			await withCdpCommandTimeout(
@@ -81,6 +94,17 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	const handler = (event: Protocol.Fetch.RequestPausedEvent): Promise<void> => {
 		const existing = requests.get(event.requestId);
 		if (existing) return existing;
+		const nativeCancellation = new AbortController();
+		const requestSignal = AbortSignal.any([cancellation.signal, nativeCancellation.signal]);
+		if (event.networkId) {
+			const controllers = nativeRequests.get(event.networkId) ?? new Set<AbortController>();
+			controllers.add(nativeCancellation);
+			nativeRequests.set(event.networkId, controllers);
+			if (cancelledNativeRequests.has(event.networkId))
+				nativeCancellation.abort(
+					new DOMException("Native backend request cancelled.", "AbortError"),
+				);
+		}
 		const task = hold
 			.run("Provider.backendRequest", async () => {
 				if (closing) {
@@ -109,9 +133,23 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 					await admit(
 						key,
 						async () => {
-							await client.Fetch.continueRequest({ requestId: event.requestId });
+							try {
+								await withCdpCommandTimeout(
+									client,
+									{
+										timeoutMs: 3_000,
+										timeoutMessage: "Owned backend request continuation timed out.",
+										abortSignal: requestSignal,
+									},
+									() => client.Fetch.continueRequest({ requestId: event.requestId }),
+								);
+							} catch (error) {
+								if (error instanceof CdpCommandCancelledBeforeSendError)
+									throw new ProviderBackendRequestCancelledBeforeDispatchError({ cause: error });
+								throw error;
+							}
 						},
-						cancellation.signal,
+						requestSignal,
 						client.Runtime,
 					);
 				} catch (error) {
@@ -128,7 +166,14 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 			});
 		requests.set(event.requestId, task);
 		pending.add(task);
-		void task.then(() => pending.delete(task));
+		void task.then(() => {
+			pending.delete(task);
+			if (event.networkId) {
+				const controllers = nativeRequests.get(event.networkId);
+				controllers?.delete(nativeCancellation);
+				if (controllers?.size === 0) nativeRequests.delete(event.networkId);
+			}
+		});
 		return task;
 	};
 	const subscription: unknown = client.Fetch.requestPaused(handler);
@@ -156,6 +201,16 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 			if (!remove) throw new Error("Fetch listener cleanup is unavailable.");
 			remove.call(client, "Fetch.requestPaused", handler);
 		}
+		if (typeof nativeSubscription === "function") nativeSubscription();
+		else if (observesNativeFailure) {
+			const remove = (client as ChromeClient & {
+				removeListener?: (event: string, callback: typeof nativeFailure) => void;
+			}).removeListener;
+			if (!remove) throw new Error("Native request cancellation listener cleanup is unavailable.");
+			remove.call(client, "Network.loadingFailed", nativeFailure);
+		}
+		nativeRequests.clear();
+		cancelledNativeRequests.clear();
 		// Keep custody until the guarded transport successfully disconnects.
 		if (failures.length === 1) throw failures[0];
 		if (failures.length > 1)

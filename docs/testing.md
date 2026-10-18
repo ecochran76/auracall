@@ -1,3 +1,9 @@
+- Native request cancellation certainty (provider-free):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'native request cancellation keeps'`.
+  Real interceptor, guard and native-style admission distinguish cancellation
+  before SDK send from uncertain cancellation afterward. Foreign request IDs and
+  non-cancelled failures leave dispatch intact; disposal removes the observer.
+
 - Live-follow bootstrap warning ownership (provider-free):
   `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'live-follow bootstrap warning'`.
   Runs configured affinity, the ChatGPT adapter, request interceptor and desktop

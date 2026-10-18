@@ -55491,3 +55491,14 @@ proof316/meter315. Durable exact run directory live-startup-drain-c1344a605-2026
 under ~/.auracall/diagnostics/plan0411. Wait for functionalAcceptance/nonempty
 observations and content evidence; no duplicate probe. Global707/PR335draft and
 Plan0411/P92OPEN retained. Memory forbidden.
+
+## 2026-10-18 | Qualify native cancellation at guarded wire boundary
+
+Startup drain passes actual30/min waiting, then one canceled Chrome request gets
+Invalid InterceptionId on continuation;45charged/peak30,1uncertain,0warnings.
+Metadata correlation proves matching canceled loadingFailed before stale send.
+Unknowns retained. Public real-interceptor regression red/green now proves no-send
+cancellation separately from after-SDK-send uncertainty; foreign/non-cancelled
+failures remain unaffected.206broader tests/10files and9final focused cases pass;
+corrected SDK listener typing, typecheck/lint/build pass.
+Global707, PR335draft and Plan0411/P92OPEN preserved. Memory forbidden.

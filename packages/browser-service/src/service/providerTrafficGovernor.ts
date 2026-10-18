@@ -12,8 +12,8 @@ import type {
 
 /** Proven cancellation before a backend request was dispatched. */
 export class ProviderBackendRequestCancelledBeforeDispatchError extends Error {
-	constructor() {
-		super("Backend request cancelled before dispatch.");
+	constructor(options?: ErrorOptions) {
+		super("Backend request cancelled before dispatch.", options);
 		this.name = "ProviderBackendRequestCancelledBeforeDispatchError";
 	}
 }

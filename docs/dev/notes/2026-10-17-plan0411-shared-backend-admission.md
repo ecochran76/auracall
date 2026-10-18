@@ -735,3 +735,30 @@ runner314/meter315, durable directory live-startup-drain-c1344a605-20261018 unde
 ~/.auracall/diagnostics/plan0411. Functional acceptance explicitly requires
 observed conversations; completion/passCount alone cannot pass. No global switch,
 prompt, seeded ID, warning release or scheduler resume. Result pending.
+
+## 2026-10-18 — Native cancellation must qualify the actual wire boundary
+
+c1344a605 startup-drain run reached conversation-list requests, then failed owned
+backend admission:45charged starts over two windows,peak30/min,0pre-dispatch
+cancels,1uncertain request,0new warnings. The pending-drain repair removed early
+cancellation but exposed a stale Fetch interception ID. Failed packet and unknown
+remain retained. An instrumented same-scope run correlates hashed Fetch/network
+IDs: Network.loadingFailed(canceled=true,net::ERR_ABORTED) precedes the rejected
+Fetch.continueRequest sends. It also fails; no throttle-free acceptance claimed.
+Private native-cancel packet retains the matching event/wire timestamps and
+admission error messages, not headers/payloads. No unknown record was released.
+
+Fast real-interceptor/guarded-CDP/native-style-admission regression distinguishes
+cancellation before raw SDK invocation from cancellation after send begins. Before
+repair, the first case failed with cleanup/Invalid InterceptionId uncertainty;
+the existing after-send uncertainty case remains conservative. Matching native
+failure now cancels the exact request signal. Guarded transport emits a typed
+proof only when its SDK send was never called; the ledger accepts that proof as
+no effect even if its start transition preceded desktop admission. SDK-invoked
+or unattributed failures remain unknown. Foreign/non-cancelled failures do not
+abort the request.206broader tests/10files pass. Typecheck caught the SDK type
+omitting removeListener; the existing compatible listener-removal path is now
+used for both subscriptions. Corrected typecheck/build/lint and9final focused
+cases pass; original type/build failure logs remain.
+Protocol IDs are not treated as permission, and neither request nor cleanup limits
+are raised. Global runtime remains7070532aa; full Plan0411/P92 acceptance OPEN.

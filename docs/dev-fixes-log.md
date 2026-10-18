@@ -1,3 +1,13 @@
+## 2026-10-18 — Preserve cancellation certainty through desktop admission
+
+A browser may cancel a paused request while its continuation waits for native
+validation or shared capacity. Match canceled Network.loadingFailed to the exact
+Fetch network ID and cancel that request signal. Only the guarded transport can
+prove raw SDK send was never invoked; use that typed proof for a no-effect ledger
+settlement. A continuation that reached the SDK stays uncertain. Do not suppress
+Invalid InterceptionId globally or let a foreign/non-cancelled failure release a
+request. Remove both event listeners during owned disposal.
+
 ## 2026-10-18 — Startup readiness must include pending request admissions
 
 A profile control can appear optimistically before asynchronous backend admission
