@@ -1228,3 +1228,19 @@ qualified bounded_utc/not_due,persistent monitor ready; no delivery/result claim
 Run ispending and survives this turn. Consume exact terminal,headerjournal and
 1/5minute meter onwake; do not blindretry afterhardstop. Missing-chat/quiet/
 concurrent acceptance remainOPEN. Memory disposition forbidden(no user request).
+
+
+## 2026-10-18 — Retry headers captured; idle browser traffic is outside the meter
+
+Consumed exact header-diagnostic completion wake. Another conversation-list429
+arrives after59charged starts/peak30perminute,0passes/contexts; both header
+sources haveDateonly,noRetry-After/quota fields. Public pause/cooldown race is
+red/green at both await positions;2production guards,86tests/typecheck/lint/build
+PASS. Exact persisted trial re-paused through public control with0providercalls.
+Passive current16-page observation finds5non-cache/non-worker transferred backend
+responses across3pages while all-account ledger records0starts. No navigation,
+submissions,pageclose,unknown-state reset or further providerretry. Shared meter
+is not browserwide; missing capture/quiet/concurrent acceptance remainOPEN.
+Details/private evidence:2026-10-17-plan0411-shared-backend-admission.md.
+Next repair: retained-page request lifetime/accounting; main707schedulerpaused,
+PR335draft. Memory forbidden(no explicit request).

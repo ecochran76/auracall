@@ -25740,3 +25740,13 @@ stop; do not infer absence of throttle from the shared meter alone. Reconcile
 all recorded account scopes and state the uninstrumented-client coverage gap.
 The observer lacked Retry-After/rate-limit headers, so this does not establish
 the provider quota/window or a safe replacement limit.
+
+
+### 2026-10-18 — Operator pause wins over late cooldown handling
+
+A collector can reject with provider eligibility after operator pause,including
+while persistent registry refresh is awaited. Check cancellation/current control
+state before handling that rejection and again after the await. Public red/green
+regression covers both positions;86completion tests pass. A separate passive
+16-page observation proves retained-page background transfers can occur while
+charged ledger starts stayzero; the owned-request ceiling is not browserwide.

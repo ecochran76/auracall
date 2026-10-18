@@ -148,3 +148,11 @@ Concurrent identical file tab-registry list observations may share an unfinished
 read by root/query. Results are cloned per caller and discarded on settlement;
 this supplies no cached custody authority. Writes retain exclusive file locking
 and atomic persistence; subsequent observations see committed custody changes.
+
+
+Completion operator pause/cancel takes precedence over an asynchronous provider
+cooldown rejection,including a pause during persistent eligibility refresh.
+A charged owned-request meter covers admitted operation traffic; retained-page
+background activity is a separate coverage boundary and may continue after the
+operation releases its request interceptor. Zero charged starts is not browser
+or account network-idle proof.

@@ -1731,6 +1731,60 @@ describe("account mirror completion service", () => {
 		expect(service.list({ limit: 1 })).toHaveLength(1);
 	});
 
+	test.each(["before-rejection", "during-eligibility-refresh"] as const)("operator pause survives a late provider cooldown (%s)", async (pauseAt) => {
+		let rejectRefresh!: (error: Error) => void;
+		let releaseSleep = () => {};
+		const requestRefresh = vi.fn((_request?: AccountMirrorRefreshRequest) =>
+			new Promise<AccountMirrorRefreshResult>((_resolve, reject) => {
+				rejectRefresh = reject;
+			}),
+		);
+		const registry = createAccountMirrorStatusRegistry({ config });
+		let releaseRegistry = () => {};
+		let registryEntered = () => {};
+		const refreshing = new Promise<void>(resolve => { registryEntered = resolve; });
+		let cooldownRejected = false;
+		const refreshState = registry.refreshPersistentState?.bind(registry);
+		vi.spyOn(registry, "refreshPersistentState").mockImplementation(async (...args) => {
+			if (cooldownRejected && pauseAt === "during-eligibility-refresh") {
+				registryEntered();
+				await new Promise<void>(resolve => { releaseRegistry = resolve; });
+			}
+			return refreshState?.(...args);
+		});
+		const service = createAccountMirrorCompletionService({
+			registry,
+			refreshService: { requestRefresh },
+			generateId: () => "acctmirror_pause_cooldown",
+			sleep: () => new Promise<void>(resolve => { releaseSleep = resolve; }),
+		});
+		try {
+			service.start();
+			await waitFor(() => requestRefresh.mock.calls.length === 1);
+			if (pauseAt === "before-rejection") {
+				service.control({ id: "acctmirror_pause_cooldown", action: "pause" });
+			}
+			cooldownRejected = true;
+			rejectRefresh(new AccountMirrorRefreshError(409, "account_mirror_provider_cooldown",
+				"Provider429 after operator pause", { eligibleAt: "2099-01-01T00:00:00.000Z" }));
+			if (pauseAt === "during-eligibility-refresh") {
+				await refreshing;
+				expect(service.control({ id: "acctmirror_pause_cooldown", action: "pause" })?.status).toBe("paused");
+				releaseRegistry();
+			}
+			expect(requestRefresh.mock.calls[0][0]?.abortSignal?.aborted).toBe(true);
+			await waitFor(() => service.read("acctmirror_pause_cooldown")?.lifecycleEvents?.some(event => event.type === "provider_work_released") === true);
+			expect(service.read("acctmirror_pause_cooldown")).toMatchObject({
+				status: "paused", nextAttemptAt: null, passCount: 0,
+			});
+			expect(requestRefresh).toHaveBeenCalledTimes(1);
+		} finally {
+			service.control({ id: "acctmirror_pause_cooldown", action: "cancel" });
+			releaseRegistry();
+			releaseSleep();
+		}
+	});
+
 	test("pauses, resumes, and cancels live-follow operations", async () => {
 		let resolveRefresh: (value: AccountMirrorRefreshResult) => void = () => undefined;
 		const requestRefresh = vi.fn(

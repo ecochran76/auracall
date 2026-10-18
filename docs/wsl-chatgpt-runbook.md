@@ -303,3 +303,10 @@ the requests waiting for the shared backend budget. Context extraction waits for
 that startup queue to drain under the existing caller cancellation. A valid auth
 session alone does not mean the new document has rendered its conversation yet;
 waiting for request capacity is distinct from losing login state.
+
+
+Operator pause remains authoritative when a pending refresh later reports a
+provider cooldown. The warning/cooldown remains separate from the operation's
+paused state. The shared charged-request count currently covers owned admissions;
+retained browser pages can generate background traffic outside that count.
+Use passive network evidence before interpreting a zero counter as account idle.

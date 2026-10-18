@@ -3705,3 +3705,9 @@ The fixture disables context retry/cache fallback and expects one navigation plu
 ordered startup/payload requests. This case intentionally spans the five-second
 empty-message window; run it alone for focused feedback. Existing cancellation,
 warning, wrong-route and after-send uncertainty cases remain required companions.
+
+
+- Operator pause versus late provider eligibility (provider-free):
+  `pnpm vitest run tests/accountMirror/completionService.test.ts -t 'operator pause survives a late provider cooldown'`.
+  Both rejection-after-pause and pause-during-registry-refresh must retain paused
+  state,avoid a retry deadline and perform no second refresh.

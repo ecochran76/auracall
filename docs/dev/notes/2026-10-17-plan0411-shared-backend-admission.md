@@ -1121,3 +1121,62 @@ qualified bounded_utc/not_due,persistent monitor ready; no delivery/result claim
 Run ispending and survives this turn. Consume exact terminal,headerjournal and
 1/5minute meter onwake; do not blindretry afterhardstop. Missing-chat/quiet/
 concurrent acceptance remainOPEN. Memory disposition forbidden(no user request).
+
+
+## 2026-10-18 | Header-qualified retry fails; retained pages bypass the charged meter
+
+Exact completion wake96342306751c41898ce52d5065821567 consumed matching
+7fdce745-f324-43c9-ab42-a811820cd5f3 and existing finished.json. Immutable source
+1460ed0c8/run-script manifest unchanged. Parent a54f3c34-b468-46ec-8a2f-2ed167748c38
+receives conversation-list HTTP429 at16:44:43.739UTC,about80s after runner start.
+59charged starts,total/rolling5minute peak59,rolling1minute peak30; at429 the
+preceding minute has29starts.0passes,0context returns,missing chat unproven,
+0uncertain,1new warning. This does not establish a5minute quota or a safe limit.
+
+Header evidence is now retained correctly:88ordinary response records and88
+extraInfo records,all hashed wire keys matched,no pending-buffer drops. The429
+has onlyDate in the allowlist in BOTH sources; noRetry-After or RateLimit fields.
+Those176records describe88response events,not176requests. The18:59:43.767UTC
+cooldown is AuraCall's local escalation,not a provider-supplied header/window.
+Original packet and warning history preserved; no further provider retry.
+
+Hardstop pause returns paused at16:44:43.750UTC,but a late provider-cooldown error
+sets idle_waiting afterward. The harness therefore observes until its10minute
+bound; shutdown leaves the persisted record queued. No charged starts occur
+past429,so this is not proof of further product admissions. Exact dead-trial /
+main-paused checks qualify a supported local completion-service pause; persisted
+record nowpaused,providerCalls0,original raw record retained. No provider warning
+or frozen reservation is cleared during this repair.
+
+Public completion-service fixture reproduces that pause overwrite in38ms using
+one pending refresh,pause,and a late typed cooldown error. Two timing positions
+are tested vertically: rejection after pause,and pause during awaited persistent
+registry refresh. Each fails before its corresponding guard. Production adds
+cancellation/authoritative-state checks before cooldown handling and after the
+registry await; paused/cancelled operations cannot be revived by this path.
+86completion-service tests PASS,typecheck,targeted lint,production build anddiff
+hygiene PASS. Cosmetic fixture cleanup is rechecked with2focused cases. A first
+typecheck caught optional registry-method handling; corrected and final checkPASS.
+No new runtime activation or native replay of this source change is claimed.
+
+The owned-page trace also records28new backend request events and40responses
+AFTER hardstop with0new charged starts. Cache/worker flags were absent in that
+original trace,so these are not all asserted server sends. Current verified
+managed browser still has16ChatGPTpages:11lost/settled,5idle/outcome-unknown.
+All are preserved. A separate bounded PASSIVE observation attaches Network only
+to those existing pages,withno navigation,prompt,pageclose or custody adoption:
+16observers,0errors,5backend request/response pairs across3pages. All5responses
+have nonzero finished encoded bytes and no disk/prefetch cache orservice-worker
+flags. The all-account ledger records0charged starts over that observation.
+Thus retained-page background activity is a verified accounting gap; a quiet
+ledger is not a quiet browser. This does NOT prove the background activity caused
+the429,and scope excludes workers/other browsers. Do not extrapolate a quota.
+
+Private packet live-header-diagnosis-1460ed0c8-20261018T1640 retains
+qualified-result.json,headerjournal,passive-browser-traffic.json,current-target-
+inventory.json,original/re-paused completion snapshots,red/green/final testlogs
+and fresh finalreadback. Main707remains selected andschedulerpaused; PR335draft.
+Plan0411/P92 remainsOPEN. Next source boundary is lifetime/accounting of retained
+browser pages before another live acceptance attempt. Unknown-outcome pages must
+remain preserved; static lease records alone do not qualify closure or adoption.
+Memory disposition forbidden(no explicit user memory-update request).
