@@ -55815,3 +55815,17 @@ navigation; navigation failure and missing top-level commit never idle/claimblan
 14focusedtests pass. No provider retry or warning release. Private control/evidence
 under diagnostics/plan0411/manual-goal-20261018; next bounded continuation after
 local cooldown reconciles actual native/warning state before any provider effect.
+
+
+### 2026-10-18 — Broaden successor measurement before provider retry
+
+Prepared staged17abfbe90 successor harness privately; no provider work started.
+Passive observers now cover initial retainedpages alongside newly owned pages,
+retain allowlisted ordinary/extraInfo headers, transfer/cache evidence and
+monotonic rolling1/5min totals. Offline actual-owned callbacks, retained privacy/
+429ordering/teardown/gap checks, rollingboundary fixtures and syntax pass. Fresh
+18:34UTC readback: nativeverified/desktopfree/mainpausedidle/exactwarning retained,
+frozenunknownintact. Localcooldown ends18:59:43UTC. Qualified native wake at19:00UTC
+retains manual original21:08checkpoint/21:13hardstop; preparation is notliveacceptance.
+Private diagnostics/plan0411/manual-goal-20261018/checkpoint.md points to successor
+and its script hashes. Missingcapture,quiet and concurrentacceptance remainOPEN.
