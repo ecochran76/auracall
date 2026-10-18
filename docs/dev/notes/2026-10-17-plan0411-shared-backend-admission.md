@@ -654,3 +654,20 @@ backend request's own client.Runtime to governor admission makes both clean and
 visible-warning cases pass in200ms; unchanged request limits/deadlines. Broader
 validation passes:190tests/8files, typecheck, targeted lint and production build.
 c4e27b2a9 remains staged, not globally activated.
+
+## 2026-10-18 — e0f6cf1ec installed package acceptance running
+
+Source e0f6cf1ec fixes callback warning Runtime lifetime after the held-scope
+repair.190tests/8files, typecheck, lint, production build and compiled runtime
+contract pass. Side-by-side package user-runtime-plan0411-e0f6cf1ec copies the
+complete validated c4e dependency snapshot and replaces the entire dist with the
+new production build;584compiled JS files match exactly. Global CLI/MCP/API
+remain7070532aa; PR335draft now describes both transport fixes.
+
+Fresh preflight12:30:00UTC verifies browser38213/CDP45015 and current window,
+0warnings, shared30/min ceiling and paused/idle main. One unscoped metadata-only
+maxPasses1/maxItems1 run now uses durable directory
+~/.auracall/diagnostics/plan0411/live-owned-runtime-e0f6cf1ec-20261018/;
+runner79102. No seeded ID, prompt, warning release or scheduler resume. Exact
+process/finished/meter/log files govern continuation; no new trial while pending.
+Acceptance remains OPEN until terminal proof is consumed.
