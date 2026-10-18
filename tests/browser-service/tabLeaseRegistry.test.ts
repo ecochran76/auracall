@@ -46,10 +46,11 @@ describe("tabLeaseRegistry (package)", () => {
 				workload: { kind: "live-follow", operationId: "follow" }, operationId: "follow",
 				now: "2026-10-18T15:00:00Z", idleTtlMs: 1000, absoluteTtlMs: 2000 });
 			expect(reserved.ok).toBe(true);
-			const fresh = await second.list({ scope });
+			const [fresh, other] = await Promise.all([second.list({ scope }), first.list({ scope })]);
 			expect(fresh).toHaveLength(1);
 			expect(fresh[0].targetId).toBe("new-target");
 			fresh[0].targetId = "caller-mutation";
+			expect(other[0].targetId).toBe("new-target");
 			expect((await first.list({ scope }))[0].targetId).toBe("new-target");
 		} finally { release(); spy.mockRestore(); await rm(directory, { recursive: true, force: true }); }
 	});

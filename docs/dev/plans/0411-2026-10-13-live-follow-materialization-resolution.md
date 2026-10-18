@@ -1123,3 +1123,33 @@ with fresh14:18:52UTC native/browser/window verification, main paused/idle and
 no seeded provider ID or prompt. Private packet live-document-replacement-9a056a006-
 20261018 adds client/frame/document/Network completion correlation. Result pending;
 capture, quiet repeat and simultaneous LitScout acceptance remain OPEN.
+
+
+## 2026-10-18 | Navigation startup and sustained custody contention
+
+Staged9a056a006 live replay preserves native document cancellation (88charged,
+peak30/min,0new uncertain/0warnings) but fails messages-not-found. Existing reader
+extracts both messages from later retained DOM; no selector patch is justified.
+Public context/real affinity/interceptor replay on a nonblank route reproduces
+messages-not-found before independently delayed startup admission finishes.
+Sourcea0f3a26eb applies the existing bounded authenticated startup drain after
+owned conversation navigation.150affected tests/8files,typecheck/lint/build PASS.
+Native a0 replay fails23s into local tab-registry lock wait before pass commit;
+30charged/peak30,0uncertain/0warnings. Subsequent targeted replay ends84.65s on
+provider-ledger lock timeout (50charged,49starts,1proven no-send,peak30,0uncertain/
+0warnings). Source checks are not full live acceptance.
+
+Private sustained32/64-reader registry replay reproduces5s lock starvation,
+whereas single bursts pass. Source1460ed0c8 shares only unfinished identical
+file-registry list reads by root/query, clones results and discards on settlement.
+Atomic writes/custody semantics unchanged. Exact public red/green, original64-
+reader replay0failures,29registry/restart/retirement tests and39affinity/coordinator
+tests PASS. Typecheck,targeted lint,full build,584-file staged parity and runtime
+contract PASS. Two offline ledger-capacity-release probes do not reproduce the
+remaining native ledger timeout, so no speculative ledger fix is applied.
+
+One unchanged6pass/10minute original live replay now runs source1460ed0c8 with
+registry/ledger lock timing only; private packet live-ledger-trace-1460ed0c8-
+20261018/checkpoint.json. Runner71316,child71319,meter71318 began15:08:37UTC.
+Fresh main preflight15:07:59UTC:paused,0queued/running,0warnings. Global707 remains
+unchanged. Capture,quiet repeat and concurrent LitScout acceptance remain OPEN.
