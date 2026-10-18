@@ -55482,3 +55482,12 @@ Interceptor-owned startup waiter now combines ready UI with no pending admission
 drains under existing caller bound, and rechecks readiness; cancellation stays
 unchanged.195affected tests/9files, typecheck, lint and build pass; global707 and
 Plan0411/P92OPEN preserved. No further live trial until validation. Memory forbidden.
+
+## 2026-10-18 | c1344a605 staged startup drain acceptance
+
+195tests/9files/typecheck/lint/build/runtime contract pass;584JS staged parity.
+Fresh browser/window38213/CDP45015,0warnings,30/min, main paused. Runner314,
+proof316/meter315. Durable exact run directory live-startup-drain-c1344a605-20261018
+under ~/.auracall/diagnostics/plan0411. Wait for functionalAcceptance/nonempty
+observations and content evidence; no duplicate probe. Global707/PR335draft and
+Plan0411/P92OPEN retained. Memory forbidden.

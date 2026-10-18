@@ -723,3 +723,15 @@ physical cleanup behavior remain unchanged. Five focused cases pass, including
 optimistic readiness, delayed readiness and cancellation.195affected tests/9files,
 typecheck, lint and production build pass. Diagnostic packet: live-startup-instrumented-5d8cde371-20261018 under
 ~/.auracall/diagnostics/plan0411. No new provider request or timeout ceilings.
+
+## 2026-10-18 — c1344a605 startup-drain installed trial
+
+195affected tests/9files, typecheck, lint and production build pass. Full current
+dist staged at user-runtime-plan0411-c1344a605 with the retained dependency
+snapshot;584compiled JS files match exactly, runtime contract passes. Fresh
+preflight12:55:33UTC verifies browser38213/window/CDP45015,0warnings, shared30/min
+ceiling, main paused/idle. One same-scope trial now runs in proof process316,
+runner314/meter315, durable directory live-startup-drain-c1344a605-20261018 under
+~/.auracall/diagnostics/plan0411. Functional acceptance explicitly requires
+observed conversations; completion/passCount alone cannot pass. No global switch,
+prompt, seeded ID, warning release or scheduler resume. Result pending.
