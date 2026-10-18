@@ -888,3 +888,38 @@ lifecycle replay/trace, including successful/failed Network completion correlate
 to client/session identity. Existing trace cannot establish the uncertain effect;
 no further live acceptance retry was spent without a qualified diagnosis.
 Memory disposition: forbidden; no explicit user memory-update request.
+
+## 2026-10-18 — Native document replacement reproduces missing cancellation event
+
+An isolated headless Chrome profile, dead loopback proxy and failing DNS prevent
+provider/account access. One paused synthetic backend fetch, one document
+replacement, and one delayed admission reproduce the exact production interceptor
+failure twice: one obsolete SDK continuation, Invalid InterceptionId, and owned
+cleanup AggregateError, without any Network.loadingFailed event. Removing only
+navigation makes the control green. An initial harness disposed before admission
+finished, cancelling the request and masking the bug; corrected with an explicit
+admission-finished signal before disposal, not a timer. AbortController cancellation
+emits the matching native failure and is already handled; a preflight control does
+not reproduce this case. An image probe produced no pause and is not qualifying.
+
+Live failure has matching ordering: paused13:40:53.873, same-target document
+navigation13:40:54.909, obsolete continuation13:40:55.024, rejection13:40:55.025.
+This closes the prior missing-event boundary without changing the preserved
+uncertain reservation. Native fixture/private receipts:
+~/.auracall/diagnostics/plan0411/native-interception-fixture-20261018/owned-probe.mjs,
+owned-before-corrected.json, owned-before-repeat.json and owned-no-navigation-control.json.
+
+Public client-close/actual interceptor regression is red97ms for document-before-wire.
+Fix tracks queued request controllers by exact frame, cancels them on that frame's
+Page.frameNavigated, and removes listener/frame state at owned disposal. Existing
+signal/guarded SDK proof decides no-send; after-wire cancellation still stays
+unknown, foreign-frame navigation does not cancel the request. Seven focused cases
+pass. Original native replay then has0obsolete SDK sends/clean disposal; a further
+native control sends a fresh request from the replacement document while preserving
+0obsolete sends. No global Invalid InterceptionId suppression, limit change, warning
+release, reset, or provider retry has been applied in this source verification.
+
+Affected validation:129tests/5files PASS (49.63s), typecheck, targeted lint and full
+production build PASS. No isolated fixture browser/profile processes remain.
+Native after-send and foreign-frame controls retain their prior semantics. Exact
+new production source is staged next; original account uncertainty is not rewritten.

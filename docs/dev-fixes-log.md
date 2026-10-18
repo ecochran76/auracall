@@ -1,3 +1,13 @@
+## 2026-10-18 — Document replacement can invalidate Fetch without loadingFailed
+
+Do not rely only on Network.loadingFailed to cancel requests waiting for account
+capacity. Native document replacement can discard an interception without that
+event. Associate queued request controllers with their exact frame and cancel them
+on Page.frameNavigated; unregister the listener on owned disposal. The guarded SDK
+boundary still proves no-send, while after-send uncertainty remains conservative.
+A real isolated-browser replay reproduced the old failure twice and passed after
+repair, including a fresh request from the replacement document.
+
 ## 2026-10-18 — Keep wait-entry abort on the Promise rejection path
 
 A helper called as wait(...).catch(normalize) must return a rejected promise even

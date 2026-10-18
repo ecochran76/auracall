@@ -55555,3 +55555,14 @@ No new source fix, reset, suppression or provider retry. Fresh final native wind
 valid; main paused/idle/0warnings,0trial active leases; original tab16 frozen unknown
 preserved. Full live acceptance remains OPEN; global707 unchanged. Next native
 trace/replay must qualify interception lifecycle before another acceptance attempt.
+
+## 2026-10-18 — Document replacement is the missing native cancellation edge
+
+Real isolated Chrome reproduces stale Fetch ID without Network.loadingFailed on
+document navigation; real production interceptor fails twice, non-navigation
+control passes. Live event order matches. Red public regression97ms; frame-scoped
+queued cancellation is green, keeps after-send uncertainty/foreign frames intact,
+and unregisters its listener. Native replay now sends0obsolete continuations;
+fresh replacement-document request still works. Outbound blocked, no provider
+requests or auth. Broader validation/build pending. Original uncertain/frozen
+records and global707 remain unchanged; full Plan0411 acceptance OPEN.

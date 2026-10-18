@@ -52,6 +52,7 @@ const fixture = vi.hoisted(() => ({
 		failClose?: boolean;
 		responseHandler?: (event: unknown) => Promise<void>;
 		loadingFailedHandler?: (event: unknown) => void;
+		frameNavigatedHandler?: (event: unknown) => void;
 		continuationError?: string;
 		onContinueSent?: () => void;
 		onDisable?: () => void;
@@ -69,6 +70,7 @@ vi.mock("chrome-remote-interface", () => ({
 			failClose: false,
 			responseHandler: undefined as ((event: unknown) => Promise<void>) | undefined,
 			loadingFailedHandler: undefined as ((event: unknown) => void) | undefined,
+			frameNavigatedHandler: undefined as ((event: unknown) => void) | undefined,
 			continuationError: undefined as string | undefined,
 			onContinueSent: undefined as (() => void) | undefined,
 			onDisable: undefined as (() => void) | undefined,
@@ -194,6 +196,10 @@ vi.mock("chrome-remote-interface", () => ({
 			},
 			// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
 			Page: {
+				frameNavigated: (handler: (event: unknown) => void) => {
+					state.frameNavigatedHandler = handler;
+					return () => { state.frameNavigatedHandler = undefined; };
+				},
 				enable: () => client.send("Page.enable", {}),
 				navigate: (input: { url: string }) => client.send("Page.navigate", input),
 			},
@@ -2287,17 +2293,25 @@ test.each([
 	"after-wire",
 	"foreign-request",
 	"not-cancelled",
+	"document-before-wire",
+	"document-after-wire",
+	"foreign-document",
 ])("native request cancellation keeps exact dispatch certainty; phase=%s", async (phase) => {
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-native-cancel-"));
 	setAuracallHomeDirOverrideForTest(home);
 	fixture.clients = [];
 	const gate = new DesktopControlGate("native-cancel");
-	const cancelNative = () =>
+	const cancelNative = () => {
+		if (phase.includes("document")) {
+			fixture.clients[0]?.frameNavigatedHandler?.({ frame: { id: phase === "foreign-document" ? "other-frame" : "frame-1", loaderId: "new-document" } });
+			return;
+		}
 		fixture.clients[0]?.loadingFailedHandler?.({
 			requestId: phase === "foreign-request" ? "other-network" : "network-1",
 			canceled: phase !== "not-cancelled",
 			errorText: "net::ERR_ABORTED",
 		});
+	};
 	setCdpCommandAdmissionResolver(async () => {
 		const admission = {
 			run: async <T>(
@@ -2305,7 +2319,7 @@ test.each([
 				effect: () => Promise<T>,
 				options?: { abortSignal?: AbortSignal },
 			) => {
-				if (command === "Fetch.continueRequest" && phase !== "after-wire") cancelNative();
+				if (command === "Fetch.continueRequest" && phase !== "after-wire" && phase !== "document-after-wire") cancelNative();
 				return gate.withAutomation("generation", effect, options);
 			},
 			hold: async (options?: { abortSignal?: AbortSignal }) => {
@@ -2345,26 +2359,30 @@ test.each([
 			"native-cancel-target",
 		);
 		const state = fixture.clients[0];
-		state.failContinuation = phase === "before-wire" || phase === "after-wire";
+		const beforeWire = phase === "before-wire" || phase === "document-before-wire";
+		const afterWire = phase === "after-wire" || phase === "document-after-wire";
+		state.failContinuation = beforeWire || afterWire;
 		state.continuationError = "Invalid InterceptionId.";
-		if (phase === "after-wire") state.onContinueSent = cancelNative;
+		if (afterWire) state.onContinueSent = cancelNative;
 		if (!state.handler) throw new Error("Missing interceptor");
 		await state.handler({
 			requestId: "interception-1",
 			networkId: "network-1",
+			frameId: "frame-1",
 			request: { url: "https://chatgpt.com/backend-api/conversations" },
 		});
-		if (phase === "after-wire") await expect(client.close()).rejects.toThrow();
+		if (afterWire) await expect(client.close()).rejects.toThrow();
 		else await expect(client.close()).resolves.toBeUndefined();
-		expect(state.requests).toEqual(phase === "before-wire" ? [] : ["interception-1"]);
+		expect(state.requests).toEqual(beforeWire ? [] : ["interception-1"]);
 		expect(state.loadingFailedHandler).toBeUndefined();
+		expect(state.frameNavigatedHandler).toBeUndefined();
 		client = undefined;
 		const ledger = createBrowserTabConcurrencyRuntime(config).ledger;
 		if (!ledger) throw new Error("Missing ledger");
 		const rows = (await ledger.list()).filter((row) => row.interactionClass === "backend-request");
 		expect(rows).toHaveLength(1);
 		expect(rows[0].effectState).toBe(
-			phase === "before-wire" ? "none" : phase === "after-wire" ? "outcome-unknown" : "settled",
+			beforeWire ? "none" : afterWire ? "outcome-unknown" : "settled",
 		);
 	} finally {
 		await client?.close().catch(() => undefined);

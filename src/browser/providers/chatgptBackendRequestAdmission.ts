@@ -58,6 +58,18 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	const cancellation = new AbortController();
 	const failures: unknown[] = [];
 	const nativeRequests = new Map<string, Set<AbortController>>();
+	const frameRequests = new Map<string, Set<AbortController>>();
+	const documentReplaced = (event: Protocol.Page.FrameNavigatedEvent) => {
+		// A document replacement can invalidate Fetch IDs without loadingFailed.
+		// Cancel only queued requests belonging to that exact frame; the guarded
+		// SDK boundary still decides whether cancellation proves no dispatch.
+		for (const controller of frameRequests.get(event.frame.id) ?? [])
+			controller.abort(new DOMException("Native request document replaced.", "AbortError"));
+	};
+	const observesDocumentReplacement = typeof client.Page?.frameNavigated === "function";
+	const documentSubscription: unknown = observesDocumentReplacement
+		? client.Page.frameNavigated(documentReplaced)
+		: undefined;
 	const cancelledNativeRequests = new Set<string>();
 	const nativeFailure = (event: Protocol.Network.LoadingFailedEvent) => {
 		if (event.canceled !== true) return;
@@ -101,6 +113,11 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 		if (existing) return existing;
 		const nativeCancellation = new AbortController();
 		const requestSignal = AbortSignal.any([cancellation.signal, nativeCancellation.signal]);
+		if (event.frameId) {
+			const controllers = frameRequests.get(event.frameId) ?? new Set<AbortController>();
+			controllers.add(nativeCancellation);
+			frameRequests.set(event.frameId, controllers);
+		}
 		if (event.networkId) {
 			const controllers = nativeRequests.get(event.networkId) ?? new Set<AbortController>();
 			controllers.add(nativeCancellation);
@@ -173,6 +190,11 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 		pending.add(task);
 		void task.then(() => {
 			pending.delete(task);
+			if (event.frameId) {
+				const controllers = frameRequests.get(event.frameId);
+				controllers?.delete(nativeCancellation);
+				if (controllers?.size === 0) frameRequests.delete(event.frameId);
+			}
 			if (event.networkId) {
 				const controllers = nativeRequests.get(event.networkId);
 				controllers?.delete(nativeCancellation);
@@ -215,6 +237,15 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 			if (!remove) throw new Error("Native request cancellation listener cleanup is unavailable.");
 			remove.call(client, "Network.loadingFailed", nativeFailure);
 		}
+		if (typeof documentSubscription === "function") documentSubscription();
+		else if (observesDocumentReplacement) {
+			const remove = (client as ChromeClient & {
+				removeListener?: (event: string, callback: typeof documentReplaced) => void;
+			}).removeListener;
+			if (!remove) throw new Error("Document replacement listener cleanup is unavailable.");
+			remove.call(client, "Page.frameNavigated", documentReplaced);
+		}
+		frameRequests.clear();
 		nativeRequests.clear();
 		cancelledNativeRequests.clear();
 		// Keep custody until the guarded transport successfully disconnects.

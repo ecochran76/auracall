@@ -42,7 +42,10 @@ from an owned provider client. Repeated observations of the same request do not
 create another permit. A permit is not proof of a completed provider response.
 Admission snapshots distinguish ready request flow, known budget exhaustion,
 unqualified failures and provider warnings. Collection may yield for known budget
-exhaustion; uncertainty or a provider warning requires a hard stop.
+exhaustion; uncertainty or a provider warning requires a hard stop. Document replacement
+cancels queued requests from that exact frame before continuation; only the guarded
+transport can prove no SDK send. Requests whose SDK send already began retain
+conservative uncertainty.
 
 A configured authority factory reports `backendRequestAdmissionEnabled` when its
 new authorities admit backend requests. This is cleanup capability metadata, not
