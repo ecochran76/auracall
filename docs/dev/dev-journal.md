@@ -55397,3 +55397,24 @@ First affected run:161tests/5files pass. Typecheck found an optional adapter-met
 call in the new fixture; corrected with an explicit guard. Production build,
 corrected typecheck and targeted lint pass. Final affected selection and installed
 acceptance are pending; wider Plan0411/P92 stays OPEN.
+
+## 2026-10-18 | c4e27b2a9 staged live-follow acceptance
+
+Final162affected tests/5files, typecheck, targeted lint and production build pass.
+PR335draft; separate installed584JS parity exact. Preflight freshly verified
+native browser/window20905/CDP45015,0warnings, shared ceiling30/min, main paused.
+One metadata-only unscoped pass running in proof process80461; runner80441/meter80446.
+Global CLI/MCP/API retain7070532aa. No prompt, seeded IDs, warning release or
+scheduler resume. Exact completion:/tmp/plan0411-live-warning-c4e27b2a9-20261018/finished.json.
+Plan0411/P92 remains OPEN pending this acceptance. Memory disposition forbidden.
+
+## 2026-10-18 | Abandoned desktop transition recovered; repeat running
+
+Installed c4e27b2a9 first trial failed earlier at census warning check,0backend.
+Native browser/window healthy; gate owner51349 absent, empty transition from11:28
+blocked normal dead-owner recovery. Preserved owner+transition, quarantined exact
+unchanged abandoned transition after fresh native/paused-idle checks. Supported gate
+probe then acquired/cleaned/released with0provider commands. New same-scope trial
+runner9959, exact completion under /tmp/plan0411-live-warning-recovered-c4e27b2a9-20261018.
+No browser/login reset, prompts, warning release or global scheduler resume.
+Source regression remains162tests green; installed acceptance still OPEN.

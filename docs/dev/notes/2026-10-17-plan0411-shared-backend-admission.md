@@ -545,3 +545,44 @@ Both bootstrap success and visible-warning refusal pass; successful bootstrap
 continues its synthetic backend request through the real configured interceptor.
 Initial affected selection:161tests/5files pass. Installation/live acceptance are
 not established by this source result; their receipts will be recorded separately.
+
+## 2026-10-18 — c4e27b2a9 staged; one installed acceptance running
+
+Final focused selection:162tests/5files pass, plus corrected typecheck, targeted
+lint, production build and diff checks. Source c4e27b2a9 is published on
+fix/plan0411-owned-warning-contention; draft PR335 contains this repair and the
+two prior failed acceptance evidence updates. Separate installed runtime:
+~/.auracall/user-runtime-plan0411-c4e27b2a9/node_modules/auracall.
+All584compiled JS files match,0mismatches/extras. Global CLI/MCP/API still7070532aa.
+
+Fresh preflight11:55:42UTC verified native browser20905/CDP45015 and its current
+window,0active warnings, shared ceiling30/min, main scheduler paused/idle. Started
+one unscoped metadata-only maxPasses1/maxItems1 acceptance; no prompt, seeded IDs,
+scheduler resume or warning release. Runner80441, proof process80461, meter80446.
+Working receipt directory:/tmp/plan0411-live-warning-c4e27b2a9-20261018.
+Source validation is complete; installed live acceptance remains pending until
+this exact run's terminal output and observer coverage are consumed.
+
+## 2026-10-18 — Installed attempt blocked by abandoned transition; recovery
+
+The c4e27b2a9 attempt failed before reaching repaired navigation admission:
+parent acctmirror_completion_43cd830e-00f6-41f4-8b09-07a342f27682,0passes/no child,
+0backend requests/charged starts,0new warnings/observed429. The initial owned-tab
+census warning check timed out. Durable failed packet:
+~/.auracall/diagnostics/plan0411/live-warning-c4e27b2a9-20261018T1155/acceptance.json.
+
+Fresh inspection verified browser20905/window healthy; gate owner51349 was absent
+from /proc. An empty transition directory remained from11:28:17.716UTC. It blocked
+transition acquisition before the gate's normal dead-owner cleanup. Original owner
+record and exact unchanged transition directory were preserved in
+~/.auracall/diagnostics/plan0411/abandoned-transition-20261018/. The abandoned
+transition was quarantined after current native verification and paused/idle API
+readback; normal gate acquisition then removed the dead owner and released cleanly.
+No browser process/login/warning/frozen prompt state changed. This is explicit
+runtime recovery; automatic transition crash recovery is not implemented here.
+
+Fresh preflight11:58:23UTC again passed with0warnings and30/min shared ceiling.
+One same-scope trial is running after that environment repair. Runner9959;
+/tmp/plan0411-live-warning-recovered-c4e27b2a9-20261018/finished.json is the exact
+completion trigger. Previous completion wake was cancelled after result consumption.
+Global launchers/API remain7070532aa pending qualification. Acceptance remains OPEN.
