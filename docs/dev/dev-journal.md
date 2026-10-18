@@ -55533,3 +55533,13 @@ snapshot: the nonasync wait helper throws before .catch attaches. Async helper
 keeps that entry abort on the existing typed no-send path. No dispatch occurred
 in regression; genuinely dispatched uncertainty remains protected. No new-chat
 capture or quiet repeat; runtime707 remains globally active and scheduler paused.
+
+## 2026-10-18 — Native discovery now completes; content continuation running
+
+caadc05dd native pass completes187419ms/82charged/peak30,0uncertain backend
+records/0new warnings;11new catalog rows include the previously missing chat.
+Its contents remain pending because retained detail consumed the one-detail budget.
+One normal unscoped continuation now permits up to6passes/10minutes, stopping after
+candidate capture/commit. No seeded scope, prompts, artifact transfer, global switch
+or main scheduler resume. Exact private runner and checkpoint under diagnostics/
+plan0411/live-capture-continuation-caadc05dd-20261018. Full Plan0411 still OPEN.

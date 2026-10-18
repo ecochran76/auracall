@@ -1072,3 +1072,27 @@ uncertain cleanup. Source remains draft PR333; plan OPEN. Next exact boundary is
 provider-free native desktop-hold/request-cleanup composition, then a qualified
 installed retry. Full receipt summary in
 ../notes/2026-10-17-plan0411-shared-backend-admission.md.
+
+## 2026-10-18 | Crash-resumed native acceptance and bounded capture continuation
+
+State: OPEN. Draft PR335 sourcecaadc05dd fixes warning transport ownership,
+startup lifetime, native cancellation, ledger read fanout and shutdown ordering.
+126affected tests/5files, typecheck/lint/build pass;584compiled files match staged
+package. Global runtime remains7070532aa, main paused. Latest normal single-pass
+native trial completes in187419ms,82charged starts/peak30,0uncertain backend
+records/0new warnings, full exact-page Network coverage. Catalog364→375, including
+the independently located missing IM Receipts chat. Its contents are not yet read:
+one retained pending detail consumed the pass. Generic completion is not capture.
+
+Under standing agentic-measurement authority and the user's correction that coarse
+operation constraints were guesses, next packet is one normal unscoped completion,
+maximum6passes/10minutes, metadata_only,maxItems1,forcefalse; stop after the missing
+chat is captured and its pass commits. Keep original cache/cursors, shared30/min
+and600000ms wait, native custody, paused main scheduler and frozen tab16 record.
+No ID is seeded into product selection; its known ID is only an observer stop rule.
+No prompts, forced refresh, login reset, artifact transfer, global activation or
+quiet acceptance is inferred. If not captured within the bound, retain pending
+work and measure that result. Quiet comparison follows only verified capture;
+concurrent LitScout qualification remains separate/unproven. Evidence:
+../notes/2026-10-17-plan0411-shared-backend-admission.md and private diagnostic packet
+live-capture-continuation-caadc05dd-20261018.

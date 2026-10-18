@@ -836,3 +836,24 @@ failure is reclassified. Local green and affected verification follow.
 
 Wait-entry repair validation:19focused tests then126affected tests/5files PASS
 (47.88s); typecheck, targeted lint, full production build and diff check PASS.
+
+## 2026-10-18 — First repaired native discovery completes
+
+Stagedcaadc05dd parent8ffc3469-77a7-4e60-986a-f8869b7eb1d0 completes one normal
+unscoped pass in187419ms, no child.82charged starts,peak30/min,0uncertain backend
+records,0new warnings; observed response statuses200/204 only.128page request
+start events include paused/cancelled work and do not equal wire sends. Full
+exact-target coverage;3wrapped returns represent one unique2-message context.
+Catalog364→375:11new rows include the original missing IM Receipts candidate,
+absent before/present after. Its context was not selected: one retained pending
+detail consumed the budget. Thus discovery passes, exact candidate capture and
+quiet repeat remain OPEN. Derived private acceptance-assessment.json binds these
+checks to raw before/after catalogs and context receipts. No forced/seeded read
+or global activation is substituted. Prior failures remain retained.
+
+Next normal continuation is explicitly bounded to6passes/10minutes, stop after
+candidate capture plus committed pass, keeping30/min, same cache and metadata_only.
+Known candidate ID only controls the observer stop, never product selection.
+Plan0411 current revision records this under the user's coarse-constraint correction.
+Packet live-capture-continuation-caadc05dd-20261018; result pending. Main remains
+paused/idle; original frozen tab16 is preserved. All previous consumed wakes cancelled.
