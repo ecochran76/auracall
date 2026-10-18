@@ -153,3 +153,51 @@ test("request transitions remain ordered if wall clock moves backwards", async (
 		Date.parse(record.startedAt ?? ""),
 	);
 });
+
+test("concurrent capacity waits share only unfinished advisory reads", async () => {
+	vi.useFakeTimers();
+	vi.setSystemTime(new Date("2026-10-18T00:00:00Z"));
+	const ledger = createInMemoryProviderInteractionLedger();
+	const cancellation = new AbortController();
+	const authority = createOwnedBackendRequestAuthority({
+		ledger,
+		scope: { provider: "chatgpt", tenantKey: "account", runtimeProfileId: "a", managedBrowserProfile: "/managed" },
+		workloadId: "shared", operationId: "shared", tabLeaseId: "shared",
+		backendRequestLimit: 1, budgetWaitTimeoutMs: 130000,
+		abortSignal: cancellation.signal, assertOwnedLease: async () => undefined,
+	});
+	const effect = vi.fn(async () => undefined);
+	await authority.admit(`sha256:${"0".repeat(64)}`, effect);
+	const list = ledger.list.bind(ledger);
+	let release!: () => void;
+	let gate = new Promise<void>((resolve) => { release = resolve; });
+	const reads = vi.spyOn(ledger, "list").mockImplementation(async (scope) => {
+		await gate;
+		return list(scope);
+	});
+	const requests = Array.from({ length: 32 }, (_, i) =>
+		authority.admit(`sha256:${(i + 1).toString(16).padStart(64, "0")}`, effect));
+	const results = Promise.allSettled(requests);
+	try {
+		await vi.advanceTimersByTimeAsync(0);
+		expect(reads).toHaveBeenCalledTimes(1);
+		release();
+		await vi.advanceTimersByTimeAsync(0);
+		// A later capacity wait must refresh, rather than reuse a completed snapshot.
+		gate = new Promise<void>((resolve) => { release = resolve; });
+		const later = authority.admit(`sha256:${"f".repeat(64)}`, effect);
+		const laterResult = Promise.allSettled([later]);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(reads).toHaveBeenCalledTimes(2);
+		release();
+		cancellation.abort();
+		await vi.advanceTimersByTimeAsync(0);
+		await laterResult;
+		expect(effect).toHaveBeenCalledTimes(1);
+	} finally {
+		release();
+		cancellation.abort();
+		await vi.advanceTimersByTimeAsync(0);
+		await results;
+	}
+});

@@ -762,3 +762,29 @@ used for both subscriptions. Corrected typecheck/build/lint and9final focused
 cases pass; original type/build failure logs remain.
 Protocol IDs are not treated as permission, and neither request nor cleanup limits
 are raised. Global runtime remains7070532aa; full Plan0411/P92 acceptance OPEN.
+
+## 2026-10-18 — Capacity wait advisory reads contend on the full ledger
+
+Installed df6ddbec6 trial failed on repeated provider-interaction ledger lock
+acquisition timeouts. Native cancellation no longer sent stale continuations:
+45 charged starts, peak30/min,3 proven no-send,0 uncertain and0 new warnings.
+Functional discovery remains unaccepted. Private packet:
+~/.auracall/diagnostics/plan0411/live-native-cancel-df6ddbec6-20261018.
+
+An isolated replay copies the17,789,034-byte ledger and invokes the real owned
+request authority with a saturated budget, no browser/provider effects.32 waiters
+read677MB without timeout;64 waiters reproduce26 lock timeouts in5.59s, repeated
+with26 in5.57s. Longest single lock hold507ms; duplicate read fanout is sufficient
+without an external holder. A gated public-authority regression fails before
+repair (32 unfinished identical reads, expected1). Share only unfinished advisory
+record/warning reads within that authority, clear on settlement or rejection;
+never cache completed results. Atomic reserve/start/settle and fresh cleanup
+reconciliation are unchanged.64-waiter replay then completes cancellation in1.50s,
+3 reads/53.5MB,0 collisions/timeouts/effects. All raw local replay evidence remains
+under ~/.auracall/diagnostics/plan0411/ledger-contention-replay-20261018.
+Global runtime still7070532aa, ceiling30/min unchanged; Plan0411/P92 remains OPEN.
+
+Focused affected validation:123 tests across5 files PASS (47.88s), typecheck,
+targeted lint and full production build PASS. Repeated repaired64-waiter replay
+again completes in1.50s with3 reads,0 collisions/timeouts/effects. These are local
+storage/authority results, not installed discovery acceptance.

@@ -66,6 +66,12 @@ export function createOwnedBackendRequestAuthority(input: {
 		lastTimestamp = Math.max(lastTimestamp, readNow().getTime());
 		return new Date(lastTimestamp);
 	};
+	// These snapshots advise when to retry; reserve remains the atomic authority.
+	// Share unfinished reads within this owner only, never cache a completed result.
+	const readBudgetRecords = sharePendingRead(() => ledger.list({ provider, tenantKey }));
+	const readBudgetWarnings = sharePendingRead(() =>
+		ledger.listActiveProviderWarnings({ now: now().toISOString() }),
+	);
 	let backendBudgetDenied = false;
 	return {
 		admit: async (requestKey: string, effect: () => Promise<void>, requestSignal?: AbortSignal) => {
@@ -110,7 +116,7 @@ export function createOwnedBackendRequestAuthority(input: {
 					now().getTime() >= deadlineMs
 				)
 					break;
-				const records = await ledger.list({ provider, tenantKey });
+				const records = await readBudgetRecords();
 				const timestamps = records
 					.filter(
 						(record) =>
@@ -126,7 +132,7 @@ export function createOwnedBackendRequestAuthority(input: {
 				while (now().getTime() < Math.min(retryAt, deadlineMs)) {
 					checkCancellation();
 					await assertOwnedLease();
-					const warnings = await ledger.listActiveProviderWarnings({ now: now().toISOString() });
+					const warnings = await readBudgetWarnings();
 					if (
 						warnings.some(
 							(warning) =>
@@ -239,4 +245,14 @@ function waitForBackendBudget(ms: number, signal?: AbortSignal): Promise<void> {
 		};
 		signal?.addEventListener("abort", abort, { once: true });
 	});
+}
+
+function sharePendingRead<T>(read: () => Promise<T>): () => Promise<T> {
+	let pending: Promise<T> | undefined;
+	return () => {
+		if (!pending) {
+			pending = Promise.resolve().then(read).finally(() => { pending = undefined; });
+		}
+		return pending;
+	};
 }

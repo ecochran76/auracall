@@ -55502,3 +55502,15 @@ cancellation separately from after-SDK-send uncertainty; foreign/non-cancelled
 failures remain unaffected.206broader tests/10files and9final focused cases pass;
 corrected SDK listener typing, typecheck/lint/build pass.
 Global707, PR335draft and Plan0411/P92OPEN preserved. Memory forbidden.
+
+## 2026-10-18 — Crash-resumed ledger contention diagnosis
+
+Recovered exact df6 trial failure and source branch. No surviving live-follow
+runner, main API active; same boot identity verified. Isolated64-waiter replay
+reproduces26 ledger lock timeouts twice without provider effects. Capacity waits
+were independently reading the same18MB file under its cross-process lock.
+Regression red32 duplicate unfinished reads; sharing only pending advisory reads
+is green, replay reduced to3 reads/zero timeouts. Completed snapshots are never
+cached; admission remains atomic. Validation/staging follows; discovery and quiet
+repeat remain unaccepted, global activation still7070532aa. Consumed df6 Wake
+cancelled to avoid duplicate continuation.

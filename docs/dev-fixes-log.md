@@ -1,3 +1,12 @@
+## 2026-10-18 — Coalesce unfinished capacity-wait advisory reads
+
+When many paused backend requests share one owned authority, independent reads
+of the full file-backed ledger can exhaust its lock timeout even when each lock
+hold is short. Share only unfinished advisory record/warning reads within that
+authority. Do not cache completed snapshots or weaken atomic reservation, warning
+checks, cancellation, or fresh final reconciliation. A64-waiter real-ledger replay
+went from26 lock timeouts to0, with43 full reads reduced to3.
+
 ## 2026-10-18 — Preserve cancellation certainty through desktop admission
 
 A browser may cancel a paused request while its continuation waits for native
