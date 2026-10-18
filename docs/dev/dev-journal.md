@@ -55418,3 +55418,26 @@ probe then acquired/cleaned/released with0provider commands. New same-scope tria
 runner9959, exact completion under /tmp/plan0411-live-warning-recovered-c4e27b2a9-20261018.
 No browser/login reset, prompts, warning release or global scheduler resume.
 Source regression remains162tests green; installed acceptance still OPEN.
+
+## 2026-10-18 | Continue after host crash; durable installed trial
+
+Recovered source4a0db4337/PR335draft and staged c4e27b2a9;584JS exact parity.
+Prior raw trace stopped before acceptance; proof PID9966 absent on fresh boot.
+Paused exact interrupted parent72f6f4e9 via authenticated API and preserved its
+observer lock. Global API50485 still7070532aa; scheduler paused. Fresh preflight
+0warnings,30/min ceiling, managed browser absent. Same-scope bounded trial now
+runner9184 with durable harness/result path live-post-crash-c4e27b2a9-20261018T1225
+under ~/.auracall/diagnostics/plan0411. Monitor50489 current. Do not restart the
+trial while its exact process/result is unresolved. Wider acceptance remains OPEN.
+
+## 2026-10-18 | Crash-corrupt locks preserved and recovered
+
+Post-crash attempt failed JSON parse before browser/provider traffic. Two pre-boot
+zero-byte owner files found in native shared-pool and desktop-control locks.
+Scope guard rejected initial profile-lock assumption without mutation. Exact
+pool hash/pre-boot/size/inode checks and browser-absent/paused-idle readback then
+qualified quarantine of originals. Supported lock probes acquired/released,0provider
+commands. Durable originals/receipts: post-crash-empty-locks-20261018 under
+~/.auracall/diagnostics/plan0411. Repeat runner37662 uses durable
+live-post-crash-repaired-c4e27b2a9-20261018 packet. Acceptance still OPEN;
+no global package switch or provider-throttle claim. Memory disposition forbidden.

@@ -1,3 +1,13 @@
+## 2026-10-18 — Preserve crash-interrupted evidence and corrupt lock originals
+
+A reboot can erase /tmp observers and leave zero-byte ownership records even
+when the browser itself is gone. Treat a surviving running completion projection
+as uncertain until current process/boot and exact control are reconciled. Keep
+acceptance runners/results in user-scoped durable diagnostics. Preserve corrupt
+lock directories before explicit recovery; verify their exact scope, unchanged
+identity, current browser absence and normal acquisition/release afterward.
+Do not reset browser/login state or infer acceptance from a vanished runner.
+
 ## 2026-10-18 — Carry held client ownership into physical-action admission
 
 Request interception retains desktop ownership across commands, but JavaScript

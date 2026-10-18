@@ -586,3 +586,49 @@ One same-scope trial is running after that environment repair. Runner9959;
 /tmp/plan0411-live-warning-recovered-c4e27b2a9-20261018/finished.json is the exact
 completion trigger. Previous completion wake was cancelled after result consumption.
 Global launchers/API remain7070532aa pending qualification. Acceptance remains OPEN.
+
+## 2026-10-18 — Host crash reconciliation and durable acceptance harness
+
+After operator-reported crash, fresh boot5601d440-a997-4a6c-806a-d8bc392f38cc and
+API50485 verified. Global CLI/MCP/API still7070532aa; staged c4e27b2a9 and PR335
+survived,584JS parity rechecked exact. Transient runner files were lost. Surviving
+raw trace for parent acctmirror_completion_72f6f4e9-de84-4923-8491-6a802e87cb05
+has0passes/0observed requests and no terminal result: INTERRUPTED, not acceptance.
+Original proof process9966 absent. API still projected that record as running;
+explicit pause through the public authenticated API settled it paused,passCount0.
+Preserved and moved its observer lock after fresh process-absence verification.
+No prompt resubmission, provider warning release or browser/login reset.
+
+Fresh preflight12:22:14UTC: managed browser absent (normal product startup allowed),
+main scheduler paused/idle,0active warnings, shared30/min ceiling. A new bounded
+same-scope installed test uses durable harness/logs/runner/meter/completion under
+~/.auracall/diagnostics/plan0411/live-post-crash-c4e27b2a9-20261018T1225/.
+Observer helpers lost with /tmp were reconstructed with explicit custody checks
+and parent/child-summary polling; no periodic broad-status reads. Runner9184.
+Monitor50489 verified persistent/recent. Current run remains pending until its
+exact terminal result is consumed; no full-live or throttle-free claim.
+
+## 2026-10-18 — Post-crash zero-byte ownership records repaired
+
+The first post-crash control failed before browser launch with Unexpected end of
+JSON input: parent acctmirror_completion_cab0d9b7-8144-4914-b8d0-4c314ffac5e4,
+0passes/0backend/0warnings; observation coverage incomplete, acceptance FAIL.
+Exact durable packet: live-post-crash-c4e27b2a9-20261018T1225/acceptance.json under
+~/.auracall/diagnostics/plan0411. Runner terminal exit0 means harness completed.
+
+A bounded parse-only check found two zero-byte owner.json files, both modified
+before this boot: the automatic native-pool lock for loopback19096/auracall/main
+and the retained wsl-chrome-3 desktop-control lock. Recovery initially refused a
+profile-lock scope assumption before any mutation; current source/key hashing
+then proved the actual shared-pool scope. After exact size/inode/pre-boot checks,
+managed-browser absence and paused/idle API verification, both original lock
+directories were quarantined intact. Supported native-pool exclusive and desktop
+gate probes then acquired/released normally with0provider commands. No valid
+binding/browser data, warning history or unknown prompt record was removed.
+Recovery receipts/originals: post-crash-empty-locks-20261018 under the same root.
+
+One same-scope trial after that verified repair now runs in runner37662. Durable
+packet: live-post-crash-repaired-c4e27b2a9-20261018. No widened request/time budget,
+prompt, seeded conversation ID or scheduler resume. Global package remains7070532aa;
+staged c4e27b2a9 source tests stay green. Automatic crash recovery for empty owner
+records remains a separate resilience gap; this packet is an explicit repair.
