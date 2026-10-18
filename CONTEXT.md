@@ -42,7 +42,13 @@ from an owned provider client. Repeated observations of the same request do not
 create another permit. A permit is not proof of a completed provider response.
 Admission snapshots distinguish ready request flow, known budget exhaustion,
 unqualified failures and provider warnings. Collection may yield for known budget
-exhaustion; uncertainty or a provider warning requires a hard stop.
+exhaustion; uncertainty or a provider warning requires a hard stop. Document replacement
+cancels queued requests from that exact frame before continuation; only the guarded
+transport can prove no SDK send. Requests whose SDK send already began retain
+conservative uncertainty.
+Owned account-mirror navigations retain startup admission until the signed-in UI
+is ready and pending startup requests drain, before context data reads begin.
+The caller cancellation still bounds that wait.
 
 A configured authority factory reports `backendRequestAdmissionEnabled` when its
 new authorities admit backend requests. This is cleanup capability metadata, not
@@ -136,3 +142,27 @@ Leased browser endpoints retain service-qualified browser process identity and m
 Developer-app response collection uses the resolved browser launch policy deadline. Fresh-root Chat/current app-test posture does not replace the selected browser.timeoutMs. A timeout after Send preserves effect evidence and forbids automatic resubmission.
 
 **Lease retirement audit**: durable history of AuraCall expiry-close intent and outcome, distinct from the mutable final lease snapshot. Acting process identity is distinct from browser process identity; already-missing is an observation, not proof of an AuraCall close.
+
+
+Concurrent identical file tab-registry list observations may share an unfinished
+read by root/query. Results are cloned per caller and discarded on settlement;
+this supplies no cached custody authority. Writes retain exclusive file locking
+and atomic persistence; subsequent observations see committed custody changes.
+
+
+Completion operator pause/cancel takes precedence over an asynchronous provider
+cooldown rejection,including a pause during persistent eligibility refresh.
+A charged owned-request meter covers admitted operation traffic; retained-page
+background activity is a separate coverage boundary and may continue after the
+operation releases its request interceptor. Zero charged starts is not browser
+or account network-idle proof.
+
+
+Settled read-only live-follow crawler pages are parked on about:blank before custody becomes idle. Parking requires fresh exact ownership, an allowed current route, a top-level blank document commit and a blank URL readback. Outcome-unknown and human/identity-protected pages retain preservation semantics. This bounds newly owned page lifetime; it does not meter preexisting or manually owned pages.
+
+Desktop ownership files are stored evidence, not live admission authority. Use
+bounded public desktop automation admission to qualify current control; atomic
+acquisition can recover an absent Linux automation owner. Human and malformed
+ownership remain fenced. Completion monitoring summaries expose only the latest
+lifecycle event; after pause, wait for current provider-work release and released
+active tab custody before ending the observer process.

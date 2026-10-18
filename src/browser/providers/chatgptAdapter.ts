@@ -91,6 +91,7 @@ import {
 } from "../service/ui.js";
 import type { BrowserLogger, ChromeClient } from "../types.js";
 import { CHATGPT_PROVIDER } from "./chatgpt.js";
+import { waitForOwnedChatgptBackendStartup } from "./chatgptBackendRequestAdmission.js";
 import {
 	buildChatgptArtifactControlExpectation,
 	reconcileChatgptPayloadDownloadControls,
@@ -4552,6 +4553,12 @@ async function connectToChatgptTab(
 					);
 				}
 				await navigateToChatgptUrl(client, preferredUrl, undefined, options);
+				if (
+					options.accountMirrorInventory &&
+					resolveProviderTrafficGovernor(client)?.admitBackendRequest
+				) {
+					await waitForChatgptAuthenticatedStartup(client, options);
+				}
 			}
 			const connection = {
 				client,
@@ -4959,6 +4966,42 @@ function shouldForceNewChatgptTabConnection(options?: BrowserProviderListOptions
 }
 
 export const shouldForceNewChatgptTabConnectionForTest = shouldForceNewChatgptTabConnection;
+
+async function waitForChatgptAuthenticatedStartup(
+	client: ChromeClient,
+	options: BrowserProviderListOptions,
+): Promise<void> {
+	// Document readiness and /api/auth/session can precede the requests that
+	// initialize the signed-in UI. Keep interception alive until that UI is ready.
+	const signal = options.abortSignal ?? AbortSignal.timeout(CHATGPT_CDP_LIST_TIMEOUT_MS);
+	await waitForOwnedChatgptBackendStartup(client, async () => {
+		recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+		const result = await withCdpCommandTimeout(
+			client,
+			{
+				timeoutMs: CHATGPT_CDP_LIST_TIMEOUT_MS,
+				timeoutMessage: "ChatGPT authenticated startup readiness probe timed out.",
+				abortSignal: signal,
+			},
+			() =>
+				client.Runtime.evaluate({
+					expression: `(() => {
+          const authenticatedPageReady = Array.from(document.querySelectorAll('button,[role="button"]'))
+            .some(node => {
+              const label = String(node.getAttribute('aria-label') || '').trim();
+              const rect = node.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0 && (
+                /open profile menu$/i.test(label) || node.getAttribute('data-testid') === 'accounts-profile-button'
+              );
+            });
+          return authenticatedPageReady;
+        })()`,
+					returnByValue: true,
+				}),
+		);
+		return result.result?.value === true;
+	}, signal);
+}
 
 function buildChatgptScopedSessionKey(host: string, port: number, preferredUrl: string): string {
 	return `chatgpt:${host}:${port}:${preferredUrl}`;

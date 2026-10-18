@@ -5,6 +5,7 @@ import { expect, test, vi } from "vitest";
 import CDP, {
 	setCdpCommandAdmissionResolver,
 } from "../../packages/browser-service/src/guardedCdp.js";
+import { ProviderBackendRequestCancelledBeforeDispatchError } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { createChatgptAccountMirrorMetadataCollector } from "../../src/accountMirror/chatgptMetadataCollector.js";
 import { createAccountMirrorMetadataTrafficPlanController } from "../../src/accountMirror/providerTrafficPlan.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
@@ -33,6 +34,11 @@ const fixture = vi.hoisted(() => ({
 				failClose?: boolean;
 				stallClose?: boolean;
 				warnPayload?: boolean;
+				visibleWarning?: boolean;
+				asyncBootstrap?: boolean;
+				bootstrapReady?: boolean;
+				onStartupProbe?: () => void;
+				requireBootstrapForMessages?: boolean;
 				failRead?: boolean;
 				abortRead?: () => void;
 				beforeIdentity?: () => void;
@@ -46,6 +52,13 @@ const fixture = vi.hoisted(() => ({
 		beforeContinue?: () => Promise<void>;
 		failClose?: boolean;
 		responseHandler?: (event: unknown) => Promise<void>;
+		loadingFailedHandler?: (event: unknown) => void;
+		frameNavigatedHandler?: (event: unknown) => void;
+		continuationError?: string;
+		onContinueSent?: () => void;
+		onDisable?: () => void;
+		fetchDisabled?: boolean;
+		disableError?: string;
 	}>,
 }));
 vi.mock("chrome-remote-interface", () => ({
@@ -57,23 +70,44 @@ vi.mock("chrome-remote-interface", () => ({
 			beforeContinue: undefined as (() => Promise<void>) | undefined,
 			failClose: false,
 			responseHandler: undefined as ((event: unknown) => Promise<void>) | undefined,
+			loadingFailedHandler: undefined as ((event: unknown) => void) | undefined,
+			frameNavigatedHandler: undefined as ((event: unknown) => void) | undefined,
+			continuationError: undefined as string | undefined,
+			onContinueSent: undefined as (() => void) | undefined,
+			onDisable: undefined as (() => void) | undefined,
+			fetchDisabled: false,
+			disableError: undefined as string | undefined,
 			handler: undefined as ((event: unknown) => Promise<void>) | undefined,
 		};
 		fixture.clients.push(state);
+		let disconnected = false;
 		const client = {
 			send: async (
 				command: string,
 				parameters: { requestId?: string; expression?: string; url?: string },
 			) => {
+				if (disconnected) throw new Error("WebSocket is not open: readyState 3 (CLOSED)");
+				if (command === "Fetch.disable") {
+					state.fetchDisabled = true;
+					state.onDisable?.();
+					if (state.disableError) throw new Error(state.disableError);
+				}
+				if (command === "Fetch.failRequest" && state.fetchDisabled)
+					throw new Error("Fetch domain is not enabled");
 				if (command === "Fetch.continueRequest" || command === "Fetch.failRequest") {
 					if (!parameters.requestId) throw new Error("Missing fixture request ID");
 					(command === "Fetch.continueRequest" ? state.requests : state.failures).push(
 						parameters.requestId,
 					);
 				}
+				if (command === "Fetch.continueRequest") state.onContinueSent?.();
 				if (command === "Fetch.continueRequest" && state.failContinuation)
-					throw new Error("Fixture continuation outcome is unknown");
-				if (command === "Fetch.continueRequest") await state.beforeContinue?.();
+					throw new Error(state.continuationError ?? "Fixture continuation outcome is unknown");
+				if (command === "Fetch.continueRequest") {
+					await state.beforeContinue?.();
+					if (fixture.page && parameters.requestId?.startsWith("bootstrap-"))
+						fixture.page.bootstrapReady = true;
+				}
 				if (
 					command === "Fetch.continueRequest" &&
 					fixture.page?.warnPayload &&
@@ -85,23 +119,35 @@ vi.mock("chrome-remote-interface", () => ({
 							status: 429,
 						},
 					});
+				if (command === "Page.navigate" && fixture.page && parameters.url === "about:blank") {
+					fixture.page.url = "about:blank";
+					state.frameNavigatedHandler?.({ frame: { id: "fixture-frame", url: "about:blank" } });
+					return { frameId: "fixture-frame" };
+				}
 				if (command === "Page.navigate" && fixture.page) {
 					if (!state.handler)
 						throw new Error("Provider navigation started before request interception");
 					if (!parameters.url) throw new Error("Missing navigation URL");
 					fixture.page.navigations.push(parameters.url);
 					fixture.page.url = parameters.url;
-					for (let index = 0; index < fixture.page.bootstrapRequests; index++)
-						await state.handler({
+					for (let index = 0; index < fixture.page.bootstrapRequests; index++) {
+						const request = state.handler({
 							requestId: `bootstrap-${index}`,
 							request: { url: "https://chatgpt.com/backend-api/conversations" },
 						});
+						if (!fixture.page.asyncBootstrap) await request;
+					}
 					return { frameId: "fixture-frame" };
 				}
 				if (command === "Runtime.evaluate" && fixture.page) {
 					const expression = parameters.expression ?? "";
 					let value: unknown = [];
-					if (expression === "location.href") value = fixture.page.url;
+					if (expression.includes("const authenticatedPageReady")) {
+						fixture.page.onStartupProbe?.();
+						value = fixture.page.bootstrapReady === true;
+					} else if (expression.includes("const visible = Array.from"))
+						value = fixture.page.visibleWarning ? "Too many requests" : null;
+					else if (expression === "location.href") value = fixture.page.url;
 					else if (expression.includes("/api/auth/session")) {
 						fixture.page.beforeIdentity?.();
 						value = { user: { id: "fixture-user", email: "operator@example.test" } };
@@ -131,9 +177,13 @@ vi.mock("chrome-remote-interface", () => ({
 						}
 						if (fixture.page.failRead) throw new Error("fixture public read failed");
 						value = {
-							messages: [{ role: "assistant", text: "Known fixture answer" }],
+							messages:
+								fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady
+									? []
+									: [{ role: "assistant", text: "Known fixture answer" }],
 							nextOffset: null,
-							totalMessages: 1,
+							totalMessages:
+								fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady ? 0 : 1,
 						};
 					}
 					return { result: { value } };
@@ -147,6 +197,7 @@ vi.mock("chrome-remote-interface", () => ({
 					if (fixture.page.failClose) throw new Error("fixture transport close outcome unknown");
 					if (fixture.page.stallClose) await new Promise<never>(() => undefined);
 				}
+				disconnected = true;
 			},
 			// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
 			Runtime: {
@@ -155,6 +206,12 @@ vi.mock("chrome-remote-interface", () => ({
 			},
 			// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
 			Page: {
+				frameNavigated: (handler: (event: unknown) => void) => {
+					state.frameNavigatedHandler = handler;
+					return () => {
+						state.frameNavigatedHandler = undefined;
+					};
+				},
 				enable: () => client.send("Page.enable", {}),
 				navigate: (input: { url: string }) => client.send("Page.navigate", input),
 			},
@@ -162,6 +219,12 @@ vi.mock("chrome-remote-interface", () => ({
 			Network: {
 				enable: async () => undefined,
 				loadingFinished: () => () => undefined,
+				loadingFailed: (handler: (event: unknown) => void) => {
+					state.loadingFailedHandler = handler;
+					return () => {
+						state.loadingFailedHandler = undefined;
+					};
+				},
 				responseReceived: (handler: (event: unknown) => Promise<void>) => {
 					state.responseHandler = handler;
 					return () => {
@@ -2062,3 +2125,392 @@ test.each([
 		await rm(home, { recursive: true, force: true });
 	}
 }, 20000);
+
+test.each([
+	"clean",
+	"warning",
+	"async-startup",
+	"optimistic-startup",
+	"startup-cancel",
+	"context-startup",
+])("live-follow bootstrap warning check shares interceptor ownership; mode=%s", async (mode) => {
+	const warning = mode === "warning";
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-follow-warning-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	fixture.page = {
+		url: mode === "context-startup" ? "https://chatgpt.com/" : "about:blank",
+		navigations: [],
+		bootstrapRequests: 1,
+		payloadReads: 0,
+		closeAttempts: 0,
+		visibleWarning: warning,
+		asyncBootstrap:
+			mode === "async-startup" ||
+			mode === "optimistic-startup" ||
+			mode === "startup-cancel" ||
+			mode === "context-startup",
+		bootstrapReady: mode === "optimistic-startup",
+		requireBootstrapForMessages: mode === "context-startup",
+	};
+	const gate = new DesktopControlGate("follow-warning");
+	const holds: Array<Awaited<ReturnType<typeof gate.holdAutomation>>> = [];
+	const controller = new AbortController();
+	let queuedStartupTimer: ReturnType<typeof setTimeout> | undefined;
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect, options) => gate.withAutomation("generation", effect, options),
+		hold: async (options) => {
+			const held = await gate.holdAutomation("generation", options);
+			holds.push(held);
+			return {
+				run: (_command, effect, context) =>
+					held.run(() => gate.withAutomation("generation", effect, context)),
+				close: () => held.close(),
+			};
+		},
+	}));
+	const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
+	const runtimeModule = await import("../../src/browser/tabConcurrencyRuntime.js");
+	const coordinator = await import("../../src/accountMirror/liveFollowTabCoordinator.js");
+	const { BrowserService } = await import("../../src/browser/service/browserService.js");
+	const { createConfiguredLiveFollowAffinity } = await import(
+		"../../src/accountMirror/configuredLiveFollowAffinity.js"
+	);
+
+	const config = {
+		auracallProfile: "fixture",
+		browser: { tabConcurrencyMode: "tab-affinity" },
+		services: {
+			chatgpt: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 30 },
+		},
+	} as never;
+	const runtime = createBrowserTabConcurrencyRuntime(config);
+	const claim = { leaseId: "follow-warning", revision: 1 };
+	const lease = { ...claim, targetId: "follow-target", ownerOperationId: "follow-warning" };
+	const registry = {
+		list: vi.fn(async () => [] as unknown[]),
+		recordTargetAction: vi.fn(async () => ({ ok: true, value: { claim } })),
+		recordMeaningfulUse: vi.fn(async () => ({ ok: true, value: { claim } })),
+		idle: vi.fn(async () => ({ ok: true })),
+	};
+	vi.spyOn(runtimeModule, "createBrowserTabConcurrencyRuntime").mockReturnValue({
+		...runtime,
+		registry,
+	} as never);
+	vi.spyOn(lifecycle, "listChromeTargets").mockResolvedValue([]);
+	vi.spyOn(coordinator, "acquireLiveFollowCrawlerTab").mockResolvedValue({
+		endpoint: { host: "127.0.0.1", port: 45170 },
+		claim,
+		lease,
+		unloadedTarget: true,
+	} as never);
+	vi.spyOn(BrowserService, "fromConfig").mockReturnValue({
+		resolveServiceTarget: async () => ({
+			host: "127.0.0.1",
+			port: 45170,
+			managedBrowserProfile: "/fixture/follow",
+			browserProfile: "fixture",
+			browserProcessId: process.pid,
+		}),
+		getConfig: () => config,
+		getMutationAuditSink: () => async () => undefined,
+	} as never);
+	const timer = setTimeout(
+		() => controller.abort(new Error("Live-follow warning blocked behind its own interceptor")),
+		mode === "context-startup" ? 13000 : 5000,
+	);
+	try {
+		const affinity = await createConfiguredLiveFollowAffinity({
+			userConfig: config,
+			provider: "chatgpt",
+			runtimeProfileId: "fixture",
+			operationId: "follow-warning",
+			maxBrowserInteractionsPerMinute: 30,
+			abortSignal: controller.signal,
+		});
+		if (!affinity) throw new Error("Missing affinity");
+		registry.list.mockResolvedValue([lease]);
+		if (
+			mode === "async-startup" ||
+			mode === "optimistic-startup" ||
+			mode === "startup-cancel" ||
+			mode === "context-startup"
+		) {
+			let release!: () => void;
+			const ready = new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			fixture.page.onStartupProbe =
+				mode === "context-startup"
+					? undefined
+					: mode === "startup-cancel"
+						? () => controller.abort(new Error("fixture startup cancelled"))
+						: release;
+			let admissionIndex = 0;
+			const originalAdmit = affinity.providerTrafficGovernor.admitBackendRequest;
+			if (!originalAdmit) throw new Error("Missing request admission");
+			affinity.providerTrafficGovernor.admitBackendRequest = async (
+				key,
+				effect,
+				signal,
+				context,
+			) => {
+				if (mode === "context-startup" && admissionIndex === 0)
+					queuedStartupTimer = setTimeout(release, 9000);
+				if (mode !== "context-startup" || admissionIndex++ === 0)
+					await new Promise<void>((resolve, reject) => {
+						if (signal?.aborted) {
+							reject(new ProviderBackendRequestCancelledBeforeDispatchError());
+							return;
+						}
+						const aborted = () => reject(new ProviderBackendRequestCancelledBeforeDispatchError());
+						signal?.addEventListener("abort", aborted, { once: true });
+						void ready.then(() => {
+							signal?.removeEventListener("abort", aborted);
+							resolve();
+						});
+					});
+				await originalAdmit(key, effect, signal, context);
+			};
+		}
+		const service = ChatgptService.create(config, {
+			browserService: BrowserService.fromConfig(config, "chatgpt"),
+		});
+		const listOptions = {
+			...affinity.tabAffinity,
+			tabTargetId: affinity.tabAffinity.targetId,
+			interactionGovernor: affinity.interactionGovernor,
+			providerTrafficGovernor: affinity.providerTrafficGovernor,
+			accountMirrorInventory:
+				mode === "async-startup" ||
+				mode === "optimistic-startup" ||
+				mode === "startup-cancel" ||
+				mode === "context-startup",
+			abortSignal: controller.signal,
+		};
+		const identity =
+			mode === "context-startup"
+				? service.getConversationContext("fixture-conversation", {
+						refresh: true,
+						retryAttempts: 0,
+						allowCacheFallback: false,
+						listOptions: { ...listOptions, accountMirrorSingleConversationVisit: true },
+					})
+				: service.getProviderSessionProof(listOptions);
+		if (warning) {
+			await expect(identity).rejects.toThrow("Too many requests");
+			expect(fixture.page.navigations).toEqual([]);
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
+			await affinity.completeFailure(new Error("Too many requests"));
+		} else if (mode === "startup-cancel") {
+			await expect(identity).rejects.toThrow("fixture startup cancelled");
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
+			await affinity.completeFailure(new Error("fixture startup cancelled"));
+		} else if (mode === "context-startup") {
+			await expect(identity).resolves.toMatchObject({
+				messages: [{ role: "assistant", text: "Known fixture answer" }],
+			});
+			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/c/fixture-conversation"]);
+			expect(fixture.page.bootstrapReady).toBe(true);
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([
+				"bootstrap-0",
+				"payload-1",
+			]);
+			await affinity.completeSuccess();
+		} else {
+			await expect(identity).resolves.toMatchObject({ verdict: "match" });
+			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/"]);
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual(["bootstrap-0"]);
+			expect(fixture.page.bootstrapReady).toBe(true);
+			const beforeFinal = fixture.clients.length;
+			await affinity.completeSuccess();
+			expect(fixture.clients).toHaveLength(beforeFinal + 2);
+		}
+		const human = await gate.takeControl("generation");
+		await gate.releaseControl(human.token, "generation");
+	} finally {
+		clearTimeout(queuedStartupTimer);
+		clearTimeout(timer);
+		controller.abort();
+		await Promise.all(holds.map((held) => held.close()));
+		vi.restoreAllMocks();
+		fixture.page = undefined;
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+}, 15000);
+
+test.each([
+	"before-wire",
+	"after-wire",
+	"foreign-request",
+	"not-cancelled",
+	"document-before-wire",
+	"document-after-wire",
+	"foreign-document",
+])("native request cancellation keeps exact dispatch certainty; phase=%s", async (phase) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-native-cancel-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	const gate = new DesktopControlGate("native-cancel");
+	const cancelNative = () => {
+		if (phase.includes("document")) {
+			fixture.clients[0]?.frameNavigatedHandler?.({
+				frame: {
+					id: phase === "foreign-document" ? "other-frame" : "frame-1",
+					loaderId: "new-document",
+				},
+			});
+			return;
+		}
+		fixture.clients[0]?.loadingFailedHandler?.({
+			requestId: phase === "foreign-request" ? "other-network" : "network-1",
+			canceled: phase !== "not-cancelled",
+			errorText: "net::ERR_ABORTED",
+		});
+	};
+	setCdpCommandAdmissionResolver(async () => {
+		const admission = {
+			run: async <T>(
+				command: string,
+				effect: () => Promise<T>,
+				options?: { abortSignal?: AbortSignal },
+			) => {
+				if (
+					command === "Fetch.continueRequest" &&
+					phase !== "after-wire" &&
+					phase !== "document-after-wire"
+				)
+					cancelNative();
+				return gate.withAutomation("generation", effect, options);
+			},
+			hold: async (options?: { abortSignal?: AbortSignal }) => {
+				const held = await gate.holdAutomation("generation", options);
+				return {
+					run: <T>(
+						command: string,
+						effect: () => Promise<T>,
+						context?: { abortSignal?: AbortSignal },
+					) => held.run(() => admission.run(command, effect, context)),
+					close: () => held.close(),
+				};
+			},
+		};
+		return admission;
+	});
+	let client: Awaited<ReturnType<typeof CDP>> | undefined;
+	try {
+		client = await CDP({ host: "127.0.0.1", port: 45181 });
+		const config = {
+			auracallProfile: "native-cancel",
+			services: {
+				chatgpt: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 30 },
+			},
+		} as never;
+		const factory = createConfiguredProviderTrafficAuthorityFactory({
+			userConfig: config,
+			provider: "chatgpt",
+			managedBrowserProfile: "/fixture/native-cancel",
+			mutationAudit: async () => undefined,
+			baseOptions: {},
+		});
+		await annotateClientMutationContext(
+			client,
+			{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
+			"provider:chatgpt",
+			"native-cancel-target",
+		);
+		const state = fixture.clients[0];
+		const beforeWire = phase === "before-wire" || phase === "document-before-wire";
+		const afterWire = phase === "after-wire" || phase === "document-after-wire";
+		state.failContinuation = beforeWire || afterWire;
+		state.continuationError = "Invalid InterceptionId.";
+		if (afterWire) state.onContinueSent = cancelNative;
+		if (!state.handler) throw new Error("Missing interceptor");
+		await state.handler({
+			requestId: "interception-1",
+			networkId: "network-1",
+			frameId: "frame-1",
+			request: { url: "https://chatgpt.com/backend-api/conversations" },
+		});
+		if (afterWire) await expect(client.close()).rejects.toThrow();
+		else await expect(client.close()).resolves.toBeUndefined();
+		expect(state.requests).toEqual(beforeWire ? [] : ["interception-1"]);
+		expect(state.loadingFailedHandler).toBeUndefined();
+		expect(state.frameNavigatedHandler).toBeUndefined();
+		client = undefined;
+		const ledger = createBrowserTabConcurrencyRuntime(config).ledger;
+		if (!ledger) throw new Error("Missing ledger");
+		const rows = (await ledger.list()).filter((row) => row.interactionClass === "backend-request");
+		expect(rows).toHaveLength(1);
+		expect(rows[0].effectState).toBe(
+			beforeWire ? "none" : afterWire ? "outcome-unknown" : "settled",
+		);
+	} finally {
+		await client?.close().catch(() => undefined);
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
+test.each([
+	"succeeded",
+	"failed",
+])("late paused event during owned Fetch shutdown preserves %s outcome", async (outcome) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-shutdown-event-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	const gate = new DesktopControlGate("shutdown-event");
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect) => gate.withAutomation("generation", effect),
+		hold: async () => {
+			const held = await gate.holdAutomation("generation");
+			return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+		},
+	}));
+	let client: Awaited<ReturnType<typeof CDP>> | undefined;
+	let late: Promise<void> | undefined;
+	try {
+		client = await CDP({ host: "127.0.0.1", port: 45190 });
+		const factory = createConfiguredProviderTrafficAuthorityFactory({
+			userConfig: {
+				auracallProfile: "shutdown-event",
+				services: { chatgpt: { identity: { email: "operator@example.test" } } },
+			} as never,
+			provider: "chatgpt",
+			managedBrowserProfile: "/fixture/shutdown-event",
+			mutationAudit: async () => undefined,
+			baseOptions: {},
+			backendRequestLimit: 1,
+		});
+		await annotateClientMutationContext(
+			client,
+			{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
+			"provider:chatgpt",
+			"shutdown-target",
+		);
+		const state = fixture.clients[0];
+		if (outcome === "failed") state.disableError = "fixture disable failed";
+		state.onDisable = () => {
+			late = state.handler?.({
+				requestId: "late-shutdown-event",
+				request: { url: "https://chatgpt.com/backend-api/conversations" },
+			});
+		};
+		if (outcome === "failed") await expect(client.close()).rejects.toThrow();
+		else await expect(client.close()).resolves.toBeUndefined();
+		await late;
+		expect(state.requests).toEqual([]);
+		expect(state.failures).toEqual([]);
+		if (outcome === "succeeded") expect(state.handler).toBeUndefined();
+		client = undefined;
+	} finally {
+		await late;
+		await client?.close().catch(() => undefined);
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});

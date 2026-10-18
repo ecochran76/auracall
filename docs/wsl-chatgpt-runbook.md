@@ -9,6 +9,14 @@ Terminology for this runbook:
 - AuraCall runtime profile: the top-level `profiles.<name>` entry selected by `--profile`
 
 ## Key behavior
+
+For a fresh request-governed Account Mirror tab, AuraCall keeps startup request
+interception active until the signed-in page surface is visible and pending
+startup admissions have settled. A matching
+auth-session identity alone does not establish UI or conversation readiness.
+The caller can cancel this wait; a page still showing login must not be reported
+as a successfully observed empty account.
+
 - WSL Chrome is the most reliable path; Windows Chrome/Brave from WSL often fails due to DevTools binding and profile locks.
 - AuraCall uses the resolver-derived Windows host for WSL-to-Windows DevTools
   routing, but normalizes any resolver-derived `127.x` nameserver to
@@ -289,3 +297,26 @@ cooldown deadline, while action-specific pacing remains active in the child.
 It adds no blanket quiet period merely because metadata collection finished.
 Historical generic failed/skipped results remain in history and do not prove
 terminal unavailability or suppress newly discovered retrievable inventory.
+
+For owned account-mirror conversation navigation, authenticated UI startup includes
+the requests waiting for the shared backend budget. Context extraction waits for
+that startup queue to drain under the existing caller cancellation. A valid auth
+session alone does not mean the new document has rendered its conversation yet;
+waiting for request capacity is distinct from losing login state.
+
+
+Operator pause remains authoritative when a pending refresh later reports a
+provider cooldown. The warning/cooldown remains separate from the operation's
+paused state. The shared charged-request count currently covers owned admissions;
+retained browser pages can generate background traffic outside that count.
+Use passive network evidence before interpreting a zero counter as account idle.
+
+
+Settled read-only owned live-follow crawlers now park on about:blank before becoming idle; reuse still requires fresh process/target custody verification. Do not apply this cleanup to existing uncertain pages or human-verification/identity stops. Source qualification is not installed activation; retain current warnings and keep the global scheduler paused pending bounded live acceptance.
+
+For desktop readiness, use bounded public admission after fresh native process/
+window verification. Do not call the gate's private stored-owner reader as an
+admission test: an exited automation process can leave a stale record that atomic
+acquisition already knows how to recover. Preserve human and invalid ownership.
+After exact target close, allow bounded readback for asynchronous disappearance;
+reconcile the same target before considering another close command.

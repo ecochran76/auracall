@@ -754,9 +754,11 @@ export function createAccountMirrorCompletionService(input: {
 						liveFollowOperationId: refreshOperation.id,
 					});
 				} catch (error) {
+					if (abortSignal.aborted || !shouldContinue(id)) return;
 					const eligibleAt = readEligibleAt(error);
 					if (eligibleAt) {
 						await input.registry.refreshPersistentState?.();
+						if (abortSignal.aborted || !shouldContinue(id)) return;
 						const entry = findTargetEntry(
 							input.registry,
 							operation.provider,

@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -203,4 +205,35 @@ test('queued automation cancellation never dispatches and leaves the current own
     cancellation.abort(); await held.close(); await outcome;
     await fs.rm(directory, { recursive: true, force: true });
   }
+});
+
+
+test.skipIf(process.platform !== 'linux').each(['automation', 'human'] as const)('public admission qualifies a reaped %s owner without trusting stored PID authority', async role => {
+  const child = spawn(process.execPath, ['-e', 'process.exit(0)'], {stdio:'ignore'});
+  await once(child, 'exit');
+  expect(child.pid).toBeTypeOf('number');
+  await expect(fs.access(`/proc/${child.pid}`)).rejects.toMatchObject({code:'ENOENT'});
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-control-reaped-'));
+  const lock = path.join(directory, createHash('sha256').update('fixture').digest('hex'));
+  await fs.mkdir(lock);
+  const raw = JSON.stringify({id:'previous-owner', role, binding:'previous-binding', ownerPid:child.pid, acquiredAt:new Date().toISOString()});
+  await fs.writeFile(path.join(lock, 'owner.json'), raw);
+  const gate = new DesktopControlGate('fixture', directory);
+  const effect = vi.fn(async () => {
+    const admitted = JSON.parse(await fs.readFile(path.join(lock, 'owner.json'), 'utf8'));
+    expect(admitted).toMatchObject({role:'automation', ownerPid:process.pid, binding:'fresh-binding'});
+    expect(admitted.id).not.toBe('previous-owner');
+  });
+  try {
+    const admission = gate.withAutomation('fresh-binding', effect, {abortSignal:AbortSignal.timeout(1000)});
+    if(role==='human') {
+      await expect(admission).rejects.toThrow('human controls');
+      expect(effect).not.toHaveBeenCalled();
+      expect(await fs.readFile(path.join(lock, 'owner.json'), 'utf8')).toBe(raw);
+    } else {
+      await expect(admission).resolves.toBeUndefined();
+      expect(effect).toHaveBeenCalledOnce();
+      await expect(fs.access(lock)).rejects.toMatchObject({code:'ENOENT'});
+    }
+  } finally { await fs.rm(directory, {recursive:true,force:true}); }
 });

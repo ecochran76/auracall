@@ -1072,3 +1072,206 @@ uncertain cleanup. Source remains draft PR333; plan OPEN. Next exact boundary is
 provider-free native desktop-hold/request-cleanup composition, then a qualified
 installed retry. Full receipt summary in
 ../notes/2026-10-17-plan0411-shared-backend-admission.md.
+
+## 2026-10-18 | Crash-resumed native acceptance and bounded capture continuation
+
+State: OPEN. Draft PR335 sourcecaadc05dd fixes warning transport ownership,
+startup lifetime, native cancellation, ledger read fanout and shutdown ordering.
+126affected tests/5files, typecheck/lint/build pass;584compiled files match staged
+package. Global runtime remains7070532aa, main paused. Latest normal single-pass
+native trial completes in187419ms,82charged starts/peak30,0uncertain backend
+records/0new warnings, full exact-page Network coverage. Catalog364→375, including
+the independently located missing IM Receipts chat. Its contents are not yet read:
+one retained pending detail consumed the pass. Generic completion is not capture.
+
+Under standing agentic-measurement authority and the user's correction that coarse
+operation constraints were guesses, next packet is one normal unscoped completion,
+maximum6passes/10minutes, metadata_only,maxItems1,forcefalse; stop after the missing
+chat is captured and its pass commits. Keep original cache/cursors, shared30/min
+and600000ms wait, native custody, paused main scheduler and frozen tab16 record.
+No ID is seeded into product selection; its known ID is only an observer stop rule.
+No prompts, forced refresh, login reset, artifact transfer, global activation or
+quiet acceptance is inferred. If not captured within the bound, retain pending
+work and measure that result. Quiet comparison follows only verified capture;
+concurrent LitScout qualification remains separate/unproven. Evidence:
+../notes/2026-10-17-plan0411-shared-backend-admission.md and private diagnostic packet
+live-capture-continuation-caadc05dd-20261018.
+
+Continuation terminal: FAIL before first pass commits (146982ms,65charged,peak30,
+1uncertain backend request,0warnings). The SDK-invoked continuation was rejected
+with Invalid InterceptionId without matching native loadingFailed evidence; later
+route recovery hits the detail navigation budget. No speculative route fix or live
+retry. Unknown retained/charged, main paused/idle, native browser/window verified,
+original tab16 frozen record preserved. Discovery passed in preceding packet;
+content capture/quiet repeat/concurrent acceptance remain OPEN. Next exact boundary
+is native interception lifecycle correlation, not a larger limit or ignored error.
+
+## 2026-10-18 | Document replacement cancellation repair
+
+Native isolated Chrome plus the real interceptor reproduces the previous missing
+loadingFailed failure twice. One document commit invalidates the old paused Fetch
+ID; removing navigation makes control green. Live trace has that exact ordering.
+Source9a056a006 cancels queued requests by exact frame on document replacement;
+guarded before-SDK proof and after-send uncertainty remain unchanged.129affected
+tests/5files, typecheck/lint/full build PASS. Staged584-file parity/runtime contract
+and isolated native old/fresh request controls PASS. Original uncertain reservation
+is retained/charged; no warning release or global switch.
+
+Same normal unscoped6pass/10minute capture continuation now runs against9a056a006,
+with fresh14:18:52UTC native/browser/window verification, main paused/idle and
+0warnings. Shared30/min, original cache/cursors, metadata_only/maxItems1/forcefalse;
+no seeded provider ID or prompt. Private packet live-document-replacement-9a056a006-
+20261018 adds client/frame/document/Network completion correlation. Result pending;
+capture, quiet repeat and simultaneous LitScout acceptance remain OPEN.
+
+
+## 2026-10-18 | Navigation startup and sustained custody contention
+
+Staged9a056a006 live replay preserves native document cancellation (88charged,
+peak30/min,0new uncertain/0warnings) but fails messages-not-found. Existing reader
+extracts both messages from later retained DOM; no selector patch is justified.
+Public context/real affinity/interceptor replay on a nonblank route reproduces
+messages-not-found before independently delayed startup admission finishes.
+Sourcea0f3a26eb applies the existing bounded authenticated startup drain after
+owned conversation navigation.150affected tests/8files,typecheck/lint/build PASS.
+Native a0 replay fails23s into local tab-registry lock wait before pass commit;
+30charged/peak30,0uncertain/0warnings. Subsequent targeted replay ends84.65s on
+provider-ledger lock timeout (50charged,49starts,1proven no-send,peak30,0uncertain/
+0warnings). Source checks are not full live acceptance.
+
+Private sustained32/64-reader registry replay reproduces5s lock starvation,
+whereas single bursts pass. Source1460ed0c8 shares only unfinished identical
+file-registry list reads by root/query, clones results and discards on settlement.
+Atomic writes/custody semantics unchanged. Exact public red/green, original64-
+reader replay0failures,29registry/restart/retirement tests and39affinity/coordinator
+tests PASS. Typecheck,targeted lint,full build,584-file staged parity and runtime
+contract PASS. Two offline ledger-capacity-release probes do not reproduce the
+remaining native ledger timeout, so no speculative ledger fix is applied.
+
+One unchanged6pass/10minute original live replay now runs source1460ed0c8 with
+registry/ledger lock timing only; private packet live-ledger-trace-1460ed0c8-
+20261018/checkpoint.json. Runner71316,child71319,meter71318 began15:08:37UTC.
+Fresh main preflight15:07:59UTC:paused,0queued/running,0warnings. Global707 remains
+unchanged. Capture,quiet repeat and concurrent LitScout acceptance remain OPEN.
+
+
+## 2026-10-18 — Live custody/startup repair passes; provider throttle stops follow
+
+Immutable staged1460ed0c8 original unscoped follow replay c8fe39ce-70a5-4d3d-aae9-
+b2df33079608 commits1pass and returns1independent2-message context through the
+production provider/service stack (three nested wrappers record that same read).
+The original missing IM Receipts candidate is not captured. Both local lock
+failures stay absent; maximum observed ledger hold477ms at an intermediate read.
+
+At15:14:59.700UTC, exact owned-page Network observes HTTP429 in conversation-list
+category. Observer immediately pauses the parent and stops; duration378133ms.
+Meter terminal170permits,169charged starts,1proven no-send,all170settled,
+peak30/min,0uncertain and1newactive rate-limit warning. Thus30/min enforcement
+passes but provider-throttle-free acceptance FAILS.191observed page requests
+include paused/cancelled requests; they are not191actual sends.3document
+navigations/6same-document changes were observed. Startup/read latency remains
+slow: first2-message DOM at15:13:07.669UTC,about4.5minutes after run start.
+
+All-account-scope ledger reconciliation over the trial window finds only these
+169charged starts and this single live-follow operation. This excludes another
+recorded workload, not uninstrumented browser/client traffic. The raw observer
+retains category/hash/status, not Retry-After/rate-limit response headers; the
+provider's governing quota/window is not established. Do not infer a safe lower
+limit from this run or silently clear the warning. No further provider replay,
+peer retry, global activation or scheduler resume. Global707 remains selected.
+The control path used loopbackHTTP19096, so unreliable bastionHTTPS is not required
+to reproduce these local coordination failures or this provider429.
+
+Private durable packet live-ledger-trace-1460ed0c8-20261018 contains terminal,
+shared meter, exact registry/ledger timings,qualified-result.json and fresh final
+readback. Two offline ledger-capacity-release probes(including more frequent
+observation reads) pass; no speculative ledger source change is made. The known
+read-starvation fix1460ed0c8 and test-isolation checkpointffe1ffa30 are pushed;
+PR335 staysdraft. Plan0411/P92 capture/quiet/concurrent acceptance remains OPEN.
+Next qualification needs provider throttle diagnostics(response headers and
+request-category spacing) and coverage of uninstrumented clients before a safe
+live retry can establish the missing-chat result. Source repair evidence is not
+provider-quota proof. Memory disposition forbidden(developer requires explicit
+user memory-update request; none was given).
+
+
+## 2026-10-18 — One-hour wake consumed; header-qualified live retry pending
+
+Wake d6be6180eb0949878211dd2cc85d2552 arrived with matching native submission
+and qualified due time16:39UTC; original one-hour predicate is satisfied. Exact
+checkpoint/source72b962631 and immutable staged1460ed0c8 reconciled. User explicitly
+resumed the objective; host goal readback still sayspaused (no tool resume action
+available), so no tracker-active claim. No new goal/budget reset.
+
+Provider-free successor now retains allowlisted ordinary and CDP extraInfo headers,
+correlating hashed request identity with before/after-event ordering; bounded
+unselected buffering reports drops, never captures cookies/auth/body. Both actual
+response callbacks and extraInfo ordering/privacy fixtures PASS, syntax PASS.
+Fresh16:43:04UTC process/window/desktop verification: native38213/CDP45015 valid,
+no desktop owner; main50485paused/0queued/running; no recorded backend starts over
+previous10minutes. Exact retained15:14:59.707warning is released through public
+ledger clear with explicit user wake authority and an attributable reason; raw
+warning/history/frozen original reservation preserved. Timed cooldown had expired;
+that alone is not claimed provider recovery.
+
+One unchanged unscoped metadata-only follow(max6passes/10minutes,maxItems1,
+forcefalse) starts16:43:22UTC. Source1460ed0c8,runner74398,child74400,meter74399;
+shared30/min and600000ms unchanged, new1/5minute diagnostics. Global707 wrappers/
+API and paused scheduler unchanged. Private packet live-header-diagnosis-
+1460ed0c8-20261018T1640/checkpoint.json binds all evidence and next action.
+Live capture verifies30HTTP200responses,30ordinary+30extraInfo header records;
+onlyDate retained sofar, no rate-limit fields yet. Do not count those60records as
+60responses. Any new429/verification/identity drift is a hardstop.
+
+Exact finished.json completion wake96342306751c41898ce52d5065821567 is armed:
+qualified bounded_utc/not_due,persistent monitor ready; no delivery/result claim.
+Run ispending and survives this turn. Consume exact terminal,headerjournal and
+1/5minute meter onwake; do not blindretry afterhardstop. Missing-chat/quiet/
+concurrent acceptance remainOPEN. Memory disposition forbidden(no user request).
+
+
+## 2026-10-18 — Retry headers captured; idle browser traffic is outside the meter
+
+Consumed exact header-diagnostic completion wake. Another conversation-list429
+arrives after59charged starts/peak30perminute,0passes/contexts; both header
+sources haveDateonly,noRetry-After/quota fields. Public pause/cooldown race is
+red/green at both await positions;2production guards,86tests/typecheck/lint/build
+PASS. Exact persisted trial re-paused through public control with0providercalls.
+Passive current16-page observation finds5non-cache/non-worker transferred backend
+responses across3pages while all-account ledger records0starts. No navigation,
+submissions,pageclose,unknown-state reset or further providerretry. Shared meter
+is not browserwide; missing capture/quiet/concurrent acceptance remainOPEN.
+Details/private evidence:2026-10-17-plan0411-shared-backend-admission.md.
+Next repair: retained-page request lifetime/accounting; main707schedulerpaused,
+PR335draft. Memory forbidden(no explicit request).
+
+## 2026-10-18 | Bound settled crawler document lifetime to ownership
+
+User authorized repairing retained-page traffic. One opt-in provider-free native
+fixture exercises real configured affinity with isolated Chrome and outbound
+blocked. After successful finish it emits10additional backend request attempts
+in250ms; positive control first observes active polling. Same managed target,
+registry/ledger and actual final-warning/finish path, no signed-in browser access.
+Next bounded repair parks only exact owned settled crawler documents onabout:blank
+before idle/release, confirms the top document, and records blank fingerprint so
+existing unloaded-target adoption remains usable. Unknown outcomes,foreign tabs
+and target identity changes remain fenced/preserved. No prompt/global scheduler/
+warning release or cleanup of the16historical pages is inferred. Qualification:
+public control/error fixtures plus isolated native before/after and same-tab reuse.
+Account-wide coverage of other/manual/unknown pages remains a separate limitation;
+this slice stops automation-owned idle documents from being new traffic sources.
+
+
+## 2026-10-18 | Native retry fails; preserve interlock and repair observation
+
+Staged17abfbe90 retry: real429 after66chargedbackendstarts,0passes/contexts,
+peak30minute/66five. Retainedpages contribute73noncache/nonworker transferred
+responses outsideledger. Dateonly429headers in bothsources; providerquotaunknown.
+Parentpaused promptly; main707schedulerstillpaused. Localcooldown01:03UTCnextday
+exceeds manualgoalwindow; nofurtherretry. Full packet and corrections in shared
+backend admission note. Sourceparking success/cancelled nativecasesPASS when
+awaited, but actual trialnewpage remainsproviderroute because runnertrace ends
+duringcleanup. Successorharness waitsforownedrelease (actualbranchRED/GREEN);
+notliverun. Missingcapture/quiet/concurrentremainOPEN; existing16pages and all
+frozenunknowns preserved. Next scoped work is provider-free shared-account traffic
+and cleanup diagnosis; do not turn more preparation into acceptance.

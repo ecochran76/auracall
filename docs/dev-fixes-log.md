@@ -1,3 +1,108 @@
+## 2026-10-18 — Drain owned startup after conversation navigation
+
+A signed-in document can expose its composer while conversation startup requests
+still await account capacity. Waiting only after about:blank misses ordinary
+conversation navigation, allowing the empty-message window to expire prematurely.
+Use the existing authenticated/pending-admission wait after owned inventory
+navigation, resolving the actual client's governor. Keep caller cancellation and
+all request/navigation limits. A public context read with independently delayed
+startup reproduces messages-not-found before repair and succeeds afterward.
+
+## 2026-10-18 — Document replacement can invalidate Fetch without loadingFailed
+
+Do not rely only on Network.loadingFailed to cancel requests waiting for account
+capacity. Native document replacement can discard an interception without that
+event. Associate queued request controllers with their exact frame and cancel them
+on Page.frameNavigated; unregister the listener on owned disposal. The guarded SDK
+boundary still proves no-send, while after-send uncertainty remains conservative.
+A real isolated-browser replay reproduced the old failure twice and passed after
+repair, including a fresh request from the replacement document.
+
+## 2026-10-18 — Keep wait-entry abort on the Promise rejection path
+
+A helper called as wait(...).catch(normalize) must return a rejected promise even
+when its signal is already aborted at entry. A synchronous throw bypasses that
+normalizer and can poison shared request state with a false unknown failure.
+Make the budget-wait helper async; retain typed pre-send cancellation and genuine
+after-send uncertainty. Test cancellation during the preceding awaited warning read.
+
+## 2026-10-18 — Fence paused events during Fetch shutdown
+
+A queued native Fetch.requestPaused event can arrive while its owning Fetch.disable
+is admitted. Scheduling failRequest behind the successful disable produces a false
+cleanup failure. Once shutdown starts, late events share its outcome; existing
+requests drain first. Do not suppress a failed disable or stop the warning observer
+early. Reproduce at public client close with a late native-style event.
+
+## 2026-10-18 — Coalesce unfinished capacity-wait advisory reads
+
+When many paused backend requests share one owned authority, independent reads
+of the full file-backed ledger can exhaust its lock timeout even when each lock
+hold is short. Share only unfinished advisory record/warning reads within that
+authority. Do not cache completed snapshots or weaken atomic reservation, warning
+checks, cancellation, or fresh final reconciliation. A64-waiter real-ledger replay
+went from26 lock timeouts to0, with43 full reads reduced to3.
+
+## 2026-10-18 — Preserve cancellation certainty through desktop admission
+
+A browser may cancel a paused request while its continuation waits for native
+validation or shared capacity. Match canceled Network.loadingFailed to the exact
+Fetch network ID and cancel that request signal. Only the guarded transport can
+prove raw SDK send was never invoked; use that typed proof for a no-effect ledger
+settlement. A continuation that reached the SDK stays uncertain. Do not suppress
+Invalid InterceptionId globally or let a foreign/non-cancelled failure release a
+request. Remove both event listeners during owned disposal.
+
+## 2026-10-18 — Startup readiness must include pending request admissions
+
+A profile control can appear optimistically before asynchronous backend admission
+finishes. UI presence alone still allowed identity cleanup to cancel startup and
+leave a login surface. Couple readiness to the owning interceptor's pending set:
+check the UI, drain current admissions under caller cancellation, and recheck
+before releasing the client. Keep disposal's capacity-wait cancellation unchanged.
+The regression must drive the public service and an optimistic UI alongside
+pending asynchronous requests, not only the adapter or a delayed UI.
+
+## 2026-10-18 — Keep initial inventory interception until signed-in UI readiness
+
+A valid /api/auth/session response can precede frontend initialization. Closing
+the identity client cancels paused startup requests and may leave a login surface
+that a later inventory read mistakes for an empty account. A completed control
+with zero observations is not functional acceptance. For a blank request-governed
+inventory target, retain the initial client until a visible signed-in profile
+surface is ready, with caller cancellation and normal native validation intact.
+Model Page.navigate acknowledgment separately from asynchronous request callbacks
+in regression fixtures; awaiting every request inside the fake navigate hides this.
+
+## 2026-10-18 — Probe warnings on the backend callback's live transport
+
+A short-lived warning probe can leave the governor remembering a Runtime whose
+socket is already closed. Later request callbacks must supply their own live
+Runtime to admission; borrowing the last probe context fails before dispatch and
+surfaces during observer cleanup. Keep transport doubles faithful to successful
+close: later commands must reject. A fake socket that keeps working after close
+hid this lifecycle defect in the initial ownership regression.
+
+## 2026-10-18 — Preserve crash-interrupted evidence and corrupt lock originals
+
+A reboot can erase /tmp observers and leave zero-byte ownership records even
+when the browser itself is gone. Treat a surviving running completion projection
+as uncertain until current process/boot and exact control are reconciled. Keep
+acceptance runners/results in user-scoped durable diagnostics. Preserve corrupt
+lock directories before explicit recovery; verify their exact scope, unchanged
+identity, current browser absence and normal acquisition/release afterward.
+Do not reset browser/login state or infer acceptance from a vanished runner.
+
+## 2026-10-18 — Carry held client ownership into physical-action admission
+
+Request interception retains desktop ownership across commands, but JavaScript
+callbacks between those commands do not inherit the hold automatically. A
+navigation governor that opens another warning transport therefore queues behind
+its own client. Run physical-action admission in that client's held scope; nested
+transports still verify their native generation and current desktop owner.
+Preserve the independent fresh warning probe after collector transport release.
+Increasing the warning deadline cannot resolve the ownership dependency.
+
 ## 2026-10-18 — Admission cancellation must outlive domain setup
 
 A caller signal on provider options does not automatically reach raw CDP commands.
@@ -25616,3 +25721,60 @@ from post-provider cleanup using completed wrapper calls, task terminal evidence
 and fresh exact-process absence. Do not rerun successful provider work solely
 because terminal observation lagged. Canonical acceptance retains raw flags and
 independent qualification, with595file parity and2newverified artifacts.
+
+
+### 2026-10-18 — Avoid repeated custody-read lock starvation
+
+Sustained queued backend admissions can starve individual file tab-registry list
+waiters even when each lock hold is short. Share only unfinished identical list
+reads by registry root/query; discard on settlement and clone per caller. Keep
+write locks and fresh post-write custody checks. Private sustained32/64-reader
+replay is red before repair; fixed64-reader replay and29affected tests pass.
+
+
+### 2026-10-18 — Account request ceiling is not provider-quota acceptance
+
+Native normal-follow replay enforces30charged starts/minute but receives a real
+conversation-list HTTP429 after169starts/6.3minutes. Preserve that warning and
+stop; do not infer absence of throttle from the shared meter alone. Reconcile
+all recorded account scopes and state the uninstrumented-client coverage gap.
+The observer lacked Retry-After/rate-limit headers, so this does not establish
+the provider quota/window or a safe replacement limit.
+
+
+### 2026-10-18 — Operator pause wins over late cooldown handling
+
+A collector can reject with provider eligibility after operator pause,including
+while persistent registry refresh is awaited. Check cancellation/current control
+state before handling that rejection and again after the await. Public red/green
+regression covers both positions;86completion tests pass. A separate passive
+16-page observation proves retained-page background transfers can occur while
+charged ledger starts stayzero; the owned-request ceiling is not browserwide.
+
+
+### 2026-10-18 — Retire the settled crawler document before idle
+
+Releasing an interceptor leaves page timers alive. An isolated real-Chrome regression against pristine source observed ten further backend request attempts after finish. Park the exact settled owned crawler on about:blank and await a top-level document commit before recording idle custody. The candidate native regression observes zero further attempts. Preserve unknown outcomes, foreign routes and human/identity warning surfaces. Existing unmanaged/uncertain pages and browser-wide accounting remain outside this repair.
+
+
+### 2026-10-18 — Parent pause is not provider cleanup completion
+
+The diagnostic runner exited while desktop-admitted cleanup was still pending,
+leaving its owned page on the provider route. Preserve that failed result; do not
+blame or qualify the parking implementation solely from it. Awaited native
+cancellation parks correctly in isolation. A successor observer waits for active
+owned leases to release before treating hard-stop pause as terminal; offline
+actual-branch red/green verifies that gate, not a native live repair. Also filter
+backend-window metrics by interactionClass: logical starts are separate costs.
+
+
+### 2026-10-18 — Private ownership reads are not admission checks
+
+A live-diagnostic preflight treated stored automationowner8124 as authoritative
+after its process exited. Public atomic admission already qualifies absence and
+recovers automation custody; human/invalid custody stays protected. Use that
+interface rather than resetting files or adding a competing gate. Real-reaped-PID
+regressions cover automation recovery and human preservation. Also reconcile an
+asynchronous target close by fresh same-target readback; an immediate live entry
+is not grounds to resend the close. Exact trial cleanup leaves16oldpages and all
+warning/frozenunknown history preserved.

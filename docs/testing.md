@@ -1,3 +1,22 @@
+- Native request cancellation certainty (provider-free):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'native request cancellation keeps'`.
+  Real interceptor, guard and native-style admission distinguish cancellation
+  before SDK send from uncertain cancellation afterward. Foreign request IDs and
+  non-cancelled failures leave dispatch intact; disposal removes the observer.
+
+- Live-follow bootstrap warning ownership (provider-free):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'live-follow bootstrap warning'`.
+  Runs configured affinity, the ChatGPT adapter, request interceptor and desktop
+  gate against synthetic CDP. Bootstrap must finish while retaining interception;
+  a visible warning must block before navigation, and successful completion must
+  open a fresh final warning transport. This catches the second-connection
+  self-contention seen in the installed live-follow acceptance trace. The fake
+  transport rejects commands after successful close, also detecting backend
+  callbacks that reuse a closed warning connection instead of their live Runtime.
+  Asynchronous and optimistic-UI startup events through the public service also
+  prove pending admissions finish before initial client cleanup and cancellation releases ownership. A completed live control
+  with zero observed conversations is not discovery acceptance.
+
 - Baseline drain/navigation/prompt/budget regression (provider-free):
   `pnpm vitest run tests/http.responsesServer.test.ts tests/browser-service/ui.test.ts tests/browser/browserMutationControlPlane.test.ts tests/browser/desktopRuntimeProfiles.test.ts tests/browser/chatgptPromptAdapter.test.ts tests/browser/llmServicePromptStructure.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers=2`.
   Drain status uses an explicit in-flight gate, and shared write budgets use a
@@ -3672,3 +3691,41 @@ This exercises the public proof call with real guarded CDP and desktop gate,
 contention introduced at identity reading, cancellation, human ownership, and
 cancellation with native-style continuous backend admission. Passing this does
 not establish live-follow completion or resolve the retained provider429.
+
+### Conversation navigation while startup requests await account capacity
+
+The public service/affinity/real-interceptor fixture in
+`tests/browser/backendRequestAdmission.test.ts` includes `mode=context-startup`.
+It begins on an existing signed-in page, models asynchronous navigation, and holds
+one startup request for nine seconds independently of readiness probes. The DOM
+has no messages until that request continues. With the original blank-page-only
+wait, extraction fails with `messages not found`; the owned startup wait now also
+covers conversation navigation, and extraction begins after that admission drains.
+The fixture disables context retry/cache fallback and expects one navigation plus
+ordered startup/payload requests. This case intentionally spans the five-second
+empty-message window; run it alone for focused feedback. Existing cancellation,
+warning, wrong-route and after-send uncertainty cases remain required companions.
+
+
+- Operator pause versus late provider eligibility (provider-free):
+  `pnpm vitest run tests/accountMirror/completionService.test.ts -t 'operator pause survives a late provider cooldown'`.
+  Both rejection-after-pause and pause-during-registry-refresh must retain paused
+  state,avoid a retry deadline and perform no second refresh.
+
+
+Provider-free native idle-page regression: `AURACALL_NATIVE_FIXTURE_TEST=1 pnpm vitest run tests/browser/liveFollowIdleTraffic.native.test.ts`. Requires /usr/bin/google-chrome; launches only an isolated temporary headless browser with external access blocked. An injected polling timer supplies the positive control. The real affinity finish path must stop subsequent request attempts and record idle/settled/blank custody. This proves document teardown, not authenticated provider acceptance.
+
+The native idle-page fixture also reacquires the parked page through the real
+public crawler coordinator. It inspects the actual blank document, advances the
+process-bound custody revision and requires the same single physical page without
+opening or closing another target. This is provider-free reuse qualification.
+
+The native idle-page fixture covers awaited cancellation as well as success.
+A paused completion parent alone is insufficient cleanup proof: live observers
+must wait for owned provider work to release before ending their process. The
+real desktop-admission hard-stop path remains a separate live qualification.
+
+`pnpm vitest run tests/accountMirror/refreshService.test.ts -t 'completion pause returns before refresh affinity cleanup'`
+qualifies the public completion/refresh ordering: pause is responsive before
+cleanup finishes; wait for `provider_work_released` and released tab custody before
+ending an observer process. This fixture does not replace live desktop proof.

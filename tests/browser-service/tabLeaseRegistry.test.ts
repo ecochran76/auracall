@@ -1,7 +1,8 @@
+import fs from "node:fs/promises";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { createBrowserOperationDispatcher } from "../../packages/browser-service/src/service/operationDispatcher.js";
 import {
 	createFileBackedBrowserTabLeaseRegistry,
@@ -17,6 +18,43 @@ const scope: TabLeaseScope = {
 };
 
 describe("tabLeaseRegistry (package)", () => {
+	test("concurrent custody reads share only unfinished snapshots across registry instances", async () => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "tab-lease-read-contention-"));
+		const first = createFileBackedBrowserTabLeaseRegistry({ registryRoot: directory });
+		const second = createFileBackedBrowserTabLeaseRegistry({ registryRoot: directory });
+		const original = fs.readFile.bind(fs);
+		let reads = 0;
+		let release!: () => void;
+		let entered!: () => void;
+		const held = new Promise<void>(resolve => { release = resolve; });
+		const started = new Promise<void>(resolve => { entered = resolve; });
+		const spy = vi.spyOn(fs, "readFile").mockImplementation(async (...args) => {
+			if (String(args[0]) === path.join(directory, "tab-leases.v1.json")) {
+				reads++;
+				if (reads === 1) { entered(); await held; }
+			}
+			return original(...args);
+		});
+		try {
+			const pending = first.list({ scope });
+			await started;
+			const concurrent = second.list({ scope });
+			release();
+			expect(await Promise.all([pending, concurrent])).toEqual([[], []]);
+			expect(reads).toBe(1);
+			const reserved = await first.reserve({ scope, targetId: "new-target",
+				workload: { kind: "live-follow", operationId: "follow" }, operationId: "follow",
+				now: "2026-10-18T15:00:00Z", idleTtlMs: 1000, absoluteTtlMs: 2000 });
+			expect(reserved.ok).toBe(true);
+			const [fresh, other] = await Promise.all([second.list({ scope }), first.list({ scope })]);
+			expect(fresh).toHaveLength(1);
+			expect(fresh[0].targetId).toBe("new-target");
+			fresh[0].targetId = "caller-mutation";
+			expect(other[0].targetId).toBe("new-target");
+			expect((await first.list({ scope }))[0].targetId).toBe("new-target");
+		} finally { release(); spy.mockRestore(); await rm(directory, { recursive: true, force: true }); }
+	});
+
 	test("the OS PID owns one tab even across separate SDK owner instances", async () => {
 		const directory = await mkdtemp(path.join(os.tmpdir(), "process-tab-pid-"));
 		try {

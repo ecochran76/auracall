@@ -1,4 +1,5 @@
 import type { ChromeClient } from '../types.js';
+import { withCdpClientOwnership } from '../guardedCdp.js';
 import type { BrowserInteractionClass, BrowserInteractionGovernor } from './interactionGovernor.js';
 import {
   beginBrowserMutation,
@@ -611,7 +612,7 @@ export type ReloadAndSettleResult = {
   documentReady?: WaitForPredicateResult;
 };
 
-async function beginUiPhysicalAction(input: {
+async function beginUiPhysicalAction(client: object, input: {
   providerTrafficGovernor?: ProviderTrafficGovernor;
   interactionGovernor?: BrowserInteractionGovernor;
   interactionClass: BrowserInteractionClass;
@@ -624,33 +625,35 @@ async function beginUiPhysicalAction(input: {
   reason?: string | null;
   providerTrafficRequired?: boolean;
 }): Promise<ProviderTrafficAction> {
-  if (input.providerTrafficGovernor) {
-    return input.providerTrafficGovernor.begin({
+  return withCdpClientOwnership(client, async () => {
+    if (input.providerTrafficGovernor) {
+      return input.providerTrafficGovernor.begin({
+        kind: input.kind,
+        interactionClass: input.interactionClass,
+        source: input.source,
+        requestedUrl: input.requestedUrl,
+        fromUrl: input.fromUrl,
+        fallbackUsed: input.fallbackUsed,
+        reason: input.reason,
+      });
+    }
+    if (input.providerTrafficRequired) {
+      throw new ProviderTrafficGovernorRequiredError(input.source);
+    }
+    await input.interactionGovernor?.beforeInteraction(input.interactionClass);
+    const legacy = beginBrowserMutation(input.mutationAudit, {
       kind: input.kind,
-      interactionClass: input.interactionClass,
       source: input.source,
       requestedUrl: input.requestedUrl,
       fromUrl: input.fromUrl,
       fallbackUsed: input.fallbackUsed,
       reason: input.reason,
     });
-  }
-  if (input.providerTrafficRequired) {
-    throw new ProviderTrafficGovernorRequiredError(input.source);
-  }
-  await input.interactionGovernor?.beforeInteraction(input.interactionClass);
-  const legacy = beginBrowserMutation(input.mutationAudit, {
-    kind: input.kind,
-    source: input.source,
-    requestedUrl: input.requestedUrl,
-    fromUrl: input.fromUrl,
-    fallbackUsed: input.fallbackUsed,
-    reason: input.reason,
+    return {
+      id: legacy.id,
+      settle: legacy.complete,
+    };
   });
-  return {
-    id: legacy.id,
-    settle: legacy.complete,
-  };
 }
 
 export type CollectUiDiagnosticsOptions = {
@@ -1268,7 +1271,7 @@ export async function navigateAndSettle(
     }
   }
 
-  let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction({
+  let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction(client, {
     providerTrafficGovernor,
     providerTrafficRequired,
     interactionGovernor: options.interactionGovernor,
@@ -1348,7 +1351,7 @@ export async function navigateAndSettle(
     if (await readLocationHrefForAudit(client.Runtime) === options.url) {
       return await evaluateState(options.fallbackTimeoutMs ?? options.timeoutMs, true, true);
     }
-    activeAction = await beginUiPhysicalAction({
+    activeAction = await beginUiPhysicalAction(client, {
       providerTrafficGovernor,
       providerTrafficRequired,
       interactionGovernor: options.interactionGovernor,
@@ -1465,7 +1468,7 @@ export async function reloadAndSettle(
     (client as { __auracallProviderTrafficRequired?: boolean }).__auracallProviderTrafficRequired === true;
   const mutationAudit = options.mutationAudit;
   const fromUrl = mutationAudit ? await readLocationHrefForAudit(client.Runtime) : null;
-  let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction({
+  let activeAction: ProviderTrafficAction | null = await beginUiPhysicalAction(client, {
     providerTrafficGovernor,
     providerTrafficRequired,
     interactionGovernor: options.interactionGovernor,
@@ -1541,7 +1544,7 @@ export async function reloadAndSettle(
         reason: 'page-reload-command-failed',
         error: error instanceof Error ? error.message : String(error),
       });
-      activeAction = await beginUiPhysicalAction({
+      activeAction = await beginUiPhysicalAction(client, {
         providerTrafficGovernor,
         providerTrafficRequired,
         interactionGovernor: options.interactionGovernor,
