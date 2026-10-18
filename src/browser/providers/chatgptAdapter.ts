@@ -4552,6 +4552,13 @@ async function connectToChatgptTab(
 					);
 				}
 				await navigateToChatgptUrl(client, preferredUrl, undefined, options);
+				if (
+					currentUrl === "about:blank" &&
+					options.accountMirrorInventory &&
+					options.providerTrafficGovernor?.admitBackendRequest
+				) {
+					await waitForChatgptAuthenticatedStartup(client, options);
+				}
 			}
 			const connection = {
 				client,
@@ -4959,6 +4966,48 @@ function shouldForceNewChatgptTabConnection(options?: BrowserProviderListOptions
 }
 
 export const shouldForceNewChatgptTabConnectionForTest = shouldForceNewChatgptTabConnection;
+
+async function waitForChatgptAuthenticatedStartup(
+	client: ChromeClient,
+	options: BrowserProviderListOptions,
+): Promise<void> {
+	// Document readiness and /api/auth/session can precede the requests that
+	// initialize the signed-in UI. Keep interception alive until that UI is ready.
+	const deadline = Date.now() + CHATGPT_CDP_LIST_TIMEOUT_MS;
+	while (options.abortSignal || Date.now() < deadline) {
+		options.abortSignal?.throwIfAborted();
+		recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
+		const result = await withCdpCommandTimeout(
+			client,
+			{
+				timeoutMs: CHATGPT_CDP_LIST_TIMEOUT_MS,
+				timeoutMessage: "ChatGPT authenticated startup readiness probe timed out.",
+				abortSignal: options.abortSignal,
+			},
+			() =>
+				client.Runtime.evaluate({
+					expression: `(() => {
+          const authenticatedPageReady = Array.from(document.querySelectorAll('button,[role="button"]'))
+            .some(node => {
+              const label = String(node.getAttribute('aria-label') || '').trim();
+              const rect = node.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0 && (
+                /open profile menu$/i.test(label) || node.getAttribute('data-testid') === 'accounts-profile-button'
+              );
+            });
+          return authenticatedPageReady;
+        })()`,
+					returnByValue: true,
+				}),
+		);
+		if (result.result?.value === true) return;
+		await waitForChatgptOperationWithAbort(
+			new Promise<void>((resolve) => setTimeout(resolve, 250)),
+			options.abortSignal,
+		);
+	}
+	throw new Error("ChatGPT authenticated page startup did not become ready.");
+}
 
 function buildChatgptScopedSessionKey(host: string, port: number, preferredUrl: string): string {
 	return `chatgpt:${host}:${port}:${preferredUrl}`;

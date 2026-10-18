@@ -1,3 +1,14 @@
+## 2026-10-18 — Keep initial inventory interception until signed-in UI readiness
+
+A valid /api/auth/session response can precede frontend initialization. Closing
+the identity client cancels paused startup requests and may leave a login surface
+that a later inventory read mistakes for an empty account. A completed control
+with zero observations is not functional acceptance. For a blank request-governed
+inventory target, retain the initial client until a visible signed-in profile
+surface is ready, with caller cancellation and normal native validation intact.
+Model Page.navigate acknowledgment separately from asynchronous request callbacks
+in regression fixtures; awaiting every request inside the fake navigate hides this.
+
 ## 2026-10-18 — Probe warnings on the backend callback's live transport
 
 A short-lived warning probe can leave the governor remembering a Runtime whose

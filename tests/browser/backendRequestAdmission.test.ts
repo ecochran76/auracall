@@ -5,6 +5,7 @@ import { expect, test, vi } from "vitest";
 import CDP, {
 	setCdpCommandAdmissionResolver,
 } from "../../packages/browser-service/src/guardedCdp.js";
+import { ProviderBackendRequestCancelledBeforeDispatchError } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { createChatgptAccountMirrorMetadataCollector } from "../../src/accountMirror/chatgptMetadataCollector.js";
 import { createAccountMirrorMetadataTrafficPlanController } from "../../src/accountMirror/providerTrafficPlan.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
@@ -34,6 +35,9 @@ const fixture = vi.hoisted(() => ({
 				stallClose?: boolean;
 				warnPayload?: boolean;
 				visibleWarning?: boolean;
+				asyncBootstrap?: boolean;
+				bootstrapReady?: boolean;
+				onStartupProbe?: () => void;
 				failRead?: boolean;
 				abortRead?: () => void;
 				beforeIdentity?: () => void;
@@ -76,7 +80,11 @@ vi.mock("chrome-remote-interface", () => ({
 				}
 				if (command === "Fetch.continueRequest" && state.failContinuation)
 					throw new Error("Fixture continuation outcome is unknown");
-				if (command === "Fetch.continueRequest") await state.beforeContinue?.();
+				if (command === "Fetch.continueRequest") {
+					await state.beforeContinue?.();
+					if (fixture.page && parameters.requestId?.startsWith("bootstrap-"))
+						fixture.page.bootstrapReady = true;
+				}
 				if (
 					command === "Fetch.continueRequest" &&
 					fixture.page?.warnPayload &&
@@ -94,17 +102,22 @@ vi.mock("chrome-remote-interface", () => ({
 					if (!parameters.url) throw new Error("Missing navigation URL");
 					fixture.page.navigations.push(parameters.url);
 					fixture.page.url = parameters.url;
-					for (let index = 0; index < fixture.page.bootstrapRequests; index++)
-						await state.handler({
+					for (let index = 0; index < fixture.page.bootstrapRequests; index++) {
+						const request = state.handler({
 							requestId: `bootstrap-${index}`,
 							request: { url: "https://chatgpt.com/backend-api/conversations" },
 						});
+						if (!fixture.page.asyncBootstrap) await request;
+					}
 					return { frameId: "fixture-frame" };
 				}
 				if (command === "Runtime.evaluate" && fixture.page) {
 					const expression = parameters.expression ?? "";
 					let value: unknown = [];
-					if (expression.includes("const visible = Array.from"))
+					if (expression.includes("const authenticatedPageReady")) {
+						fixture.page.onStartupProbe?.();
+						value = fixture.page.bootstrapReady === true;
+					} else if (expression.includes("const visible = Array.from"))
 						value = fixture.page.visibleWarning ? "Too many requests" : null;
 					else if (expression === "location.href") value = fixture.page.url;
 					else if (expression.includes("/api/auth/session")) {
@@ -2070,9 +2083,12 @@ test.each([
 }, 20000);
 
 test.each([
-	false,
-	true,
-])("live-follow bootstrap warning check shares interceptor ownership; warning=%s", async (warning) => {
+	"clean",
+	"warning",
+	"async-startup",
+	"startup-cancel",
+])("live-follow bootstrap warning check shares interceptor ownership; mode=%s", async (mode) => {
+	const warning = mode === "warning";
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-follow-warning-"));
 	setAuracallHomeDirOverrideForTest(home);
 	fixture.clients = [];
@@ -2083,6 +2099,8 @@ test.each([
 		payloadReads: 0,
 		closeAttempts: 0,
 		visibleWarning: warning,
+		asyncBootstrap: mode === "async-startup" || mode === "startup-cancel",
+		bootstrapReady: false,
 	};
 	const gate = new DesktopControlGate("follow-warning");
 	const holds: Array<Awaited<ReturnType<typeof gate.holdAutomation>>> = [];
@@ -2157,6 +2175,38 @@ test.each([
 		});
 		if (!affinity) throw new Error("Missing affinity");
 		registry.list.mockResolvedValue([lease]);
+		if (mode === "async-startup" || mode === "startup-cancel") {
+			let release!: () => void;
+			const ready = new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			fixture.page.onStartupProbe =
+				mode === "startup-cancel"
+					? () => controller.abort(new Error("fixture startup cancelled"))
+					: release;
+			const originalAdmit = affinity.providerTrafficGovernor.admitBackendRequest;
+			if (!originalAdmit) throw new Error("Missing request admission");
+			affinity.providerTrafficGovernor.admitBackendRequest = async (
+				key,
+				effect,
+				signal,
+				context,
+			) => {
+				await new Promise<void>((resolve, reject) => {
+					if (signal?.aborted) {
+						reject(new ProviderBackendRequestCancelledBeforeDispatchError());
+						return;
+					}
+					const aborted = () => reject(new ProviderBackendRequestCancelledBeforeDispatchError());
+					signal?.addEventListener("abort", aborted, { once: true });
+					void ready.then(() => {
+						signal?.removeEventListener("abort", aborted);
+						resolve();
+					});
+				});
+				await originalAdmit(key, effect, signal, context);
+			};
+		}
 		const readIdentity = createChatgptAdapter().getUserIdentity;
 		if (!readIdentity) throw new Error("Missing identity reader");
 		const identity = readIdentity({
@@ -2164,6 +2214,7 @@ test.each([
 			tabTargetId: affinity.tabAffinity.targetId,
 			interactionGovernor: affinity.interactionGovernor,
 			providerTrafficGovernor: affinity.providerTrafficGovernor,
+			accountMirrorInventory: mode === "async-startup" || mode === "startup-cancel",
 			abortSignal: controller.signal,
 		});
 		if (warning) {
@@ -2171,10 +2222,15 @@ test.each([
 			expect(fixture.page.navigations).toEqual([]);
 			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
 			await affinity.completeFailure(new Error("Too many requests"));
+		} else if (mode === "startup-cancel") {
+			await expect(identity).rejects.toThrow("fixture startup cancelled");
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
+			await affinity.completeFailure(new Error("fixture startup cancelled"));
 		} else {
 			await expect(identity).resolves.toMatchObject({ email: "operator@example.test" });
 			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/"]);
 			expect(fixture.clients.flatMap((client) => client.requests)).toEqual(["bootstrap-0"]);
+			expect(fixture.page.bootstrapReady).toBe(true);
 			const beforeFinal = fixture.clients.length;
 			await affinity.completeSuccess();
 			expect(fixture.clients).toHaveLength(beforeFinal + 1);

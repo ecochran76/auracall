@@ -9,6 +9,13 @@ Terminology for this runbook:
 - AuraCall runtime profile: the top-level `profiles.<name>` entry selected by `--profile`
 
 ## Key behavior
+
+For a fresh request-governed Account Mirror tab, AuraCall keeps startup request
+interception active until the signed-in page surface is visible. A matching
+auth-session identity alone does not establish UI or conversation readiness.
+The caller can cancel this wait; a page still showing login must not be reported
+as a successfully observed empty account.
+
 - WSL Chrome is the most reliable path; Windows Chrome/Brave from WSL often fails due to DevTools binding and profile locks.
 - AuraCall uses the resolver-derived Windows host for WSL-to-Windows DevTools
   routing, but normalizes any resolver-derived `127.x` nameserver to

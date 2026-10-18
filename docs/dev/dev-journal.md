@@ -55461,3 +55461,14 @@ browser38213/window/CDP45015,0warnings,30/min and main paused. One bounded insta
 trial runner79102; durable live-owned-runtime-e0f6cf1ec-20261018 directory under
 ~/.auracall/diagnostics/plan0411. Global remains7070532aa, PR335draft, wider
 acceptance OPEN. Wait for exact result; no duplicate trial. Memory forbidden.
+
+## 2026-10-18 | Reject empty completed pass; protect authenticated startup
+
+e0f6cf1ec completed32s but observed0rows/detail, retained364cached rows, no child.
+5charged starts/peak5,23pre-dispatch cancels,5HTTP200responses,0warnings. Exact
+passive page inspection shows login surface despite matching session proof.
+NOT_FUNCTIONALLY_ACCEPTED receipt retained. Async startup fixture red twice:
+identity completion cancels pending startup. Initial owned inventory navigation
+now waits for visible signed-in UI before closing interception; cancellation case
+also passes.194affected tests/9files, typecheck, lint and production build pass. Plan0411/P92
+OPEN, global remains7070532aa. Memory forbidden.

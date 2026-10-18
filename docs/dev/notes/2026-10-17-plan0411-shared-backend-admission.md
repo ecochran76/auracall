@@ -671,3 +671,32 @@ maxPasses1/maxItems1 run now uses durable directory
 runner79102. No seeded ID, prompt, warning release or scheduler resume. Exact
 process/finished/meter/log files govern continuation; no new trial while pending.
 Acceptance remains OPEN until terminal proof is consumed.
+
+## 2026-10-18 — Completed control is not functional discovery acceptance
+
+e0f6cf1ec parent acctmirror_completion_48838d6e-8768-449b-82c2-14f8707777cb completed
+one pass in32.085s with no exception. Deeper evidence rejects functional acceptance:
+0new conversations/0detail, all364rows retained from cache, no child/context capture.
+46observed request events,5responses(all200); shared ledger28reservations,
+5charged starts(peak5/min),23cancelled before dispatch,0unknowns/new warnings.
+Do not compare paused request events to an HTTP send ceiling or close Plan0411.
+
+One bounded passive inspection checked the exact prior target, fresh native
+browser38213/window, actual target presence and no active competing tab lease.
+Page complete/root/sidebar present but0conversation anchors and visible login
+surface; matching auth-session proof was insufficient to establish ready UI.
+No navigation, provider fetch or login interaction in that inspection. Its lease
+had transitioned lost after the observation process ended; that projection alone
+was not used as current native authority. Durable acceptance.json now explicitly
+says NOT_FUNCTIONALLY_ACCEPTED, alongside owned-page-inspection.json.
+
+Corrected SDK fixture emits startup request callbacks asynchronously rather than
+awaiting them inside Page.navigate. With one controlled startup admission, identity
+returns match while cleanup cancels the request: reproduced twice in~100ms. Fresh
+request-governed Account Mirror targets now retain the initial client until a
+visible signed-in profile surface is ready. Commands remain guarded, each probe
+uses the existing wire deadline, and a supplied caller signal bounds/cancels the
+wait (standalone without a signal uses the existing5s list bound). No reload,
+login click, request-budget increase or cleanup-deadline increase. Four focused
+cases pass, including startup cancellation/normal desktop release.194affected
+tests/9files, typecheck, lint and production build pass before installed acceptance.
