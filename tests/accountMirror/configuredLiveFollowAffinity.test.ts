@@ -57,6 +57,9 @@ describe("live-follow final warning transport", () => {
 		"late-warning",
 		"probe-failure",
 		"probe-stall",
+		"foreign-route",
+		"parking-failure",
+		"missing-commit",
 	])("checks fresh final transport and preserves %s outcome", async (outcome) => {
 		const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
 		const runtimeModule = await import("../../src/browser/tabConcurrencyRuntime.js");
@@ -83,7 +86,9 @@ describe("live-follow final warning transport", () => {
 		vi.spyOn(guardModule, "recordChatgptRateLimitDetection").mockResolvedValue(undefined as never);
 		vi.spyOn(lifecycle, "listChromeTargets").mockResolvedValue([]);
 		const close = vi.fn(async () => undefined);
-		let currentUrl = "https://chatgpt.com/";
+		let currentUrl =
+			outcome === "foreign-route" ? "https://foreign.invalid/" : "https://chatgpt.com/";
+		const navigations: string[] = [];
 		let onFrame: ((event: unknown) => void) | undefined;
 		const evaluate = vi.fn(async (options?: { expression?: string }) => {
 			if (options?.expression === "location.href") return { result: { value: currentUrl } };
@@ -93,17 +98,20 @@ describe("live-follow final warning transport", () => {
 		});
 		const connect = vi
 			.spyOn(lifecycle, "connectToChromeTarget")
-			// biome-ignore lint/style/useNamingConvention: CDP names its protocol domain Runtime.
 			.mockResolvedValue({
+				// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
 				Runtime: { evaluate, enable: async () => {} },
+				// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
 				Page: {
 					enable: async () => {},
 					frameNavigated: (handler: (event: unknown) => void) => {
 						onFrame = handler;
 					},
 					navigate: async ({ url }: { url: string }) => {
+						navigations.push(url);
+						if (outcome === "parking-failure") throw new Error("parking transport failed");
 						currentUrl = url;
-						onFrame?.({ frame: { id: "frame", url } });
+						if (outcome !== "missing-commit") onFrame?.({ frame: { id: "frame", url } });
 					},
 				},
 				close,
@@ -156,7 +164,15 @@ describe("live-follow final warning transport", () => {
 				await expect(affinity?.completeSuccess()).resolves.toBeUndefined();
 			else
 				await expect(affinity?.completeSuccess()).rejects.toThrow(
-					outcome === "late-warning" ? /Too many requests/ : /fresh probe failed/,
+					outcome === "late-warning"
+						? /Too many requests/
+						: outcome === "foreign-route"
+							? /route changed before parking/
+							: outcome === "parking-failure"
+								? /parking transport failed/
+								: outcome === "missing-commit"
+									? /timed out|timeout|aborted/i
+									: /fresh probe failed/,
 				);
 			expect(registry.idle).toHaveBeenCalledTimes(outcome === "clean" ? 1 : 0);
 			expect(warningRecord).toHaveBeenCalledTimes(outcome === "late-warning" ? 1 : 0);
@@ -166,7 +182,12 @@ describe("live-follow final warning transport", () => {
 			expect(
 				evaluate.mock.calls.filter(([options]) => options?.expression !== "location.href"),
 			).toHaveLength(1);
-			expect(close).toHaveBeenCalledTimes(outcome === "clean" ? 2 : 1);
+			expect(close).toHaveBeenCalledTimes(
+				["clean", "foreign-route", "parking-failure", "missing-commit"].includes(outcome) ? 2 : 1,
+			);
+			if (outcome === "foreign-route") expect(navigations).toEqual([]);
+			if (["foreign-route", "parking-failure", "missing-commit"].includes(outcome))
+				expect(registry.recordMeaningfulUse).not.toHaveBeenCalled();
 			if (outcome === "clean") {
 				expect(currentUrl).toBe("about:blank");
 				expect(registry.recordMeaningfulUse).toHaveBeenLastCalledWith(

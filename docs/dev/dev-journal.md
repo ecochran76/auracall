@@ -55800,3 +55800,18 @@ provider header or retry proof. Existing retained-page coverage remains the next
 diagnostic boundary. Private staging/readback/checkpoint receipts live under
 user-scoped diagnostics/plan0411/idle-page-lifetime-20261018. No provider retry,
 old-page cleanup or scheduler resume. Memory forbidden(no explicit request).
+
+
+### 2026-10-18 — Manual goal resumed; retained-page traffic remains real
+
+User explicitly authorized manual enforcement of1Mtokens/3hours after automatic
+controller held on missing caller grant. Preserve original18:13:20UTC start;
+checkpoint by21:08:20UTC, hardstop21:13:20UTC, token reserve900k/1M. Passive native
+Network-only observation attaches16pages and records9transferred backend responses
+across4pages with0ledgerstarts. Two active pages map to unknown-effect custody;
+two map to settled/lost. These records do not authorize adoption or cleanup.
+Three further public-affinity parking boundary cases pass: foreign route sends no
+navigation; navigation failure and missing top-level commit never idle/claimblank.
+14focusedtests pass. No provider retry or warning release. Private control/evidence
+under diagnostics/plan0411/manual-goal-20261018; next bounded continuation after
+local cooldown reconciles actual native/warning state before any provider effect.
