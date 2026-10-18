@@ -55787,3 +55787,16 @@ PR335draft. Memory forbidden(no explicit request).
 Provider-free diagnosis reproduced continued polling after the original affinity finish path: ten post-finish request attempts in isolated network-blocked Chrome. Candidate parking confirms the blank top-level document commit before idle, records cleanup navigation and the blank fingerprint, and passes the same native regression with zero further attempts. Strict provider-origin fixture prototypes timed out during setup and are nonqualifying; the retained regression tests owned document lifetime on about:blank. Evidence: user-scoped diagnostics/plan0411/idle-page-lifetime-20261018. No signed-in provider retry, warning release, existing-page cleanup or runtime activation. Missing IM Receipts capture, quiet repeat and concurrent acceptance remain open.
 
 Verification completed: 131/131 affected tests, typecheck, targeted lint, production build and diff check pass.
+
+### 2026-10-18 — Plan0411 repaired runtime staged without activation
+
+Staged source17abfbe90 in isolated user-runtime-plan0411-17abfbe90 with private
+wrappers. All584compiled JS files match checkout; installed runtime contract
+passes. Focused known-owned unloaded-target reuse cases pass. Fresh18:11:16UTC
+readback verifies native38213, main50485paused/0queued/running, original frozen
+outcome-unknown reservation intact and0recorded starts over10minutes. Global707
+CLI/MCP/API unchanged; warning retained; local cooldown18:59:43.767UTC is not a
+provider header or retry proof. Existing retained-page coverage remains the next
+diagnostic boundary. Private staging/readback/checkpoint receipts live under
+user-scoped diagnostics/plan0411/idle-page-lifetime-20261018. No provider retry,
+old-page cleanup or scheduler resume. Memory forbidden(no explicit request).
