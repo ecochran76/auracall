@@ -1086,3 +1086,38 @@ It binds source/runtime/warning/frozen reservation, header fixture/limitations,
 replay manifest and bounded resume action. Existing warning history remains;
 elapsed time alone is not recovery proof. Main scheduler stays paused.
 Memory disposition forbidden(no explicit memory-update request).
+
+
+## 2026-10-18 — One-hour wake consumed; header-qualified live retry pending
+
+Wake d6be6180eb0949878211dd2cc85d2552 arrived with matching native submission
+and qualified due time16:39UTC; original one-hour predicate is satisfied. Exact
+checkpoint/source72b962631 and immutable staged1460ed0c8 reconciled. User explicitly
+resumed the objective; host goal readback still sayspaused (no tool resume action
+available), so no tracker-active claim. No new goal/budget reset.
+
+Provider-free successor now retains allowlisted ordinary and CDP extraInfo headers,
+correlating hashed request identity with before/after-event ordering; bounded
+unselected buffering reports drops, never captures cookies/auth/body. Both actual
+response callbacks and extraInfo ordering/privacy fixtures PASS, syntax PASS.
+Fresh16:43:04UTC process/window/desktop verification: native38213/CDP45015 valid,
+no desktop owner; main50485paused/0queued/running; no recorded backend starts over
+previous10minutes. Exact retained15:14:59.707warning is released through public
+ledger clear with explicit user wake authority and an attributable reason; raw
+warning/history/frozen original reservation preserved. Timed cooldown had expired;
+that alone is not claimed provider recovery.
+
+One unchanged unscoped metadata-only follow(max6passes/10minutes,maxItems1,
+forcefalse) starts16:43:22UTC. Source1460ed0c8,runner74398,child74400,meter74399;
+shared30/min and600000ms unchanged, new1/5minute diagnostics. Global707 wrappers/
+API and paused scheduler unchanged. Private packet live-header-diagnosis-
+1460ed0c8-20261018T1640/checkpoint.json binds all evidence and next action.
+Live capture verifies30HTTP200responses,30ordinary+30extraInfo header records;
+onlyDate retained sofar, no rate-limit fields yet. Do not count those60records as
+60responses. Any new429/verification/identity drift is a hardstop.
+
+Exact finished.json completion wake96342306751c41898ce52d5065821567 is armed:
+qualified bounded_utc/not_due,persistent monitor ready; no delivery/result claim.
+Run ispending and survives this turn. Consume exact terminal,headerjournal and
+1/5minute meter onwake; do not blindretry afterhardstop. Missing-chat/quiet/
+concurrent acceptance remainOPEN. Memory disposition forbidden(no user request).
