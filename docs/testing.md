@@ -1,3 +1,11 @@
+- Live-follow bootstrap warning ownership (provider-free):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'live-follow bootstrap warning'`.
+  Runs configured affinity, the ChatGPT adapter, request interceptor and desktop
+  gate against synthetic CDP. Bootstrap must finish while retaining interception;
+  a visible warning must block before navigation, and successful completion must
+  open a fresh final warning transport. This catches the second-connection
+  self-contention seen in the installed live-follow acceptance trace.
+
 - Baseline drain/navigation/prompt/budget regression (provider-free):
   `pnpm vitest run tests/http.responsesServer.test.ts tests/browser-service/ui.test.ts tests/browser/browserMutationControlPlane.test.ts tests/browser/desktopRuntimeProfiles.test.ts tests/browser/chatgptPromptAdapter.test.ts tests/browser/llmServicePromptStructure.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers=2`.
   Drain status uses an explicit in-flight gate, and shared write budgets use a

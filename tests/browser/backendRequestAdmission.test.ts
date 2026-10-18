@@ -33,6 +33,7 @@ const fixture = vi.hoisted(() => ({
 				failClose?: boolean;
 				stallClose?: boolean;
 				warnPayload?: boolean;
+				visibleWarning?: boolean;
 				failRead?: boolean;
 				abortRead?: () => void;
 				beforeIdentity?: () => void;
@@ -101,7 +102,9 @@ vi.mock("chrome-remote-interface", () => ({
 				if (command === "Runtime.evaluate" && fixture.page) {
 					const expression = parameters.expression ?? "";
 					let value: unknown = [];
-					if (expression === "location.href") value = fixture.page.url;
+					if (expression.includes("const visible = Array.from"))
+						value = fixture.page.visibleWarning ? "Too many requests" : null;
+					else if (expression === "location.href") value = fixture.page.url;
 					else if (expression.includes("/api/auth/session")) {
 						fixture.page.beforeIdentity?.();
 						value = { user: { id: "fixture-user", email: "operator@example.test" } };
@@ -2062,3 +2065,127 @@ test.each([
 		await rm(home, { recursive: true, force: true });
 	}
 }, 20000);
+
+test.each([
+	false,
+	true,
+])("live-follow bootstrap warning check shares interceptor ownership; warning=%s", async (warning) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-follow-warning-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	fixture.page = {
+		url: "about:blank",
+		navigations: [],
+		bootstrapRequests: 1,
+		payloadReads: 0,
+		closeAttempts: 0,
+		visibleWarning: warning,
+	};
+	const gate = new DesktopControlGate("follow-warning");
+	const holds: Array<Awaited<ReturnType<typeof gate.holdAutomation>>> = [];
+	const controller = new AbortController();
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect, options) => gate.withAutomation("generation", effect, options),
+		hold: async (options) => {
+			const held = await gate.holdAutomation("generation", options);
+			holds.push(held);
+			return {
+				run: (_command, effect, context) =>
+					held.run(() => gate.withAutomation("generation", effect, context)),
+				close: () => held.close(),
+			};
+		},
+	}));
+	const lifecycle = await import("../../packages/browser-service/src/chromeLifecycle.js");
+	const runtimeModule = await import("../../src/browser/tabConcurrencyRuntime.js");
+	const coordinator = await import("../../src/accountMirror/liveFollowTabCoordinator.js");
+	const { BrowserService } = await import("../../src/browser/service/browserService.js");
+	const { createConfiguredLiveFollowAffinity } = await import(
+		"../../src/accountMirror/configuredLiveFollowAffinity.js"
+	);
+	const { createChatgptAdapter } = await import("../../src/browser/providers/chatgptAdapter.js");
+	const config = {
+		auracallProfile: "fixture",
+		browser: { tabConcurrencyMode: "tab-affinity" },
+		services: {
+			chatgpt: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 30 },
+		},
+	} as never;
+	const runtime = createBrowserTabConcurrencyRuntime(config);
+	const claim = { leaseId: "follow-warning", revision: 1 };
+	const lease = { ...claim, targetId: "follow-target", ownerOperationId: "follow-warning" };
+	const registry = {
+		list: vi.fn(async () => [] as unknown[]),
+		recordTargetAction: vi.fn(async () => ({ ok: true, value: { claim } })),
+		recordMeaningfulUse: vi.fn(async () => ({ ok: true, value: { claim } })),
+		idle: vi.fn(async () => ({ ok: true })),
+	};
+	vi.spyOn(runtimeModule, "createBrowserTabConcurrencyRuntime").mockReturnValue({
+		...runtime,
+		registry,
+	} as never);
+	vi.spyOn(lifecycle, "listChromeTargets").mockResolvedValue([]);
+	vi.spyOn(coordinator, "acquireLiveFollowCrawlerTab").mockResolvedValue({
+		endpoint: { host: "127.0.0.1", port: 45170 },
+		claim,
+		lease,
+		unloadedTarget: true,
+	} as never);
+	vi.spyOn(BrowserService, "fromConfig").mockReturnValue({
+		resolveServiceTarget: async () => ({
+			host: "127.0.0.1",
+			port: 45170,
+			managedBrowserProfile: "/fixture/follow",
+		}),
+		getMutationAuditSink: () => async () => undefined,
+	} as never);
+	const timer = setTimeout(
+		() => controller.abort(new Error("Live-follow warning blocked behind its own interceptor")),
+		5000,
+	);
+	try {
+		const affinity = await createConfiguredLiveFollowAffinity({
+			userConfig: config,
+			provider: "chatgpt",
+			runtimeProfileId: "fixture",
+			operationId: "follow-warning",
+			maxBrowserInteractionsPerMinute: 30,
+			abortSignal: controller.signal,
+		});
+		if (!affinity) throw new Error("Missing affinity");
+		registry.list.mockResolvedValue([lease]);
+		const readIdentity = createChatgptAdapter().getUserIdentity;
+		if (!readIdentity) throw new Error("Missing identity reader");
+		const identity = readIdentity({
+			...affinity.tabAffinity,
+			tabTargetId: affinity.tabAffinity.targetId,
+			interactionGovernor: affinity.interactionGovernor,
+			providerTrafficGovernor: affinity.providerTrafficGovernor,
+			abortSignal: controller.signal,
+		});
+		if (warning) {
+			await expect(identity).rejects.toThrow("Too many requests");
+			expect(fixture.page.navigations).toEqual([]);
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
+			await affinity.completeFailure(new Error("Too many requests"));
+		} else {
+			await expect(identity).resolves.toMatchObject({ email: "operator@example.test" });
+			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/"]);
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual(["bootstrap-0"]);
+			const beforeFinal = fixture.clients.length;
+			await affinity.completeSuccess();
+			expect(fixture.clients).toHaveLength(beforeFinal + 1);
+		}
+		const human = await gate.takeControl("generation");
+		await gate.releaseControl(human.token, "generation");
+	} finally {
+		clearTimeout(timer);
+		controller.abort();
+		await Promise.all(holds.map((held) => held.close()));
+		vi.restoreAllMocks();
+		fixture.page = undefined;
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+}, 15000);

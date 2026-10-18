@@ -28,6 +28,15 @@ interface CdpCommandTimeout {
 const commandTimeouts = new AsyncLocalStorage<CdpCommandTimeout>();
 const commandAbortSignals = new AsyncLocalStorage<AbortSignal>();
 
+/** Admission callbacks may open another transport; retain this client's exact held ownership. */
+export function withCdpClientOwnership<T>(client: object, effect: () => Promise<T>): Promise<T> {
+  const state = clientAdmissions.get(client);
+  if (state?.closed) return Promise.reject(new Error('CDP client is closed.'));
+  return state?.hold
+    ? state.hold.run('ProviderTraffic.begin', effect, { abortSignal: commandAbortSignals.getStore() })
+    : effect();
+}
+
 /** Keep caller cancellation on admission for commands outside a wire-timeout scope. */
 export function withCdpCommandAbortSignal<T>(signal: AbortSignal | undefined, effect: () => Promise<T>): Promise<T> {
   if (!signal) return effect();

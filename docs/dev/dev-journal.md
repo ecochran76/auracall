@@ -55383,3 +55383,17 @@ Canonical acceptance note closes scoped Plan0386; issue165closure follows the
 acceptance PR. Wider P92/Plan0411 changed-frontier and scheduler continuation stay
 open; scheduler/all17subscriptions paused,0queued/running/warnings. Memory
 disposition forbidden.
+
+## 2026-10-18 | Live-follow warning self-contention regression and repair
+
+Provider-free configured-affinity/adapter/interceptor/desktop-gate regression
+reproduced the warning check blocking behind its own continuous hold twice.
+A test-only inherited-scope intervention passed; removing it restored the failure.
+Shared navigation/reload admission now inherits the exact held client scope,
+including fallback admission. The warning connection retains fresh native/gate
+checks; final completion still opens a fresh transport after collection.
+Clean and visible-warning cases pass; the warning blocks before any navigation.
+First affected run:161tests/5files pass. Typecheck found an optional adapter-method
+call in the new fixture; corrected with an explicit guard. Production build,
+corrected typecheck and targeted lint pass. Final affected selection and installed
+acceptance are pending; wider Plan0411/P92 stays OPEN.

@@ -1,3 +1,13 @@
+## 2026-10-18 — Carry held client ownership into physical-action admission
+
+Request interception retains desktop ownership across commands, but JavaScript
+callbacks between those commands do not inherit the hold automatically. A
+navigation governor that opens another warning transport therefore queues behind
+its own client. Run physical-action admission in that client's held scope; nested
+transports still verify their native generation and current desktop owner.
+Preserve the independent fresh warning probe after collector transport release.
+Increasing the warning deadline cannot resolve the ownership dependency.
+
 ## 2026-10-18 — Admission cancellation must outlive domain setup
 
 A caller signal on provider options does not automatically reach raw CDP commands.

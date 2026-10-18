@@ -523,3 +523,25 @@ and all frozen histories remain. Completion wake cancelled after foreground
 consumption. Durable phase/acceptance receipts and runnable tracing harness:
 `~/.auracall/diagnostics/plan0411/live-retry-ingress-20261018T1126/`.
 Plan0411/P92 remains OPEN. No additional live retry.
+
+## 2026-10-18 — Provider-free reproduction of held-owner warning contention
+
+Command: `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t
+'live-follow bootstrap warning' --reporter=dot`. Two runs on the unchanged source
+failed at probeChatgptRateLimitWarning → checkOwnedProviderWarning → physical
+navigation admission: Desktop control is busy. The fixture's signal-less desktop
+retry bound ends before the live ten-second wrapper, but both exercise the same
+second warning transport blocked by the original interceptor hold. No provider
+network is used. A single test-only change running admission inside the existing
+hold made bootstrap succeed; removing it restored failure.
+
+The production repair adds withCdpClientOwnership at shared navigation/reload
+admission (primary and fallback). It borrows only the supplied client's existing
+hold, validates through hold.run, and otherwise preserves existing admission.
+New warning transports still validate current native generation and desktop
+ownership. No process-wide ownership inference, gate bypass, larger deadline or
+cached warning Runtime. Final completion still opens a fresh independent probe.
+Both bootstrap success and visible-warning refusal pass; successful bootstrap
+continues its synthetic backend request through the real configured interceptor.
+Initial affected selection:161tests/5files pass. Installation/live acceptance are
+not established by this source result; their receipts will be recorded separately.
