@@ -25730,3 +25730,13 @@ waiters even when each lock hold is short. Share only unfinished identical list
 reads by registry root/query; discard on settlement and clone per caller. Keep
 write locks and fresh post-write custody checks. Private sustained32/64-reader
 replay is red before repair; fixed64-reader replay and29affected tests pass.
+
+
+### 2026-10-18 — Account request ceiling is not provider-quota acceptance
+
+Native normal-follow replay enforces30charged starts/minute but receives a real
+conversation-list HTTP429 after169starts/6.3minutes. Preserve that warning and
+stop; do not infer absence of throttle from the shared meter alone. Reconcile
+all recorded account scopes and state the uninstrumented-client coverage gap.
+The observer lacked Retry-After/rate-limit headers, so this does not establish
+the provider quota/window or a safe replacement limit.

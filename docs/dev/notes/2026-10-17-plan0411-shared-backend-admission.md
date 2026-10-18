@@ -1020,3 +1020,43 @@ owned admission failure caused by provider-interaction ledger lock timeouts,
 not a tab-registry timeout.50charged permits(49started,1proven no-send),peak30,
 0uncertain/0warnings. Capturing original candidate and quiet repeat remain OPEN;
 this source fix does not qualify broader acceptance or change global707 runtime.
+
+
+## 2026-10-18 — Live custody/startup repair passes; provider throttle stops follow
+
+Immutable staged1460ed0c8 original unscoped follow replay c8fe39ce-70a5-4d3d-aae9-
+b2df33079608 commits1pass and returns1independent2-message context through the
+production provider/service stack (three nested wrappers record that same read).
+The original missing IM Receipts candidate is not captured. Both local lock
+failures stay absent; maximum observed ledger hold477ms at an intermediate read.
+
+At15:14:59.700UTC, exact owned-page Network observes HTTP429 in conversation-list
+category. Observer immediately pauses the parent and stops; duration378133ms.
+Meter terminal170permits,169charged starts,1proven no-send,all170settled,
+peak30/min,0uncertain and1newactive rate-limit warning. Thus30/min enforcement
+passes but provider-throttle-free acceptance FAILS.191observed page requests
+include paused/cancelled requests; they are not191actual sends.3document
+navigations/6same-document changes were observed. Startup/read latency remains
+slow: first2-message DOM at15:13:07.669UTC,about4.5minutes after run start.
+
+All-account-scope ledger reconciliation over the trial window finds only these
+169charged starts and this single live-follow operation. This excludes another
+recorded workload, not uninstrumented browser/client traffic. The raw observer
+retains category/hash/status, not Retry-After/rate-limit response headers; the
+provider's governing quota/window is not established. Do not infer a safe lower
+limit from this run or silently clear the warning. No further provider replay,
+peer retry, global activation or scheduler resume. Global707 remains selected.
+The control path used loopbackHTTP19096, so unreliable bastionHTTPS is not required
+to reproduce these local coordination failures or this provider429.
+
+Private durable packet live-ledger-trace-1460ed0c8-20261018 contains terminal,
+shared meter, exact registry/ledger timings,qualified-result.json and fresh final
+readback. Two offline ledger-capacity-release probes(including more frequent
+observation reads) pass; no speculative ledger source change is made. The known
+read-starvation fix1460ed0c8 and test-isolation checkpointffe1ffa30 are pushed;
+PR335 staysdraft. Plan0411/P92 capture/quiet/concurrent acceptance remains OPEN.
+Next qualification needs provider throttle diagnostics(response headers and
+request-category spacing) and coverage of uninstrumented clients before a safe
+live retry can establish the missing-chat result. Source repair evidence is not
+provider-quota proof. Memory disposition forbidden(developer requires explicit
+user memory-update request; none was given).
