@@ -55829,3 +55829,15 @@ frozenunknownintact. Localcooldown ends18:59:43UTC. Qualified native wake at19:0
 retains manual original21:08checkpoint/21:13hardstop; preparation is notliveacceptance.
 Private diagnostics/plan0411/manual-goal-20261018/checkpoint.md points to successor
 and its script hashes. Missingcapture,quiet and concurrentacceptance remainOPEN.
+
+
+### 2026-10-18 — Native parked-tab reuse qualified
+
+Extended the opt-in isolated Chrome regression through the real public crawler
+coordinator after affinity finish. Fresh actual blank-document inspection yields
+same-target unloaded adoption, advanced custody revision and exactlyonepage; no
+new target/browser/close or later poll. Native testPASS(~1second), targetedlint
+andtypecheckPASS. Read-only current catalog retains375conversations; missing-chat
+candidate remains indexed/deferred at frontier position5, withoutdetailfingerprint;
+the first row iscomplete. No ID seeded or cursor modified; provider selection
+still must capture actualcontent. Raw native/catalog evidence stays user-scoped.

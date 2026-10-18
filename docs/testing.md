@@ -3714,3 +3714,8 @@ warning, wrong-route and after-send uncertainty cases remain required companions
 
 
 Provider-free native idle-page regression: `AURACALL_NATIVE_FIXTURE_TEST=1 pnpm vitest run tests/browser/liveFollowIdleTraffic.native.test.ts`. Requires /usr/bin/google-chrome; launches only an isolated temporary headless browser with external access blocked. An injected polling timer supplies the positive control. The real affinity finish path must stop subsequent request attempts and record idle/settled/blank custody. This proves document teardown, not authenticated provider acceptance.
+
+The native idle-page fixture also reacquires the parked page through the real
+public crawler coordinator. It inspects the actual blank document, advances the
+process-bound custody revision and requires the same single physical page without
+opening or closing another target. This is provider-free reuse qualification.

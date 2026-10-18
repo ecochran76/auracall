@@ -91,6 +91,7 @@ describe.skipIf(!enabled)("native provider-free live-follow idle traffic", () =>
 				registry,
 				ledger: createInMemoryProviderInteractionLedger(),
 			} as never);
+			const acquireCrawler = coordinator.acquireLiveFollowCrawlerTab;
 			vi.spyOn(coordinator, "acquireLiveFollowCrawlerTab").mockResolvedValue({
 				...reserved.value,
 				endpoint: { host: "127.0.0.1", port },
@@ -131,6 +132,53 @@ describe.skipIf(!enabled)("native provider-free live-follow idle traffic", () =>
 				effectState: "settled",
 				targetFingerprint: "about:blank",
 			});
+
+			const inspect = vi.fn(async () => {
+				const observed = await client?.Runtime.evaluate({
+					expression: "location.href",
+					returnByValue: true,
+				});
+				return { url: String(observed?.result.value) };
+			});
+			const open = vi.fn(async (): Promise<never> => {
+				throw new Error("Unexpected replacement target");
+			});
+			const next = await acquireCrawler({
+				registry,
+				scope,
+				operationId: "op-next",
+				targetUrl: "https://chatgpt.com/",
+				allowOwnedUnloadedTarget: true,
+				idleTtlMs: 60000,
+				absoluteTtlMs: 3600000,
+				resolveExistingEndpoint: async () => ({
+					host: "127.0.0.1",
+					port,
+					managedBrowserProfile: profile,
+				}),
+				startBrowser: async () => {
+					throw new Error("Unexpected replacement browser");
+				},
+				inspectTarget: inspect,
+				openTarget: open,
+				closeTarget: async () => {
+					throw new Error("Unexpected close of retained target");
+				},
+			});
+			expect(inspect).toHaveBeenCalledOnce();
+			expect(open).not.toHaveBeenCalled();
+			expect(next.unloadedTarget).toBe(true);
+			expect(next.lease).toMatchObject({
+				targetId,
+				state: "active",
+				effectState: "settled",
+				ownerOperationId: "op-next",
+			});
+			expect(next.claim.revision).toBeGreaterThan(reserved.value.claim.revision);
+			expect(
+				(await lifecycle.listChromeTargets(port, "127.0.0.1")).filter((t) => t.type === "page"),
+			).toHaveLength(1);
+			expect(requests - afterFinish).toBe(0);
 		} finally {
 			await client?.close().catch(() => {});
 			vi.restoreAllMocks();
