@@ -55852,3 +55852,32 @@ receipt rejects; offlinepositive/9negativecases pass; actualheadercallbacks and
 syntax remainPASS. Quietrepeat,filetransfer and concurrentqualification remain
 separateOPENgates. No provider/control/warningrelease effect. Hashes/checkpoint
 updated under user-scoped diagnostics/plan0411.
+
+
+### 2026-10-18 — Idle-parking retry throttled; terminal observation repaired offline
+
+After exact warning release and fresh native/desktop/main-idle qualification, staged
+17abfbe90 normal unscoped follow hits conversation-list429 at19:03:01UTC. Zero
+passes/contexts;66charged backendstarts,peak30/minute and66/fiveminutes. At429,
+backend-only lastminute10/lastfive66. Rawmeter last1/5 fields accidentally included
+logical interaction classes; corrected derivation and meter-v2 remain separate
+from immutable executed script/output. Prior16:44 derivation remains29/59.
+
+Owned response/extraInfo66/66 and retained73/73 correlate exactly with0bufferdrops.
+All73retained responses have positivefinishedbytes withoutcache/workerflags.
+143rawrequest events include pre-admission attempts; they are not143wire sends.
+429headers retainDateonly, noRetryAfter/quotafields. Sharedmeter is notaccountwide
+enforcement. Parent paused promptly, mainpausedidle, native38213verified, original
+frozenunknown preserved. New localcooldown01:03UTCnextday is local escalation; no
+further provider retry. Missing capture/quiet/concurrentacceptance remainOPEN.
+
+Fresh post-run newcrawler remainsproviderroute despite staleblankfingerprint;
+cleanup is unproven. Trace ends during pendingdesktop-admitted cleanup: harness
+exits on parentpaused before verifying ownedworkrelease. Actual terminalbranch
+fixtureRED for activelease; successor condition waitsforownedrelease andGREEN.
+Original live script/hash/output preserved; successor has notrunlive. Public
+isolatednative success AND cancelled finish both park/reacquiresameblank when
+awaited (2testsPASS). This narrows cause toward harness lifetime, without claiming
+productiondesktoplatency or nativehardstopcleanup repaired. Typecheck/targetedlint
+PASS. User-scoped packetlive-idle-parking-17abfbe90-20261018T1900 contains exact
+terminal/headerjournals/correctedledgerderivation/finalreadback/successorhashes.

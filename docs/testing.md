@@ -3719,3 +3719,8 @@ The native idle-page fixture also reacquires the parked page through the real
 public crawler coordinator. It inspects the actual blank document, advances the
 process-bound custody revision and requires the same single physical page without
 opening or closing another target. This is provider-free reuse qualification.
+
+The native idle-page fixture covers awaited cancellation as well as success.
+A paused completion parent alone is insufficient cleanup proof: live observers
+must wait for owned provider work to release before ending their process. The
+real desktop-admission hard-stop path remains a separate live qualification.

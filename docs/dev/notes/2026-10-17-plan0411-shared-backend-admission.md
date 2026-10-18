@@ -1187,3 +1187,32 @@ Memory disposition forbidden(no explicit user memory-update request).
 Pristine 9d4670b4c source reproduced ten post-finish backend request attempts in isolated network-blocked native Chrome. The candidate parks the exact settled owned crawler and requires a top-level blank document commit before idle custody; the same regression observes zero post-finish attempts. The blank-document fixture qualifies document lifetime, not authenticated provider navigation. Strict provider-origin prototypes timed out during setup and are excluded.
 
 Verification: 131 tests pass across configuredLiveFollowAffinity, liveFollowTabCoordinator, backendRequestAdmission and the opt-in native idle fixture; typecheck, targeted Biome lint, production build and diff check pass. Private raw receipts remain in user-scoped diagnostics/plan0411/idle-page-lifetime-20261018. No provider retry, warning release, old-page adoption/cleanup or runtime activation occurred. Existing uncertain pages, browser-wide accounting, actual missing-chat capture, quiet repeat and concurrent acceptance remain open.
+
+
+### 2026-10-18 — Idle-parking retry throttled; terminal observation repaired offline
+
+After exact warning release and fresh native/desktop/main-idle qualification, staged
+17abfbe90 normal unscoped follow hits conversation-list429 at19:03:01UTC. Zero
+passes/contexts;66charged backendstarts,peak30/minute and66/fiveminutes. At429,
+backend-only lastminute10/lastfive66. Rawmeter last1/5 fields accidentally included
+logical interaction classes; corrected derivation and meter-v2 remain separate
+from immutable executed script/output. Prior16:44 derivation remains29/59.
+
+Owned response/extraInfo66/66 and retained73/73 correlate exactly with0bufferdrops.
+All73retained responses have positivefinishedbytes withoutcache/workerflags.
+143rawrequest events include pre-admission attempts; they are not143wire sends.
+429headers retainDateonly, noRetryAfter/quotafields. Sharedmeter is notaccountwide
+enforcement. Parent paused promptly, mainpausedidle, native38213verified, original
+frozenunknown preserved. New localcooldown01:03UTCnextday is local escalation; no
+further provider retry. Missing capture/quiet/concurrentacceptance remainOPEN.
+
+Fresh post-run newcrawler remainsproviderroute despite staleblankfingerprint;
+cleanup is unproven. Trace ends during pendingdesktop-admitted cleanup: harness
+exits on parentpaused before verifying ownedworkrelease. Actual terminalbranch
+fixtureRED for activelease; successor condition waitsforownedrelease andGREEN.
+Original live script/hash/output preserved; successor has notrunlive. Public
+isolatednative success AND cancelled finish both park/reacquiresameblank when
+awaited (2testsPASS). This narrows cause toward harness lifetime, without claiming
+productiondesktoplatency or nativehardstopcleanup repaired. Typecheck/targetedlint
+PASS. User-scoped packetlive-idle-parking-17abfbe90-20261018T1900 contains exact
+terminal/headerjournals/correctedledgerderivation/finalreadback/successorhashes.

@@ -18,7 +18,10 @@ const enabled = process.env.AURACALL_NATIVE_FIXTURE_TEST === "1";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe.skipIf(!enabled)("native provider-free live-follow idle traffic", () => {
-	test("settled crawler cannot keep producing backend requests after its owner finishes", async () => {
+	test.each([
+		"success",
+		"cancelled",
+	] as const)("settled crawler stops polling and supports reuse after %s", async (outcome) => {
 		const profile = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-idle-native-"));
 		const browser = spawn(
 			"/usr/bin/google-chrome",
@@ -104,6 +107,7 @@ describe.skipIf(!enabled)("native provider-free live-follow idle traffic", () =>
 				}),
 				getMutationAuditSink: () => async () => undefined,
 			} as never);
+			const abort = new AbortController();
 			const affinity = await createConfiguredLiveFollowAffinity({
 				userConfig: {
 					auracallProfile: "runtime-1",
@@ -115,6 +119,7 @@ describe.skipIf(!enabled)("native provider-free live-follow idle traffic", () =>
 				provider: "chatgpt",
 				runtimeProfileId: "runtime-1",
 				operationId: "op-native",
+				abortSignal: abort.signal,
 				maxBrowserInteractionsPerMinute: 20,
 			});
 			await client.Runtime.evaluate({
@@ -123,7 +128,10 @@ describe.skipIf(!enabled)("native provider-free live-follow idle traffic", () =>
 			});
 			for (let i = 0; i < 100 && requests < 3; i++) await delay(20);
 			expect(requests).toBeGreaterThanOrEqual(3);
-			await affinity?.completeSuccess();
+			if (outcome === "cancelled") {
+				abort.abort(new Error("Fixture traversal cancelled"));
+				await affinity?.completeFailure(abort.signal.reason);
+			} else await affinity?.completeSuccess();
 			const afterFinish = requests;
 			await delay(250);
 			expect(requests - afterFinish).toBe(0);

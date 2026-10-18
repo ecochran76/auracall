@@ -1260,3 +1260,18 @@ warning release or cleanup of the16historical pages is inferred. Qualification:
 public control/error fixtures plus isolated native before/after and same-tab reuse.
 Account-wide coverage of other/manual/unknown pages remains a separate limitation;
 this slice stops automation-owned idle documents from being new traffic sources.
+
+
+## 2026-10-18 | Native retry fails; preserve interlock and repair observation
+
+Staged17abfbe90 retry: real429 after66chargedbackendstarts,0passes/contexts,
+peak30minute/66five. Retainedpages contribute73noncache/nonworker transferred
+responses outsideledger. Dateonly429headers in bothsources; providerquotaunknown.
+Parentpaused promptly; main707schedulerstillpaused. Localcooldown01:03UTCnextday
+exceeds manualgoalwindow; nofurtherretry. Full packet and corrections in shared
+backend admission note. Sourceparking success/cancelled nativecasesPASS when
+awaited, but actual trialnewpage remainsproviderroute because runnertrace ends
+duringcleanup. Successorharness waitsforownedrelease (actualbranchRED/GREEN);
+notliverun. Missingcapture/quiet/concurrentremainOPEN; existing16pages and all
+frozenunknowns preserved. Next scoped work is provider-free shared-account traffic
+and cleanup diagnosis; do not turn more preparation into acceptance.

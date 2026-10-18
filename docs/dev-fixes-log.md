@@ -25755,3 +25755,14 @@ charged ledger starts stayzero; the owned-request ceiling is not browserwide.
 ### 2026-10-18 — Retire the settled crawler document before idle
 
 Releasing an interceptor leaves page timers alive. An isolated real-Chrome regression against pristine source observed ten further backend request attempts after finish. Park the exact settled owned crawler on about:blank and await a top-level document commit before recording idle custody. The candidate native regression observes zero further attempts. Preserve unknown outcomes, foreign routes and human/identity warning surfaces. Existing unmanaged/uncertain pages and browser-wide accounting remain outside this repair.
+
+
+### 2026-10-18 — Parent pause is not provider cleanup completion
+
+The diagnostic runner exited while desktop-admitted cleanup was still pending,
+leaving its owned page on the provider route. Preserve that failed result; do not
+blame or qualify the parking implementation solely from it. Awaited native
+cancellation parks correctly in isolation. A successor observer waits for active
+owned leases to release before treating hard-stop pause as terminal; offline
+actual-branch red/green verifies that gate, not a native live repair. Also filter
+backend-window metrics by interactionClass: logical starts are separate costs.
