@@ -492,3 +492,34 @@ or prompt resubmission. Terminal wake cancelled after foreground result consumpt
 Private durable acceptance and raw trace:
 `~/.auracall/diagnostics/plan0411/live-accept-20261018T1105/acceptance.json`.
 Plan0411/P92 acceptance remains OPEN.
+
+## 2026-10-18 — Bastion-recovery retry isolates same-process admission contention
+
+User reported degraded bastion HTTPS ingress and explicitly authorized one retry.
+Same activated7070532aa,30/min shared ceiling, no prompt or scheduler resume.
+Preflight native window/launch checks passed in293/263ms through loopback
+Remote View control http://127.0.0.1:19096. Public HTTPS ingress is not a direct
+client dependency of the timed-out path; historical downstream impact is unproven.
+
+Retry parent acctmirror_completion_3f748019-9e9f-4abb-bd6d-8a7f30cac604 FAIL:
+Owned ChatGPT warning check timed out after10000ms.0passes/no child,0observed
+backend requests/responses,0charged shared starts,0new warnings/observed429.
+Startup page Network coverage is complete for the owned parent/child scope.
+
+Phase trace: all20Remote View control requests completed, slowest421.36ms;
+slowest successful CDP wire command3.42ms. In process34189, automation hold28
+acquired at11:26:28.799 remained held12.225s. Warning probe46 began waiting at
+11:26:30.562; it acquired only after hold28 was released, waiting10.487s. Its
+socket had already been closed by the10s warning timeout. Thus this retry's
+failure is internal same-process ownership contention, not demonstrated ingress
+latency. A longer warning timer alone cannot remove that ownership dependency.
+The next regression must combine active interceptor ownership with the separate
+warning client; candidate repair is reuse of the existing admitted client/scope.
+No source fix is claimed by this evidence packet.
+
+Main remains healthy with19paused subscriptions,0queued/running,0active provider
+warnings. No warning release was needed for this retry; prior explicit release
+and all frozen histories remain. Completion wake cancelled after foreground
+consumption. Durable phase/acceptance receipts and runnable tracing harness:
+`~/.auracall/diagnostics/plan0411/live-retry-ingress-20261018T1126/`.
+Plan0411/P92 remains OPEN. No additional live retry.
