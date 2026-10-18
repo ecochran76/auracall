@@ -2086,6 +2086,7 @@ test.each([
 	"clean",
 	"warning",
 	"async-startup",
+	"optimistic-startup",
 	"startup-cancel",
 ])("live-follow bootstrap warning check shares interceptor ownership; mode=%s", async (mode) => {
 	const warning = mode === "warning";
@@ -2099,8 +2100,9 @@ test.each([
 		payloadReads: 0,
 		closeAttempts: 0,
 		visibleWarning: warning,
-		asyncBootstrap: mode === "async-startup" || mode === "startup-cancel",
-		bootstrapReady: false,
+		asyncBootstrap:
+			mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel",
+		bootstrapReady: mode === "optimistic-startup",
 	};
 	const gate = new DesktopControlGate("follow-warning");
 	const holds: Array<Awaited<ReturnType<typeof gate.holdAutomation>>> = [];
@@ -2124,7 +2126,7 @@ test.each([
 	const { createConfiguredLiveFollowAffinity } = await import(
 		"../../src/accountMirror/configuredLiveFollowAffinity.js"
 	);
-	const { createChatgptAdapter } = await import("../../src/browser/providers/chatgptAdapter.js");
+
 	const config = {
 		auracallProfile: "fixture",
 		browser: { tabConcurrencyMode: "tab-affinity" },
@@ -2157,7 +2159,10 @@ test.each([
 			host: "127.0.0.1",
 			port: 45170,
 			managedBrowserProfile: "/fixture/follow",
+			browserProfile: "fixture",
+			browserProcessId: process.pid,
 		}),
+		getConfig: () => config,
 		getMutationAuditSink: () => async () => undefined,
 	} as never);
 	const timer = setTimeout(
@@ -2175,7 +2180,7 @@ test.each([
 		});
 		if (!affinity) throw new Error("Missing affinity");
 		registry.list.mockResolvedValue([lease]);
-		if (mode === "async-startup" || mode === "startup-cancel") {
+		if (mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel") {
 			let release!: () => void;
 			const ready = new Promise<void>((resolve) => {
 				release = resolve;
@@ -2207,14 +2212,16 @@ test.each([
 				await originalAdmit(key, effect, signal, context);
 			};
 		}
-		const readIdentity = createChatgptAdapter().getUserIdentity;
-		if (!readIdentity) throw new Error("Missing identity reader");
-		const identity = readIdentity({
+		const service = ChatgptService.create(config, {
+			browserService: BrowserService.fromConfig(config, "chatgpt"),
+		});
+		const identity = service.getProviderSessionProof({
 			...affinity.tabAffinity,
 			tabTargetId: affinity.tabAffinity.targetId,
 			interactionGovernor: affinity.interactionGovernor,
 			providerTrafficGovernor: affinity.providerTrafficGovernor,
-			accountMirrorInventory: mode === "async-startup" || mode === "startup-cancel",
+			accountMirrorInventory:
+				mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel",
 			abortSignal: controller.signal,
 		});
 		if (warning) {
@@ -2227,7 +2234,7 @@ test.each([
 			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
 			await affinity.completeFailure(new Error("fixture startup cancelled"));
 		} else {
-			await expect(identity).resolves.toMatchObject({ email: "operator@example.test" });
+			await expect(identity).resolves.toMatchObject({ verdict: "match" });
 			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/"]);
 			expect(fixture.clients.flatMap((client) => client.requests)).toEqual(["bootstrap-0"]);
 			expect(fixture.page.bootstrapReady).toBe(true);

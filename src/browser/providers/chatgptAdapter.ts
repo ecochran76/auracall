@@ -91,6 +91,7 @@ import {
 } from "../service/ui.js";
 import type { BrowserLogger, ChromeClient } from "../types.js";
 import { CHATGPT_PROVIDER } from "./chatgpt.js";
+import { waitForOwnedChatgptBackendStartup } from "./chatgptBackendRequestAdmission.js";
 import {
 	buildChatgptArtifactControlExpectation,
 	reconcileChatgptPayloadDownloadControls,
@@ -4973,16 +4974,15 @@ async function waitForChatgptAuthenticatedStartup(
 ): Promise<void> {
 	// Document readiness and /api/auth/session can precede the requests that
 	// initialize the signed-in UI. Keep interception alive until that UI is ready.
-	const deadline = Date.now() + CHATGPT_CDP_LIST_TIMEOUT_MS;
-	while (options.abortSignal || Date.now() < deadline) {
-		options.abortSignal?.throwIfAborted();
+	const signal = options.abortSignal ?? AbortSignal.timeout(CHATGPT_CDP_LIST_TIMEOUT_MS);
+	await waitForOwnedChatgptBackendStartup(client, async () => {
 		recordBrowserScrapeCdpCall(options, "Runtime.evaluate");
 		const result = await withCdpCommandTimeout(
 			client,
 			{
 				timeoutMs: CHATGPT_CDP_LIST_TIMEOUT_MS,
 				timeoutMessage: "ChatGPT authenticated startup readiness probe timed out.",
-				abortSignal: options.abortSignal,
+				abortSignal: signal,
 			},
 			() =>
 				client.Runtime.evaluate({
@@ -5000,13 +5000,8 @@ async function waitForChatgptAuthenticatedStartup(
 					returnByValue: true,
 				}),
 		);
-		if (result.result?.value === true) return;
-		await waitForChatgptOperationWithAbort(
-			new Promise<void>((resolve) => setTimeout(resolve, 250)),
-			options.abortSignal,
-		);
-	}
-	throw new Error("ChatGPT authenticated page startup did not become ready.");
+		return result.result?.value === true;
+	}, signal);
 }
 
 function buildChatgptScopedSessionKey(host: string, port: number, preferredUrl: string): string {

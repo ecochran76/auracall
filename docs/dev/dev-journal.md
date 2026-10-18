@@ -55472,3 +55472,13 @@ identity completion cancels pending startup. Initial owned inventory navigation
 now waits for visible signed-in UI before closing interception; cancellation case
 also passes.194affected tests/9files, typecheck, lint and production build pass. Plan0411/P92
 OPEN, global remains7070532aa. Memory forbidden.
+
+## 2026-10-18 | Optimistic startup UI requires pending-admission drain
+
+5d8 installed gate still rejects0observations. Public-service fixture passes;
+metadata instrumentation proves flags reach adapter and readiness returns true
+before cleanup. Optimistic-UI async fixture red twice reproduces cancellation.
+Interceptor-owned startup waiter now combines ready UI with no pending admissions,
+drains under existing caller bound, and rechecks readiness; cancellation stays
+unchanged.195affected tests/9files, typecheck, lint and build pass; global707 and
+Plan0411/P92OPEN preserved. No further live trial until validation. Memory forbidden.

@@ -700,3 +700,26 @@ wait (standalone without a signal uses the existing5s list bound). No reload,
 login click, request-budget increase or cleanup-deadline increase. Four focused
 cases pass, including startup cancellation/normal desktop release.194affected
 tests/9files, typecheck, lint and production build pass before installed acceptance.
+
+## 2026-10-18 — Instrumented startup proves optimistic UI before admission drain
+
+5d8cde371 failed the strengthened acceptance gate: parent6cb31edc completed but
+0observed conversations/detail,6charged starts/peak6,15pre-dispatch cancellations,
+0warnings. Passive exact-page check again showed login UI. The public
+ChatgptService proof regression passes; adapter-only dispatch was not the missing
+condition. One same-scope metadata-instrumented trial then measured option shape
+and readiness booleans only: inventory=true,explicit admission=true,factory=false;
+blank starting location; readiness ran and returned true before cleanup. Its
+parent30c09e5f also observed0rows;3charged starts/peak3,17pre-dispatch cancellations,
+0warnings. All failures retained; no global runtime switch.
+
+A faithful optimistic-startup fixture now exposes the actual remaining boundary:
+a visible profile surface while an asynchronous request is still pending. Red
+twice through public ChatgptService/configured affinity/real interceptor/gate;
+cleanup cancels bootstrap. The interceptor now owns a startup waiter that checks
+UI readiness together with pending admission count, drains existing admissions
+without cancelling capacity waits, and rechecks after the drain. Caller abort and
+physical cleanup behavior remain unchanged. Five focused cases pass, including
+optimistic readiness, delayed readiness and cancellation.195affected tests/9files,
+typecheck, lint and production build pass. Diagnostic packet: live-startup-instrumented-5d8cde371-20261018 under
+~/.auracall/diagnostics/plan0411. No new provider request or timeout ceilings.

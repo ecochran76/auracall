@@ -11,7 +11,8 @@ Terminology for this runbook:
 ## Key behavior
 
 For a fresh request-governed Account Mirror tab, AuraCall keeps startup request
-interception active until the signed-in page surface is visible. A matching
+interception active until the signed-in page surface is visible and pending
+startup admissions have settled. A matching
 auth-session identity alone does not establish UI or conversation readiness.
 The caller can cancel this wait; a page still showing login must not be reported
 as a successfully observed empty account.

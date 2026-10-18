@@ -1,3 +1,13 @@
+## 2026-10-18 — Startup readiness must include pending request admissions
+
+A profile control can appear optimistically before asynchronous backend admission
+finishes. UI presence alone still allowed identity cleanup to cancel startup and
+leave a login surface. Couple readiness to the owning interceptor's pending set:
+check the UI, drain current admissions under caller cancellation, and recheck
+before releasing the client. Keep disposal's capacity-wait cancellation unchanged.
+The regression must drive the public service and an optimistic UI alongside
+pending asynchronous requests, not only the adapter or a delayed UI.
+
 ## 2026-10-18 — Keep initial inventory interception until signed-in UI readiness
 
 A valid /api/auth/session response can precede frontend initialization. Closing

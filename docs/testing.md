@@ -7,8 +7,8 @@
   self-contention seen in the installed live-follow acceptance trace. The fake
   transport rejects commands after successful close, also detecting backend
   callbacks that reuse a closed warning connection instead of their live Runtime.
-  Asynchronous startup events also prove initialization continues before initial
-  client cleanup and cancellation releases ownership. A completed live control
+  Asynchronous and optimistic-UI startup events through the public service also
+  prove pending admissions finish before initial client cleanup and cancellation releases ownership. A completed live control
   with zero observed conversations is not discovery acceptance.
 
 - Baseline drain/navigation/prompt/budget regression (provider-free):
