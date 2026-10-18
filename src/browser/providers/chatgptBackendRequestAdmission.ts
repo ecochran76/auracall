@@ -82,6 +82,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 							await client.Fetch.continueRequest({ requestId: event.requestId });
 						},
 						cancellation.signal,
+						client.Runtime,
 					);
 				} catch (error) {
 					if (!(error instanceof ProviderBackendRequestCancelledBeforeDispatchError))

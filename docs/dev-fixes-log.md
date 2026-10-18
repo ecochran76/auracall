@@ -1,3 +1,12 @@
+## 2026-10-18 — Probe warnings on the backend callback's live transport
+
+A short-lived warning probe can leave the governor remembering a Runtime whose
+socket is already closed. Later request callbacks must supply their own live
+Runtime to admission; borrowing the last probe context fails before dispatch and
+surfaces during observer cleanup. Keep transport doubles faithful to successful
+close: later commands must reject. A fake socket that keeps working after close
+hid this lifecycle defect in the initial ownership regression.
+
 ## 2026-10-18 — Preserve crash-interrupted evidence and corrupt lock originals
 
 A reboot can erase /tmp observers and leave zero-byte ownership records even

@@ -4,7 +4,9 @@
   gate against synthetic CDP. Bootstrap must finish while retaining interception;
   a visible warning must block before navigation, and successful completion must
   open a fresh final warning transport. This catches the second-connection
-  self-contention seen in the installed live-follow acceptance trace.
+  self-contention seen in the installed live-follow acceptance trace. The fake
+  transport rejects commands after successful close, also detecting backend
+  callbacks that reuse a closed warning connection instead of their live Runtime.
 
 - Baseline drain/navigation/prompt/budget regression (provider-free):
   `pnpm vitest run tests/http.responsesServer.test.ts tests/browser-service/ui.test.ts tests/browser/browserMutationControlPlane.test.ts tests/browser/desktopRuntimeProfiles.test.ts tests/browser/chatgptPromptAdapter.test.ts tests/browser/llmServicePromptStructure.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers=2`.

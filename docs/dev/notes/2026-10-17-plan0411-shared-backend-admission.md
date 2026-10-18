@@ -632,3 +632,25 @@ packet: live-post-crash-repaired-c4e27b2a9-20261018. No widened request/time bud
 prompt, seeded conversation ID or scheduler resume. Global package remains7070532aa;
 staged c4e27b2a9 source tests stay green. Automatic crash recovery for empty owner
 records remains a separate resilience gap; this packet is an explicit repair.
+
+## 2026-10-18 — Navigation scope repaired; stale warning context exposed
+
+Post-recovery installed parent acctmirror_completion_0ddd8bcf-a5d6-4b12-86d2-3532c094f95f
+passed startup and navigation, then failed Provider observer cleanup failed.
+0passes/no child. Full scoped startup coverage observed42backend request events,
+0responses,1document navigation; this is not42proven HTTP sends. Shared ledger:
+11reservations,11start transitions, all11settled effect none before dispatch,
+0charged starts/unknowns/new warnings. Owned cleanup issued42Fetch.failRequest
+commands. Do not infer an HTTP ceiling breach or throttle-free acceptance.
+Durable acceptance.json and phase trace in live-post-crash-repaired-c4e27b2a9-20261018
+under ~/.auracall/diagnostics/plan0411. Completion wake cancelled after consumption.
+
+Trace isolated25backend warning evaluations on a closed socket. Tight regression:
+make the existing SDK double reject send after successful close. Same configured
+affinity/adapter/interceptor test now fails twice with the exact observer-cleanup
+error and nested WebSocket CLOSED; no provider network. Initial mock had allowed
+commands after close, hiding this second lifecycle bug. Explicitly supplying the
+backend request's own client.Runtime to governor admission makes both clean and
+visible-warning cases pass in200ms; unchanged request limits/deadlines. Broader
+validation passes:190tests/8files, typecheck, targeted lint and production build.
+c4e27b2a9 remains staged, not globally activated.

@@ -61,11 +61,13 @@ vi.mock("chrome-remote-interface", () => ({
 			handler: undefined as ((event: unknown) => Promise<void>) | undefined,
 		};
 		fixture.clients.push(state);
+		let disconnected = false;
 		const client = {
 			send: async (
 				command: string,
 				parameters: { requestId?: string; expression?: string; url?: string },
 			) => {
+				if (disconnected) throw new Error("WebSocket is not open: readyState 3 (CLOSED)");
 				if (command === "Fetch.continueRequest" || command === "Fetch.failRequest") {
 					if (!parameters.requestId) throw new Error("Missing fixture request ID");
 					(command === "Fetch.continueRequest" ? state.requests : state.failures).push(
@@ -150,6 +152,7 @@ vi.mock("chrome-remote-interface", () => ({
 					if (fixture.page.failClose) throw new Error("fixture transport close outcome unknown");
 					if (fixture.page.stallClose) await new Promise<never>(() => undefined);
 				}
+				disconnected = true;
 			},
 			// biome-ignore lint/style/useNamingConvention: CDP protocol domain.
 			Runtime: {

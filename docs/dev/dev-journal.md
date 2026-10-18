@@ -55441,3 +55441,14 @@ commands. Durable originals/receipts: post-crash-empty-locks-20261018 under
 ~/.auracall/diagnostics/plan0411. Repeat runner37662 uses durable
 live-post-crash-repaired-c4e27b2a9-20261018 packet. Acceptance still OPEN;
 no global package switch or provider-throttle claim. Memory disposition forbidden.
+
+## 2026-10-18 | Lock recovery reaches navigation; live request warning context repair
+
+Installed trial now reaches navigation but fails observer cleanup.42observed
+request events/0responses;11shared reservations all cancelled before dispatch,
+0charged starts/new warnings. Native phase trace points to closed warning Runtime
+reused by backend callbacks. Faithful SDK-double close semantics reproduce exact
+failure twice; supplying callback client.Runtime to admission passes both cases.
+190affected tests/8files, typecheck, targeted lint and production build pass.
+No new live retry or global activation yet.
+Wider Plan0411/P92 remains OPEN. Memory disposition forbidden.
