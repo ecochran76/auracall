@@ -1060,3 +1060,29 @@ request-category spacing) and coverage of uninstrumented clients before a safe
 live retry can establish the missing-chat result. Source repair evidence is not
 provider-quota proof. Memory disposition forbidden(developer requires explicit
 user memory-update request; none was given).
+
+
+## 2026-10-18 — Retain throttle headers and schedule user-requested diagnosis
+
+User correctly identified missing header evidence. The original failed packet
+remains unchanged. A private unlaunched successor adds immediate flushed JSONL
+and per-response retention of Retry-After,Date,Age,RateLimit/RateLimit-*,
+X-RateLimit-*/X-Rate-Limit-* on both actual early/late Network.responseReceived
+paths before429stop. Cookies/authorization/body/arbitrary headers excluded.
+Offline actual-callback replay is red(undefined vs Retry-After300) before repair,
+then green for both paths,200/429,secret exclusion and append-before-stop;
+node syntax check passes. No provider/browser request or warning release.
+CDP responseReceivedExtraInfo/wire-only coverage remains explicitly incomplete.
+
+User requested a one-hour wake and goal. New native goal created without an
+invented resource budget. Exact same-thread Wake intent
+wake_intent_d6be6180eb0949878211dd2cc85d2552 initially pending_time, then recovers
+qualified bounded_utc/not_due with original relative3600s delay; due approximately
+16:39:41UTC/11:39:41Central. Persistent codex-wake-auracall monitor is ready/fresh
+15:41:51UTC. Registration is not delivery proof. No duplicate wake or shared
+Codex restart. Goal work waits for the requested delay; checkpoint:
+~/.auracall/diagnostics/plan0411/resume-live-diagnosis-20261018/checkpoint.md.
+It binds source/runtime/warning/frozen reservation, header fixture/limitations,
+replay manifest and bounded resume action. Existing warning history remains;
+elapsed time alone is not recovery proof. Main scheduler stays paused.
+Memory disposition forbidden(no explicit memory-update request).
