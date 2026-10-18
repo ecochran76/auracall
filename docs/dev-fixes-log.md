@@ -25721,3 +25721,12 @@ from post-provider cleanup using completed wrapper calls, task terminal evidence
 and fresh exact-process absence. Do not rerun successful provider work solely
 because terminal observation lagged. Canonical acceptance retains raw flags and
 independent qualification, with595file parity and2newverified artifacts.
+
+
+### 2026-10-18 — Avoid repeated custody-read lock starvation
+
+Sustained queued backend admissions can starve individual file tab-registry list
+waiters even when each lock hold is short. Share only unfinished identical list
+reads by registry root/query; discard on settlement and clone per caller. Keep
+write locks and fresh post-write custody checks. Private sustained32/64-reader
+replay is red before repair; fixed64-reader replay and29affected tests pass.

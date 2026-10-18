@@ -142,3 +142,9 @@ Leased browser endpoints retain service-qualified browser process identity and m
 Developer-app response collection uses the resolved browser launch policy deadline. Fresh-root Chat/current app-test posture does not replace the selected browser.timeoutMs. A timeout after Send preserves effect evidence and forbids automatic resubmission.
 
 **Lease retirement audit**: durable history of AuraCall expiry-close intent and outcome, distinct from the mutable final lease snapshot. Acting process identity is distinct from browser process identity; already-missing is an observation, not proof of an AuraCall close.
+
+
+Concurrent identical file tab-registry list observations may share an unfinished
+read by root/query. Results are cloned per caller and discarded on settlement;
+this supplies no cached custody authority. Writes retain exclusive file locking
+and atomic persistence; subsequent observations see committed custody changes.

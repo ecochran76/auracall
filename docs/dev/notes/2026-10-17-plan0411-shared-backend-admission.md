@@ -975,3 +975,48 @@ message with one navigation, startup before payload, and no cache fallback.
 150affected tests/8files PASS (58.54s wall), typecheck, targeted lint, full build and
 diff hygiene PASS. Tagged temporary context diagnostics are removed. Separate
 native cancellation and wrong-route/deadline contracts stay green.
+
+
+## 2026-10-18 — Startup fix live replay reaches a local registry timeout
+
+Source a0f3a26eb is staged with584 compiled files matching the build and runtime
+contract PASS. Fresh native/browser/window preflight14:55:25UTC passes; main
+scheduler stays paused/idle with0warnings. Normal unscoped6pass/10minute replay
+fbc5b92e-4e55-4ec7-be49-15d5ba37ae3f fails after23.17s before a pass commits:
+local tab lease registry lock timeout. Shared meter30charged,peak30/min,0uncertain,
+0warnings; no context-capture acceptance. Full page request counts include paused
+requests and are not charged sends. Exact private packet:
+live-context-startup-a0f3a26eb-20261018. Consumed Wake
+c045c56d4c704a3aad6eb3974190c605 cancelled; no unattended delivery claim.
+
+The lock is absent after terminal. Private copied-registry probes64 concurrent
+reads(1.33s) and64 writes(2.22s) both pass; these do not reproduce the live timeout
+and do not qualify a lock fix. One unchanged bounded live replay adds only
+registry operation/lock-hold timings to identify the contending operation.
+Private live-registry-trace-a0f3a26eb-20261018/checkpoint.json binds source/budget/
+next action; runner94426,child94439,meter94438 began15:01:49UTC. Result pending.
+No custody/warning/limit reset or global activation. Plan0411/P92 remains OPEN.
+
+
+## 2026-10-18 — Sustained custody reads can starve the tab-registry lock
+
+Private copies of the972679-byte registry reproduce the exact5s lock timeout:
+64 readers repeatedly listing at100ms intervals fail10 then4 callers in11.2-11.4s;
+32 readers also fail1. Single bursts of64 reads/writes pass. Targeted native trace
+shows queued backend admissions repeatedly asserting lease custody; observed lock
+holds peak253ms, while several list waiters take seconds. No abandoned lock is
+required. Public regression catches duplicate unfinished identical snapshot reads
+(red43ms), then verifies fresh post-write custody and caller result isolation.
+
+File registry list now shares only unfinished identical reads across instances
+for the same root/query; each caller receives a clone. Settled observations are
+removed immediately, writes retain exclusive locking/atomic persistence, and no
+custody TTL or timeout changes. Original64-reader sustained replay passes with0
+failures in10.11s.29affected tests/3files, typecheck, targeted lint and full build
+PASS. Evidence: private tab-registry-contention-20261018. No DEBUG logs added.
+
+Instrumented native parent eedfa8ed-f321-4744-a71b-70d3fe996901 ends84.65s with
+owned admission failure caused by provider-interaction ledger lock timeouts,
+not a tab-registry timeout.50charged permits(49started,1proven no-send),peak30,
+0uncertain/0warnings. Capturing original candidate and quiet repeat remain OPEN;
+this source fix does not qualify broader acceptance or change global707 runtime.
