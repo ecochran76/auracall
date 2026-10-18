@@ -54,6 +54,9 @@ const fixture = vi.hoisted(() => ({
 		loadingFailedHandler?: (event: unknown) => void;
 		continuationError?: string;
 		onContinueSent?: () => void;
+		onDisable?: () => void;
+		fetchDisabled?: boolean;
+		disableError?: string;
 	}>,
 }));
 vi.mock("chrome-remote-interface", () => ({
@@ -68,6 +71,9 @@ vi.mock("chrome-remote-interface", () => ({
 			loadingFailedHandler: undefined as ((event: unknown) => void) | undefined,
 			continuationError: undefined as string | undefined,
 			onContinueSent: undefined as (() => void) | undefined,
+			onDisable: undefined as (() => void) | undefined,
+			fetchDisabled: false,
+			disableError: undefined as string | undefined,
 			handler: undefined as ((event: unknown) => Promise<void>) | undefined,
 		};
 		fixture.clients.push(state);
@@ -78,6 +84,13 @@ vi.mock("chrome-remote-interface", () => ({
 				parameters: { requestId?: string; expression?: string; url?: string },
 			) => {
 				if (disconnected) throw new Error("WebSocket is not open: readyState 3 (CLOSED)");
+				if (command === "Fetch.disable") {
+					state.fetchDisabled = true;
+					state.onDisable?.();
+					if (state.disableError) throw new Error(state.disableError);
+				}
+				if (command === "Fetch.failRequest" && state.fetchDisabled)
+					throw new Error("Fetch domain is not enabled");
 				if (command === "Fetch.continueRequest" || command === "Fetch.failRequest") {
 					if (!parameters.requestId) throw new Error("Missing fixture request ID");
 					(command === "Fetch.continueRequest" ? state.requests : state.failures).push(
@@ -2354,6 +2367,52 @@ test.each([
 			phase === "before-wire" ? "none" : phase === "after-wire" ? "outcome-unknown" : "settled",
 		);
 	} finally {
+		await client?.close().catch(() => undefined);
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
+
+test.each(["succeeded", "failed"])("late paused event during owned Fetch shutdown preserves %s outcome", async (outcome) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-shutdown-event-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	const gate = new DesktopControlGate("shutdown-event");
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect) => gate.withAutomation("generation", effect),
+		hold: async () => {
+			const held = await gate.holdAutomation("generation");
+			return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+		},
+	}));
+	let client: Awaited<ReturnType<typeof CDP>> | undefined;
+	let late: Promise<void> | undefined;
+	try {
+		client = await CDP({ host: "127.0.0.1", port: 45190 });
+		const factory = createConfiguredProviderTrafficAuthorityFactory({
+			userConfig: { auracallProfile: "shutdown-event", services: { chatgpt: { identity: { email: "operator@example.test" } } } } as never,
+			provider: "chatgpt", managedBrowserProfile: "/fixture/shutdown-event",
+			mutationAudit: async () => undefined, baseOptions: {}, backendRequestLimit: 1,
+		});
+		await annotateClientMutationContext(client,
+			{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
+			"provider:chatgpt", "shutdown-target");
+		const state = fixture.clients[0];
+		if (outcome === "failed") state.disableError = "fixture disable failed";
+		state.onDisable = () => { late = state.handler?.({
+			requestId: "late-shutdown-event", request: { url: "https://chatgpt.com/backend-api/conversations" },
+		}); };
+		if (outcome === "failed") await expect(client.close()).rejects.toThrow();
+		else await expect(client.close()).resolves.toBeUndefined();
+		await late;
+		expect(state.requests).toEqual([]);
+		expect(state.failures).toEqual([]);
+		if (outcome === "succeeded") expect(state.handler).toBeUndefined();
+		client = undefined;
+	} finally {
+		await late;
 		await client?.close().catch(() => undefined);
 		setCdpCommandAdmissionResolver(undefined);
 		setAuracallHomeDirOverrideForTest(null);

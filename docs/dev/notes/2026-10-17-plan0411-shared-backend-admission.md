@@ -788,3 +788,29 @@ Focused affected validation:123 tests across5 files PASS (47.88s), typecheck,
 targeted lint and full production build PASS. Repeated repaired64-waiter replay
 again completes in1.50s with3 reads,0 collisions/timeouts/effects. These are local
 storage/authority results, not installed discovery acceptance.
+
+## 2026-10-18 — Late paused events race interception shutdown
+
+Staged9cec53e7d full584-file parity and native preflight pass (browser38213,
+CDP45015, verified window, loopback19096, main paused/idle,0warnings). Bounded
+unscoped parent020e9202-6d6f-45d8-b445-8cf029b204e7 fails after163755ms:
+Provider observer cleanup failed.90 charged starts,peak30/min,5 proven no-send,
+0uncertain backend records,0new warnings;90 observed responses and3 wrapped
+context returns do not establish new-chat capture. Full exact-page Network
+coverage;122 requestWillBeSent events include requests not dispatched, so their
+peak57 is not a wire-rate claim. Parent0passes, no child; metadata remains
+uncommitted. Raw packet live-ledger-sharing-9cec53e7d-20261018 retained privately.
+No provider-ledger timeout recurs. Global runtime remains7070532aa.
+
+Trace shows own Fetch.disable succeeds at13:24:59.398, then two late closing
+handlers send failRequest at13:24:59.520; Chrome rejects with Fetch domain is not
+enabled. Public client-close fixture reproduces exact observer-cleanup AggregateError
+in48ms by emitting one queued paused event during disable. A shutdown barrier now
+makes late callbacks await the same disable outcome instead of scheduling commands
+behind it. Successful disable needs no command against its removed interception;
+failed disable still fails dispose/authority settlement. Existing pending dispatches
+are drained before shutdown, and warning observation remains until cleanup finishes.
+Regression green44ms; failed-disable companion protects conservative cleanup.
+
+Shutdown repair validation:125 affected tests/5files, typecheck, targeted lint and
+full production build PASS. No new provider trial is graded from these source checks.

@@ -54,6 +54,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	const requests = new Map<string, Promise<void>>();
 	const pending = new Set<Promise<void>>();
 	let closing = false;
+	let interceptionShutdown: Promise<unknown> | undefined;
 	const cancellation = new AbortController();
 	const failures: unknown[] = [];
 	const nativeRequests = new Map<string, Set<AbortController>>();
@@ -92,6 +93,10 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 		}
 	};
 	const handler = (event: Protocol.Fetch.RequestPausedEvent): Promise<void> => {
+		// Events already queued by Chrome may arrive while disable is admitted.
+		// Its outcome owns those events; never enqueue commands behind domain shutdown.
+		// A failed disable is still propagated by dispose, not hidden by this barrier.
+		if (interceptionShutdown) return interceptionShutdown.then(() => undefined, () => undefined);
 		const existing = requests.get(event.requestId);
 		if (existing) return existing;
 		const nativeCancellation = new AbortController();
@@ -182,7 +187,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 		startupWaiters.delete(client);
 		cancellation.abort();
 		while (pending.size) await Promise.all(pending);
-		await withCdpCommandTimeout(
+		interceptionShutdown = withCdpCommandTimeout(
 			client,
 			{
 				timeoutMs: 3_000,
@@ -190,6 +195,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 			},
 			() => client.Fetch.disable(),
 		);
+		await interceptionShutdown;
 		while (pending.size) await Promise.all(pending);
 		if (typeof subscription === "function") subscription();
 		else {

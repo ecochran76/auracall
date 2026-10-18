@@ -55514,3 +55514,12 @@ is green, replay reduced to3 reads/zero timeouts. Completed snapshots are never
 cached; admission remains atomic. Validation/staging follows; discovery and quiet
 repeat remain unaccepted, global activation still7070532aa. Consumed df6 Wake
 cancelled to avoid duplicate continuation.
+
+## 2026-10-18 — Installed ledger fix holds; shutdown event race isolated
+
+9cec53e7d live run fails after164s on observer cleanup, with90charged/peak30,
+0ledger timeouts,0uncertain backend records/0new warnings. Context returned but
+new-chat metadata not committed; no quiet repeat or activation. Single late event
+during Fetch.disable reproduces the exact cleanup failure. Added an outcome barrier
+for queued events during domain shutdown; genuine disable failure remains fatal.
+Validation and another bounded staged acceptance follow. Raw failed packet retained.

@@ -1,3 +1,11 @@
+## 2026-10-18 — Fence paused events during Fetch shutdown
+
+A queued native Fetch.requestPaused event can arrive while its owning Fetch.disable
+is admitted. Scheduling failRequest behind the successful disable produces a false
+cleanup failure. Once shutdown starts, late events share its outcome; existing
+requests drain first. Do not suppress a failed disable or stop the warning observer
+early. Reproduce at public client close with a late native-style event.
+
 ## 2026-10-18 — Coalesce unfinished capacity-wait advisory reads
 
 When many paused backend requests share one owned authority, independent reads
