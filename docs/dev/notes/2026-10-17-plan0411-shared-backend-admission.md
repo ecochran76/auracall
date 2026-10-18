@@ -1180,3 +1180,10 @@ Plan0411/P92 remainsOPEN. Next source boundary is lifetime/accounting of retaine
 browser pages before another live acceptance attempt. Unknown-outcome pages must
 remain preserved; static lease records alone do not qualify closure or adoption.
 Memory disposition forbidden(no explicit user memory-update request).
+
+
+### 2026-10-18 — Provider-free idle document repair
+
+Pristine 9d4670b4c source reproduced ten post-finish backend request attempts in isolated network-blocked native Chrome. The candidate parks the exact settled owned crawler and requires a top-level blank document commit before idle custody; the same regression observes zero post-finish attempts. The blank-document fixture qualifies document lifetime, not authenticated provider navigation. Strict provider-origin prototypes timed out during setup and are excluded.
+
+Verification: 131 tests pass across configuredLiveFollowAffinity, liveFollowTabCoordinator, backendRequestAdmission and the opt-in native idle fixture; typecheck, targeted Biome lint, production build and diff check pass. Private raw receipts remain in user-scoped diagnostics/plan0411/idle-page-lifetime-20261018. No provider retry, warning release, old-page adoption/cleanup or runtime activation occurred. Existing uncertain pages, browser-wide accounting, actual missing-chat capture, quiet repeat and concurrent acceptance remain open.

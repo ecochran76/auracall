@@ -25750,3 +25750,8 @@ state before handling that rejection and again after the await. Public red/green
 regression covers both positions;86completion tests pass. A separate passive
 16-page observation proves retained-page background transfers can occur while
 charged ledger starts stayzero; the owned-request ceiling is not browserwide.
+
+
+### 2026-10-18 — Retire the settled crawler document before idle
+
+Releasing an interceptor leaves page timers alive. An isolated real-Chrome regression against pristine source observed ten further backend request attempts after finish. Park the exact settled owned crawler on about:blank and await a top-level document commit before recording idle custody. The candidate native regression observes zero further attempts. Preserve unknown outcomes, foreign routes and human/identity warning surfaces. Existing unmanaged/uncertain pages and browser-wide accounting remain outside this repair.

@@ -1,4 +1,9 @@
 import {
+	hasCdpCommandAdmission,
+	holdCdpCommandAdmission,
+	withCdpCommandTimeout,
+} from "../../packages/browser-service/src/guardedCdp.js";
+import {
 	closeRemoteChromeTarget,
 	connectToChromeTarget,
 	listChromeTargets,
@@ -369,6 +374,86 @@ export async function createConfiguredLiveFollowAffinity(input: {
 		}
 		crawlerClaim = recorded.value.claim;
 	};
+	const parkSettledCrawler = async () => {
+		await assertOwnedLease();
+		// Cleanup owns its own bounded deadline, even after the traversal was cancelled.
+		const signal = AbortSignal.timeout(3_000);
+		const client = await connectToChromeTarget({
+			host: crawler.endpoint.host,
+			port: crawler.endpoint.port,
+			target: crawler.lease.targetId,
+			timeoutMs: 3_000,
+			abortSignal: signal,
+		});
+		let hold: Awaited<ReturnType<typeof holdCdpCommandAdmission>> | undefined;
+		try {
+			if (hasCdpCommandAdmission(client))
+				hold = await holdCdpCommandAdmission(client, { abortSignal: signal });
+			await assertOwnedLease();
+			await withCdpCommandTimeout(
+				client,
+				{
+					timeoutMs: 3_000,
+					abortSignal: signal,
+					timeoutMessage: "Owned crawler parking timed out.",
+				},
+				async () => {
+					await client.Runtime.enable();
+					const current = (
+						await client.Runtime.evaluate({ expression: "location.href", returnByValue: true })
+					).result.value;
+					if (
+						current !== "about:blank" &&
+						(typeof current !== "string" ||
+							!["https://chatgpt.com", "https://chat.openai.com"].includes(new URL(current).origin))
+					)
+						throw new Error("Owned crawler route changed before parking; preserving its target.");
+					await client.Page.enable();
+					const committed = new Promise<void>((resolve) => {
+						client.Page.frameNavigated((event) => {
+							if (!event.frame.parentId && event.frame.url === "about:blank") resolve();
+						});
+					});
+					await client.Page.navigate({ url: "about:blank" });
+					signal.throwIfAborted();
+					let abortCommit: (() => void) | undefined;
+					try {
+						await Promise.race([
+							committed,
+							new Promise<never>((_resolve, reject) => {
+								abortCommit = () => reject(signal.reason);
+								signal.addEventListener("abort", abortCommit, { once: true });
+							}),
+						]);
+					} finally {
+						if (abortCommit) signal.removeEventListener("abort", abortCommit);
+					}
+					for (;;) {
+						signal.throwIfAborted();
+						const observed = await client.Runtime.evaluate({
+							expression: "location.href",
+							returnByValue: true,
+						});
+						if (observed.result.value === "about:blank") return;
+						await new Promise((resolve) => setTimeout(resolve, 20));
+					}
+				},
+			);
+		} finally {
+			try {
+				await hold?.close();
+			} finally {
+				await withCdpCommandTimeout(
+					client,
+					{
+						timeoutMs: 3_000,
+						timeoutMessage: "Owned crawler parking transport cleanup timed out.",
+					},
+					() => client.close(),
+				);
+			}
+		}
+	};
 	let finished = false;
 	let warningRecorded = false;
 	const finish = async (
@@ -382,12 +467,20 @@ export async function createConfiguredLiveFollowAffinity(input: {
 			(await backendRequests?.reconcileEffectState(effectState, failure)) ?? effectState;
 		if (outcome === "succeeded" && effectState === "outcome-unknown")
 			throw new Error("Live-follow backend request outcome remains unknown.");
+		const protection = classifyLiveFollowWarning(failure);
+		const park =
+			effectState === "settled" && (!protection || protection.classification === "rate-limit");
+		if (park) {
+			await parkSettledCrawler();
+			await recordTargetNavigation();
+		}
 		await interactionGovernor.close({ outcome, effectState, reason });
 		const used = await runtime.registry?.recordMeaningfulUse({
 			claim: crawlerClaim,
 			now: (input.now ?? (() => new Date()))().toISOString(),
 			idleTtlMs: 15 * 60_000,
 			effectState,
+			...(park ? { targetFingerprint: "about:blank" } : {}),
 		});
 		if (!used?.ok) {
 			throw new Error(`Live-follow crawler heartbeat failed: ${used?.conflict.kind ?? "missing"}.`);

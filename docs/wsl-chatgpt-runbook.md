@@ -310,3 +310,6 @@ provider cooldown. The warning/cooldown remains separate from the operation's
 paused state. The shared charged-request count currently covers owned admissions;
 retained browser pages can generate background traffic outside that count.
 Use passive network evidence before interpreting a zero counter as account idle.
+
+
+Settled read-only owned live-follow crawlers now park on about:blank before becoming idle; reuse still requires fresh process/target custody verification. Do not apply this cleanup to existing uncertain pages or human-verification/identity stops. Source qualification is not installed activation; retain current warnings and keep the global scheduler paused pending bounded live acceptance.

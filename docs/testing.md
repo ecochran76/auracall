@@ -3711,3 +3711,6 @@ warning, wrong-route and after-send uncertainty cases remain required companions
   `pnpm vitest run tests/accountMirror/completionService.test.ts -t 'operator pause survives a late provider cooldown'`.
   Both rejection-after-pause and pause-during-registry-refresh must retain paused
   state,avoid a retry deadline and perform no second refresh.
+
+
+Provider-free native idle-page regression: `AURACALL_NATIVE_FIXTURE_TEST=1 pnpm vitest run tests/browser/liveFollowIdleTraffic.native.test.ts`. Requires /usr/bin/google-chrome; launches only an isolated temporary headless browser with external access blocked. An injected polling timer supplies the positive control. The real affinity finish path must stop subsequent request attempts and record idle/settled/blank custody. This proves document teardown, not authenticated provider acceptance.

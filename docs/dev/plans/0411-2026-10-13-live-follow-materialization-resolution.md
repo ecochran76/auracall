@@ -1244,3 +1244,19 @@ is not browserwide; missing capture/quiet/concurrent acceptance remainOPEN.
 Details/private evidence:2026-10-17-plan0411-shared-backend-admission.md.
 Next repair: retained-page request lifetime/accounting; main707schedulerpaused,
 PR335draft. Memory forbidden(no explicit request).
+
+## 2026-10-18 | Bound settled crawler document lifetime to ownership
+
+User authorized repairing retained-page traffic. One opt-in provider-free native
+fixture exercises real configured affinity with isolated Chrome and outbound
+blocked. After successful finish it emits10additional backend request attempts
+in250ms; positive control first observes active polling. Same managed target,
+registry/ledger and actual final-warning/finish path, no signed-in browser access.
+Next bounded repair parks only exact owned settled crawler documents onabout:blank
+before idle/release, confirms the top document, and records blank fingerprint so
+existing unloaded-target adoption remains usable. Unknown outcomes,foreign tabs
+and target identity changes remain fenced/preserved. No prompt/global scheduler/
+warning release or cleanup of the16historical pages is inferred. Qualification:
+public control/error fixtures plus isolated native before/after and same-tab reuse.
+Account-wide coverage of other/manual/unknown pages remains a separate limitation;
+this slice stops automation-owned idle documents from being new traffic sources.

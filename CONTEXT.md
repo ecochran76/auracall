@@ -156,3 +156,6 @@ A charged owned-request meter covers admitted operation traffic; retained-page
 background activity is a separate coverage boundary and may continue after the
 operation releases its request interceptor. Zero charged starts is not browser
 or account network-idle proof.
+
+
+Settled read-only live-follow crawler pages are parked on about:blank before custody becomes idle. Parking requires fresh exact ownership, an allowed current route, a top-level blank document commit and a blank URL readback. Outcome-unknown and human/identity-protected pages retain preservation semantics. This bounds newly owned page lifetime; it does not meter preexisting or manually owned pages.

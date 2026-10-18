@@ -74,6 +74,7 @@ describe("live-follow final warning transport", () => {
 		};
 		const registry = {
 			list: vi.fn(async () => []),
+			recordTargetAction: vi.fn(async () => ({ ok: true, value: { claim } })),
 			recordMeaningfulUse: vi.fn(async () => ({ ok: true, value: { claim } })),
 			idle: vi.fn(async () => ({ ok: true })),
 		};
@@ -82,7 +83,10 @@ describe("live-follow final warning transport", () => {
 		vi.spyOn(guardModule, "recordChatgptRateLimitDetection").mockResolvedValue(undefined as never);
 		vi.spyOn(lifecycle, "listChromeTargets").mockResolvedValue([]);
 		const close = vi.fn(async () => undefined);
-		const evaluate = vi.fn(async () => {
+		let currentUrl = "https://chatgpt.com/";
+		let onFrame: ((event: unknown) => void) | undefined;
+		const evaluate = vi.fn(async (options?: { expression?: string }) => {
+			if (options?.expression === "location.href") return { result: { value: currentUrl } };
 			if (outcome === "probe-failure") throw new Error("fresh probe failed");
 			if (outcome === "probe-stall") return new Promise<never>(() => {});
 			return { result: { value: outcome === "late-warning" ? "Too many requests" : null } };
@@ -90,7 +94,20 @@ describe("live-follow final warning transport", () => {
 		const connect = vi
 			.spyOn(lifecycle, "connectToChromeTarget")
 			// biome-ignore lint/style/useNamingConvention: CDP names its protocol domain Runtime.
-			.mockResolvedValue({ Runtime: { evaluate }, close } as never);
+			.mockResolvedValue({
+				Runtime: { evaluate, enable: async () => {} },
+				Page: {
+					enable: async () => {},
+					frameNavigated: (handler: (event: unknown) => void) => {
+						onFrame = handler;
+					},
+					navigate: async ({ url }: { url: string }) => {
+						currentUrl = url;
+						onFrame?.({ frame: { id: "frame", url } });
+					},
+				},
+				close,
+			} as never);
 		vi.spyOn(runtimeModule, "createBrowserTabConcurrencyRuntime").mockReturnValue({
 			registry,
 			ledger: { recordProviderWarning: warningRecord },
@@ -146,8 +163,16 @@ describe("live-follow final warning transport", () => {
 			expect(connect).toHaveBeenCalledWith(
 				expect.objectContaining({ target: "target-1", port: 37749 }),
 			);
-			expect(evaluate).toHaveBeenCalledOnce();
-			expect(close).toHaveBeenCalledOnce();
+			expect(
+				evaluate.mock.calls.filter(([options]) => options?.expression !== "location.href"),
+			).toHaveLength(1);
+			expect(close).toHaveBeenCalledTimes(outcome === "clean" ? 2 : 1);
+			if (outcome === "clean") {
+				expect(currentUrl).toBe("about:blank");
+				expect(registry.recordMeaningfulUse).toHaveBeenLastCalledWith(
+					expect.objectContaining({ targetFingerprint: "about:blank" }),
+				);
+			}
 		} finally {
 			vi.restoreAllMocks();
 		}

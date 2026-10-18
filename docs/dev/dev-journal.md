@@ -55780,3 +55780,10 @@ is not browserwide; missing capture/quiet/concurrent acceptance remainOPEN.
 Details/private evidence:2026-10-17-plan0411-shared-backend-admission.md.
 Next repair: retained-page request lifetime/accounting; main707schedulerpaused,
 PR335draft. Memory forbidden(no explicit request).
+
+
+### 2026-10-18 — Plan0411 idle document lifetime repair
+
+Provider-free diagnosis reproduced continued polling after the original affinity finish path: ten post-finish request attempts in isolated network-blocked Chrome. Candidate parking confirms the blank top-level document commit before idle, records cleanup navigation and the blank fingerprint, and passes the same native regression with zero further attempts. Strict provider-origin fixture prototypes timed out during setup and are nonqualifying; the retained regression tests owned document lifetime on about:blank. Evidence: user-scoped diagnostics/plan0411/idle-page-lifetime-20261018. No signed-in provider retry, warning release, existing-page cleanup or runtime activation. Missing IM Receipts capture, quiet repeat and concurrent acceptance remain open.
+
+Verification completed: 131/131 affected tests, typecheck, targeted lint, production build and diff check pass.

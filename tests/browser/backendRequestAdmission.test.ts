@@ -119,6 +119,11 @@ vi.mock("chrome-remote-interface", () => ({
 							status: 429,
 						},
 					});
+				if (command === "Page.navigate" && fixture.page && parameters.url === "about:blank") {
+					fixture.page.url = "about:blank";
+					state.frameNavigatedHandler?.({ frame: { id: "fixture-frame", url: "about:blank" } });
+					return { frameId: "fixture-frame" };
+				}
 				if (command === "Page.navigate" && fixture.page) {
 					if (!state.handler)
 						throw new Error("Provider navigation started before request interception");
@@ -172,10 +177,13 @@ vi.mock("chrome-remote-interface", () => ({
 						}
 						if (fixture.page.failRead) throw new Error("fixture public read failed");
 						value = {
-							messages: fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady
-								? [] : [{ role: "assistant", text: "Known fixture answer" }],
+							messages:
+								fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady
+									? []
+									: [{ role: "assistant", text: "Known fixture answer" }],
 							nextOffset: null,
-							totalMessages: fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady ? 0 : 1,
+							totalMessages:
+								fixture.page.requireBootstrapForMessages && !fixture.page.bootstrapReady ? 0 : 1,
 						};
 					}
 					return { result: { value } };
@@ -200,7 +208,9 @@ vi.mock("chrome-remote-interface", () => ({
 			Page: {
 				frameNavigated: (handler: (event: unknown) => void) => {
 					state.frameNavigatedHandler = handler;
-					return () => { state.frameNavigatedHandler = undefined; };
+					return () => {
+						state.frameNavigatedHandler = undefined;
+					};
 				},
 				enable: () => client.send("Page.enable", {}),
 				navigate: (input: { url: string }) => client.send("Page.navigate", input),
@@ -2136,7 +2146,10 @@ test.each([
 		closeAttempts: 0,
 		visibleWarning: warning,
 		asyncBootstrap:
-			mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel" || mode === "context-startup",
+			mode === "async-startup" ||
+			mode === "optimistic-startup" ||
+			mode === "startup-cancel" ||
+			mode === "context-startup",
 		bootstrapReady: mode === "optimistic-startup",
 		requireBootstrapForMessages: mode === "context-startup",
 	};
@@ -2217,15 +2230,22 @@ test.each([
 		});
 		if (!affinity) throw new Error("Missing affinity");
 		registry.list.mockResolvedValue([lease]);
-		if (mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel" || mode === "context-startup") {
+		if (
+			mode === "async-startup" ||
+			mode === "optimistic-startup" ||
+			mode === "startup-cancel" ||
+			mode === "context-startup"
+		) {
 			let release!: () => void;
 			const ready = new Promise<void>((resolve) => {
 				release = resolve;
 			});
 			fixture.page.onStartupProbe =
-				mode === "context-startup" ? undefined : mode === "startup-cancel"
-					? () => controller.abort(new Error("fixture startup cancelled"))
-					: release;
+				mode === "context-startup"
+					? undefined
+					: mode === "startup-cancel"
+						? () => controller.abort(new Error("fixture startup cancelled"))
+						: release;
 			let admissionIndex = 0;
 			const originalAdmit = affinity.providerTrafficGovernor.admitBackendRequest;
 			if (!originalAdmit) throw new Error("Missing request admission");
@@ -2237,18 +2257,19 @@ test.each([
 			) => {
 				if (mode === "context-startup" && admissionIndex === 0)
 					queuedStartupTimer = setTimeout(release, 9000);
-				if (mode !== "context-startup" || admissionIndex++ === 0) await new Promise<void>((resolve, reject) => {
-					if (signal?.aborted) {
-						reject(new ProviderBackendRequestCancelledBeforeDispatchError());
-						return;
-					}
-					const aborted = () => reject(new ProviderBackendRequestCancelledBeforeDispatchError());
-					signal?.addEventListener("abort", aborted, { once: true });
-					void ready.then(() => {
-						signal?.removeEventListener("abort", aborted);
-						resolve();
+				if (mode !== "context-startup" || admissionIndex++ === 0)
+					await new Promise<void>((resolve, reject) => {
+						if (signal?.aborted) {
+							reject(new ProviderBackendRequestCancelledBeforeDispatchError());
+							return;
+						}
+						const aborted = () => reject(new ProviderBackendRequestCancelledBeforeDispatchError());
+						signal?.addEventListener("abort", aborted, { once: true });
+						void ready.then(() => {
+							signal?.removeEventListener("abort", aborted);
+							resolve();
+						});
 					});
-				});
 				await originalAdmit(key, effect, signal, context);
 			};
 		}
@@ -2261,12 +2282,21 @@ test.each([
 			interactionGovernor: affinity.interactionGovernor,
 			providerTrafficGovernor: affinity.providerTrafficGovernor,
 			accountMirrorInventory:
-				mode === "async-startup" || mode === "optimistic-startup" || mode === "startup-cancel" || mode === "context-startup",
+				mode === "async-startup" ||
+				mode === "optimistic-startup" ||
+				mode === "startup-cancel" ||
+				mode === "context-startup",
 			abortSignal: controller.signal,
 		};
-		const identity = mode === "context-startup"
-			? service.getConversationContext("fixture-conversation", { refresh: true, retryAttempts: 0, allowCacheFallback: false, listOptions: { ...listOptions, accountMirrorSingleConversationVisit: true } })
-			: service.getProviderSessionProof(listOptions);
+		const identity =
+			mode === "context-startup"
+				? service.getConversationContext("fixture-conversation", {
+						refresh: true,
+						retryAttempts: 0,
+						allowCacheFallback: false,
+						listOptions: { ...listOptions, accountMirrorSingleConversationVisit: true },
+					})
+				: service.getProviderSessionProof(listOptions);
 		if (warning) {
 			await expect(identity).rejects.toThrow("Too many requests");
 			expect(fixture.page.navigations).toEqual([]);
@@ -2277,10 +2307,15 @@ test.each([
 			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([]);
 			await affinity.completeFailure(new Error("fixture startup cancelled"));
 		} else if (mode === "context-startup") {
-			await expect(identity).resolves.toMatchObject({ messages: [{ role: "assistant", text: "Known fixture answer" }] });
+			await expect(identity).resolves.toMatchObject({
+				messages: [{ role: "assistant", text: "Known fixture answer" }],
+			});
 			expect(fixture.page.navigations).toEqual(["https://chatgpt.com/c/fixture-conversation"]);
 			expect(fixture.page.bootstrapReady).toBe(true);
-			expect(fixture.clients.flatMap((client) => client.requests)).toEqual(["bootstrap-0", "payload-1"]);
+			expect(fixture.clients.flatMap((client) => client.requests)).toEqual([
+				"bootstrap-0",
+				"payload-1",
+			]);
 			await affinity.completeSuccess();
 		} else {
 			await expect(identity).resolves.toMatchObject({ verdict: "match" });
@@ -2289,7 +2324,7 @@ test.each([
 			expect(fixture.page.bootstrapReady).toBe(true);
 			const beforeFinal = fixture.clients.length;
 			await affinity.completeSuccess();
-			expect(fixture.clients).toHaveLength(beforeFinal + 1);
+			expect(fixture.clients).toHaveLength(beforeFinal + 2);
 		}
 		const human = await gate.takeControl("generation");
 		await gate.releaseControl(human.token, "generation");
@@ -2321,7 +2356,12 @@ test.each([
 	const gate = new DesktopControlGate("native-cancel");
 	const cancelNative = () => {
 		if (phase.includes("document")) {
-			fixture.clients[0]?.frameNavigatedHandler?.({ frame: { id: phase === "foreign-document" ? "other-frame" : "frame-1", loaderId: "new-document" } });
+			fixture.clients[0]?.frameNavigatedHandler?.({
+				frame: {
+					id: phase === "foreign-document" ? "other-frame" : "frame-1",
+					loaderId: "new-document",
+				},
+			});
 			return;
 		}
 		fixture.clients[0]?.loadingFailedHandler?.({
@@ -2337,7 +2377,12 @@ test.each([
 				effect: () => Promise<T>,
 				options?: { abortSignal?: AbortSignal },
 			) => {
-				if (command === "Fetch.continueRequest" && phase !== "after-wire" && phase !== "document-after-wire") cancelNative();
+				if (
+					command === "Fetch.continueRequest" &&
+					phase !== "after-wire" &&
+					phase !== "document-after-wire"
+				)
+					cancelNative();
 				return gate.withAutomation("generation", effect, options);
 			},
 			hold: async (options?: { abortSignal?: AbortSignal }) => {
@@ -2410,8 +2455,10 @@ test.each([
 	}
 });
 
-
-test.each(["succeeded", "failed"])("late paused event during owned Fetch shutdown preserves %s outcome", async (outcome) => {
+test.each([
+	"succeeded",
+	"failed",
+])("late paused event during owned Fetch shutdown preserves %s outcome", async (outcome) => {
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-shutdown-event-"));
 	setAuracallHomeDirOverrideForTest(home);
 	fixture.clients = [];
@@ -2428,18 +2475,30 @@ test.each(["succeeded", "failed"])("late paused event during owned Fetch shutdow
 	try {
 		client = await CDP({ host: "127.0.0.1", port: 45190 });
 		const factory = createConfiguredProviderTrafficAuthorityFactory({
-			userConfig: { auracallProfile: "shutdown-event", services: { chatgpt: { identity: { email: "operator@example.test" } } } } as never,
-			provider: "chatgpt", managedBrowserProfile: "/fixture/shutdown-event",
-			mutationAudit: async () => undefined, baseOptions: {}, backendRequestLimit: 1,
+			userConfig: {
+				auracallProfile: "shutdown-event",
+				services: { chatgpt: { identity: { email: "operator@example.test" } } },
+			} as never,
+			provider: "chatgpt",
+			managedBrowserProfile: "/fixture/shutdown-event",
+			mutationAudit: async () => undefined,
+			baseOptions: {},
+			backendRequestLimit: 1,
 		});
-		await annotateClientMutationContext(client,
+		await annotateClientMutationContext(
+			client,
 			{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
-			"provider:chatgpt", "shutdown-target");
+			"provider:chatgpt",
+			"shutdown-target",
+		);
 		const state = fixture.clients[0];
 		if (outcome === "failed") state.disableError = "fixture disable failed";
-		state.onDisable = () => { late = state.handler?.({
-			requestId: "late-shutdown-event", request: { url: "https://chatgpt.com/backend-api/conversations" },
-		}); };
+		state.onDisable = () => {
+			late = state.handler?.({
+				requestId: "late-shutdown-event",
+				request: { url: "https://chatgpt.com/backend-api/conversations" },
+			});
+		};
 		if (outcome === "failed") await expect(client.close()).rejects.toThrow();
 		else await expect(client.close()).resolves.toBeUndefined();
 		await late;
