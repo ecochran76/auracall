@@ -1,3 +1,12 @@
+## 2026-10-20 — API runtime alignment research
+
+Read-only investigation confirms API PID50485 uses plan0411 while the CLI wrapper
+selects issue311. Captured status shows no foreground requests or active interactions,
+idle drain, paused scheduler and20paused completion records. This snapshot does not
+reserve an idle window. Findings and controlled API-only restart gates are recorded
+in notes/2026-10-20-api-runtime-alignment-research.md. No restart, installation or
+provider work performed. Memory forbidden: no explicit save request.
+
 ## 2026-10-20 — Issue275 verified as already repaired
 
 Issue275 ownership JSON parsing is repaired by PR279 / 212f3ef489f3574172bb1c9129b4c0698f319e47.
