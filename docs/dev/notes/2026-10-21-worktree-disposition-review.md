@@ -41,3 +41,28 @@ This is a disposition review, not a security/content audit of every untracked
 artifact, proof of test currency for old branches, or acceptance of their runtime
 claims. Review bounds intentionally exclude executing provider/campaign work.
 Memory forbidden: no explicit user request to save memory.
+
+## Handling completed — 2026-10-21
+
+All12noncurrent working trees were archived before mutation. Archives total about
+129MiB and are private (directory0700/files0600), with per-archive SHA256manifest,
+worktree heads/status,5stable dirty-state Git archive refs and a verified all-ref
+repository.bundle. All11old linked checkouts were removed; clean primary main was
+fast-forwarded. Two checkouts remain: primary and serialized current lane.
+Restore committed work with git worktree add on the retained branch. For dirty
+state, apply the exact saved stash OID from cleanup.json; full raw files/ignored
+artifacts are also in the tar archive. Reinstall dependencies from retained locks;
+.git pointers and derived CodeGraph state are intentionally not archived.
+
+Disposition: root/premium/launch/live-follow historical evidence archived without
+rewriting acceptance history. Four messages-diagnosis commits, desktop decisions
+and expired next-campaign prep preserved in named refs and bundle; no stale runtime
+claims promoted to current authority. PR262 source already integrated/superseded;
+old original receipts remain recoverable. PR335 and PR324 stay OPEN DRAFT, parked
+with preserved branches rather than mixed into this cleanup. Duplicate PR335
+checkout retired. Dirty issue107 source was adapted/tested on current main under
+Plan0444. No claim that parked draft behavior is accepted or deployed.
+
+Private restore manifests: ~/.auracall/worktree-archives/20261021/{manifest,cleanup}.json.
+Original raw content was not published or discarded. Current installed runtime was
+not changed during worktree handling.

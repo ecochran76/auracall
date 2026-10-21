@@ -190,3 +190,7 @@ lease release; unknown custody blocks startup.
 Debugger readiness failure carries owned-child exit evidence when observed.
 BROWSER_PROCESS_EXITED_BEFORE_CDP means an exit code or signal was observed;
 BROWSER_CDP_NOT_READY preserves unknown exit attribution and grants no restart.
+
+Read-only utility stale-lease reconciliation observes the exact managed browser
+directory/service domain despite tenant metadata drift. Fresh adoption and provider
+identity remain tenant-scoped; live-owner and uncertain-effect fences remain intact.

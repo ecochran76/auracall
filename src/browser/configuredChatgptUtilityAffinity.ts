@@ -153,10 +153,11 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			targetId,
 			() => undefined,
 		);
+	const targetDomainScope = { managedBrowserProfile, service: "chatgpt" };
 	recordLibraryInventoryStage(input.options, "affinity-reconcile-leases");
 	await reconcileStaleTabLeases({
 		registry: runtime.registry,
-		scope,
+		scope: targetDomainScope,
 		now,
 		currentOwner: input.deps?.currentOwner ?? getCurrentTabLeaseOwnerIdentity(),
 		isOwnerAlive: input.deps?.isOwnerAlive,
@@ -170,7 +171,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		if (endpoint) {
 			const processTab = await runtime.registry.findByProcess(scope);
 			const recoverable = await runtime.registry.list({
-				scope,
+				scope: targetDomainScope,
 				states: ["idle", "lost"],
 			});
 			for (const lease of recoverable) {
