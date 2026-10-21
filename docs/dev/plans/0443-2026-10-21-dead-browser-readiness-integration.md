@@ -1,6 +1,6 @@
 # Plan0443 — Integrate dead-browser readiness classification
 
-State: OPEN
+State: CLOSED
 Issue: https://github.com/ecochran76/auracall/issues/226
 Branch: fix/issue226-readiness-current
 Owner: primary agent, serial
@@ -58,3 +58,20 @@ checks qualify deployment. Current CLI/MCP/API remain issue245. This is a real
 runtime gate, not a source or installed-fixture failure. Issue226 remains open
 until deployment acceptance; original browser exit attribution remains unknown.
 Memory forbidden: no explicit save request.
+
+## Authorized activation acceptance
+
+User explicitly authorized closing the current browser and completing activation.
+Canonical closeDesktopBrowser was refused by busy desktop control. No repeat or
+control-record deletion: fresh verifyNativeBrowser qualified exact PID80756/start
+29363014; authorized graceful SIGTERM terminated it, /proc absence verified. No
+other process termination. Scoped native census confirms no root for that managed
+browser profile; no replacement browser was launched.
+CLI/MCP select staged user-runtime-issue226-readiness. API PID60481 resolves the
+same exact runtime and returns HTTP200/ok:true, NRestarts0. Scheduler stays paused,
+all23previous paused completion IDs preserved, warning hash unchanged. Global
+activeInteractionCount remains1; its scope/outcome is not attributed or cleared.
+Four installed readiness checks re-pass. No provider prompt or lease reset.
+Private acceptance receipts: ~/.auracall/acceptance/issue226-activation-20261021/.
+Historical browser-disappearance actors remain unknown; bounded classification
+repair is accepted. Worktree review is a separate note, not additional cleanup.

@@ -1,3 +1,14 @@
+## 2026-10-21 — Issue226 activation complete; remaining worktrees reviewed
+
+User authorized exact browser close. Canonical close refused busy desktop control;
+fresh native proof qualified PID80756/start29363014 and gracefulSIGTERM closed it.
+No control record/lease deletion, no other process termination. CLI/MCP/API now
+issue226-readiness, API PID60481 HTTP200,23paused jobs/scheduler and warning hash
+preserved. Global activeInteractionCount1 remains unattributed and untouched.
+Plan0443 CLOSED. Review note classifies13remaining trees:5dirty,6distinct unmerged
+heads with1duplicate checkout,1current lane. No pending work discarded or merged.
+Memory forbidden: no explicit save request.
+
 ## 2026-10-21 — Issue226 source merged, verified installation staged
 
 PR360/727fbf35d implements typed observed-child exit versus unknownCDP readiness.
