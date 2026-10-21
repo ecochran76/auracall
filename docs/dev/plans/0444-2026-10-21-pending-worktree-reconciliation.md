@@ -1,6 +1,6 @@
 # Plan0444 — Reconcile pending worktrees
 
-State: OPEN
+State: CLOSED
 Owner: primary agent, serial
 Branch: fix/dirty-worktree-reconciliation
 Base:24116eeac
@@ -40,3 +40,12 @@ typecheck/build/scoped Biome and diff checks pass. No installed/live acceptance
 claimed for this archival source slice; active runtime remains issue226-readiness.
 Primary Standards review: no accepted blocker, preserves existing seams. Spec review:
 archive preservation, recovery and live-owner fence accepted; drafts explicitly parked.
+
+## Delivery
+
+PR363 integrates the recovered source and archival disposition. All private
+archives, stable refs and repository bundle verified before worktree removal.
+Primary main is clean; serialized execution checkout is retired after this closeout
+merges, leaving one primary checkout. Broad drafts remain deliberately parked,
+not lost or silently accepted. Installed API/CLI remain issue226-readiness; this
+handling task performed no runtime changes.
