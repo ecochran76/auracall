@@ -1,3 +1,13 @@
+## 2026-10-20 — API runtime alignment accepted
+
+Authorized API-only restart selects issue311-6b07a6c84, PID73731; HTTP200/ok:true,
+installed contract PASS. Initial readiness probes saw normal startup refusal before
+successful readback. Browser PID/start, assignment/window and warning hash preserved.
+All20original paused jobs remain paused; scheduler remains paused. New build reports
+additional historical completion rows including1queued; attribution remains unknown,
+no job-state changes performed. Detailed receipt boundary is appended to the research
+note. No provider execution tested. Memory forbidden: no save request.
+
 ## 2026-10-20 — API runtime alignment research
 
 Read-only investigation confirms API PID50485 uses plan0411 while the CLI wrapper

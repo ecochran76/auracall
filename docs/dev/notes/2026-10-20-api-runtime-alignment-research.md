@@ -46,3 +46,22 @@ compatibility remain execution gates. No need for external web sources: local
 process evidence, first-party status API and repository source own these claims.
 
 Memory disposition: forbidden; no explicit user request to save memory.
+
+## Authorized execution acceptance — 2026-10-21T02:41Z
+
+User subsequently requested the fix. Fresh preflight showed zero active foreground
+requests/interactions, idle drain, paused scheduler and20paused completion records.
+Installed runtime contract passed. API-only restart changed PID50485 to73731;
+/proc/73731/cmdline now resolves the issue311-6b07a6c84 runtime selected by the CLI.
+Initial immediate readiness probes returned connection refused during startup;
+subsequent /status returned HTTP200 and ok:true, with NRestarts0.
+Native browser PID910183/start13260269, assignment and window remain verified.
+Rate-limit record hash is unchanged. All20original paused completion IDs remain
+paused and scheduler stays paused. New status exposes5162total versus5143before,
+23paused and1queued; these extra rows have historical start times. This research
+does not attribute the count difference to new execution or modify queued work.
+Active interactions remain0. Startup log reports1stale browser operation lock
+removed by application startup; no manual owner/warning reset was performed.
+Private before/after and native receipts:
+/home/ecochran76/.auracall/acceptance/api-alignment-20261020/.
+API/CLI alignment is accepted; provider execution was not tested.
