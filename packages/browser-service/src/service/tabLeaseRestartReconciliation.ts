@@ -12,7 +12,8 @@ export interface StaleTabLeaseReconciliationOutcome {
 
 export async function reconcileStaleTabLeases(input: {
 	registry: BrowserTabLeaseRegistry;
-	scope: TabLeaseScope;
+	scope: Pick<TabLeaseScope, "managedBrowserProfile" | "service"> &
+		Partial<Pick<TabLeaseScope, "runtimeProfileId" | "tenantKey">>;
 	now?: () => Date;
 	currentOwner: { processId: number; instanceId: string };
 	isOwnerAlive?: (processId: number) => boolean;

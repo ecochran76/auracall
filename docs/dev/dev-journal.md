@@ -1,3 +1,14 @@
+## 2026-10-21 — Pending worktrees archived and source slice reconciled
+
+Plan0444:12private verified tar snapshots,5dirty stash/archive refs and verified
+all-ref bundle preserve pending work.11old linked trees removed, main clean and
+fast-forwarded;2checkouts remain. PR335/324 explicitly parked as drafts, branches
+retained. Historical evidence archived without promoting stale acceptance claims.
+Recovered issue107 source adapted to current main: exact physical-profile/service
+reconciliation across tenant metadata drift; tenant-scoped adoption and live-owner
+fence preserved.73focused tests, typecheck/build/scopedlint pass. No runtime effect.
+Memory forbidden: no explicit save request.
+
 ## 2026-10-21 — Issue226 activation complete; remaining worktrees reviewed
 
 User authorized exact browser close. Canonical close refused busy desktop control;

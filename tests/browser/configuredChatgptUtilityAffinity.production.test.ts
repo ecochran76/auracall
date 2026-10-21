@@ -31,6 +31,32 @@ const userConfig = {
 	},
 } as never;
 
+const productionIdentityUserConfig = {
+	auracallProfile: "runtime-current",
+	browser: { tabConcurrencyMode: "tab-affinity", chatgptUrl: "https://chatgpt.com/" },
+	profiles: {
+		"runtime-current": {
+			services: {
+				chatgpt: {
+					identity: {
+						email: "researcher@example.test",
+						accountPlanType: "plus",
+						accountStructure: "personal",
+					},
+				},
+			},
+		},
+	},
+} as never;
+
+const productionManagedBrowserProfile = "/managed/runtime-current/chatgpt";
+const persistedProductionScope = {
+	runtimeProfileId: "runtime-current",
+	managedBrowserProfile: productionManagedBrowserProfile,
+	service: "chatgpt",
+	tenantKey: "service-account:chatgpt:researcher@example.test|plan=pro|structure=personal",
+};
+
 describe("configured ChatGPT utility production target wiring", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -165,6 +191,126 @@ describe("configured ChatGPT utility production target wiring", () => {
 			targetId: "library-target",
 			workload: { kind: "ephemeral", operationId: "chatgpt-service-current-process" },
 		});
+		expect(chromeLifecycleMocks.openChromeTarget).not.toHaveBeenCalled();
+		expect(chromeLifecycleMocks.closeRemoteChromeTarget).not.toHaveBeenCalled();
+	});
+
+	test("recovers an expired dead-owner lease across retained production tenant-scope drift", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: (() => {
+				let index = 0;
+				return () => `lease-${++index}`;
+			})(),
+			ownerIdentity: { processId: 46827, instanceId: "previous-process" },
+		});
+		const stranded = await registry.reserve({
+			scope: persistedProductionScope,
+			targetId: "library-target",
+			workload: { kind: "ephemeral", operationId: "chatgpt-service-previous-process" },
+			operationId: "chatgpt-service-previous-process",
+			now: "2026-09-28T02:03:32.243Z",
+			idleTtlMs: 5 * 60_000,
+			absoluteTtlMs: 60 * 60_000,
+			targetFingerprint: "https://chatgpt.com/",
+		});
+		expect(stranded.ok).toBe(true);
+		const ledger = createInMemoryProviderInteractionLedger();
+
+		await expect(
+			runConfiguredChatgptUtilityOperation({
+				userConfig: productionIdentityUserConfig,
+				browserService: {
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 45015,
+						managedBrowserProfile: productionManagedBrowserProfile,
+					}),
+				} as never,
+				utilityId: "chatgpt-service-current-process",
+				mutability: "read-only",
+				options: {
+					configuredUrl: "https://chatgpt.com/library",
+					preserveActiveTab: true,
+					requireExistingTarget: true,
+				},
+				buildListOptions: async (options) => options,
+				run: async (options) => options.tabTargetId,
+				now: () => new Date("2026-09-28T11:09:15.608Z"),
+				deps: {
+					createRuntime: () => ({ registry, ledger }) as never,
+					currentOwner: { processId: 90001, instanceId: "current-process" },
+					isOwnerAlive: () => false,
+				},
+			}),
+		).resolves.toBe("library-target");
+
+		expect((await registry.list())[0]).toMatchObject({
+			state: "released",
+			finalDisposition: "preserved",
+			lossReason: "restart-unverified",
+			scope: persistedProductionScope,
+		});
+		expect(chromeLifecycleMocks.openChromeTarget).not.toHaveBeenCalled();
+		expect(chromeLifecycleMocks.closeRemoteChromeTarget).not.toHaveBeenCalled();
+	});
+
+	test("keeps a live owner fenced across tenant-scope drift", async () => {
+		const registry = createInMemoryBrowserTabLeaseRegistry({
+			createLeaseId: (() => {
+				let n = 0;
+				return () => (n++ === 0 ? "lease-live-owner" : `lease-next-${n}`);
+			})(),
+			ownerIdentity: { processId: 46827, instanceId: "live-process" },
+		});
+		await registry.reserve({
+			scope: persistedProductionScope,
+			targetId: "library-target",
+			workload: { kind: "ephemeral", operationId: "chatgpt-service-live-process" },
+			operationId: "chatgpt-service-live-process",
+			now: "2026-09-28T11:00:00.000Z",
+			idleTtlMs: 60 * 60_000,
+			absoluteTtlMs: 2 * 60 * 60_000,
+			targetFingerprint: "https://chatgpt.com/library",
+		});
+		const ledger = createInMemoryProviderInteractionLedger();
+
+		await expect(
+			runConfiguredChatgptUtilityOperation({
+				userConfig: productionIdentityUserConfig,
+				browserService: {
+					resolveServiceTarget: vi.fn().mockResolvedValue({
+						host: "127.0.0.1",
+						port: 45015,
+						managedBrowserProfile: productionManagedBrowserProfile,
+					}),
+				} as never,
+				utilityId: "chatgpt-service-current-process",
+				mutability: "read-only",
+				options: {
+					configuredUrl: "https://chatgpt.com/library",
+					preserveActiveTab: true,
+					requireExistingTarget: true,
+				},
+				buildListOptions: async (options) => options,
+				run: async (options) => options.tabTargetId,
+				now: () => new Date("2026-09-28T11:09:15.608Z"),
+				deps: {
+					createRuntime: () => ({ registry, ledger }) as never,
+					currentOwner: { processId: 90001, instanceId: "current-process" },
+					isOwnerAlive: () => true,
+				},
+			}),
+		).rejects.toThrow("no existing compatible target");
+
+		const leases = await registry.list();
+		expect(leases.filter((lease) => lease.targetId === "library-target")).toEqual([
+			expect.objectContaining({
+				leaseId: "lease-live-owner",
+				state: "active",
+				ownerProcessId: 46827,
+				scope: persistedProductionScope,
+			}),
+		]);
 		expect(chromeLifecycleMocks.openChromeTarget).not.toHaveBeenCalled();
 		expect(chromeLifecycleMocks.closeRemoteChromeTarget).not.toHaveBeenCalled();
 	});

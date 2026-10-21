@@ -1,3 +1,12 @@
+## 2026-10-21 — Reconcile physical tab custody across tenant metadata drift
+
+A retained dead-owner lease can share the exact managed browser directory and
+service while carrying an older plan-derived tenant key. Read-only utility stale
+reconciliation must observe that physical domain; exact-route settled ephemeral
+release then permits fresh tenant-scoped adoption. Keep live owners, uncertain
+effects, revision fencing and current identity checks. Do not use a fixed lease-ID
+collision as evidence of a successful live-owner fence.
+
 ## 2026-10-21 — Retain owned child evidence in CDP readiness failures
 
 Integrate retained PR262 readiness repair against current main. A child exit code
