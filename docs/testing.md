@@ -1,3 +1,10 @@
+- Long ChatGPT result preservation (#134, provider-free):
+  `pnpm vitest run tests/browser/chatgptAffinityExecutor.test.ts tests/browser/chatgptAffinityRuntime.test.ts tests/browser/legacyChatgptAffinityRuntime.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts tests/terminalSessionReceipts.test.ts --maxWorkers=1`
+  Controlled1703.3-second completions across maintenance preserve the exact answer,
+  conversation binding and successful ledger settlement. Completed-response takeover,
+  lost-claim and absolute-deadline controls retain fencing; receipt success/integrity
+  is tested at its separate public boundary. No live prompt is required or implied.
+
 - Developer-app readiness (#357, provider-free):
   `pnpm vitest run tests/browser/chatgptDeveloperAppReadiness.test.ts tests/browser/chatgptDeveloperAppInventory.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/browser/chatgptDeveloperAppRefreshTools.test.ts tests/browser/chatgptDeveloperAppLifecycle.test.ts --maxWorkers=1`
   Public adapter fixtures cover immediate/late account-load failure, sidebar/hidden

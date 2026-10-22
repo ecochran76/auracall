@@ -1,3 +1,13 @@
+## 2026-10-22 — Qualify long-result preservation against stale claims (#134)
+
+The October10 in-flight renewal repair40ea42c19 already prevents maintenance from
+invalidating a long-running ChatGPT claim. Incident-executor replay at1703.3seconds
+reproduces stale-claim; current source and installed compiled runtime preserve exact
+answer/binding and successful ledger settlement. Strengthen the existing regression
+rather than add redundant production recovery. A genuinely reacquired target stays
+fenced: old completed response cannot overwrite its new owner. Never swallow CAS
+failure indiscriminately, extend absolute deadlines, resubmit or rewrite old receipts.
+
 ## 2026-10-22 — Observe failed account pages during developer-app inventory
 
 An absent inventory response is not always legitimate capacity waiting. Check
