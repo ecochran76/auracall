@@ -1,12 +1,15 @@
-## 2026-10-22 — Issue357 runtime activated; inventory acceptance running
+## 2026-10-22 — Issue357 activation and complete inventory accepted
 
 Plan0446: user authorized deployment of merged PR365/55520b18e. Distinct installed
 runtime has597compiled-file parity, installed contract and14readiness fixtures
 passing. Fresh idle/native/custody gates qualified switch despite historical
 unattributed interaction count1: all669leases released, no managed browser process.
 CLI/MCP/API select issue357-55520b18e; API PID2028634 healthy, NRestarts0. Scheduler
-paused and all23paused IDs/guard bytes preserved. Single bounded read-only inventory
-in progress; no create/prompt, process termination or lease/guard reset.
+paused and all23paused IDs/guard bytes preserved. Single read-only inventory
+completed in282.03seconds,30apps, exit0/complete. No create/prompt, process termination
+or lease/guard reset. Final custody has0active leases and1ownerless settled lease
+marked restart-unverified after caller exit; retained unchanged, clean retirement
+not claimed. Plan0446 CLOSED; PR366 records deployment. Memory forbidden.
 
 ## 2026-10-22 — Issue357 developer-app readiness
 
