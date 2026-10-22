@@ -22,35 +22,27 @@ Return complete app inventory when Developer-mode UI is unavailable; represent t
 
 PR248 integrated c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8. Source regression, 79 focused/adjacent tests and installed original command pass; independent Standards/Spec review has zero findings. See [bounded installed receipt](../notes/2026-10-10-plan0393-inventory-acceptance.md). Remote CI supplied no checks. Source and scoped two-module installation are accepted; live create/replace remains untested.
 
-## Corrective item IQ1 | 2026-10-22
+## Corrective diagnosis IQ1 | 2026-10-22
 
 Owner: ecochran76. Branch: fix/installed-plugin-query. State: IN_PROGRESS.
-The historical acceptance above remains valid for its frontend version. Current
-Plugins UI hydrates an account-bound installed React Query collection without
-emitting the legacy installed endpoint. Existing-app inventory therefore waits
-and returns incomplete despite visible membership.
+The original endpoint-removal hypothesis was disproven: same-tab diagnostic
+reload receives installed200 after CLI exit. A speculative installed-query
+fallback was tested, then withdrawn from source and restored out of the runtime;
+it did not establish the original failure's cause. No provider prompt or app
+mutation was submitted.
 
-Repair only existing-app readState: pass the verified account ID to a passive,
-bounded, allowlisted query-cache projection. Require the exact five-part key,
-success/idle/non-invalidated state, unique collection and exact installed plugin
-IDs. Batch catalog metadata never establishes membership. Preserve legacy
-network capture, exact app/auth selection, abort cleanup and mutation gates.
-Public adapter regression went red (empty/incomplete) before the fix and green
-with the actual projection expression executed in a VM fixture. 154 adjacent
-tests, full typecheck and compiled build pass. Independent scoped review found
-no blocker; primary independently reran the tests. Installed qualification is
-pending. Post-create capture and genuinely empty installed collections remain
-fail-closed outside this existing-app test repair. No app replacement, account
-reset or provider prompt is part of IQ1. Done when the installed original list
-returns complete inventory for the exact account and selected existing app.
+Live boundary logs show Network.enable and location reads returning, then
+navigation waits inside ProviderTrafficGovernor.begin's interaction pacing.
+The runtime profile's live-follow policy sets renavigationCooldownMs=120000,
+pageRefreshCooldownMs=120000 and maxBrowserInteractionsPerMinute=6.
+LlmService.resolveBrowserInteractionGovernor applies these settings to foreground
+utility operations too. The shortened 90/100/180-second diagnostic wrappers
+could expire before the navigation sequence completed; they do not prove a
+browser deadlock or failed login. The candidate second-client warning deadlock
+belongs to another workflow and was rejected for this caller.
 
-### Live correction | IQ1 is not the root repair
-
-The first frontend-removal hypothesis was disproven: the same tab loads
-`/backend-api/ps/plugins/installed` with HTTP200 after the owned CLI exits.
-During the owned run, Plugins displays Failed to fetch and backend resources
-fail. Installed IQ1 did not complete the original command; it ended with
-owned cleanup unknown. The two-module cache patch was restored to the original
-runtime. Keep this branch as a supplemental candidate, not an accepted live
-repair. Investigate owned request admission and its first failure before further
-provider effects. No prompt or calendar mutation ran.
+One original installed apps-list run is now allowed its full native timeout.
+Stop condition: record that outcome and the exact remaining integration gate.
+No cooldown reduction, warning bypass, speculative source change or calendar
+mutation belongs to this diagnosis. Original runtime hashes and rollback
+custody are preserved privately; temporary diagnostic hooks are removed.

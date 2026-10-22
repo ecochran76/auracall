@@ -2,9 +2,9 @@
 
 - Completed P88: [Plan0394](docs/dev/plans/0394-2026-10-10-memory-routing.md) makes AuraCall Graphiti routing discoverable and distinguishes unresolved routes from service failure; atlas publication and original-query retrieval verified.
 
-- Reopened P87 / corrective IQ1 (existing-app inventory): current frontend
-  installed-query drift repair on fix/installed-plugin-query; source regression
-  and 154 adjacent tests pass, installed read-only qualification pending.
+- Reopened P87 / corrective IQ1 (existing-app inventory): navigation pacing
+  diagnosis on fix/installed-plugin-query; speculative cache change withdrawn,
+  full-timeout installed read-only outcome pending.
 
 - Historical P87 acceptance: [Plan0393](docs/dev/plans/0393-2026-10-10-developer-app-inventory.md) repairs issue225 app inventory independently of missing Developer-mode UI; PR248 integrated; original installed inventory passes with 26 apps and independent review.
 

@@ -20,7 +20,6 @@ vi.mock("../../src/browser/service/ui.js", () => ({
 
 describe("developer app inventory with current settings UI", () => {
 	it.each([
-		{ developerMode: null, responseDelay: 0, cancelAfterMs: 0, hydrated: true },
 		{ developerMode: null, responseDelay: 0, cancelAfterMs: 0 },
 		{ developerMode: true, responseDelay: 0, cancelAfterMs: 0 },
 		{ developerMode: false, responseDelay: 0, cancelAfterMs: 0 },
@@ -30,7 +29,6 @@ describe("developer app inventory with current settings UI", () => {
 		developerMode,
 		responseDelay,
 		cancelAfterMs,
-		hydrated,
 	}) => {
 		vi.useFakeTimers();
 		const controller = new AbortController();
@@ -43,64 +41,15 @@ describe("developer app inventory with current settings UI", () => {
 				evaluate: async ({ expression }: { expression: string }) => ({
 					result: {
 						value:
-							expression.includes("auracall.installed-query.v1") && hydrated
-								? runInNewContext(expression, {
-										location: { origin: "https://chatgpt.com", pathname: "/plugins" },
-										document: {
-											querySelector: () => ({
-												__reactFiberFixture: {
-													memoizedProps: {
-														client: {
-															getQueryCache: () => ({
-																getAll: () => [
-																	{
-																		queryKey: [
-																			"plugins",
-																			"installed",
-																			"local",
-																			"hosted",
-																			"fixture-account",
-																		],
-																		state: {
-																			status: "success",
-																			fetchStatus: "idle",
-																			isInvalidated: false,
-																			data: [
-																				{
-																					plugin: {
-																						installed: true,
-																						remotePluginId: "plugin_asdk_app_fixture",
-																					},
-																					servicePlugin: {
-																						id: "plugin_asdk_app_fixture",
-																						name: "dev-fixture",
-																						enabled: true,
-																						release: {
-																							display_name: "Fixture App",
-																							app_ids: ["asdk_app_fixture"],
-																						},
-																					},
-																				},
-																			],
-																		},
-																	},
-																],
-															}),
-														},
-													},
-												},
-											}),
-										},
-									})
-								: expression === "location.href"
-									? url
-									: expression.includes("?.getAttribute('aria-checked')")
-										? String(developerMode)
-										: expression.includes("Boolean(document.querySelector")
-											? developerMode !== null
-											: expression.startsWith("JSON.stringify")
-												? JSON.stringify({ url, dialogs: [], switches: [] })
-												: false,
+							expression === "location.href"
+								? url
+								: expression.includes("?.getAttribute('aria-checked')")
+									? String(developerMode)
+									: expression.includes("Boolean(document.querySelector")
+										? developerMode !== null
+										: expression.startsWith("JSON.stringify")
+											? JSON.stringify({ url, dialogs: [], switches: [] })
+											: false,
 					},
 				}),
 			},
@@ -108,7 +57,7 @@ describe("developer app inventory with current settings UI", () => {
 				enable: async () => {},
 				navigate: async (input: { url: string }) => {
 					url = input.url;
-					if (url === "https://chatgpt.com/plugins" && !hydrated) {
+					if (url === "https://chatgpt.com/plugins") {
 						const deliver = () => {
 							if (url !== "https://chatgpt.com/plugins") return;
 							responseReceived({
@@ -151,8 +100,7 @@ describe("developer app inventory with current settings UI", () => {
 				userConfig: {
 					services: { chatgpt: { backendRequestBudgetWaitMs: responseDelay ? 60_000 : 0 } },
 				} as never,
-				getUserIdentity: async () =>
-					({ email: "owner@example.test", accountId: "fixture-account" }) as never,
+				getUserIdentity: async () => ({ email: "owner@example.test" }) as never,
 				connectDevTools: async () => ({ client: client as never, port: 45015 }),
 			},
 			async () => {

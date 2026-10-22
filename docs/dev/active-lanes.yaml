@@ -2,7 +2,7 @@ schema_version: 1
 work_item_tracking: optional
 lanes:
   - id: P87-IQ1
-    objective: Restore existing-app inventory from current ChatGPT installed query
+    objective: Diagnose existing-app discovery pacing without speculative changes
     work_items: [Plan0393-IQ1]
     plan: docs/dev/plans/0393-2026-10-10-developer-app-inventory.md
     plan_ref: refs/heads/fix/installed-plugin-query
@@ -15,7 +15,7 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: source-accepted-installed-pending
+    validation_status: configured-pacing-observed-full-run-pending
     updated_at: 2026-10-22
   - id: issue331
     objective: Repair five provider-free baseline test failures

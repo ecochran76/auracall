@@ -22256,3 +22256,15 @@ owned execution, hydration fails and the CLI hides causes behind operation and
 cleanup aggregate failure. Cache patch restored; no live repair accepted. One
 bounded diagnostic records first request-admission errors, with module rollback
 automatic at exit. No provider prompt or calendar mutation has been submitted.
+
+
+### P87 IQ1 cause narrowed to configured pacing
+
+Network.enable and location reads return. Navigation then waits inside
+ProviderTrafficGovernor.begin -> ledger interaction pacing. The actual runtime
+profile supplies a120000ms renavigation cooldown through LlmService's live-follow
+policy resolver. Short diagnostic caps were invalid for this sequence. The
+second-client warning hypothesis does not apply to this utility caller. All
+speculative code has been withdrawn and original runtime bytes restored;
+temporary diagnostic hooks were removed. One original installed list is running
+with its full native timeout; no prompt or calendar mutation has been submitted.
