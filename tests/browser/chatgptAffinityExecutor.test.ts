@@ -500,7 +500,7 @@ describe("ChatGPT affinity executor", () => {
 test.each([
 	"conversation",
 	"new-conversation",
-] as const)("keeps an in-flight %s active through maintenance past its original idle expiry", async (kind) => {
+] as const)("preserves the complete 1703.3-second %s result through maintenance and final settlement", async (kind) => {
 	vi.useFakeTimers();
 	vi.setSystemTime(new Date("2026-10-10T12:00:00Z"));
 	try {
@@ -530,10 +530,11 @@ test.each([
 		const ready = new Promise<void>((resolve) => {
 			started = resolve;
 		});
+		const ledger = createInMemoryProviderInteractionLedger();
 		const pending = executeChatgptConversation({
 			mode: "tab-affinity",
 			registry,
-			ledger: createInMemoryProviderInteractionLedger(),
+			ledger,
 			lease: reserved.value.lease,
 			claim: reserved.value.claim,
 			operationId: "pending",
@@ -550,23 +551,32 @@ test.each([
 			},
 		});
 		await ready;
-		await vi.advanceTimersByTimeAsync(960_000);
+		await vi.advanceTimersByTimeAsync(1_703_300);
 		await reconcileStaleTabLeases({
 			registry,
 			scope,
 			currentOwner: { processId: 99, instanceId: "maintenance" },
 			isOwnerAlive: () => true,
 		});
-		expect((await registry.list())[0].state).toBe("active");
-		complete({
-			text: "done",
+		const captured = {
+			text: "Captured architecture review.\n".repeat(950),
 			conversationId: "fixture",
 			url: "https://chatgpt.com/c/fixture",
 			tabTargetId: "pending",
-		});
-		await expect(pending).resolves.toMatchObject({ status: "completed" });
+		};
+		complete(captured);
+		await expect(pending).resolves.toEqual({ status: "completed", result: captured });
+		expect(await ledger.list()).toEqual([
+			expect.objectContaining({ state: "settled", outcome: "succeeded", effectState: "settled" }),
+		]);
 		const idle = (await registry.list())[0];
-		expect(idle.state).toBe("idle");
+		expect(idle).toMatchObject({
+			state: "idle",
+			effectState: "settled",
+			ownerOperationId: null,
+			workload: { kind: "conversation", conversationId: "fixture" },
+			targetId: "pending",
+		});
 		await vi.advanceTimersByTimeAsync(120_000);
 		expect((await registry.list())[0]).toEqual(idle);
 	} finally {
@@ -594,6 +604,7 @@ async function pendingChatFixture(
 	});
 	if (!reserved.ok) throw Error("reserve failed");
 	let fail!: (error: Error) => void;
+	let complete!: (result: import("../../src/browser/llmService/types.js").PromptResult) => void;
 	let started!: () => void;
 	let providerSignal: AbortSignal | undefined;
 	let governor:
@@ -619,7 +630,8 @@ async function pendingChatFixture(
 			providerSignal = options?.abortSignal;
 			governor = options?.providerTrafficGovernor;
 			started();
-			return new Promise((_resolve, reject) => {
+			return new Promise((resolve, reject) => {
+				complete = resolve;
 				fail = reject;
 			});
 		},
@@ -637,6 +649,7 @@ async function pendingChatFixture(
 		ledger,
 		pending,
 		fail,
+		complete,
 		signal: () => providerSignal,
 		governor: () => governor,
 	};
@@ -779,7 +792,6 @@ test("failure settlement waits for an outstanding renewal write and uses its cla
 	}
 });
 
-
 test.each([
 	{ kind: "new-conversation", lateMs: 0 },
 	{ kind: "new-conversation", lateMs: 1 },
@@ -846,10 +858,48 @@ test.each([
 			expect.objectContaining({ effectState: "outcome-unknown", outcome: "failed" }),
 		]);
 		expect(await registry.list()).toEqual([
-			expect.objectContaining(lateMs === 0
-          ? { state: "idle", effectState: "outcome-unknown", ownerOperationId: null }
-          : { state: "active", ownerOperationId: "pending" }),
+			expect.objectContaining(
+				lateMs === 0
+					? { state: "idle", effectState: "outcome-unknown", ownerOperationId: null }
+					: { state: "active", ownerOperationId: "pending" },
+			),
 		]);
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
+test("a captured response cannot settle a target reacquired by a newer operation", async () => {
+	vi.useFakeTimers();
+	vi.setSystemTime(new Date("2026-10-10T12:00:00Z"));
+	try {
+		const f = await pendingChatFixture();
+		const original = (await f.registry.list())[0];
+		const idled = await f.registry.idle({
+			claim: { leaseId: original.leaseId, revision: original.revision, operationId: "pending" },
+			now: new Date().toISOString(),
+			effectState: "settled",
+		});
+		expect(idled.ok).toBe(true);
+		const newer = await f.registry.acquire({
+			scope,
+			workload: { kind: "conversation", conversationId: "fixture" },
+			operationId: "newer-operation",
+			now: new Date().toISOString(),
+		});
+		if (!newer.ok) throw new Error("fixture takeover failed");
+		f.complete({
+			text: "Captured old answer",
+			conversationId: "fixture",
+			url: "https://chatgpt.com/c/fixture",
+			tabTargetId: "pending",
+		});
+		await expect(f.pending).rejects.toThrow("stale-claim");
+		expect((await f.registry.list())[0]).toEqual(newer.value.lease);
+		expect(await f.ledger.list()).toEqual([
+			expect.objectContaining({ outcome: "failed", effectState: "outcome-unknown" }),
+		]);
+		expect(vi.getTimerCount()).toBe(0);
 	} finally {
 		vi.useRealTimers();
 	}
