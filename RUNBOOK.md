@@ -22279,3 +22279,13 @@ error-chain capture is running with automatic diagnostic module restoration;
 file-completion continuation registered after monitor recovered qualified UTC.
 Speculative product code is withdrawn; PR370 closed. No provider prompt/calendar
 mutation ran. Next is exact leaf-cause regression, not a cleanup bypass.
+
+
+### P87 IQ1 bounded result
+
+Instrumented full-budget repeat exits0: complete26-app inventory, exact expected
+account/app, clean close. Allfour diagnostic modules restored byte-for-byte.
+Configured navigation pacing reproduced; historical cleanupfailure remains
+intermittent/unexplained, no sourcefixclaimed. Bounded diagnosis closed; original
+authorized integrationtest resumed with one in-place catalogrefresh and bounded
+filecompletionwake. No prompt/calendarwrite yet. Memory forbidden.

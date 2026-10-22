@@ -8,14 +8,14 @@ lanes:
     plan_ref: refs/heads/fix/installed-plugin-query
     branch: fix/installed-plugin-query
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
     checkpoint: 3bbb09faf
     remote_ref: refs/remotes/origin/fix/installed-plugin-query
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: inventory-complete-observer-cleanup-failed-cause-pending
+    validation_status: bounded-diagnosis-closed-original-repeat-passed
     updated_at: 2026-10-22
   - id: issue331
     objective: Repair five provider-free baseline test failures

@@ -1,6 +1,6 @@
 # Plan0393 | Independent app inventory and Developer-mode observation
 
-State: OPEN
+State: CLOSED
 Owner: ecochran76
 Work item: https://github.com/ecochran76/auracall/issues/225
 Branch: fix/issue225-app-inventory
@@ -24,7 +24,7 @@ PR248 integrated c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8. Source regression, 79
 
 ## Corrective diagnosis IQ1 | 2026-10-22
 
-Owner: ecochran76. Branch: fix/installed-plugin-query. State: IN_PROGRESS.
+Owner: ecochran76. Branch: fix/installed-plugin-query. State: CLOSED.
 The original endpoint-removal hypothesis was disproven: same-tab diagnostic
 reload receives installed200 after CLI exit. A speculative installed-query
 fallback was tested, then withdrawn from source and restored out of the runtime;
@@ -60,3 +60,14 @@ A qualified file-completion continuation is registered. No prompt/calendar write
 has been sent. Do not suppress unknown cleanup or infer source acceptance from
 inventory completion. Next: identify leaf error and reproduce its exact ordering
 at tests/browser/backendRequestAdmission.test.ts before proposing a fix.
+
+### Bounded diagnosis closeout
+
+The instrumented full-budget repeat exited0 with complete26-app inventory and
+clean browser-client close. Original compiled bytes verified for allfour touched
+diagnostic modules. No speculative product code remains and no source repair is
+claimed. The historical observer cleanup failure remains intermittent and its
+leaf cause unobserved. The configured pacing cause is reproduced with the actual
+installed governor under an injected clock. The original authorized integration
+test resumes from this successful qualification; any later cleanup failure must
+retain its own evidence rather than be ignored.
