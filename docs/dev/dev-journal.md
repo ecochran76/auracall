@@ -1,3 +1,16 @@
+## 2026-10-22 — Issue240 acceptance refreshed; installed gates remain
+
+Plan0448 under Plan0391: local client200/public authentication302, execution-key
+bypass not attempted after uncredentialed operator API401. Installed canonical
+inventory qualifies2owned ready browsers; Research exact allocation ready, Writing
+retained allocation has 0 ready matches (released; physical desktop has a different
+active assignment, so no silent rebind).22focused tests/7suites pass. Historical
+marker input remains evidence only for its original checkpoint; root/pixel question
+pending. Agent-browser inspection fails stale/no attached browser; preserve dry
+run requires workstation substrate provisioning, no mutation/apply. No new marker
+prepare, launch, control grant, provider input or runtime restart. #240 stays OPEN.
+Memory forbidden: no explicit save request.
+
 ## 2026-10-22 — Issue134 existing result-preservation repair qualified
 
 Plan0447: incident executor reproduces exact stale-claim binding failure after
