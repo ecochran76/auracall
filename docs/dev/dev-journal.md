@@ -1,3 +1,13 @@
+## 2026-10-22 — Issue357 runtime activated; inventory acceptance running
+
+Plan0446: user authorized deployment of merged PR365/55520b18e. Distinct installed
+runtime has597compiled-file parity, installed contract and14readiness fixtures
+passing. Fresh idle/native/custody gates qualified switch despite historical
+unattributed interaction count1: all669leases released, no managed browser process.
+CLI/MCP/API select issue357-55520b18e; API PID2028634 healthy, NRestarts0. Scheduler
+paused and all23paused IDs/guard bytes preserved. Single bounded read-only inventory
+in progress; no create/prompt, process termination or lease/guard reset.
+
 ## 2026-10-22 — Issue357 developer-app readiness
 
 Plan0445: public fixture reproduced account-load error waiting through the capacity
