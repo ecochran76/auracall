@@ -1,21 +1,21 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
-  - id: P87-IQ1
-    objective: Diagnose existing-app discovery pacing without speculative changes
-    work_items: [Plan0393-IQ1]
+  - id: P87-IQ2
+    objective: Honor configured admission wait while reading refresh settings
+    work_items: [Plan0393-IQ2]
     plan: docs/dev/plans/0393-2026-10-10-developer-app-inventory.md
-    plan_ref: refs/heads/fix/installed-plugin-query
-    branch: fix/installed-plugin-query
+    plan_ref: refs/heads/fix/app-refresh-settings-budget
+    branch: fix/app-refresh-settings-budget
     target: main
-    plan_state: CLOSED
+    plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 3bbb09faf
-    remote_ref: refs/remotes/origin/fix/installed-plugin-query
+    checkpoint: 23aa6b83e
+    remote_ref: refs/remotes/origin/fix/app-refresh-settings-budget
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: bounded-diagnosis-closed-original-repeat-passed
+    validation_status: sequential-source-accepted-installed-pending
     updated_at: 2026-10-22
   - id: issue331
     objective: Repair five provider-free baseline test failures

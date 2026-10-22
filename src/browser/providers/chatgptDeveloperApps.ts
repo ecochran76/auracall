@@ -466,6 +466,12 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		serverUrl: string,
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
 		const client = await this.ensureClient();
+		const settingsReadTimeoutMs =
+			8_000 +
+			resolveChatgptBackendRequestBudgetWaitMs(
+				this.browser.userConfig as Record<string, unknown>,
+				this.browser.userConfig.auracallProfile ?? "default",
+			);
 		const settingsUrl = `https://chatgpt.com/settings/plugins-settings/${encodeURIComponent(app.pluginId)}`;
 		const observation = observeChatgptToolRefresh(client, app, this.abortSignal);
 		try {
@@ -482,7 +488,12 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				`location.href === ${JSON.stringify(settingsUrl)} && document.body.innerText.includes('Refresh tools')`,
 				{ timeoutMs: 10_000, description: "exact app tool refresh settings" },
 			);
-			const before = await readChatgptDeveloperAppRefreshSettings(client, "before");
+			const before = await readChatgptDeveloperAppRefreshSettings(
+				client,
+				"before",
+				settingsReadTimeoutMs,
+				this.abortSignal,
+			);
 			if (before.humanApproval)
 				return {
 					status: "awaiting-human",
@@ -509,7 +520,12 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				};
 			const catalog = await observation.result;
 			this.throwIfAborted();
-			const after = await readChatgptDeveloperAppRefreshSettings(client, "after");
+			const after = await readChatgptDeveloperAppRefreshSettings(
+				client,
+				"after",
+				settingsReadTimeoutMs,
+				this.abortSignal,
+			);
 			if (after.humanApproval)
 				return {
 					status: "awaiting-human",
@@ -1707,6 +1723,8 @@ interface ChatgptDeveloperAppRefreshSettings {
 async function readChatgptDeveloperAppRefreshSettings(
 	client: ChromeClient,
 	stage: "before" | "after",
+	timeoutMs: number,
+	signal?: AbortSignal,
 ): Promise<ChatgptDeveloperAppRefreshSettings> {
 	const result = await waitForPredicate(
 		client.Runtime,
@@ -1722,7 +1740,12 @@ async function readChatgptDeveloperAppRefreshSettings(
 			const accountsReady = start >= 0 && end > start + 1 && lines.slice(start + 1, end).some(line => !/^(connect another account|loading[.\\s…]*|no connected accounts)$/i.test(line));
 			return state.humanApproval || (state.refreshButtonCount === 1 && accountsReady) ? state : null;
 		})()`,
-		{ timeoutMs: 8_000, pollMs: 50, description: `settled app refresh settings ${stage} refresh` },
+		{
+			timeoutMs,
+			pollMs: 50,
+			interrupt: () => signal?.throwIfAborted(),
+			description: `settled app refresh settings ${stage} refresh`,
+		},
 	);
 	if (!result.ok || !result.value)
 		throw new Error(

@@ -1,6 +1,6 @@
 # Plan0393 | Independent app inventory and Developer-mode observation
 
-State: CLOSED
+State: OPEN
 Owner: ecochran76
 Work item: https://github.com/ecochran76/auracall/issues/225
 Branch: fix/issue225-app-inventory
@@ -22,52 +22,32 @@ Return complete app inventory when Developer-mode UI is unavailable; represent t
 
 PR248 integrated c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8. Source regression, 79 focused/adjacent tests and installed original command pass; independent Standards/Spec review has zero findings. See [bounded installed receipt](../notes/2026-10-10-plan0393-inventory-acceptance.md). Remote CI supplied no checks. Source and scoped two-module installation are accepted; live create/replace remains untested.
 
-## Corrective diagnosis IQ1 | 2026-10-22
+## Corrective item IQ2 | 2026-10-22
 
-Owner: ecochran76. Branch: fix/installed-plugin-query. State: CLOSED.
-The original endpoint-removal hypothesis was disproven: same-tab diagnostic
-reload receives installed200 after CLI exit. A speculative installed-query
-fallback was tested, then withdrawn from source and restored out of the runtime;
-it did not establish the original failure's cause. No provider prompt or app
-mutation was submitted.
+Owner: ecochran76. Branch: fix/app-refresh-settings-budget. State: OPEN.
+Roadmap home: P87 existing developer-app inventory/tool refresh.
 
-Live boundary logs show Network.enable and location reads returning, then
-navigation waits inside ProviderTrafficGovernor.begin's interaction pacing.
-The runtime profile's live-follow policy sets renavigationCooldownMs=120000,
-pageRefreshCooldownMs=120000 and maxBrowserInteractionsPerMinute=6.
-LlmService.resolveBrowserInteractionGovernor applies these settings to foreground
-utility operations too. The shortened 90/100/180-second diagnostic wrappers
-could expire before the navigation sequence completed; they do not prove a
-browser deadlock or failed login. The candidate second-client warning deadlock
-belongs to another workflow and was rejected for this caller.
+An authorized in-place refresh stopped before activation because its settings
+reader allowed8seconds while backend admission could legitimately delay the
+settings response longer. The exact owned lease recorded175 minute-budget
+denials; same-tab diagnostic reload subsequently loaded correct app settings.
+The pre-activation failure is retained; no refresh effect or calendar write is
+claimed from that attempt.
 
-One original installed apps-list run is now allowed its full native timeout.
-Stop condition: record that outcome and the exact remaining integration gate.
-No cooldown reduction, warning bypass, speculative source change or calendar
-mutation belongs to this diagnosis. Original runtime hashes and rollback
-custody are preserved privately; temporary diagnostic hooks are removed.
+Use8seconds plus the configured backend-admission wait allowance for the before
+and after settings reads. Preserve the enclosing operation deadline and check
+caller cancellation during polling. Keep exact account/app/endpoint/connection
+and consent checks. No request-rate/cooldown change, app replacement, automatic
+consent or ambiguous-effect replay.
 
-### Full-budget result
+Public refreshTools regression went RED for settings ready at20seconds under a
+60-second allowance; cancellation also went RED by waiting20seconds after abort.
+The repair passes101 focused/adjacent tests run with one worker, full typecheck,
+compiled build and scoped lint. Unconfigured/exhausted budgets still stop before
+click; cancellation stops promptly; existing identity/change guards remain.
+Parallel test runs showed timing-sensitive fixture failures, so passing evidence
+is explicitly the sequential suite. Installed qualification is pending.
 
-The unmodified installed list completed inventory, then exited1 in cleanup with
-`Provider observer cleanup failed.` and cleanupunknown. Configured pacing
-explains the apparent hang; observer cleanup is a separate real failure.
-`mutationAudit.ts` aggregates backend-admission and warning-observer disposal
-errors. The generic JSON result hides the attributable leaf. One bounded
-read-only capture now projects native AggregateError.errors/Error.cause privately
-at the existing CLI formatter, with automatic module restoration on exit.
-A qualified file-completion continuation is registered. No prompt/calendar write
-has been sent. Do not suppress unknown cleanup or infer source acceptance from
-inventory completion. Next: identify leaf error and reproduce its exact ordering
-at tests/browser/backendRequestAdmission.test.ts before proposing a fix.
-
-### Bounded diagnosis closeout
-
-The instrumented full-budget repeat exited0 with complete26-app inventory and
-clean browser-client close. Original compiled bytes verified for allfour touched
-diagnostic modules. No speculative product code remains and no source repair is
-claimed. The historical observer cleanup failure remains intermittent and its
-leaf cause unobserved. The configured pacing cause is reproduced with the actual
-installed governor under an injected clock. The original authorized integration
-test resumes from this successful qualification; any later cleanup failure must
-retain its own evidence rather than be ignored.
+Done when one installed in-place refresh preserves identity/connection and
+returns the refreshed catalog, or an attributable live blocker is recorded.
+The original ChatGPT calendar test remains a subsequent integration gate.

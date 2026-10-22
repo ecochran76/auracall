@@ -22233,59 +22233,14 @@ to restored application routes; no provider prompts or new wake ran.
 State: OPEN. [Plan0405](docs/dev/plans/0405-2026-10-11-developer-app-affinity-config.md), issue #253. Selected resolved configuration forwarding; source validation in progress, LitScout installed acceptance pending.
 
 
-## 2026-10-22 | P87 / Plan0393 IQ1
+## 2026-10-22 | P87 IQ2 refresh-settings admission budget
 
-Current ChatGPT Plugins no longer emits the installed endpoint awaited by
-AuraCall. Public readState regression reproduced incomplete empty inventory;
-exact account-bound settled installed-query projection repairs it. 154 focused
-and adjacent tests, typecheck and compiled build pass. Actual projection executes
-in the regression VM. Independent review has no blocker for existing-app scope;
-post-create and truly empty collections remain fail-closed. Installed module is
-byte-identical to the prepatch source compilation, enabling a bounded two-module
-qualification with private rollback custody. Original transient Remote View
-failure no longer reproduces; contemporaneous gateway restart is correlation,
-not proven cause. No ChatGPT prompt has been sent. Memory: forbidden; user did
-not authorize a durable memory update.
-
-
-### P87 IQ1 correction
-
-Installed test disproved endpoint removal: after CLI failure/exit, diagnostic
-reload of the same tab receives installed200 twice and plugins/home200. During
-owned execution, hydration fails and the CLI hides causes behind operation and
-cleanup aggregate failure. Cache patch restored; no live repair accepted. One
-bounded diagnostic records first request-admission errors, with module rollback
-automatic at exit. No provider prompt or calendar mutation has been submitted.
-
-
-### P87 IQ1 cause narrowed to configured pacing
-
-Network.enable and location reads return. Navigation then waits inside
-ProviderTrafficGovernor.begin -> ledger interaction pacing. The actual runtime
-profile supplies a120000ms renavigation cooldown through LlmService's live-follow
-policy resolver. Short diagnostic caps were invalid for this sequence. The
-second-client warning hypothesis does not apply to this utility caller. All
-speculative code has been withdrawn and original runtime bytes restored;
-temporary diagnostic hooks were removed. One original installed list is running
-with its full native timeout; no prompt or calendar mutation has been submitted.
-
-
-### P87 IQ1 complete-inventory / failed-cleanup separation
-
-Full native timeout reaches complete installed inventory, then exits1 with
-Provider observer cleanup failed/cleanupunknown. This disproves a permanent
-inventory deadlock but establishes a cleanup failure. A bounded read-only native
-error-chain capture is running with automatic diagnostic module restoration;
-file-completion continuation registered after monitor recovered qualified UTC.
-Speculative product code is withdrawn; PR370 closed. No provider prompt/calendar
-mutation ran. Next is exact leaf-cause regression, not a cleanup bypass.
-
-
-### P87 IQ1 bounded result
-
-Instrumented full-budget repeat exits0: complete26-app inventory, exact expected
-account/app, clean close. Allfour diagnostic modules restored byte-for-byte.
-Configured navigation pacing reproduced; historical cleanupfailure remains
-intermittent/unexplained, no sourcefixclaimed. Bounded diagnosis closed; original
-authorized integrationtest resumed with one in-place catalogrefresh and bounded
-filecompletionwake. No prompt/calendarwrite yet. Memory forbidden.
+Original in-place refresh failed before activation:8-second settings reader
+expired during legitimate request-admission waits (175denials on exact owned
+lease). Diagnostic reload loaded correct settings. Public refreshTools red/green
+covers20-second readiness under60-second allowance, bounded exhaustion, no-budget
+failure and prompt cancellation. Existing identity/endpoint/connection guards
+retained. 101 sequential focused/adjacent tests, full typecheck, compiled build
+and scoped lint pass. Parallel fixture timing failures observed; no parallel-pass
+claim. One-module installed qualification follows; no request-rate/cooldown or
+consent changes. No ChatGPT prompt/calendar writes yet. Memory forbidden.

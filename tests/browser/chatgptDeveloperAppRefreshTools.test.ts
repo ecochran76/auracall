@@ -6,6 +6,11 @@ describe("developer app tool refresh", () => {
 	afterEach(() => vi.useRealTimers());
 	it.each([
 		"success",
+		"slow-before-budget",
+		"slow-after-budget",
+		"slow-cancel-budget",
+		"slow-no-budget",
+		"slow-exhausted-budget",
 		"settling-before",
 		"settling-after",
 		"account-loading-before",
@@ -24,9 +29,12 @@ describe("developer app tool refresh", () => {
 		let response: (value: unknown) => void = () => {};
 		let finished: (value: unknown) => Promise<void> = async () => {};
 		const clicks: string[] = [];
+		const controller = new AbortController();
 		let settingsReads = 0;
 		let postReads = 0;
-		if (scenario === "foreign-refresh-link") vi.useFakeTimers();
+		vi.useFakeTimers();
+		const startedAt = Date.now();
+		const settingsReadyAt = Date.now() + (scenario === "slow-exhausted-budget" ? 80_000 : 20_000);
 		const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
 			if (expression.includes("refreshButtonCount:")) {
 				const firstRead = settingsReads++ === 0;
@@ -34,7 +42,12 @@ describe("developer app tool refresh", () => {
 				const text = `Connected accounts\n${scenario === "connection-change" && clicks.length ? "Other account" : scenario === "account-loading-before" && firstRead ? "Connect another account" : "Fixture account"}\nAbout\nURL\nhttps://fixture.example/mcp\nApp ID\n${["identity-change", "app-member-change"].includes(scenario) && clicks.length ? "other" : "fixture"}\nRefresh tools`;
 				const control = {
 					innerText: "Refresh tools",
-					disabled: (scenario === "settling-before" && firstRead) || postLoading,
+					disabled:
+						(scenario === "settling-before" && firstRead) ||
+						postLoading ||
+						(scenario.startsWith("slow-") &&
+							(scenario === "slow-after-budget" ? clicks.length > 0 : !clicks.length) &&
+							Date.now() < settingsReadyAt),
 					getAttribute: () => null,
 					getBoundingClientRect: () => ({ width: 100, height: 30 }),
 				};
@@ -67,7 +80,14 @@ describe("developer app tool refresh", () => {
 		});
 		const adapter = createChatgptDeveloperAppBrowserAdapter(
 			{
-				userConfig: {} as never,
+				userConfig: {
+					services: {
+						chatgpt: {
+							backendRequestBudgetWaitMs:
+								scenario.startsWith("slow-") && scenario !== "slow-no-budget" ? 60_000 : 0,
+						},
+					},
+				} as never,
 				getUserIdentity: async () => null,
 				connectDevTools: async () => ({
 					port: 1,
@@ -158,6 +178,7 @@ describe("developer app tool refresh", () => {
 			async () => {
 				throw Error("unexpected browser creation");
 			},
+			{ abortSignal: controller.signal },
 		);
 		const resultPromise = adapter.refreshTools(
 			{
@@ -167,7 +188,24 @@ describe("developer app tool refresh", () => {
 			},
 			"https://fixture.example/mcp",
 		);
-		if (scenario === "foreign-refresh-link") await vi.runAllTimersAsync();
+		void resultPromise.catch(() => undefined);
+		if (scenario === "slow-cancel-budget")
+			setTimeout(() => controller.abort(new Error("fixture cancelled")), 1000);
+		await vi.runAllTimersAsync();
+		if (scenario === "slow-cancel-budget") {
+			await expect(resultPromise).rejects.toThrow("fixture cancelled");
+			expect(clicks).toEqual([]);
+			expect(Date.now() - startedAt).toBeLessThan(5000);
+			return;
+		}
+		if (["slow-no-budget", "slow-exhausted-budget"].includes(scenario)) {
+			await expect(resultPromise).rejects.toThrow(
+				"App refresh settings did not settle before refresh",
+			);
+			expect(clicks).toEqual([]);
+			expect(Date.now()).toBeLessThan(settingsReadyAt);
+			return;
+		}
 		if (scenario === "foreign-connection") {
 			await expect(resultPromise).rejects.toThrow("Exact app connection identity unavailable");
 			expect(clicks).toEqual([]);
@@ -177,6 +215,8 @@ describe("developer app tool refresh", () => {
 		expect(result.status).toBe(
 			[
 				"success",
+				"slow-before-budget",
+				"slow-after-budget",
 				"body-fallback",
 				"settling-before",
 				"settling-after",
@@ -190,6 +230,8 @@ describe("developer app tool refresh", () => {
 		if (
 			[
 				"success",
+				"slow-before-budget",
+				"slow-after-budget",
 				"body-fallback",
 				"settling-before",
 				"settling-after",
