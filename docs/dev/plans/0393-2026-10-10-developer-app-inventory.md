@@ -46,3 +46,17 @@ Stop condition: record that outcome and the exact remaining integration gate.
 No cooldown reduction, warning bypass, speculative source change or calendar
 mutation belongs to this diagnosis. Original runtime hashes and rollback
 custody are preserved privately; temporary diagnostic hooks are removed.
+
+### Full-budget result
+
+The unmodified installed list completed inventory, then exited1 in cleanup with
+`Provider observer cleanup failed.` and cleanupunknown. Configured pacing
+explains the apparent hang; observer cleanup is a separate real failure.
+`mutationAudit.ts` aggregates backend-admission and warning-observer disposal
+errors. The generic JSON result hides the attributable leaf. One bounded
+read-only capture now projects native AggregateError.errors/Error.cause privately
+at the existing CLI formatter, with automatic module restoration on exit.
+A qualified file-completion continuation is registered. No prompt/calendar write
+has been sent. Do not suppress unknown cleanup or infer source acceptance from
+inventory completion. Next: identify leaf error and reproduce its exact ordering
+at tests/browser/backendRequestAdmission.test.ts before proposing a fix.

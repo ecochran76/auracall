@@ -15,7 +15,7 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: configured-pacing-observed-full-run-pending
+    validation_status: inventory-complete-observer-cleanup-failed-cause-pending
     updated_at: 2026-10-22
   - id: issue331
     objective: Repair five provider-free baseline test failures

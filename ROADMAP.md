@@ -4,7 +4,8 @@
 
 - Reopened P87 / corrective IQ1 (existing-app inventory): navigation pacing
   diagnosis on fix/installed-plugin-query; speculative cache change withdrawn,
-  full-timeout installed read-only outcome pending.
+  full-timeout inventory completes but observer cleanup fails; exact leaf-cause
+  capture and bounded continuation active.
 
 - Historical P87 acceptance: [Plan0393](docs/dev/plans/0393-2026-10-10-developer-app-inventory.md) repairs issue225 app inventory independently of missing Developer-mode UI; PR248 integrated; original installed inventory passes with 26 apps and independent review.
 

@@ -22268,3 +22268,14 @@ second-client warning hypothesis does not apply to this utility caller. All
 speculative code has been withdrawn and original runtime bytes restored;
 temporary diagnostic hooks were removed. One original installed list is running
 with its full native timeout; no prompt or calendar mutation has been submitted.
+
+
+### P87 IQ1 complete-inventory / failed-cleanup separation
+
+Full native timeout reaches complete installed inventory, then exits1 with
+Provider observer cleanup failed/cleanupunknown. This disproves a permanent
+inventory deadlock but establishes a cleanup failure. A bounded read-only native
+error-chain capture is running with automatic diagnostic module restoration;
+file-completion continuation registered after monitor recovered qualified UTC.
+Speculative product code is withdrawn; PR370 closed. No provider prompt/calendar
+mutation ran. Next is exact leaf-cause regression, not a cleanup bypass.
