@@ -466,12 +466,11 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		serverUrl: string,
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
 		const client = await this.ensureClient();
-		const settingsReadTimeoutMs =
-			8_000 +
-			resolveChatgptBackendRequestBudgetWaitMs(
-				this.browser.userConfig as Record<string, unknown>,
-				this.browser.userConfig.auracallProfile ?? "default",
-			);
+		const budgetWaitMs = resolveChatgptBackendRequestBudgetWaitMs(
+			this.browser.userConfig as Record<string, unknown>,
+			this.browser.userConfig.auracallProfile ?? "default",
+		);
+		const settingsReadTimeoutMs = 8_000 + budgetWaitMs;
 		const settingsUrl = `https://chatgpt.com/settings/plugins-settings/${encodeURIComponent(app.pluginId)}`;
 		const observation = observeChatgptToolRefresh(client, app, this.abortSignal);
 		try {
@@ -479,15 +478,10 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			const navigation = await navigateAndSettle(client, {
 				url: settingsUrl,
 				forceNavigation: true,
-				timeoutMs: 10_000,
+				timeoutMs: 10_000 + budgetWaitMs,
 				mutationSource: "chatgpt-developer-apps:refresh-tools-settings",
 			});
 			if (!navigation.ok) throw new Error("Exact app refresh settings navigation did not settle.");
-			await waitForPredicate(
-				client.Runtime,
-				`location.href === ${JSON.stringify(settingsUrl)} && document.body.innerText.includes('Refresh tools')`,
-				{ timeoutMs: 10_000, description: "exact app tool refresh settings" },
-			);
 			const before = await readChatgptDeveloperAppRefreshSettings(
 				client,
 				"before",
@@ -681,6 +675,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			client,
 			12_000 + budgetWaitMs,
 			this.abortSignal,
+			10_000 + budgetWaitMs,
 		);
 	}
 
@@ -982,6 +977,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 	client: ChromeClient,
 	timeoutMs: number,
 	signal?: AbortSignal,
+	navigationTimeoutMs = 10_000,
 ): Promise<string> {
 	signal?.throwIfAborted();
 	const endpoints = {
@@ -1091,7 +1087,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 		if (currentUrl?.startsWith("https://chatgpt.com/plugins")) {
 			const reloaded = await reloadAndSettle(client, {
 				ignoreCache: true,
-				timeoutMs: 10_000,
+				timeoutMs: navigationTimeoutMs,
 				mutationSource: "chatgpt-developer-apps:inventory-reload",
 			});
 			if (!reloaded.ok) {
@@ -1101,7 +1097,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 			}
 			await wait(250);
 		} else {
-			await navigateChatgpt(client, "https://chatgpt.com/plugins");
+			await navigateChatgpt(client, "https://chatgpt.com/plugins", navigationTimeoutMs);
 		}
 		const inventoryReady = Promise.race([installedReady, payloadPromise]);
 		let ready = false;
@@ -1129,7 +1125,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 		}
 		await inventoryReady;
 		signal?.throwIfAborted();
-		await navigateChatgpt(client, "https://chatgpt.com/");
+		await navigateChatgpt(client, "https://chatgpt.com/", navigationTimeoutMs);
 		beginLinkedObservation();
 		const payloads = await payloadPromise;
 		const installedPayload = isRecord(payloads.installed) ? payloads.installed : {};
@@ -1339,10 +1335,14 @@ async function selectChatgptDeveloperAppConnectionMode(
 	return true;
 }
 
-async function navigateChatgpt(client: ChromeClient, url: string): Promise<void> {
+async function navigateChatgpt(
+	client: ChromeClient,
+	url: string,
+	timeoutMs = 10_000,
+): Promise<void> {
 	const settled = await navigateAndSettle(client, {
 		url,
-		timeoutMs: 10_000,
+		timeoutMs,
 		mutationSource: "chatgpt-developer-apps:navigate",
 	});
 	if (!settled.ok) {

@@ -22244,3 +22244,15 @@ retained. 101 sequential focused/adjacent tests, full typecheck, compiled build
 and scoped lint pass. Parallel fixture timing failures observed; no parallel-pass
 claim. One-module installed qualification follows; no request-rate/cooldown or
 consent changes. No ChatGPT prompt/calendar writes yet. Memory forbidden.
+
+
+### IQ2 navigation gate
+
+Installed qualification failed during read-only root document readiness before
+refreshTools was reached. Real-UI public readState regression reproduced the
+same10-second/20-second mismatch. Inventory navigation/reload and exactsettings
+navigation now honor configured admission wait too; default helper callers and
+overall command deadline unchanged. Removed ignored redundant settings-content
+wait; stronger exactsettings reader remains. 102 sequentialtests/typecheck/build/
+scopedlint pass. Previous attempt preserved as zeroactivation; freshqualification
+uses a distinct result path. No provider prompt/calendarwrite.

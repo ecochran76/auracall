@@ -51,3 +51,18 @@ is explicitly the sequential suite. Installed qualification is pending.
 Done when one installed in-place refresh preserves identity/connection and
 returns the refreshed catalog, or an attributable live blocker is recorded.
 The original ChatGPT calendar test remains a subsequent integration gate.
+
+### Read-only navigation readiness
+
+The first installed IQ2 qualification stopped earlier in readState, before the
+refresh method: root document readiness exceeded a separate10-second window.
+A public readState fixture using the real navigation helper reproduced the exact
+root-navigation error with20-second readiness under a60-second allowance.
+Inventory navigation/reload and exact refresh-settings navigation now receive
+the same configured admission allowance. Other helper callers retain their
+10-second default. The ignored preliminary settings-content wait is removed;
+the stronger settings reader still requires a unique enabled Refresh tools
+control and connected-account state, followed by exact endpoint/app checks.
+Enclosing command deadline remains unchanged. 102 sequential tests, typecheck,
+compiled build and scoped lint pass (external CDP naming warnings only).
+No refresh activation or calendar write occurred in this failed qualification.
