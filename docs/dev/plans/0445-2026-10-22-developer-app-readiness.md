@@ -1,6 +1,6 @@
 # Plan0445 — Developer-app readiness (#357)
 
-State: VALIDATED
+State: CLOSED
 Branch: fix/issue357-plugin-readiness
 Base: d28adfff7
 
@@ -48,3 +48,12 @@ mark the exact unique observed control. Spec: account failure is prompt without
 shortening capacity wait; before/after identity, readiness and blocking checks
 fence recovery before form input; persistent/ambiguous/unknown states stop. No
 accepted blocker remains. Both review axes performed by primary, no delegation.
+
+## Delivery readback
+
+PR365 publishes source commit 2c45a3963 and this closeout against main. Remote
+branch readback and published diff/spec checked by primary before merge. Source
+outcome is complete; no provider-side historical cause or live UI success inferred.
+Fresh wrapper/service readback: CLI points to user-runtime-issue226-readiness;
+API PID11771 is active through that wrapper. This task does not deploy/restart it.
+Memory disposition: forbidden, no explicit user request to save memory.
