@@ -1,3 +1,16 @@
+## 2026-10-22 — Issue357 developer-app readiness
+
+Plan0445: public fixture reproduced account-load error waiting through the capacity
+budget. Observe scoped visible failure while awaiting installed inventory, preserving
+legitimate delayed responses and cancellation. Disabled Add dropdown recovery is
+one pre-form refresh with before/after exact account email, fresh readiness and
+blocking-surface checks. Mark the exact observed control for trusted pointer input:
+a selector overrides label matching in the shared helper. No provider/live effects.
+91 focused tests/5suites, typecheck/build/scoped Biome pass. Initial concurrent
+lifecycle timeout passes unchanged in isolated/final serial verification. Source
+review accepted exact-control marking; active installed runtime unchanged.
+PR365; Plan0445 CLOSED for source outcome. Memory forbidden: no save request.
+
 ## 2026-10-21 — Pending worktrees archived and source slice reconciled
 
 Plan0444:12private verified tar snapshots,5dirty stash/archive refs and verified

@@ -1,3 +1,11 @@
+- Developer-app readiness (#357, provider-free):
+  `pnpm vitest run tests/browser/chatgptDeveloperAppReadiness.test.ts tests/browser/chatgptDeveloperAppInventory.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/browser/chatgptDeveloperAppRefreshTools.test.ts tests/browser/chatgptDeveloperAppLifecycle.test.ts --maxWorkers=1`
+  Public adapter fixtures cover immediate/late account-load failure, sidebar/hidden
+  exclusions, cancellation/timer disposal, delayed success, one disabled Add refresh,
+  identity loss/change, persistent disablement, absent/ambiguous controls and legacy
+  Create app. Form-input sentinel proves no recovery retry after opening the form.
+  These fixtures do not establish installed/live provider acceptance.
+
 - Backend transport handoff, native cancellation and inventory observation (provider-free, issue325):
   `pnpm vitest run tests/browser/backendRequestAdmission.test.ts tests/browser/chatgptDeveloperAppInventory.test.ts tests/browser/nativeDesktopCdp.test.ts tests/browser/desktopControlGate.test.ts`.
   Reused governor probes the owning Runtime after predecessor closure. Seven

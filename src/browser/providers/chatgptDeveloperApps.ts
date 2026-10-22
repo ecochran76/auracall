@@ -214,23 +214,76 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		}
 	}
 
+	private async openCreateDialog(client: ChromeClient): Promise<void> {
+		this.throwIfAborted();
+		await assertNoChatgptAccountLoadError(client, this.abortSignal);
+		await assertNoChatgptBlockingSurface(client, "create developer app");
+		let control = await readDeveloperAppCreateControl(client, this.abortSignal);
+		if (control?.disabled) {
+			const before = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
+			if (!before?.email?.trim())
+				throw new Error("Cannot refresh Plugins without a verified account identity.");
+			this.throwIfAborted();
+			const reloaded = await reloadAndSettle(client, {
+				ignoreCache: true,
+				timeoutMs: 10_000,
+				mutationSource: "chatgpt-developer-apps:disabled-add-recovery",
+			});
+			if (!reloaded.ok) throw new Error("ChatGPT Plugins recovery refresh did not settle.");
+			this.throwIfAborted();
+			await assertNoChatgptAccountLoadError(client, this.abortSignal);
+			await assertNoChatgptBlockingSurface(client, "create developer app");
+			const after = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
+			this.throwIfAborted();
+			if (
+				!after?.email?.trim() ||
+				before.email.trim().toLowerCase() !== after.email.trim().toLowerCase()
+			) {
+				throw new Error(
+					"ChatGPT account identity changed or became unavailable after Plugins refresh; create stopped.",
+				);
+			}
+			control = await readDeveloperAppCreateControl(client, this.abortSignal);
+			if (!control || control.disabled)
+				throw new Error(
+					"ChatGPT Plugins Add/Create app remains unavailable after one refresh; recover the page manually.",
+				);
+		}
+		if (!control)
+			throw new Error("ChatGPT Plugins did not expose one available Add/Create app control.");
+		this.throwIfAborted();
+		if (control.kind === "add") {
+			const menu = await pressButtonWithTrustedPointer(client, {
+				selector: developerAppCreateControlSelector,
+				match: { exact: ["add"] },
+				requireVisible: true,
+				postSelector: '[role="menu"],[role="listbox"]',
+				timeoutMs: 8_000,
+			});
+			if (!menu.ok) throw new Error("Unable to open ChatGPT Plugins Add dropdown; create stopped.");
+			this.throwIfAborted();
+		}
+		const opened = await pressButtonWithTrustedPointer(client, {
+			...(control.kind === "add"
+				? { rootSelectors: ['[role="menu"]', '[role="listbox"]'], match: { exact: ["create app"] } }
+				: { selector: 'button[aria-label="Create app"]' }),
+			requireVisible: true,
+			postSelector: '[role="dialog"]',
+			timeoutMs: 8_000,
+		});
+		if (!opened.ok)
+			throw new Error(
+				`Unable to open ChatGPT Create app: ${opened.reason ?? "control not found"}.`,
+			);
+		this.throwIfAborted();
+	}
+
 	async create(
 		input: ChatgptDeveloperAppBrowserCreateInput,
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
 		const client = await this.ensureClient();
 		await navigateChatgpt(client, "https://chatgpt.com/plugins");
-		await assertNoChatgptBlockingSurface(client, "create developer app");
-		const opened = await pressButtonWithTrustedPointer(client, {
-			selector: 'button[aria-label="Create app"]',
-			requireVisible: true,
-			postSelector: '[role="dialog"]',
-			timeoutMs: 8_000,
-		});
-		if (!opened.ok) {
-			throw new Error(
-				`Unable to open ChatGPT Create app: ${opened.reason ?? "control not found"}.`,
-			);
-		}
+		await this.openCreateDialog(client);
 		await setRequiredInput(client, 'input[aria-label="Name"]', input.name, "app name");
 		if (input.description) {
 			await setRequiredInput(
@@ -1034,7 +1087,31 @@ async function captureChatgptDeveloperAppFeatureSignature(
 		} else {
 			await navigateChatgpt(client, "https://chatgpt.com/plugins");
 		}
-		await Promise.race([installedReady, payloadPromise]);
+		const inventoryReady = Promise.race([installedReady, payloadPromise]);
+		let ready = false;
+		void inventoryReady.then(
+			() => {
+				ready = true;
+			},
+			() => {
+				ready = true;
+			},
+		);
+		while (!ready) {
+			await assertNoChatgptAccountLoadError(client, signal);
+			let pollTimer: NodeJS.Timeout | undefined;
+			try {
+				await Promise.race([
+					inventoryReady,
+					new Promise<void>((resolve) => {
+						pollTimer = setTimeout(resolve, 500);
+					}),
+				]);
+			} finally {
+				clearTimeout(pollTimer);
+			}
+		}
+		await inventoryReady;
 		signal?.throwIfAborted();
 		await navigateChatgpt(client, "https://chatgpt.com/");
 		beginLinkedObservation();
@@ -1390,6 +1467,82 @@ async function clearDeveloperAppComposer(client: ChromeClient): Promise<void> {
 
 export async function clearDeveloperAppComposerForTest(client: ChromeClient): Promise<void> {
 	await clearDeveloperAppComposer(client);
+}
+
+const developerAppCreateControlSelector = '[data-auracall-developer-app-create-control="true"]';
+
+const developerAppAddSelector =
+	'button[aria-haspopup],[role="button"][aria-haspopup],[role="combobox"]';
+
+async function readDeveloperAppCreateControl(
+	client: ChromeClient,
+	signal?: AbortSignal,
+): Promise<{ kind: "add" | "legacy"; disabled: boolean } | null> {
+	const result = await runDeveloperAppAttachmentStage(
+		client.Runtime.evaluate({
+			expression: `(() => {
+      for (const previous of document.querySelectorAll('${developerAppCreateControlSelector}')) previous.removeAttribute('data-auracall-developer-app-create-control');
+      const candidates = Array.from(document.querySelectorAll('button[aria-label="Create app"],${developerAppAddSelector}')).filter((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const label = String(element.getAttribute('aria-label') || element.textContent || '').trim();
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && /^(Add|Create app)$/i.test(label) && !element.closest('nav,aside');
+      });
+      if (candidates.length !== 1) return null;
+      const element = candidates[0];
+      element.setAttribute('data-auracall-developer-app-create-control', 'true');
+      const label = String(element.getAttribute('aria-label') || element.textContent || '').trim();
+      return {kind: /^Add$/i.test(label) ? 'add' : 'legacy', disabled: element.disabled === true || element.getAttribute('aria-disabled') === 'true' || element.getAttribute('aria-hidden') === 'true'};
+    })()`,
+			returnByValue: true,
+		}),
+		{ stage: "developer-app create readiness", timeoutMs: 10_000, abortSignal: signal },
+	);
+	const value = result.result?.value;
+	return isRecord(value) &&
+		(value.kind === "add" || value.kind === "legacy") &&
+		typeof value.disabled === "boolean"
+		? { kind: value.kind, disabled: value.disabled }
+		: null;
+}
+
+async function assertNoChatgptAccountLoadError(
+	client: ChromeClient,
+	signal?: AbortSignal,
+): Promise<void> {
+	const result = await runDeveloperAppAttachmentStage(
+		client.Runtime.evaluate({
+			expression: `(() => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const text = [];
+      for (let node; (node = walker.nextNode());) {
+        const parent = node.parentElement;
+        if (!parent || parent.closest('nav,aside')) continue;
+        const rect = parent.getBoundingClientRect();
+        const style = getComputedStyle(parent);
+        if (rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden') text.push(node.textContent || '');
+      }
+      return text.join(' ').slice(0, 12000);
+    })()`,
+			returnByValue: true,
+		}),
+		{ stage: "developer-app account readiness", timeoutMs: 10_000, abortSignal: signal },
+	);
+	const text = readString(result.result?.value) ?? "";
+	if (
+		/\b(?:error|problem|trouble) (?:while )?loading your account\b|\b(?:unable|failed) to load your account\b/i.test(
+			text,
+		)
+	) {
+		throw Object.assign(
+			new Error(
+				"ChatGPT could not load the account for developer-app inventory. Recover the account page, then retry inventory; no app was created.",
+			),
+			{
+				code: "developer_app_account_load_error",
+			},
+		);
+	}
 }
 
 async function assertNoChatgptBlockingSurface(client: ChromeClient, action: string): Promise<void> {

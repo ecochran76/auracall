@@ -1,3 +1,14 @@
+## 2026-10-22 — Observe failed account pages during developer-app inventory
+
+An absent inventory response is not always legitimate capacity waiting. Check
+visible account-load failure outside sidebar history while awaiting installed data;
+return developer_app_account_load_error without consuming the capacity allowance.
+Preserve ordinary delayed success. For a disabled Plugins Add dropdown/combo,
+refresh once before opening the form, compare account identity, and re-observe
+readiness. Missing/ambiguous controls and changed identity stop without input.
+Never retry form input or submission. Trusted pointer selector ignores label match;
+mark the one observed Add control instead of passing a broad popup selector.
+
 ## 2026-10-21 — Reconcile physical tab custody across tenant metadata drift
 
 A retained dead-owner lease can share the exact managed browser directory and
