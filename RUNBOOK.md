@@ -22246,3 +22246,13 @@ qualification with private rollback custody. Original transient Remote View
 failure no longer reproduces; contemporaneous gateway restart is correlation,
 not proven cause. No ChatGPT prompt has been sent. Memory: forbidden; user did
 not authorize a durable memory update.
+
+
+### P87 IQ1 correction
+
+Installed test disproved endpoint removal: after CLI failure/exit, diagnostic
+reload of the same tab receives installed200 twice and plugins/home200. During
+owned execution, hydration fails and the CLI hides causes behind operation and
+cleanup aggregate failure. Cache patch restored; no live repair accepted. One
+bounded diagnostic records first request-admission errors, with module rollback
+automatic at exit. No provider prompt or calendar mutation has been submitted.

@@ -43,3 +43,14 @@ pending. Post-create capture and genuinely empty installed collections remain
 fail-closed outside this existing-app test repair. No app replacement, account
 reset or provider prompt is part of IQ1. Done when the installed original list
 returns complete inventory for the exact account and selected existing app.
+
+### Live correction | IQ1 is not the root repair
+
+The first frontend-removal hypothesis was disproven: the same tab loads
+`/backend-api/ps/plugins/installed` with HTTP200 after the owned CLI exits.
+During the owned run, Plugins displays Failed to fetch and backend resources
+fail. Installed IQ1 did not complete the original command; it ended with
+owned cleanup unknown. The two-module cache patch was restored to the original
+runtime. Keep this branch as a supplemental candidate, not an accepted live
+repair. Investigate owned request admission and its first failure before further
+provider effects. No prompt or calendar mutation ran.
