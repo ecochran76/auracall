@@ -6,6 +6,11 @@ Developer-app inventory diagnostics retain browser resolution, utility/interacti
 admission, identity, attachment, inventory, Developer mode, navigation restoration
 and cleanup stages. Queue admission precedes the operation and has its own bound.
 The effective inventory deadline includes configured backend capacity waiting.
+A visible main-page account-load failure ends installed inventory observation with
+`developer_app_account_load_error`; sidebar/hidden text is not failure evidence.
+Plugins Add is a dropdown/combo. A disabled control permits one pre-form refresh,
+with exact account continuity and fresh readiness checks; missing identity or a
+still unavailable control stops creation. No recovery wraps form input/submission.
 Passive assistant progress includes plain prose owned by the qualified assistant
 turn when a provider omits its markdown wrapper. Descendant content remains
 preferred; tool/composer exclusions and response boundaries still apply. Snapshot
