@@ -9,7 +9,26 @@ Branch: feat/issue240-named-desktops
 Base: origin/main at 591a118245cafbc54c34cd0bc179c4b380308ef6
 Work items: ecochran76/auracall#240, ecochran76/auracall#241, ecochran76/auracall#242
 
-## Current deployment checkpoint: 2026-10-10
+## Current acceptance checkpoint: 2026-10-22
+
+Plan0448 refreshes #240 against installed issue357-55520b18e (API PID2028634).
+The local client returns 200 and public ingress redirects to authentication.
+Installed canonical inventory qualifies two ready owned browsers on Research and
+another retained named desktop. Writing is empty: its retained assignment was
+released, while its physical desktop is ready under a different active assignment.
+Do not adopt that new assignment from display/name matching or silently rebind.
+22 focused configuration/launch/client tests across seven suites pass.
+
+Historical human text-entry verification remains qualified for its original
+checkpoint. Authenticated current viewer pixels and independent root confirmation
+are requested from the operator and remain pending. Agent-browser inspection has
+no attached transfer candidate; its preserve-only plan requires substrate
+provisioning, outside #240. No new marker prepare, control grant, provider input,
+installation, restart, ownership cleanup or readiness inference was performed.
+#240 and this wider plan remain OPEN. Private receipts and continuation gate:
+[Plan0448](0448-2026-10-22-issue240-acceptance.md).
+
+## Historical deployment checkpoint: 2026-10-10
 
 PR244 merged at578b642c33104e3b1bf4db2f10c6989a9504bb42. The combined desktop
 and launch-policy package is installed byte-identically across589 dist files;
