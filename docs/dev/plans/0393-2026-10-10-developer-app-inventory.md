@@ -1,6 +1,6 @@
 # Plan0393 | Independent app inventory and Developer-mode observation
 
-State: CLOSED
+State: OPEN
 Owner: ecochran76
 Work item: https://github.com/ecochran76/auracall/issues/225
 Branch: fix/issue225-app-inventory
@@ -21,3 +21,25 @@ Return complete app inventory when Developer-mode UI is unavailable; represent t
 ## Acceptance
 
 PR248 integrated c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8. Source regression, 79 focused/adjacent tests and installed original command pass; independent Standards/Spec review has zero findings. See [bounded installed receipt](../notes/2026-10-10-plan0393-inventory-acceptance.md). Remote CI supplied no checks. Source and scoped two-module installation are accepted; live create/replace remains untested.
+
+## Corrective item IQ1 | 2026-10-22
+
+Owner: ecochran76. Branch: fix/installed-plugin-query. State: IN_PROGRESS.
+The historical acceptance above remains valid for its frontend version. Current
+Plugins UI hydrates an account-bound installed React Query collection without
+emitting the legacy installed endpoint. Existing-app inventory therefore waits
+and returns incomplete despite visible membership.
+
+Repair only existing-app readState: pass the verified account ID to a passive,
+bounded, allowlisted query-cache projection. Require the exact five-part key,
+success/idle/non-invalidated state, unique collection and exact installed plugin
+IDs. Batch catalog metadata never establishes membership. Preserve legacy
+network capture, exact app/auth selection, abort cleanup and mutation gates.
+Public adapter regression went red (empty/incomplete) before the fix and green
+with the actual projection expression executed in a VM fixture. 154 adjacent
+tests, full typecheck and compiled build pass. Independent scoped review found
+no blocker; primary independently reran the tests. Installed qualification is
+pending. Post-create capture and genuinely empty installed collections remain
+fail-closed outside this existing-app test repair. No app replacement, account
+reset or provider prompt is part of IQ1. Done when the installed original list
+returns complete inventory for the exact account and selected existing app.

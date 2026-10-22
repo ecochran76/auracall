@@ -1,6 +1,22 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: P87-IQ1
+    objective: Restore existing-app inventory from current ChatGPT installed query
+    work_items: [Plan0393-IQ1]
+    plan: docs/dev/plans/0393-2026-10-10-developer-app-inventory.md
+    plan_ref: refs/heads/fix/installed-plugin-query
+    branch: fix/installed-plugin-query
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 3bbb09faf
+    remote_ref: refs/remotes/origin/fix/installed-plugin-query
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: source-accepted-installed-pending
+    updated_at: 2026-10-22
   - id: issue331
     objective: Repair five provider-free baseline test failures
     work_items: [ecochran76/auracall#331]

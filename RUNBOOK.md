@@ -22231,3 +22231,18 @@ to restored application routes; no provider prompts or new wake ran.
 ## Turn 405 | 2026-10-11
 
 State: OPEN. [Plan0405](docs/dev/plans/0405-2026-10-11-developer-app-affinity-config.md), issue #253. Selected resolved configuration forwarding; source validation in progress, LitScout installed acceptance pending.
+
+
+## 2026-10-22 | P87 / Plan0393 IQ1
+
+Current ChatGPT Plugins no longer emits the installed endpoint awaited by
+AuraCall. Public readState regression reproduced incomplete empty inventory;
+exact account-bound settled installed-query projection repairs it. 154 focused
+and adjacent tests, typecheck and compiled build pass. Actual projection executes
+in the regression VM. Independent review has no blocker for existing-app scope;
+post-create and truly empty collections remain fail-closed. Installed module is
+byte-identical to the prepatch source compilation, enabling a bounded two-module
+qualification with private rollback custody. Original transient Remote View
+failure no longer reproduces; contemporaneous gateway restart is correlation,
+not proven cause. No ChatGPT prompt has been sent. Memory: forbidden; user did
+not authorize a durable memory update.

@@ -33,6 +33,7 @@ import {
 	normalizeChatgptInstalledAppProbes,
 	normalizeChatgptLinkedAppProbes,
 } from "./chatgptAdapter.js";
+import { parseInstalledQuerySnapshot } from "./chatgptInstalledQuery.js";
 import type { BrowserProviderListOptions, ProviderUserIdentity } from "./types.js";
 
 export interface ChatgptDeveloperAppStateInput {
@@ -188,7 +189,10 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		try {
 			debugDeveloperApps("reading installed and linked app signals");
 			this.submissionOptions.onInventoryStage?.("inventory");
-			const featureSignature = await this.captureInventoryFeatureSignature(client);
+			const featureSignature = await this.captureInventoryFeatureSignature(
+				client,
+				identity?.accountId ?? null,
+			);
 			this.throwIfAborted();
 			debugDeveloperApps(
 				options.includeDeveloperMode === false
@@ -655,7 +659,10 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		debugDeveloperApps("developer-app browser client closed");
 	}
 
-	private captureInventoryFeatureSignature(client: ChromeClient): Promise<string> {
+	private captureInventoryFeatureSignature(
+		client: ChromeClient,
+		expectedAccountId: string | null = null,
+	): Promise<string> {
 		const config = this.browser.userConfig;
 		const budgetWaitMs = resolveChatgptBackendRequestBudgetWaitMs(
 			config as Record<string, unknown>,
@@ -665,6 +672,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			client,
 			12_000 + budgetWaitMs,
 			this.abortSignal,
+			expectedAccountId,
 		);
 	}
 
@@ -966,6 +974,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 	client: ChromeClient,
 	timeoutMs: number,
 	signal?: AbortSignal,
+	expectedAccountId: string | null = null,
 ): Promise<string> {
 	signal?.throwIfAborted();
 	const endpoints = {
@@ -980,6 +989,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 	});
 	let observationDisposed = false;
 	let disposeCapture: () => void = () => undefined;
+	let acceptInstalledQuery: (records: Record<string, unknown>[]) => void = () => undefined;
 	let beginLinkedObservation: () => void = () => undefined;
 	const payloadPromise = new Promise<{
 		installed: unknown | null;
@@ -996,6 +1006,12 @@ async function captureChatgptDeveloperAppFeatureSignature(
 			settled = true;
 			clearTimeout(timer);
 			resolve(payloads);
+		};
+		acceptInstalledQuery = (records) => {
+			if (settled || payloads.installed !== null) return;
+			payloads.installed = { plugins: records };
+			resolveInstalled();
+			finish();
 		};
 		const finishPartial = () => {
 			if (settled) return;
@@ -1098,6 +1114,14 @@ async function captureChatgptDeveloperAppFeatureSignature(
 			},
 		);
 		while (!ready) {
+			if (expectedAccountId) {
+				const snapshot = await client.Runtime.evaluate({
+					expression: installedQuerySnapshotExpression(),
+					returnByValue: true,
+				});
+				const records = parseInstalledQuerySnapshot(snapshot.result?.value, expectedAccountId);
+				if (records !== null) acceptInstalledQuery(records);
+			}
 			await assertNoChatgptAccountLoadError(client, signal);
 			let pollTimer: NodeJS.Timeout | undefined;
 			try {
@@ -1129,6 +1153,35 @@ async function captureChatgptDeveloperAppFeatureSignature(
 	} finally {
 		disposeCapture();
 	}
+}
+
+// Passive, bounded projection: never fetch catalog metadata or infer membership from it.
+function installedQuerySnapshotExpression(): string {
+	return `(() => {
+  const marker = "auracall.installed-query.v1";
+  if (location.origin !== "https://chatgpt.com" || location.pathname !== "/plugins") return null;
+  const anchor = document.querySelector('a[href^="/plugins/plugin_"]');
+  if (!anchor) return null;
+  const fiberKey = Object.keys(anchor).find(key => key.startsWith("__reactFiber"));
+  let fiber = fiberKey ? anchor[fiberKey] : null;
+  const clients = new Set();
+  for (let depth = 0; fiber && depth < 300; depth++, fiber = fiber.return) {
+   for (const candidate of [fiber.memoizedProps?.client, fiber.memoizedProps?.value]) {
+    if (candidate && typeof candidate.getQueryCache === "function") clients.add(candidate);
+   }
+  }
+  if (clients.size !== 1) return null;
+  const queries = [...clients][0].getQueryCache().getAll();
+  if (!Array.isArray(queries) || queries.length > 2000) return null;
+  const pick = (value, fields) => Object.fromEntries(fields.filter(key => value && Object.hasOwn(value, key)).map(key => [key, value[key]]));
+  return { origin: location.origin, pathname: location.pathname, queries: queries.filter(q => Array.isArray(q.queryKey) && q.queryKey[0] === "plugins" && q.queryKey[1] === "installed").map(q => ({
+   queryKey: q.queryKey, status: q.state?.status, fetchStatus: q.state?.fetchStatus, isInvalidated: q.state?.isInvalidated,
+   data: Array.isArray(q.state?.data) && q.state.data.length <= 2000 ? q.state.data.map(entry => ({
+    installed: entry?.plugin?.installed, remotePluginId: entry?.plugin?.remotePluginId,
+    servicePlugin: entry?.servicePlugin ? { ...pick(entry.servicePlugin, ["id","name","canonical_app_id","status","enabled","authentication_policy","installation_policy","scope","discoverability","creator_name"]), release: pick(entry.servicePlugin.release, ["display_name","app_ids","version","description"]) } : null
+   })) : null
+  })) };
+ })()`;
 }
 
 function isCompleteChatgptInstalledAppsPayload(value: unknown): boolean {
