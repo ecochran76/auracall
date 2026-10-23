@@ -4,9 +4,11 @@
 
 - Completed P88: [Plan0394](docs/dev/plans/0394-2026-10-10-memory-routing.md) makes AuraCall Graphiti routing discoverable and distinguishes unresolved routes from service failure; atlas publication and original-query retrieval verified.
 
-- OPEN P87 corrective IQ2: [Plan0393](docs/dev/plans/0393-2026-10-10-developer-app-inventory.md)
+- CLOSED P87 corrective IQ2: [Plan0393](docs/dev/plans/0393-2026-10-10-developer-app-inventory.md)
   aligns refresh-settings reads with configured backend-admission allowance;
-  102 sequential tests/typecheck/build/lint pass, installed qualification pending.
+  132 combined sequential tests pass; typecheck/build/lint qualified. Installed
+  refresh reached its catalog response; preservation snapshot remained unconfirmed
+  and was reconciled read-only, without replay.
 
 - Historical P87 acceptance: [Plan0393](docs/dev/plans/0393-2026-10-10-developer-app-inventory.md) repairs issue225 app inventory independently of missing Developer-mode UI; PR248 integrated; original installed inventory passes with 26 apps and independent review.
 

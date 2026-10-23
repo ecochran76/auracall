@@ -5,18 +5,19 @@ lanes:
     objective: Honor configured admission wait while reading refresh settings
     work_items: [Plan0393-IQ2]
     plan: docs/dev/plans/0393-2026-10-10-developer-app-inventory.md
-    plan_ref: refs/heads/fix/app-refresh-settings-budget
+    plan_ref: refs/remotes/origin/main
     branch: fix/app-refresh-settings-budget
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 23aa6b83e
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: c0c9b28cc5cc1782485e152dc6cf4563426f07ce
     remote_ref: refs/remotes/origin/fix/app-refresh-settings-budget
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: sequential-source-accepted-installed-pending
-    updated_at: 2026-10-22
+    validation_status: source-accepted-refresh-blocker-recorded-no-replay
+    updated_at: 2026-10-23
+    integration_receipt: 470902bf70f994936d6a07458d5ac6b3f4e21256
   - id: issue331
     objective: Repair five provider-free baseline test failures
     work_items: [ecochran76/auracall#331]
