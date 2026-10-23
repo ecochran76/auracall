@@ -1,3 +1,12 @@
+## 2026-10-23 | Reject unknown ChatGPT CLI selectors (#374)
+
+`chatgpt:reasoning-medium` was not a supported semantic selector. The CLI accepted
+its null semantic resolution and fed it into generic label inference, producing
+gpt-5.2 / Terra. Reject unknown namespaced single-model browser selectors before
+inference, including configured model input. Keep `chatgpt:reasoning` as the
+existing standard/Medium selector. Regression first failed, then passed; no new
+alias or live model remapping is introduced. Installed acceptance is separate.
+
 
 ## 2026-10-23 — Use authorized ingress authentication before declaring an inspection gate
 
