@@ -1,3 +1,17 @@
+
+## 2026-10-22 — Preserve shared provider warnings during interaction settlement
+
+P78 / Plan0378 corrective diagnostic: a ChatGPT backend HTTP429 froze an active
+read-only interaction. The next governor settlement returned invalid-state and
+masked the provider-warning stop. A deterministic public governor+ledger fixture
+reproduced the exact error (1failed/5passed before fix). On invalid-state, inspect
+only the exact reservation in its account scope; a warning-frozen record raises
+the existing provider-warning admission error. Other settlement errors remain
+errors. Never settle/unfreeze the record, clear warnings or permit a retry.
+30focused governor/ledger/cross-process tests pass, including finish/close and an
+unrelated invalid-state control. Live calendar acceptance remains NOT_RUN; the
+provider warning has no automatic expiry. No new provider request used for proof.
+
 ## 2026-10-22 — Issue240 acceptance refreshed; installed gates remain
 
 Plan0448 under Plan0391: local client200/public authentication302, execution-key
