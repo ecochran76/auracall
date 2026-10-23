@@ -22245,3 +22245,28 @@ to restored application routes; no provider prompts or new wake ran.
 ## Turn 405 | 2026-10-11
 
 State: OPEN. [Plan0405](docs/dev/plans/0405-2026-10-11-developer-app-affinity-config.md), issue #253. Selected resolved configuration forwarding; source validation in progress, LitScout installed acceptance pending.
+
+
+## 2026-10-22 | P87 IQ2 refresh-settings admission budget
+
+Original in-place refresh failed before activation:8-second settings reader
+expired during legitimate request-admission waits (175denials on exact owned
+lease). Diagnostic reload loaded correct settings. Public refreshTools red/green
+covers20-second readiness under60-second allowance, bounded exhaustion, no-budget
+failure and prompt cancellation. Existing identity/endpoint/connection guards
+retained. 101 sequential focused/adjacent tests, full typecheck, compiled build
+and scoped lint pass. Parallel fixture timing failures observed; no parallel-pass
+claim. One-module installed qualification follows; no request-rate/cooldown or
+consent changes. No ChatGPT prompt/calendar writes yet. Memory forbidden.
+
+
+### IQ2 navigation gate
+
+Installed qualification failed during read-only root document readiness before
+refreshTools was reached. Real-UI public readState regression reproduced the
+same10-second/20-second mismatch. Inventory navigation/reload and exactsettings
+navigation now honor configured admission wait too; default helper callers and
+overall command deadline unchanged. Removed ignored redundant settings-content
+wait; stronger exactsettings reader remains. 102 sequentialtests/typecheck/build/
+scopedlint pass. Previous attempt preserved as zeroactivation; freshqualification
+uses a distinct result path. No provider prompt/calendarwrite.

@@ -1,6 +1,6 @@
 # Plan0393 | Independent app inventory and Developer-mode observation
 
-State: CLOSED
+State: OPEN
 Owner: ecochran76
 Work item: https://github.com/ecochran76/auracall/issues/225
 Branch: fix/issue225-app-inventory
@@ -21,3 +21,48 @@ Return complete app inventory when Developer-mode UI is unavailable; represent t
 ## Acceptance
 
 PR248 integrated c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8. Source regression, 79 focused/adjacent tests and installed original command pass; independent Standards/Spec review has zero findings. See [bounded installed receipt](../notes/2026-10-10-plan0393-inventory-acceptance.md). Remote CI supplied no checks. Source and scoped two-module installation are accepted; live create/replace remains untested.
+
+## Corrective item IQ2 | 2026-10-22
+
+Owner: ecochran76. Branch: fix/app-refresh-settings-budget. State: OPEN.
+Roadmap home: P87 existing developer-app inventory/tool refresh.
+
+An authorized in-place refresh stopped before activation because its settings
+reader allowed8seconds while backend admission could legitimately delay the
+settings response longer. The exact owned lease recorded175 minute-budget
+denials; same-tab diagnostic reload subsequently loaded correct app settings.
+The pre-activation failure is retained; no refresh effect or calendar write is
+claimed from that attempt.
+
+Use8seconds plus the configured backend-admission wait allowance for the before
+and after settings reads. Preserve the enclosing operation deadline and check
+caller cancellation during polling. Keep exact account/app/endpoint/connection
+and consent checks. No request-rate/cooldown change, app replacement, automatic
+consent or ambiguous-effect replay.
+
+Public refreshTools regression went RED for settings ready at20seconds under a
+60-second allowance; cancellation also went RED by waiting20seconds after abort.
+The repair passes101 focused/adjacent tests run with one worker, full typecheck,
+compiled build and scoped lint. Unconfigured/exhausted budgets still stop before
+click; cancellation stops promptly; existing identity/change guards remain.
+Parallel test runs showed timing-sensitive fixture failures, so passing evidence
+is explicitly the sequential suite. Installed qualification is pending.
+
+Done when one installed in-place refresh preserves identity/connection and
+returns the refreshed catalog, or an attributable live blocker is recorded.
+The original ChatGPT calendar test remains a subsequent integration gate.
+
+### Read-only navigation readiness
+
+The first installed IQ2 qualification stopped earlier in readState, before the
+refresh method: root document readiness exceeded a separate10-second window.
+A public readState fixture using the real navigation helper reproduced the exact
+root-navigation error with20-second readiness under a60-second allowance.
+Inventory navigation/reload and exact refresh-settings navigation now receive
+the same configured admission allowance. Other helper callers retain their
+10-second default. The ignored preliminary settings-content wait is removed;
+the stronger settings reader still requires a unique enabled Refresh tools
+control and connected-account state, followed by exact endpoint/app checks.
+Enclosing command deadline remains unchanged. 102 sequential tests, typecheck,
+compiled build and scoped lint pass (external CDP naming warnings only).
+No refresh activation or calendar write occurred in this failed qualification.
