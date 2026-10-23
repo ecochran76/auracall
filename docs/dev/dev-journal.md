@@ -1,4 +1,14 @@
 
+## 2026-10-23 — Installed automatic desktop launch and cleanup verified (#240)
+
+PR378 merged81752b758. Installed launch policy for the formerly pinned browser
+family selects automatic placement. One isolated about:blank browser launches,
+qualifies ready, and closes through the supported exact-browser API. Existing two
+browsers remain ready; fresh /proc check finds test root absent and zero scratch
+profile command matches. No provider prompt, input grant or runtime install.
+Plan0448 records the proof and limits; physical root/input acceptance remains open.
+
+
 ## 2026-10-23 — Neutral desktop model and stale explicit-pin cleanup (#240)
 
 Aligned CONTEXT.md and configuration examples: generic browser homes with neutral
