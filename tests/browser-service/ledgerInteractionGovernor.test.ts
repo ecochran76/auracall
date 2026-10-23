@@ -199,4 +199,77 @@ describe("ledger-backed browser interaction governor", () => {
 		await expect(lateInteraction).rejects.toBeInstanceOf(ProviderInteractionGovernorClosedError);
 		expect(await ledger.list()).toEqual([]);
 	});
+	test.each([
+		"beforeInteraction",
+		"finish",
+		"close",
+	] as const)("preserves a frozen provider warning during %s", async (action) => {
+		const scope = {
+			provider: "chatgpt",
+			tenantKey: "tenant-1",
+			runtimeProfileId: "runtime-1",
+			managedBrowserProfile: "managed-1",
+		};
+		const ledger = createInMemoryProviderInteractionLedger();
+		const governor = createLedgerBackedBrowserInteractionGovernor({
+			ledger,
+			scope,
+			workloadId: "utility:test",
+			operationId: "test",
+			tabLeaseId: "lease-test",
+			policy: {
+				maxConcurrentChats: 4,
+				maxConversationStartsPerHour: 120,
+				maxConversationStartsPerDay: 240,
+				maxInteractionsPerMinute: 6,
+			},
+			baseGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+		});
+		await governor.beforeInteraction("generic");
+		await ledger.recordProviderWarning({
+			scope,
+			classification: "rate-limit",
+			reason: "Owned backend HTTP 429",
+			observedAt: new Date().toISOString(),
+		});
+		await expect(
+			action === "beforeInteraction"
+				? governor.beforeInteraction("renavigation")
+				: governor[action](),
+		).rejects.toMatchObject({
+			name: "ProviderInteractionAdmissionError",
+			reason: "provider-warning",
+		});
+		expect(await ledger.list()).toMatchObject([
+			{ state: "frozen", effectState: "outcome-unknown", providerWarning: "rate-limit" },
+		]);
+	});
+
+	test("does not relabel an unrelated settlement failure as a provider warning", async () => {
+		const ledger = createInMemoryProviderInteractionLedger();
+		const governor = createLedgerBackedBrowserInteractionGovernor({
+			ledger,
+			scope: {
+				provider: "chatgpt",
+				tenantKey: "tenant-1",
+				runtimeProfileId: "runtime-1",
+				managedBrowserProfile: "managed-1",
+			},
+			workloadId: "utility:test",
+			operationId: "test",
+			tabLeaseId: "lease-test",
+			policy: {
+				maxConcurrentChats: 4,
+				maxConversationStartsPerHour: 120,
+				maxConversationStartsPerDay: 240,
+				maxInteractionsPerMinute: 6,
+			},
+			baseGovernor: { beforeInteraction: vi.fn(async () => undefined) },
+		});
+		await governor.beforeInteraction("generic");
+		vi.spyOn(ledger, "settle").mockResolvedValue({ ok: false, reason: "invalid-state" });
+		await expect(governor.finish()).rejects.toThrow(
+			"Provider interaction settlement failed: invalid-state.",
+		);
+	});
 });

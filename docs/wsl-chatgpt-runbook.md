@@ -321,3 +321,12 @@ problem with the operator; do not hand-edit receipts, reuse stale CDP endpoints,
 clear control claims or kill a browser to make the command succeed. After successful
 reconciliation, run one supported read-only inventory command. Provider warnings
 and human-verification pages retain their existing hard stops.
+
+
+### Warning-frozen interaction settlement
+
+A backend HTTP429 can freeze an active interaction before normal settlement.
+The governor reports `Provider interaction admission denied: provider-warning`
+in this case and preserves the ledger's frozen/outcome-unknown state. Inspect
+the scoped warning and its evidence; this diagnosis does not clear warnings or
+authorize replay. A warning with no cooldownUntil has no automatic expiry.

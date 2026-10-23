@@ -113,6 +113,16 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 			stopReason: settlement.reason,
 		});
 		if (!settled.ok) {
+			if (settled.reason === "invalid-state") {
+				const record = (await input.ledger.list(input.scope)).find(
+					(candidate) => candidate.reservationId === reservationId,
+				);
+				if (record?.state === "frozen" && record.providerWarning) {
+					// A shared provider warning owns this transition. Preserve its fence
+					// and report the warning instead of masking it as a ledger failure.
+					throw new ProviderInteractionAdmissionError("provider-warning");
+				}
+			}
 			throw new Error(`Provider interaction settlement failed: ${settled.reason}.`);
 		}
 	};
