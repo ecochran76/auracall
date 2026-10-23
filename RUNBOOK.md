@@ -1,3 +1,16 @@
+## Calendar-session custody closeout | 2026-10-23 UTC
+
+PR371 readiness repair and PR372 warning diagnostic are integrated. Combined
+132testsPASS; prior typecheck/build/lint receipts retained. Both clean repair
+worktrees closed after exact shared ancestry and no active cwd checks; topic refs
+preserved, root checkout returned to main. IQ2 closed at its documented attributable
+blocker condition: refresh catalog response observed, snapshot preservation
+unconfirmed, later settings baseline matched read-only, no refresh replay.
+Operator-driven ChatGPT calendar-store lifecycle subsequently passed. Runtime
+remains a scoped two-module installation, not a full canonical-runtime replacement.
+No warning clearance, browser navigation, scheduler control or prompt retry.
+Memory disposition forbidden: no explicit memory-update authorization.
+
 
 ## 2026-10-22 — Preserve shared provider warnings during interaction settlement
 

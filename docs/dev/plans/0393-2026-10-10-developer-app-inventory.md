@@ -24,7 +24,7 @@ PR248 integrated c629aeb0ca666ee633bd7ff0e1475e6cf29f00b8. Source regression, 79
 
 ## Corrective item IQ2 | 2026-10-22
 
-Owner: ecochran76. Branch: fix/app-refresh-settings-budget. State: OPEN.
+Owner: ecochran76. Branch: fix/app-refresh-settings-budget. State: CLOSED.
 Roadmap home: P87 existing developer-app inventory/tool refresh.
 
 An authorized in-place refresh stopped before activation because its settings
@@ -66,3 +66,17 @@ control and connected-account state, followed by exact endpoint/app checks.
 Enclosing command deadline remains unchanged. 102 sequential tests, typecheck,
 compiled build and scoped lint pass (external CDP naming warnings only).
 No refresh activation or calendar write occurred in this failed qualification.
+
+
+## IQ2 bounded closeout — 2026-10-23 UTC
+
+PR371 merged470902bf7 after132 combined readiness/ledger tests passed. Installed
+refresh3 reached activation and an attributable catalog response. Preservation
+snapshot comparison remained unconfirmed; subsequent exact settings matched the
+pre-refresh baseline. No ambiguous refresh was replayed, and no full-refresh
+acceptance is claimed. This satisfies the packet's recorded-live-blocker stop
+condition. The catalog already exposed the calendar tools; the operator completed
+the disposable calendar create/rename/delete/status test successfully through
+ChatGPT afterward. Independent HTTP429 warning diagnosis/PR372 remains separate.
+Both clean integrated repair worktrees are closed, preserved branches remain, and
+root main is anchored on canonical source. No further live effects in closeout.
