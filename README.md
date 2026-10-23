@@ -18,7 +18,8 @@ passive by default; explicit takeover coordinates human input with AuraCall
 browser automation. After two minutes without external keyboard/pointer input,
 control returns to view-only after verified revocation, allowing automation to
 resume. A compact, collapsible rail groups real runtime profiles by account or
-profile; **Wake** opens dormant local browser profiles on the selected desktop.
+profile; **Launch** opens dormant local browser profiles with desktop allocation handled
+in the background. Empty desktop allocations do not appear in the browser rail.
 Connected embedded viewers stay mounted during routine refreshes and when returning to the tab. Switching interaction capability replaces the viewer. Root desktop access remains independently available.
 
 API model IDs containing `/` (for example, `vendor/claude-sonnet-custom-v1`)

@@ -1,4 +1,18 @@
 
+## 2026-10-23 — Keep allocation inventory out of browser navigation (#240)
+
+Empty/stale desktop catalog entries leaked into Other running browsers. Render
+only unmatched owned running browsers there; group configured entries by actual
+browser profile or account and keep dormant entries launchable. Allocation names
+are internal placement, not browser identity.
+
+An embedded authentication redirect can look like a broken document: live Remote
+View redirected to cooper-auth whose login prohibits framing. The client also
+hid the helper's access link/status unconditionally. Show those on unavailable or
+disconnected embeds, hide the failed iframe, and offer an explicit observation
+retry after top-level sign-in. Do not weaken CSP or authentication.
+
+
 ## 2026-10-23 — Do not turn desktop examples into task-specific allocation roles
 
 Research/Writing examples misrepresented generic browser homes. Use neutral labels

@@ -524,18 +524,8 @@ ${primaryViewerSource}
 	])
 		assert(await nativeFrame.$(`#${id}`), `Missing native tool: ${id}`);
 	await page.screenshot({ path: "/tmp/auracall391-native-client.png", fullPage: true });
-	await page.$eval('#desktops button[data-desktop="empty"]', (node) =>
-		(node as HTMLButtonElement).click(),
-	);
-	await page.waitForFunction(() =>
-		document.querySelector("#message")?.textContent?.includes("No AuraCall browsers"),
-	);
-	await page.$eval('#desktops button[data-desktop="unavailable"]', (node) =>
-		(node as HTMLButtonElement).click(),
-	);
-	await page.waitForFunction(() =>
-		document.querySelector("#message")?.textContent?.includes("Configured desktop route"),
-	);
+	assert.equal(await page.$('#desktops button[data-desktop="empty"]'), null);
+	assert.equal(await page.$('#desktops button[data-desktop="unavailable"]'), null);
 	assert.equal(
 		await page.$eval("#root", (node) => (node as HTMLAnchorElement).href),
 		"https://browser.example.test/root",

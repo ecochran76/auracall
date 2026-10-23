@@ -11,7 +11,6 @@ import { launchChrome } from "../chromeLifecycle.js";
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from "../constants.js";
 import { findChromeProcessUsingUserDataDir } from "../processCheck.js";
 import type { ResolvedBrowserConfig } from "../types.js";
-import { navigateAndSettle } from "./ui.js";
 import { resolveBrowserLaunchPlan } from "./browserLaunchPlan.js";
 import { listDesktopViews } from "./desktopClient.js";
 import {
@@ -24,9 +23,11 @@ import {
 	NativeDesktopStore,
 	nativeDesktopKey,
 } from "./nativeDesktopStore.js";
+import { navigateAndSettle } from "./ui.js";
 
 export interface DesktopRuntimeProfile {
 	runtimeProfileId: string;
+	browserProfileId?: string;
 	provider: "chatgpt" | "gemini" | "grok";
 	accountKey: string;
 	accountLabel: string;
@@ -88,6 +89,7 @@ export async function listDesktopRuntimeProfiles(
 				: `Unassigned account · ${family ?? id}`);
 		const item: DesktopRuntimeProfile = {
 			runtimeProfileId: id,
+			...(family ? { browserProfileId: family } : {}),
 			provider,
 			accountKey: createHash("sha256")
 				.update(identityKey ?? `${provider}:browser:${family ?? id}`)
@@ -124,7 +126,8 @@ export async function listDesktopRuntimeProfiles(
 				if (ready) {
 					if (
 						!plan.launchPolicy.remoteViewDesktop ||
-						(!plan.launchPolicy.remoteViewDesktop.automatic && nativeDesktopKey(binding) !== nativeDesktopKey(plan.launchPolicy.remoteViewDesktop))
+						(!plan.launchPolicy.remoteViewDesktop.automatic &&
+							nativeDesktopKey(binding) !== nativeDesktopKey(plan.launchPolicy.remoteViewDesktop))
 					)
 						throw new Error(
 							"Running browser placement differs from this runtime profile configuration.",
@@ -150,10 +153,12 @@ export async function listDesktopRuntimeProfiles(
 				(await (deps.findProcess ?? findChromeProcessUsingUserDataDir)(directory))
 			)
 				throw new Error("Running outside these desktops. Close it before waking here.");
-			if (!plan.launchPolicy.remoteViewDesktop?.automatic) item.desktopName ??= plan.launchPolicy.remoteViewDesktop?.desktopName;
+			if (!plan.launchPolicy.remoteViewDesktop?.automatic)
+				item.desktopName ??= plan.launchPolicy.remoteViewDesktop?.desktopName;
 			if (
 				item.state !== "ready" &&
-				!current.remoteView?.pool && !Object.values(current.remoteView?.desktops ?? {}).some((d) => d.poolName)
+				!current.remoteView?.pool &&
+				!Object.values(current.remoteView?.desktops ?? {}).some((d) => d.poolName)
 			)
 				throw new Error("Configure a native desktop before waking this runtime profile.");
 		} catch (error) {
@@ -242,9 +247,10 @@ export async function wakeDesktopRuntimeProfile(
 			desktopName ??
 			current.remoteView?.defaultDesktop;
 		if (
-			!plan.launchPolicy.remoteViewDesktop?.automatic && (!selected ||
-			!Object.hasOwn(current.remoteView?.desktops ?? {}, selected) ||
-			!current.remoteView?.desktops[selected]?.poolName)
+			!plan.launchPolicy.remoteViewDesktop?.automatic &&
+			(!selected ||
+				!Object.hasOwn(current.remoteView?.desktops ?? {}, selected) ||
+				!current.remoteView?.desktops[selected]?.poolName)
 		)
 			throw new Error("Select a configured native desktop to wake this runtime profile.");
 		if (!plan.launchPolicy.remoteViewDesktop) {
