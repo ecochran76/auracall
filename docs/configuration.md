@@ -731,12 +731,17 @@ require Agent Browser RDP family/build declarations. Minimal manual-login launch
 so that CDP can become ready; provider sign-in remains interactive.
 
 Open `/desktops` on the AuraCall HTTP service. The compact left rail lists configured AuraCall runtime profiles, grouped by
-**Account** or **Profile**, alongside positively owned running AuraCall browsers.
+**Account** or browser **Profile**, alongside positively owned running AuraCall browsers.
+Desktop allocations stay in the background: empty and unavailable allocation records
+are not navigation rows, and running rows show browser status rather than desktop names.
 The SVG header control hides or restores the rail with a short slide; grouping
 and collapse preferences survive reload. Reduced-motion preferences are honored.
 The selected browser mounts Remote View's native observe-only embed.
+If embedded viewing cannot connect, use **Open in Remote View** to complete
+any required sign-in in a top-level tab, then **Retry view after signing in**.
+Login pages that prohibit framing cannot be completed inside the viewer.
 
-**Wake** opens a dormant local browser runtime profile on its configured native
+**Launch** opens a dormant local browser runtime profile on its configured native
 desktop, or the selected existing desktop when no placement is configured. It
 uses the same managed browser directory, browser family, provider and configured
 account identity as ordinary AuraCall commands. Remembered placement lives in

@@ -114,6 +114,7 @@ test("inventory projects real runtime profiles and configured account identity w
 	expect(rows[0]?.accountKey).toBe(rows[1]?.accountKey);
 	expect(rows[0]).toMatchObject({
 		accountLabel: "writer@example.test",
+		browserProfileId: "account",
 		state: "dormant",
 		wakeable: true,
 	});

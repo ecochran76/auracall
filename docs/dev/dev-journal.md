@@ -1,4 +1,22 @@
 
+## 2026-10-23 — Restore browser-centric navigation and viewer access recovery (#240)
+
+Operator reports desktop clutter and broken documents. Rendered regression goes
+red with two allocation rows; corrected rail hides empty/unavailable records,
+groups by actual browserProfileId, offers Launch for dormant runtime profiles,
+and keeps desktop names out of browser-row metadata. Owned unmatched running
+browsers remain accessible without duplicating represented browsers. Existing
+smoke expectations no longer require allocation rows.
+
+Authenticated live inspection separately reproduces Remote View redirect to
+cooper-auth, whose frame-ancestors none policy blocks the embedded login. One
+authorized top-level agent login restores nativeState ready. Keep authentication
+policy; expose the existing unavailable-state link/status and an explicit Retry
+that remounts observation after sign-in. No provider prompt/control grant.
+Ten focused tests pass; build passes. Installed rollout pending in Plan0448.
+Memory forbidden: no explicit save request.
+
+
 ## 2026-10-23 — Installed automatic desktop launch and cleanup verified (#240)
 
 PR378 merged81752b758. Installed launch policy for the formerly pinned browser
