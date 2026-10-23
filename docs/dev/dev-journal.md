@@ -8,7 +8,11 @@ the exact ownership-changed error. Skip only records whose PID is proven absent,
 require one verified remaining owner and keep stale-only endpoints blocked.
 Live wrong-generation/unknown/conflicting ownership and input gates remain fenced.
 Current main browser has new PID3060274/two pages; exit/restart cause unknown.
-No browser has been terminated by this source repair. Deployment pending.
+PR382 merged35bb3c855; installed custody-2538fbec0, API PID3109599. Supported
+close of the qualified blank browser succeeds; all13 captured process identities
+are gone. Main identity preserved, wsl-chrome-3 ready, catalog now one ready browser.
+Typing/paste root cause remains unqualified. See
+[endpoint repair](notes/2026-10-23-stale-cdp-endpoint.md).
 
 ## 2026-10-23 — Restore browser-centric navigation and viewer access recovery (#240)
 
