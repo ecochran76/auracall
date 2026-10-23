@@ -4,6 +4,19 @@ import * as configModule from '../../src/config.js';
 import { resolveConfig } from '../../src/schema/resolver.js';
 
 describe('Config Resolver', () => {
+  it.each(['chatgpt:reasoning-medium', ' ChatGPT:typo '])(
+    'rejects unknown browser selector %s at the actual CLI configuration boundary',
+    async (model) => {
+      const loader = vi.spyOn(configModule, 'loadUserConfig');
+      loader.mockResolvedValue({ config: { model: 'gpt-5.6-sol', browser: {} }, path: '/tmp/config.json', loaded: false });
+      await expect(resolveConfig({ engine: 'browser', model }, '/tmp', {}))
+        .rejects.toThrow(/Unknown ChatGPT model selector/);
+      loader.mockResolvedValue({ config: { model, engine: 'browser', browser: {} }, path: '/tmp/config.json', loaded: true });
+      await expect(resolveConfig({}, '/tmp', {}))
+        .rejects.toThrow(/Unknown ChatGPT model selector/);
+    },
+  );
+
   it('should resolve default values when no config/cli provided', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: { model: 'gpt-5.1-pro', browser: {} },
