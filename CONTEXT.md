@@ -134,8 +134,8 @@ The general desktop view available independently of the AuraCall remote-view cli
 _Avoid_: AuraCall remote-view client
 
 **AuraCall desktop**:
-A desktop owned by AuraCall and used to display its managed browsers. Its allocation is distinct from an AuraCall runtime profile, which remains available when no desktop is assigned.
-_Avoid_: Browser profile, AuraCall runtime profile
+A desktop owned by AuraCall that houses its controlled browsers, identified by a neutral label such as Desktop 1. Desktops have no dedicated task purpose; browser profiles and accounts identify the browsers inside them.
+_Avoid_: Browser profile, AuraCall runtime profile, research desktop, writing desktop
 
 **Control handoff**:
 An explicit transfer of interaction ownership between automation and a human operator.
