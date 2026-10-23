@@ -44,6 +44,8 @@ fenced. Inventory observation includes configured capacity waiting for the
 installed-app response, then separately bounds optional linked metadata. Caller
 abort ends observation and prevents later navigation; outer deadlines remain.
 
+Warning-frozen interaction settlement reports the existing provider-warning admission stop; it never converts the frozen record to settled or clears the warning. Other invalid settlement states remain errors.
+
 ## Language
 
 **AuraCall runtime profile**:
