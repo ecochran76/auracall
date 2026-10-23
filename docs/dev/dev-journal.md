@@ -1,4 +1,15 @@
 
+## 2026-10-23 — Stale endpoint history blocks a verified browser (#240)
+
+A dead default/grok receipt shares CDP port45011 with the live default/chatgpt
+browser. Admission rejected the dead record before selecting the verified owner,
+preventing the unmatched blank browser from closing. Wire regression reproduces
+the exact ownership-changed error. Skip only records whose PID is proven absent,
+require one verified remaining owner and keep stale-only endpoints blocked.
+Live wrong-generation/unknown/conflicting ownership and input gates remain fenced.
+Current main browser has new PID3060274/two pages; exit/restart cause unknown.
+No browser has been terminated by this source repair. Deployment pending.
+
 ## 2026-10-23 — Restore browser-centric navigation and viewer access recovery (#240)
 
 Operator reports desktop clutter and broken documents. Rendered regression goes

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import fs from 'node:fs/promises';
 import { setCdpCommandAdmissionResolver, type CdpCommandAdmission } from '../../../packages/browser-service/src/guardedCdp.js';
 import { DesktopBindingStore, type DesktopBinding } from './desktopBindings.js';
 import { NativeDesktopStore, nativeBrowserGeneration, verifyNativeBrowser, verifyNativeBrowserForOpening } from './nativeDesktopStore.js';
@@ -20,9 +21,16 @@ setCdpCommandAdmissionResolver(async ({ host, port }) => {
   const nativeCandidates = (await nativeStore.browsers()).filter(binding => canonicalHost(binding.cdpHost) === canonicalHost(host) && binding.cdpPort === port);
   const native = [];
   for (const candidate of nativeCandidates) {
-    if (!await verifyNativeBrowserForOpening(candidate)) throw new Error('Native desktop browser ownership changed; reconnect before automation.');
-    native.push(candidate);
+    if (await verifyNativeBrowserForOpening(candidate)) {
+      native.push(candidate);
+      continue;
+    }
+    // Retained history cannot claim a reused port after its process is proven absent.
+    try { await fs.access(`/proc/${candidate.pid}`); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
+    throw new Error('Native desktop browser ownership changed; reconnect before automation.');
   }
+  if (nativeCandidates.length && !native.length) throw new Error('Native desktop browser ownership changed; reconnect before automation.');
   if (native.length && bindings.length) throw new Error('Conflicting legacy and native desktop endpoint ownership.');
   if (native.length) {
     if (native.length !== 1 || !native[0]) throw new Error('Ambiguous native desktop endpoint ownership.');

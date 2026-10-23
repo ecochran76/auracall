@@ -1,4 +1,11 @@
 
+## 2026-10-23 — Qualify reused CDP ports against live ownership (#240)
+
+A retained dead browser is history, not an active claim on its old endpoint.
+When a port is reused, ignore a non-verifying receipt only after /proc confirms
+its PID absent and only if a uniquely verified current owner remains. Preserve
+receipts; stale-only endpoints must never fall through to unguarded CDP.
+
 ## 2026-10-23 — Keep allocation inventory out of browser navigation (#240)
 
 Empty/stale desktop catalog entries leaked into Other running browsers. Render
