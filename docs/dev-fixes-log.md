@@ -1,4 +1,12 @@
 
+## 2026-10-23 — Do not turn desktop examples into task-specific allocation roles
+
+Research/Writing examples misrepresented generic browser homes. Use neutral labels
+and existing automatic placement. A stale dormant explicit pin can obstruct that
+path; qualify assignment absence and all associated browser processes before
+backed-up local cleanup. Preserve live assignments and browser data. See
+[Plan0448](dev/plans/0448-2026-10-22-issue240-acceptance.md).
+
 ## 2026-10-23 — Use authorized ingress authentication before declaring an inspection gate
 
 An Authelia redirect does not establish that agent credentials are unavailable.

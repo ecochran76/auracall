@@ -1,4 +1,14 @@
 
+## 2026-10-23 — Neutral desktop model and stale explicit-pin cleanup (#240)
+
+Aligned CONTEXT.md and configuration examples: generic browser homes with neutral
+labels, ordinary automatic pool placement. Live labels were already neutral.
+Installed checks: zero exact ready matches for the stale writing assignment;
+nine associated browser records all non-live. Backed up config/stale desktop,
+removed the dormant explicit pin and stale local catalog through the existing
+store API. No browser/service lifecycle or ownership adoption; no allocator change.
+Plan0448 remains open for launch and root/input acceptance.
+
 ## 2026-10-23 — Authenticated issue240 inspection; Writing remains empty
 
 The operator-invoked Cooper ingress skill's existing agent account signs in to

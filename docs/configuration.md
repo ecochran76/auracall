@@ -673,6 +673,13 @@ agent-browser reports the actual selected executable.
 
 ## Named AuraCall desktops
 
+AuraCall desktops are generic homes for its controlled browsers. Use neutral
+labels such as Desktop 1 and Desktop 2; tasks such as research or writing do not
+define desktop roles. Browser profiles and accounts identify what runs inside.
+Prefer the [automatic pool](#automatic-auracall-desktop-pool) for ordinary placement;
+explicit names are optional placement pins. Existing internal names can remain
+unchanged when only their display labels need updating.
+
 Native `remoteView` uses Remote View's application consumer API. AuraCall owns
 its Chromium processes, managed browser profiles and CDP; Remote View supplies
 desktops and the native viewer. Configure an enabled external-mode `auracall`
@@ -688,15 +695,15 @@ remoteView: {
     publicOrigin: "https://desktops.example.com",
     appOrigin: "https://auracall.example.com"
   },
-  defaultDesktop: "research",
+  defaultDesktop: "desktop-1",
   desktops: {
-    research: { poolName: "main", label: "Research" },
-    writing: { poolName: "main", label: "Writing" }
+    "desktop-1": { poolName: "main", label: "Desktop 1" },
+    "desktop-2": { poolName: "main", label: "Desktop 2" }
   },
   rootDesktopUrl: "https://desktops.example.com/root"
 },
 browserProfiles: {
-  "work-chrome": { desktop: "writing" },
+  "work-chrome": { desktop: "desktop-2" },
   "root-chrome": { desktop: "root" }
 }
 ```
