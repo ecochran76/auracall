@@ -13,7 +13,12 @@ cooper-auth, whose frame-ancestors none policy blocks the embedded login. One
 authorized top-level agent login restores nativeState ready. Keep authentication
 policy; expose the existing unavailable-state link/status and an explicit Retry
 that remounts observation after sign-in. No provider prompt/control grant.
-Ten focused tests pass; build passes. Installed rollout pending in Plan0448.
+Ten focused tests pass; build passes. PR380 merged178e21701; new user runtime
+issue240-rail-a223d3878 active, API PID2161290. Installed rail: seven runtime
+profiles, five enabled Launch actions, zero allocation rows; six browser-profile
+groups match configuration. Native stream ready; both original browsers preserved.
+Exact inspection task closed and all14 captured process identities absent. See
+[installed proof](notes/2026-10-23-browser-rail-installed.md).
 Memory forbidden: no explicit save request.
 
 
