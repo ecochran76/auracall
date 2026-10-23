@@ -1,4 +1,14 @@
 
+## 2026-10-23 — Use authorized ingress authentication before declaring an inspection gate
+
+An Authelia redirect does not establish that agent credentials are unavailable.
+The explicitly invoked Cooper ingress skill supplies the approved existing login
+workflow. Private credential submission and a clean unauthenticated HTML request
+qualify authenticated app access separately from the302 guard. Actual streams
+still do not repair empty named ownership or prove physical root/input behavior.
+See the [issue240 checkpoint](dev/notes/2026-10-23-issue240-authenticated-client.md).
+No application source or authentication configuration changed.
+
 ## 2026-10-22 — Preserve shared provider warnings during interaction settlement
 
 P78 / Plan0378 corrective diagnostic: a ChatGPT backend HTTP429 froze an active

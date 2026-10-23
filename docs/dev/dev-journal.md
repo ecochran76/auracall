@@ -1,4 +1,15 @@
 
+## 2026-10-23 — Authenticated issue240 inspection; Writing remains empty
+
+The operator-invoked Cooper ingress skill's existing agent account signs in to
+Authelia without a second factor. Configured MCP and authenticated client/API work;
+Research and another retained browser render actual pixels. Writing remains
+empty/0. The independent root portal connects to an empty shared desktop, so
+physical root/input acceptance is not inferred. Root view was set to view-only;
+no marker prepare, wake, rebind or provider input. Owned task closed; all16 captured
+inspection processes absent; authenticated profile retained privately. Plan0448's
+[new checkpoint](notes/2026-10-23-issue240-authenticated-client.md) keeps #240 open.
+
 ## 2026-10-22 — Preserve shared provider warnings during interaction settlement
 
 P78 / Plan0378 corrective diagnostic: a ChatGPT backend HTTP429 froze an active
