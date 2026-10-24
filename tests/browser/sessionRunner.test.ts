@@ -473,3 +473,13 @@ describe('runBrowserSessionExecution', () => {
     expect(executeBrowser).toHaveBeenCalled();
   });
 });
+
+test('serialized Grok forwards configured account controls to browser execution',async()=>{
+ const executeBrowser=vi.fn(async(_options:unknown)=>({answerText:'ok',answerMarkdown:'ok',tookMs:1,answerTokens:1,answerChars:2}));
+ await runBrowserSessionExecution({runOptions:baseRunOptions,browserConfig:{target:'grok',auracallProfileName:'default',tabConcurrencyMode:'serialized'},cwd:'/repo',log:vi.fn(),userConfig:{auracallProfile:'default',browser:{target:'grok',tabConcurrencyMode:'serialized'},runtimeProfiles:{default:{services:{grok:{identity:{email:'operator@example.test'},maxBackendRequestsPerMinute:3}}}}} as never},{executeBrowser,assemblePrompt:async()=>({markdown:'prompt',composerText:'prompt',estimatedInputTokens:1,attachments:[],inlineFileCount:0,tokenEstimateIncludesInlineFiles:false,attachmentsPolicy:'auto',attachmentMode:'inline',fallback:null})});
+ const {resolveGrokBackendRequestsPerMinute}=await import('../../src/runtime/grokTrafficLimits.js');
+ const {resolveConfiguredServiceAccountId}=await import('../../src/config/serviceAccountIdentity.js');
+ const configuration=(executeBrowser.mock.calls[0]?.[0] as {tabAffinityUserConfig?:Record<string,unknown>}|undefined)?.tabAffinityUserConfig;if(!configuration)throw new Error('Missing resolved Grok account configuration');
+ expect(resolveGrokBackendRequestsPerMinute(configuration,'default')).toBe(3);
+ expect(resolveConfiguredServiceAccountId(configuration,{serviceId:'grok',runtimeProfileId:'default'})).toBe('service-account:grok:operator@example.test');
+});

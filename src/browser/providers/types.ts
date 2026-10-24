@@ -1,3 +1,4 @@
+import type { GrokHistoryOptions, GrokHistoryCoverage } from "./grokHistoryInventory.js";
 import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type {
@@ -45,7 +46,8 @@ export interface BrowserProviderCapabilities {
 	files?: boolean;
 }
 
-export interface BrowserProviderListOptions {
+export interface BrowserProviderListOptions extends GrokHistoryOptions {
+    onHistoryInventory?: (coverage: GrokHistoryCoverage) => Promise<void> | void;
 	host?: string;
 	port?: number;
 	configuredUrl?: string | null;

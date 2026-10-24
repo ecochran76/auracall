@@ -5,7 +5,6 @@ import {
   ensureGrokLoggedIn,
   ensureGrokPromptReady,
   setGrokPrompt,
-  submitGrokPrompt,
   waitForGrokAssistantResult,
   waitForGrokAssistantResponse,
 } from '../../src/browser/actions/grok.js';
@@ -48,34 +47,8 @@ describe('grok actions', () => {
     expect(fallbackExpression).toContain("InputEvent('input'");
   });
 
-  test('submitGrokPrompt falls back to Enter when click does not commit the turn', async () => {
-    const evaluate = vi
-      .fn()
-      .mockResolvedValueOnce({
-        result: {
-          value: { composerText: 'ping', turnCount: 0, submitDisabled: false, hasEnabledSubmit: true },
-        },
-      })
-      .mockResolvedValueOnce({ result: { value: true } })
-      .mockResolvedValueOnce({
-        result: {
-          value: { composerText: 'ping', turnCount: 0, submitDisabled: false, hasEnabledSubmit: true },
-        },
-      });
-    const input = {
-      dispatchKeyEvent: vi.fn().mockResolvedValue(undefined),
-    } as unknown as ChromeClient['Input'];
-    const runtime = {
-      evaluate,
-    } as unknown as ChromeClient['Runtime'];
-
-    await expect(submitGrokPrompt(input, runtime)).resolves.toBeUndefined();
-
-    expect(input.dispatchKeyEvent).toHaveBeenCalledTimes(2);
-    const clickExpression = String(evaluate.mock.calls[1]?.[0]?.expression ?? '');
-    expect(clickExpression).toContain('candidate instanceof HTMLButtonElement');
-    expect(clickExpression).toContain("style.display !== 'none'");
-  });
+  // Delayed/unknown commit custody is exercised through the real DOM transport
+  // in grok402Text.test.ts; an uncertain click must never send Enter again.
 
   test('ensureGrokLoggedIn rejects visible guest auth CTAs in headless mode', async () => {
     const logger = vi.fn();
@@ -138,7 +111,7 @@ describe('grok actions', () => {
     const logger = vi.fn();
     const evaluate = vi
       .fn()
-      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '' } } })
+      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '', terminal: false, streaming: false } } })
       .mockResolvedValueOnce({
         result: {
           value: {
@@ -146,7 +119,7 @@ describe('grok actions', () => {
             lastText: 'alpha\n\nbeta',
             lastMarkdown: '- alpha\n\n```txt\nbeta\n```',
             lastHtml: '<ul><li>alpha</li></ul>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -157,7 +130,7 @@ describe('grok actions', () => {
             lastText: 'alpha\n\nbeta',
             lastMarkdown: '- alpha\n\n```txt\nbeta\n```',
             lastHtml: '<ul><li>alpha</li></ul>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -168,7 +141,7 @@ describe('grok actions', () => {
             lastText: 'alpha\n\nbeta',
             lastMarkdown: '- alpha\n\n```txt\nbeta\n```',
             lastHtml: '<ul><li>alpha</li></ul>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       });
@@ -191,7 +164,7 @@ describe('grok actions', () => {
     const logger = vi.fn();
     const evaluate = vi
       .fn()
-      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '' } } })
+      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '', terminal: false, streaming: false } } })
       .mockResolvedValueOnce({
         result: {
           value: {
@@ -199,7 +172,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -210,7 +183,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -221,7 +194,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -232,7 +205,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -243,7 +216,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       });
@@ -263,7 +236,7 @@ describe('grok actions', () => {
             lastText: 'AURACALL_TEAM_SMOKE_OK',
             lastMarkdown: 'AURACALL_TEAM_SMOKE_OK',
             lastHtml: '<p>AURACALL_TEAM_SMOKE_OK</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -274,7 +247,7 @@ describe('grok actions', () => {
             lastText: 'AURACALL_TEAM_SMOKE_OK',
             lastMarkdown: 'AURACALL_TEAM_SMOKE_OK',
             lastHtml: '<p>AURACALL_TEAM_SMOKE_OK</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -285,7 +258,7 @@ describe('grok actions', () => {
             lastText: 'AURACALL_TEAM_SMOKE_OK',
             lastMarkdown: 'AURACALL_TEAM_SMOKE_OK',
             lastHtml: '<p>AURACALL_TEAM_SMOKE_OK</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       });
@@ -321,7 +294,7 @@ describe('grok actions', () => {
             lastText: '',
             lastMarkdown: '',
             lastHtml: '',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -332,7 +305,7 @@ describe('grok actions', () => {
             lastText: 'alpha',
             lastMarkdown: 'alpha',
             lastHtml: '<p>alpha</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -343,7 +316,7 @@ describe('grok actions', () => {
             lastText: 'alpha',
             lastMarkdown: 'alpha',
             lastHtml: '<p>alpha</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       })
@@ -354,7 +327,7 @@ describe('grok actions', () => {
             lastText: 'alpha',
             lastMarkdown: 'alpha',
             lastHtml: '<p>alpha</p>',
-            toastText: '',
+            toastText: '', terminal: true, streaming: false,
           },
         },
       });
@@ -384,7 +357,7 @@ describe('grok actions', () => {
     const logger = vi.fn();
     const evaluate = vi
       .fn()
-      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '' } } })
+      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '', terminal: false, streaming: false } } })
       .mockResolvedValue({
         result: {
           value: {

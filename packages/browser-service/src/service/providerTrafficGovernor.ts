@@ -51,6 +51,7 @@ export interface ProviderTrafficActionInput {
 }
 
 export interface ProviderTrafficActionSettlement {
+ effectState?: "none" | "settled" | "outcome-unknown";
 	outcome: BrowserMutationOutcome;
 	toUrl?: string | null;
 	targetId?: string | null;
@@ -320,7 +321,7 @@ export function createProviderTrafficGovernor(input: {
 					if (recentEffects.length > 20) recentEffects.splice(0, recentEffects.length - 20);
 					await input.settleInteraction?.({
 						outcome: details.outcome === "succeeded" ? "succeeded" : "failed",
-						effectState: "settled",
+						effectState: details.effectState ?? "settled",
 						reason: details.error ?? details.reason ?? null,
 					});
 

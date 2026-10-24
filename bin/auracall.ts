@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { GrokConversationsRequestSchema, runGrokConversationsCommand, grokConversationsFailureResult } from "../src/cli/grokConversationsCommand.js";
+import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../src/browser/configuredGrokDiscovery.js";
+import { runGrokConnectorsCommand, grokConnectorsFailureResult, GrokConnectorsRequestSchema } from "../src/cli/grokConnectorsCommand.js";
 import 'dotenv/config';
 import { resolveBrowserLoginLaunchOptions, type BrowserLoginLaunchOptions } from '../src/cli/browserLoginLaunch.js';
 import { spawn } from 'node:child_process';
@@ -3420,6 +3423,35 @@ filesCommand
       console.log(`Removed account file ${fileId}.`);
     }
   });
+
+
+
+program.command('grok-conversations').description('Read bounded Grok Chats inventory and coverage as JSON.')
+ .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--project-id <id>','Require positive project membership.')
+ .option('--query <text>','Search Chats.').option('--cursor <cursor>','Resume a scope-bound inventory cursor.')
+ .option('--limit <count>','Maximum returned rows.',Number).option('--since <date>','Restrict observed timestamps.')
+ .option('--max-pages <count>','Bound history pages.',Number).option('--timeout-ms <ms>','Bound page hydration time.',Number).option('--json','Print JSON.')
+ .action(async(commandOptions,command)=>{
+  const request=GrokConversationsRequestSchema.parse({runtimeProfile:commandOptions.runtimeProfile,projectId:commandOptions.projectId,query:commandOptions.query,cursor:commandOptions.cursor,limit:commandOptions.limit,since:commandOptions.since,maxPages:commandOptions.maxPages,timeoutMs:commandOptions.timeoutMs});
+  const userConfig=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+  let result;try{result=await runGrokConversationsCommand(request,await createConfiguredGrokConversationsService(userConfig,request.runtimeProfile));}catch{result=grokConversationsFailureResult(request.projectId);}
+  console.log(JSON.stringify(result,null,2));if(result.coverage.state==='failed')process.exitCode=1;
+ });
+
+program.command('grok-connectors').description('List or inspect Grok Connector inventory as JSON.')
+ .option('--action <list|inspect>','Read operation.','list').option('--query <text>','Search visible Connector inventory.')
+ .option('--id <id>','Exact observed Connector ID.').option('--name <name>','Exact name; ambiguity rejects.')
+ .option('--endpoint <url>','Exact endpoint identity.').option('--kind <installed|catalog>','Inventory kind.')
+ .option('--runtime-profile <id>','Select configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async (commandOptions,command)=>{
+  const userConfig=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+  const request=commandOptions.action==='inspect' ? {action:'inspect',runtimeProfile:commandOptions.runtimeProfile,selector:{id:commandOptions.id,name:commandOptions.name,endpoint:commandOptions.endpoint,kind:commandOptions.kind}} : {action:commandOptions.action,query:commandOptions.query,runtimeProfile:commandOptions.runtimeProfile};
+  if(commandOptions.action==='list' && [commandOptions.id,commandOptions.name,commandOptions.endpoint,commandOptions.kind].some(Boolean))throw new Error('Use --action inspect with Connector selectors.');
+  const validated=GrokConnectorsRequestSchema.parse(request);
+  let result;
+  try {result=await runGrokConnectorsCommand(validated,await createConfiguredGrokConnectorsService(userConfig,commandOptions.runtimeProfile));} catch {result=grokConnectorsFailureResult();}
+  console.log(JSON.stringify(result,null,2));if(result.status==='failed')process.exitCode=1;
+ });
 
 const conversationsCommand = program
   .command('conversations')

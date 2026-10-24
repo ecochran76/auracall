@@ -1243,3 +1243,26 @@ Requests under `https://grok.com/rest/` on the continuously owned target get one
 pre-dispatch permit per Fetch interception ID. Static assets, telemetry, other
 origins and other targets are excluded. Status separates request and operation
 usage, with bounded cancellation and conservative uncertain-effect fencing.
+
+Grok Connector discovery returns privacy-bounded JSON through
+`auracall grok-connectors --action list --query <text>`,
+`auracall grok-connectors --action inspect --endpoint <url>`,
+MCP `grok_connectors`, and operator-authorized POST
+`/v1/grok/connectors/query`. The HTTP/MCP body is `{ "action": "list" }` or
+`{ "action": "inspect", "selector": { "endpoint": "https://example.test/mcp" } }`;
+`runtimeProfile` selects a configured AuraCall runtime profile. Inventory status
+distinguishes visible incomplete coverage, account-gated and failed reads.
+Catalog entries are separate from installed connections. Discovery never installs,
+authenticates, invokes, or removes a Connector. Ops shows counts and bounded
+reason codes; exact endpoints are returned only when safe, with stable hashes
+available for identity. Source tests do not establish installed/live acceptance.
+
+Grok Chats inventory has a structured read path: `auracall grok-conversations
+--limit 100 --max-pages 20 --json`, MCP `grok_conversations`, and operator-authorized
+POST `/v1/grok/conversations/query`. Request fields: `runtimeProfile`, `projectId`,
+`query`, `cursor`, `limit`, `since`, `maxPages`, `timeoutMs`. The result's `coverage`
+distinguishes visible complete, explicit empty, incomplete and failed reads;
+complete means the bounded visible UI, never account-wide backfill. Use returned
+opaque cursors only with the same project/search/since scope. An unseen cursor
+anchor remains incomplete. Project rows require positive membership; observed
+Bot provenance stays distinct. Ops stores only count/reason/continuation presence.
