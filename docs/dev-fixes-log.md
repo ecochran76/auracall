@@ -1,3 +1,11 @@
+## 2026-10-24 — Start refresh observation deadline after activation
+
+Attach and arm exact-app observation before the click, but start its response
+wait deadline after governed activation completes. Admission/interaction latency
+can exceed20 seconds before the request exists; expiring observation during that
+wait discards a valid later catalog. The public-adapter regression varies only
+activation latency and retains one-click, exact-attribution and no-replay fences.
+
 ## 2026-10-24 — Preserve tool-refresh observation failure reasons
 
 An unconfirmed catalog refresh must distinguish a missing expected request,

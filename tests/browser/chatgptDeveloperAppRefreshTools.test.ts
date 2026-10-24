@@ -6,6 +6,7 @@ describe("developer app tool refresh", () => {
 	afterEach(() => vi.useRealTimers());
 	it.each([
 		"success",
+		"delayed-activation",
 		"slow-before-budget",
 		"slow-after-budget",
 		"slow-cancel-budget",
@@ -114,6 +115,8 @@ describe("developer app tool refresh", () => {
 						Input: {
 							dispatchMouseEvent: async ({ type }: { type: string }) => {
 								if (type === "mouseReleased") {
+									if (scenario === "delayed-activation")
+										await new Promise((resolve) => setTimeout(resolve, 25_000));
 									clicks.push(type);
 									if (scenario === "no-refresh-request") return;
 									request({
@@ -214,6 +217,12 @@ describe("developer app tool refresh", () => {
 			return;
 		}
 		const result = await resultPromise;
+		if (scenario === "delayed-activation") {
+			expect(result.status).toBe("completed");
+			expect(result.catalog).toMatchObject({ toolCount: 1, toolNames: ["new_tool"] });
+			expect(clicks).toEqual(["mouseReleased"]);
+			return;
+		}
 		if (scenario === "no-refresh-request")
 			expect(result.message).toContain("No request to the expected refresh endpoint");
 		if (scenario === "http-error") expect(result.message).toContain("HTTP 500");

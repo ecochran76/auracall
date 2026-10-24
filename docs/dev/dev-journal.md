@@ -1,3 +1,20 @@
+## 2026-10-24 — Issue368 timing loop red/green
+
+One captured live attempt returns690-second timeout despite HTTP200/31-action
+refresh response. No second activation. A minimized public-adapter fixture with
+25-second activation latency reproduces false unconfirmed; start observer wait
+deadline after activation, while listening beforehand. Fixture turns green.
+Do not claim this establishes historical live timeout causality or post-settings
+acceptance. Plan0451 retains both live boundaries and the source timing proof.
+
+## 2026-10-24 — Issue368 actual catalog reproduction
+
+Use Matt diagnosing-bugs for the actual missing-catalog symptom. Isolated branch
+fix/issue368-catalog-repro; source diagnostic assertions do not establish the
+live cause. One guarded OpenSign refresh on wsl-chrome-3 is under independent
+passive endpoint/status/structure capture. Result pending; no further activation
+in this packet. Plan0451 records the stopping and minimization conditions.
+
 ## 2026-10-24 — Issue368 refresh observation diagnosis
 
 Read-only reconciliation could not recover the prior response. Exact retained
