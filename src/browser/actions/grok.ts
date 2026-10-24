@@ -1,5 +1,5 @@
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { createGrokFileClient } from '../providers/grokFiles.js';
 import { BrowserAutomationError } from '../../oracle/errors.js';
 import type { ChromeClient, BrowserLogger, BrowserAttachment } from '../types.js';
 import { delay } from '../utils.js';
@@ -721,34 +721,13 @@ export async function uploadGrokAttachments(
   logger: BrowserLogger,
 ): Promise<void> {
   if (!attachments.length) return;
-  const inputNode = await queryFileInputNode(dom);
-  if (!inputNode.nodeId) {
-    throw new Error('Unable to locate Grok file input.');
-  }
-  for (const attachment of attachments) {
-    await dom.setFileInputFiles({ nodeId: inputNode.nodeId, files: [attachment.path] });
-    const name = path.basename(attachment.displayPath ?? attachment.path);
-    const appeared = await waitForAttachmentName(runtime, name);
-    if (!appeared) {
-      logger(`Attachment name not detected for ${attachment.displayPath}; proceeding anyway.`);
-    }
-  }
-}
-
-async function waitForAttachmentName(
-  runtime: ChromeClient['Runtime'],
-  name: string,
-): Promise<boolean> {
-  const deadline = Date.now() + 10_000;
-  while (Date.now() < deadline) {
-    const outcome = await runtime.evaluate({
-      expression: `(() => document.body?.innerText?.includes(${JSON.stringify(name)}) ?? false)()`,
-      returnByValue: true,
+  const result = await createGrokFileClient(runtime).upload(dom, attachments.map(attachment => attachment.path));
+  if (result.status !== 'complete') {
+    throw new BrowserAutomationError(`Grok attachments not ready: ${result.code}. Reconcile the exact composer before retrying.`, {
+      stage: 'grok-file-upload', effectState: result.status === 'unconfirmed' ? 'unknown' : 'effect_observed',
     });
-    if (outcome.result?.value) return true;
-    await delay(250);
   }
-  return false;
+  logger(`Verified ${attachments.length} Grok composer attachment(s) ready by stable file identity.`);
 }
 
 export function buildGrokAssistantSnapshotExpressionForTest(): string {
@@ -1059,20 +1038,6 @@ async function readLocationHref(Runtime: ChromeClient['Runtime']): Promise<strin
     returnByValue: true,
   });
   return typeof result?.value === 'string' ? result.value : '';
-}
-
-async function queryFileInputNode(dom: ChromeClient['DOM']) {
-  const documentNode = await dom.getDocument();
-  for (const selector of GROK_PROVIDER.selectors.fileInput) {
-    const match = await dom.querySelector({
-      nodeId: documentNode.root.nodeId,
-      selector,
-    });
-    if (match.nodeId) {
-      return match;
-    }
-  }
-  return { nodeId: 0 };
 }
 
 async function openGrokModelMenu(
