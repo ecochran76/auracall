@@ -1,4 +1,15 @@
 
+## 2026-10-23 — Operator Browser Recall for borrowed profiles (#240)
+
+Operator explains profile was borrowed by another agent and left open after work.
+Add Recall in the rail only for an exact qualified local holder. Confirmation
+binds PID/start/boot/executable/directory; stop that holder gracefully and use
+ordinary Wake/automatic placement. Preserve profile bytes, remote/unknown guards
+and operator-only HTTP authorization. Stale confirmation cannot close a replacement
+holder. Process, inventory, rendered confirmation and HTTP tests cover this path.
+Installed rollout pending; do not press Recall on the real borrowed profile as
+part of fixture validation. Memory forbidden: no explicit save request.
+
 ## 2026-10-23 — Stale endpoint history blocks a verified browser (#240)
 
 A dead default/grok receipt shares CDP port45011 with the live default/chatgpt

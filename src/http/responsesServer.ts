@@ -1,7 +1,7 @@
 import { RemoteViewConfigSchema } from '../schema/types.js';
 import { maintainDesktopPool } from '../browser/service/nativeDesktopPool.js';
 import { applyDesktopProfileAssignments } from "../browser/service/desktopProfileAssignments.js";
-import { listDesktopRuntimeProfiles, wakeDesktopRuntimeProfile } from '../browser/service/desktopRuntimeProfiles.js';
+import { listDesktopRuntimeProfiles, wakeDesktopRuntimeProfile, recallDesktopRuntimeProfile } from '../browser/service/desktopRuntimeProfiles.js';
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -377,6 +377,7 @@ export interface ResponsesHttpServerDeps {
     list: () => ReturnType<typeof listDesktopViews>;
     profiles?: () => ReturnType<typeof listDesktopRuntimeProfiles>;
     wakeProfile?: (id: string, desktopName?: string) => ReturnType<typeof wakeDesktopRuntimeProfile>;
+    recallProfile?: (id: string, token: string) => ReturnType<typeof recallDesktopRuntimeProfile>;
     closeBrowser?: (name: string, browserId: string) => ReturnType<typeof closeDesktopBrowser>;
     capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
     view?: (name: string, browserId: string) => ReturnType<typeof openDesktopView>;
@@ -1927,6 +1928,18 @@ export async function createResponsesHttpServer(
           const result=await (deps.desktopClient?.closeBrowser?.(name,payload.browserId) ?? closeDesktopBrowser({remoteView:configuredRuntimeConfig?.remoteView,name,browserId:payload.browserId}));
           sendJson(res,200,result,{'Cache-Control':'no-store'});
         } catch(error) {sendJson(res,409,{error:{message:error instanceof Error?error.message:'Browser close was not confirmed.'}},{'Cache-Control':'no-store'});}
+        return;
+      }
+      const runtimeProfileRecall = url.pathname.match(/^\/v1\/desktops\/profiles\/([^/]+)\/recall$/);
+      if (req.method === 'POST' && runtimeProfileRecall) {
+        try {
+          const input=z.object({recallToken:z.string().regex(/^[a-f0-9]{64}$/),confirmed:z.literal(true)}).strict().parse(JSON.parse(await readRequestBody(req)));
+          const id=decodeURIComponent(runtimeProfileRecall[1]);
+          const result=deps.desktopClient?.recallProfile ? await deps.desktopClient.recallProfile(id,input.recallToken)
+            : resolvedUserConfig ? await recallDesktopRuntimeProfile(resolvedUserConfig,id,input.recallToken) : undefined;
+          if (!result) throw new Error('Runtime profile configuration is unavailable.');
+          sendJson(res,200,result,{'Cache-Control':'no-store'});
+        } catch(error) { sendJson(res,409,{error:{message:error instanceof Error?error.message:'Browser Recall unavailable.'}}); }
         return;
       }
       const runtimeProfileWake = url.pathname.match(/^\/v1\/desktops\/profiles\/([^/]+)\/wake$/);

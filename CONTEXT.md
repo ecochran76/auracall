@@ -137,6 +137,10 @@ _Avoid_: AuraCall remote-view client
 A desktop owned by AuraCall that houses its controlled browsers, identified by a neutral label such as Desktop 1. Desktops have no dedicated task purpose; browser profiles and accounts identify the browsers inside them.
 _Avoid_: Browser profile, AuraCall runtime profile, research desktop, writing desktop
 
+**Browser Recall**:
+An operator-confirmed return of a borrowed managed browser profile to AuraCall: close its identified external browser and launch the same profile under AuraCall. Profile data is retained.
+_Avoid_: Profile reset, desktop reassignment
+
 **Control handoff**:
 An explicit transfer of interaction ownership between automation and a human operator.
 _Avoid_: View selection, browser launch
