@@ -10028,7 +10028,7 @@ async function deleteConversationInHistoryDialog(
   }
 }
 
-async function listHistoryConversations(
+export async function listHistoryConversations(
  client: ChromeClient,
  projectId: string | undefined,
  options?: BrowserProviderListOptions,
