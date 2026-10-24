@@ -150,3 +150,9 @@ Biome, docs:list and whitespace pass. Primary Standards/Spec review against
 18cbb4d39 finds no blocker: exact visible error recognition tightens fail-closed
 behavior and does not weaken attribution or permit a retry. Memory forbidden: no
 explicit request to save memory.
+
+PR396 source044009ea0 mergedae8a95cc7; full build passes. CLI-only adoption
+uses ~/.auracall/user-runtime-issue368-settings-044009ea0. The running API remains
+on its existing Recall/clipboard artifact; no API restart, settings retry or
+additional provider refresh. The remaining live gate is recovery/readback of the
+provider settings surface and preservation acceptance, not an unexplained poll.
