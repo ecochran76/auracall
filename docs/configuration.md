@@ -1166,6 +1166,12 @@ Browser and new-target opening are independent of desktop input ownership. Autom
 
 Desktop input-control ownership records are validated before automation. An invalid or incomplete record blocks interaction with an explicit recovery error and is preserved for diagnosis. Ownership is published by atomic rename so readers cannot observe a partially written owner.json. Browser opening remains independent of input ownership. Recovery of existing unknown ownership requires qualifying the retained control state; no automatic deletion is performed.
 
+Explicit ChatGPT utility commands, including app discovery and catalog refresh,
+acquire an exact utility tab and traffic governor even with serialized prompt
+concurrency. First-tab creation uses existing pre-lease acquisition before
+provider navigation. These commands keep their ordinary lease lifetime and
+cleanup; selecting serialized prompts does not disable traffic admission.
+
 Developer-mode visibility is an independent, optional observation. `apps list` reads installed-app inventory without navigating Developer mode settings, so unobserved Developer mode remains unknown. If that bounded predicate evaluation expires, the inventory retains Developer mode as unknown. Existing-app tests still require exact account/app identity and complete inventory; creating or replacing an app requires confirmed enabled Developer mode. Transport, navigation and cancellation failures remain errors.
 
 A retained native browser can open a replacement tab/window when its existing window has closed. Opening verifies exact retained process identity and current desktop assignment/display. Existing-page interactions still require current desktop window proof and input ownership. A live retained process cannot be silently moved to root by changing configuration.

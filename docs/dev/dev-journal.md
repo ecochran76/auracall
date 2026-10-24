@@ -21,6 +21,15 @@ behavior. Focused helper regression fails before the one-line repair. Deployment
 requires exact canonical helper bytes, backup and API/runtime acceptance.
 
 
+## 2026-10-23 — Issue368 first-tab developer-app bootstrap
+
+Plan0451 / fix/issue368-app-discovery-governor. Public command through real
+serialized service dispatch reproduces exact connect-tab missing-governor error.
+Request target custody for explicit serialized utility commands through the
+existing governed ephemeral-tab pipeline. Prompt mode, affinity identity rules
+and mandatory guard remain unchanged. Live refresh target requested; no provider
+mutation or warning clearance performed.
+
 ## 2026-10-23 — Operator Browser Recall for borrowed profiles (#240)
 
 Operator explains profile was borrowed by another agent and left open after work.
