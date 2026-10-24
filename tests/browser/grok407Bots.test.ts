@@ -318,7 +318,7 @@ test("same-connection invocation proves exact Bot token before submission and re
 		artifacts: { status: "unknown" },
 	});
 	expect(prepare.mock.calls[0][1]).toBe(fixture.runtime);
- expect(prepare.mock.calls[0][3]).toEqual({id:"bot-alice",name:"Helper"});
+	expect(prepare.mock.calls[0][3]).toEqual({ id: "bot-alice", name: "Helper" });
 	expect(submit.mock.calls[0][1]).toBe(fixture.runtime);
 });
 test("a different Bot token after picker selection prevents prompt preparation and Send", async () => {
@@ -455,11 +455,70 @@ test("unknown invocation retains its exact browser target locator for reconcilia
 	expect(result).toMatchObject({ targetId: "target", effectState: "none", status: "unknown" });
 });
 
-test('operation admission rejects before Bot account discovery begins', async () => {
- const verifyAccount=vi.fn(async()=> 'account-ref');
- const close=vi.fn(async()=>{});
- const begin=vi.fn(async()=>{throw new Error('operation-cap');});
- const service=createGrokBotsService({}, {connect:async()=>({client:{Runtime:fixture().runtime,close,__auracallProviderTrafficGovernor:{attribution:{provider:'grok',targetId:'target'},admitBackendRequest:async()=>{},begin}},targetId:'target',shouldClose:false,host:'localhost',port:1}),verifyAccount});
- await expect(service.list('catalog')).rejects.toThrow('operation-cap');
- expect(verifyAccount).not.toHaveBeenCalled();expect(close).toHaveBeenCalledOnce();
+test("operation admission rejects before Bot account discovery begins", async () => {
+	const verifyAccount = vi.fn(async () => "account-ref");
+	const close = vi.fn(async () => {});
+	const begin = vi.fn(async () => {
+		throw new Error("operation-cap");
+	});
+	const service = createGrokBotsService(
+		{},
+		{
+			connect: async () => ({
+				client: {
+					Runtime: fixture().runtime,
+					close,
+					__auracallProviderTrafficGovernor: {
+						attribution: { provider: "grok", targetId: "target" },
+						admitBackendRequest: async () => {},
+						begin,
+					},
+				},
+				targetId: "target",
+				shouldClose: false,
+				host: "localhost",
+				port: 1,
+			}),
+			verifyAccount,
+		},
+	);
+	await expect(service.list("catalog")).rejects.toThrow("operation-cap");
+	expect(verifyAccount).not.toHaveBeenCalled();
+	expect(close).toHaveBeenCalledOnce();
+});
+
+test("public Bot cleanup failure keeps the verified target locator for reconciliation", async () => {
+	const service = createGrokBotsService(
+		{},
+		{
+			connect: async () => ({
+				client: {
+					Runtime: fixture().runtime,
+					close: async () => {
+						throw new Error("private cleanup");
+					},
+					__auracallProviderTrafficGovernor: {
+						attribution: { provider: "grok", targetId: "retained-target" },
+						admitBackendRequest: async () => {},
+						begin: async () => ({ settle: async () => {} }),
+					},
+				},
+				targetId: "retained-target",
+				shouldClose: true,
+				host: "localhost",
+				port: 1,
+			}),
+			verifyAccount: async () => "account-ref",
+		},
+	);
+	const result = await runGrokBotsCommand(
+		{ action: "invoke", selector: { id: "bot-id", source: "catalog" }, prompt: "Question" },
+		service,
+	);
+	expect(result).toMatchObject({
+		status: "unknown",
+		effectState: "unknown",
+		targetId: "retained-target",
+	});
+	expect(JSON.stringify(result)).not.toContain("private cleanup");
 });

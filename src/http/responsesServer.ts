@@ -3936,7 +3936,7 @@ export async function createResponsesHttpServer(
             if(req.method==='POST'&&url.pathname==='/v1/grok/files/query'){
                 const denied=authorizeOperatorConfigAccess(apiAuthContext);
                 if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
-                let request;
+                let request: import("../cli/grokFilesCommand.js").GrokFilesRequest;
                 try{request=GrokFilesRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
                 catch{sendJson(res,400,{error:{message:'Invalid Grok files request.',type:'invalid_request_error'}});return;}
                 if(!deps.grokFilesServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}
@@ -3952,7 +3952,7 @@ export async function createResponsesHttpServer(
             if(req.method==='POST'&&url.pathname==='/v1/grok/bots/query'){
                 const denied=authorizeOperatorConfigAccess(apiAuthContext);
                 if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
-                let request;
+                let request: import("../cli/grokBotsCommand.js").GrokBotsRequest;
                 try{request=GrokBotsRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
                 catch{sendJson(res,400,{error:{message:'Invalid Grok bots request.',type:'invalid_request_error'}});return;}
                 if(!deps.grokBotsServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}

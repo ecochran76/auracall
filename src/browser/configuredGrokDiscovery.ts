@@ -107,14 +107,22 @@ export async function createConfiguredGrokFilesService(
 	async function run(action: () => Promise<Awaited<ReturnType<typeof service.context>>>) {
 		try {
 			const result = await action();
-			await recordGrokEcosystemProgress("files", profile, summarizeGrokFilesDiagnostics(result));
+			try {
+				await recordGrokEcosystemProgress("files", profile, summarizeGrokFilesDiagnostics(result));
+			} catch {
+				return { ...result, progressPersistence: "failed" as const };
+			}
 			return result;
 		} catch (error) {
-			await recordGrokEcosystemProgress(
-				"files",
-				profile,
-				summarizeGrokFilesDiagnostics(grokFilesFailure()),
-			);
+			try {
+				await recordGrokEcosystemProgress(
+					"files",
+					profile,
+					summarizeGrokFilesDiagnostics(grokFilesFailure()),
+				);
+			} catch {
+				/* Diagnostic persistence cannot replace the original operation error/custody. */
+			}
 			throw error;
 		}
 	}
@@ -142,14 +150,22 @@ export async function createConfiguredGrokBotsService(
 	>(action: () => Promise<T>) {
 		try {
 			const result = await action();
-			await recordGrokEcosystemProgress("bots", profile, summarizeGrokBotDiagnostics(result));
+			try {
+				await recordGrokEcosystemProgress("bots", profile, summarizeGrokBotDiagnostics(result));
+			} catch {
+				return { ...result, progressPersistence: "failed" as const };
+			}
 			return result;
 		} catch (error) {
-			await recordGrokEcosystemProgress(
-				"bots",
-				profile,
-				summarizeGrokBotDiagnostics(grokBotsFailureResult()),
-			);
+			try {
+				await recordGrokEcosystemProgress(
+					"bots",
+					profile,
+					summarizeGrokBotDiagnostics(grokBotsFailureResult()),
+				);
+			} catch {
+				/* Diagnostic persistence cannot replace the original operation error/custody. */
+			}
 			throw error;
 		}
 	}

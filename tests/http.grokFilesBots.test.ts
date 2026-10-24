@@ -57,7 +57,7 @@ test("HTTP Grok Bot invocation preserves exact prompt whitespace and selector cu
 			code: "grok_bot_inventory_unknown",
 			providerAccountRef: null,
 			bots: [],
-			coverage: { scope: "visible" as const, complete: false },
+			coverage: { scope: "visible" as const, complete: false as const },
 		}),
 		invoke,
 	}));

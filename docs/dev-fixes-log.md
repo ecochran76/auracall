@@ -25942,3 +25942,13 @@ independent qualification, with595file parity and2newverified artifacts.
 ## 2026-10-24 Grok wave 2 checkpoint (#398)
 
 #399 and #400 merged and closed. #401 history inventory, #402 strict governed text/model/composer flow, and #404 connector discovery passed bounded review remediation and provider-free acceptance. See `docs/dev/notes/2026-10-24-grok-wave2-review.md` and Plan0453 ledger for exact proof and pending integration. In-flight reads must propagate the SDK abort signal and preserve unknown effects; final account proof must finish before CDP cleanup. No installed/live acceptance claimed.
+
+## 2026-10-24 — Grok Bot dispatch identity and file outcome custody (#403/#407)
+
+Bind the intended Bot ID/name in the same DOM evaluation that captures its
+composer, and retain stable Bot ID/href evidence through the atomic send guard.
+Diagnostic persistence must never replace an unknown operation outcome or its
+retained target. A ready chip with a new provider ID plus a native basename/count
+is insufficient proof of local upload identity; report unconfirmed until an
+actual binding is observed. Recent selection uses the exact provider file ID.
+See the next-wave review receipt for reproductions and the open upload gate.

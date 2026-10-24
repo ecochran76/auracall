@@ -3787,3 +3787,18 @@ public progress reports 557 chars (matching snapshot) and the public collector r
 the full authoritative answer in 10832 ms. Compare non-whitespace content because
 rendered table cells introduce whitespace; retain the initial overly strict oracle
 as a false positive. This does not prove completion before the historical deadline.
+
+### Grok files and existing Bots (issues403/407)
+
+Focused presubmit: `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grok402Text.test.ts tests/browser/grok402Orchestration.test.ts tests/browser/grok403Files.test.ts tests/browser/grok407Bots.test.ts tests/browser/grokEcosystemProgress.test.ts tests/browser/grokConfiguredProgressFailure.test.ts tests/http.grokFilesBots.test.ts --maxWorkers=2`.
+
+Controlled CDP fixtures prove exact recent IDs, readiness/error/progress,
+project changes, retained unknown targets, Bot token identity drift before
+preparation and during dispatch, and public request/output parity. Public HTTP
+checks include malformed-input redaction and unchanged prompt whitespace.
+Diagnostic persistence failure cannot erase unknown upload custody. A reproduced
+foreign ready-file counterexample means local-upload acceptance is still open:
+new IDs/counts and native basenames do not bind selected bytes to provider IDs.
+The implementation reports this gap as unconfirmed; do not classify it as a
+successful attachment or a completed issue403. No installed/live provider smoke
+or artifact byte materialization is implied by these fixtures.

@@ -1266,3 +1266,31 @@ complete means the bounded visible UI, never account-wide backfill. Use returned
 opaque cursors only with the same project/search/since scope. An unseen cursor
 anchor remains incomplete. Project rows require positive membership; observed
 Bot provenance stays distinct. Ops stores only count/reason/continuation presence.
+
+Grok composer files are available through `auracall grok-files --action context`,
+`--action recent`, `--action select --id <observed-id>`, MCP `grok_files`, and
+operator-authorized POST `/v1/grok/files/query`. Bodies use `action`, optional
+`runtimeProfile`, and either `id` for selection or `paths` for explicit local
+uploads. Recent selections require an exact unique provider file ID and explicit
+readiness in the same composer/project context. A duplicate basename is not an
+identity selector. The local upload path currently returns `unconfirmed` when
+provider evidence cannot bind the selected native File to its observed provider
+ID; it does not permit a prompt to proceed on that evidence. Reconcile the
+retained target instead of retrying an uncertain upload. Limits, observed file
+states and provenance accompany results. Diagnostics contain counts and codes.
+
+Existing Grok Bots are available through `auracall grok-bots --action list
+--source owned`, `--source catalog`, and `--action invoke --source owned --id
+<observed-id> --prompt <text>`; MCP uses `grok_bots`, and operator-authorized POST
+`/v1/grok/bots/query` uses `action`, `runtimeProfile`, `source` for listing or
+`selector: {id,source,author?}` plus `prompt` for invocation. Selection requires an
+empty root composer and verifies the intended stable Bot token again atomically
+at prompt preparation and dispatch. Exact prompt whitespace is preserved.
+Catalog listing does not install a Bot; catalog invocation is explicitly blocked.
+Completed results include account/Bot/conversation/response custody. Artifact
+references are response-scoped and explicitly incomplete, without materialized
+bytes. Unknown outcomes retain the exact target and must not be resubmitted.
+Ops exposes whitelisted file/Bot progress. If diagnostic persistence fails, the
+original operation outcome is preserved; a returned outcome may include
+`progressPersistence: "failed"`. These source contracts do not establish installed
+or live Grok UI acceptance. Connector installation remains a separate open slice.

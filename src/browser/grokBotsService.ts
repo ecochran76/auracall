@@ -1,3 +1,4 @@
+import { BrowserAutomationError } from "../oracle/errors.js";
 // biome-ignore-all lint/style/useNamingConvention: CDP protocol and provider identity wire names are case-sensitive.
 import { createHash } from "node:crypto";
 import {
@@ -109,12 +110,22 @@ export function createGrokBotsService(
 			tabLifecycle: invoke ? "retain-new" : options.tabLifecycle,
 		});
 		const client = connection.client as ChromeClient;
+		let targetVerified = false;
+		const preserveCustody = (error: unknown) =>
+			invoke && targetVerified
+				? new BrowserAutomationError(
+						"Grok Bot operation unconfirmed; reconcile the retained target.",
+						{ effectState: "unknown", targetId: connection.targetId },
+						error,
+					)
+				: error;
 		try {
 			const governor = resolveProviderTrafficGovernor(client);
 			if (!governor || governor.attribution.provider !== "grok" || !governor.admitBackendRequest)
 				throw new Error("grok_bot_governor_required");
 			if (!connection.targetId || governor.attribution.targetId !== connection.targetId)
 				throw new Error("grok_bot_target_not_verified");
+			targetVerified = true;
 			const verify =
 				dependencies.verifyAccount ??
 				(async (runtime: ChromeClient["Runtime"], input: BrowserProviderListOptions) => {
@@ -164,8 +175,12 @@ export function createGrokBotsService(
 				});
 				throw error;
 			}
+		} catch (error) {
+			throw preserveCustody(error);
 		} finally {
-			await connection.client.close();
+			await connection.client.close().catch((error) => {
+				throw preserveCustody(error);
+			});
 			// Invocation keeps its exact target for result/unknown-effect custody.
 			if (!invoke && connection.shouldClose && connection.targetId) {
 				if (dependencies.closeTarget) await dependencies.closeTarget(connection);
@@ -222,7 +237,9 @@ export function createGrokBotsService(
 				const base = { ...grokBotUnknown(), bot };
 				// The existing text pipeline preserves and rechecks selected composer tokens.
 				const baseline = await readGrokAssistantSnapshotForRuntime(client.Runtime);
-				await effect("input", "prompt", () => setGrokPrompt(client.Input, client.Runtime, prompt, {id:bot.id,name:bot.name}));
+				await effect("input", "prompt", () =>
+					setGrokPrompt(client.Input, client.Runtime, prompt, { id: bot.id, name: bot.name }),
+				);
 				try {
 					await effect("in-page-click", "submit", () =>
 						submitGrokPrompt(client.Input, client.Runtime),

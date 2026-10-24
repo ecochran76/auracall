@@ -1,3 +1,4 @@
+import { BrowserAutomationError } from "../oracle/errors.js";
 // biome-ignore-all lint/style/useNamingConvention: Public Zod schemas follow the repository PascalCase convention.
 import { z } from "zod";
 import type { GrokBotsService } from "../browser/grokBotsService.js";
@@ -52,7 +53,17 @@ export async function runGrokBotsCommand(
 		return request.action === "list"
 			? await service.list(request.source)
 			: await service.invoke(request.selector, request.prompt);
-	} catch {
+	} catch (error) {
+		if (
+			invoked &&
+			error instanceof BrowserAutomationError &&
+			typeof error.details?.targetId === "string"
+		)
+			return {
+				...grokBotUnknown("grok_bot_invocation_outcome_unknown"),
+				effectState: "unknown",
+				targetId: error.details.targetId,
+			};
 		return invoked
 			? { ...grokBotUnknown("grok_bot_invocation_outcome_unknown"), effectState: "unknown" }
 			: grokBotsFailureResult();
