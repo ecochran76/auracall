@@ -1,3 +1,12 @@
+## 2026-10-23 | Distinguish account-page failure from missing startup controls (#384)
+
+A captured account-load error screen had neither composer nor model selector.
+Ordinary startup reported only missing controls. On missing-model/mode outcomes,
+classify visible main-page error headings and emit CHATGPT_ACCOUNT_LOAD_ERROR.
+Keep conversation, sidebar and hidden content excluded. Real captured wording
+uses “couldn’t load”, not “couldn’t to load”; the regression caught that mistake.
+No account reset, warning change, automatic reload or provider retry is added.
+
 
 ## 2026-10-23 — Qualify reused CDP ports against live ownership (#240)
 
