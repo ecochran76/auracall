@@ -523,16 +523,32 @@
       "blockers": [
         412
       ],
-      "state": "running",
+      "state": "validated",
       "worker": "/root/grok413",
       "ownedPaths": [],
-      "validation": [],
+      "validation": [
+        {
+          "command": "worker8-file focused gate",
+          "result": "180 passed; independently rerun by primary after integration"
+        },
+        {
+          "command": "primary10-file focused integration gate",
+          "result": "187 passed; final2 custody cases plus typecheck/build/targeted lint pass; no installed/native claim"
+        }
+      ],
       "review": null,
       "postCompletionTdd": null,
       "trackerResolved": false,
       "base": "ae21c97c907eb903360058c7b65c8bb267b70016",
       "branch": "feat/grok-413-resume",
-      "worktree": "/home/ecochran76/workspace.local/auracall-grok-413-resume"
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-413-resume",
+      "resultSha": "f76545f7ef0d8b0e783c55b27ec66fc0a81d6ce6",
+      "acceptanceState": "source-validated-awaiting-main-integration",
+      "evidence": "docs/dev/notes/2026-10-24-grok-413-bounded-detail.md",
+      "workerResultShas": [
+        "7f97ddfa204df97dabee9e4005cb01c8ce62a0b8",
+        "4e08da07bbb1e90024bfd3a4f7c186ea1b58153d"
+      ]
     },
     {
       "ticket": 16,
@@ -657,7 +673,7 @@
       "410": "/root/grok410"
     },
     "queued": [],
-    "status": "seven-closed-nine-open; source405/410-integrated; worker413-running; native403/408-gated",
+    "status": "413-source-validated-awaiting-main-integration; native403/405/408/410-gates-open",
     "reviewContract": "one whole-integration code-review then one bounded TDD findings pass after tickets validated",
     "workerResults": {
       "403": {
@@ -679,18 +695,22 @@
         "state": "source-validated-not-integrated",
         "sha": "b29984f63d14ce0d77dec9657797efa5861a7597",
         "worker": "/root/grok410"
+      },
+      "413": {
+        "state": "source-validated-integrated",
+        "worker": "/root/grok413",
+        "sha": "7f97ddfa204df97dabee9e4005cb01c8ce62a0b8",
+        "followupSha": "4e08da07bbb1e90024bfd3a4f7c186ea1b58153d"
       }
     },
-    "sourceCheckpoint": "245f1554e847fbe75f8d6f9841fcf10187d9ee31",
-    "activeWorkers": {
-      "413": "/root/grok413"
-    },
+    "sourceCheckpoint": "f76545f7ef0d8b0e783c55b27ec66fc0a81d6ce6",
+    "activeWorkers": {},
     "primaryTicketCompleted": 412,
     "lastManualObservation": {
-      "nativeTokensUsed": 763438,
-      "timeUsedSeconds": 1678,
-      "availableMemoryMiB": 44159,
-      "swapUsedMiB": 80299,
+      "nativeTokensUsed": 943533,
+      "timeUsedSeconds": 3169,
+      "availableMemoryMiB": 44234,
+      "swapUsedMiB": 79634,
       "controllerMutation": false
     },
     "closedIssues": [
@@ -712,6 +732,12 @@
       411,
       413,
       414
-    ]
+    ],
+    "sourceWaveMerge": {
+      "pullRequest": "https://github.com/ecochran76/auracall/pull/431",
+      "mergeCommit": "16dbd72184c90b196c45a14ba8015f67dc219917"
+    },
+    "wholeProgramReview": "pending ticket completion; no new broad review pass consumed",
+    "postReviewTdd": "pending whole-program review"
   }
 }
