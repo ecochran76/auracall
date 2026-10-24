@@ -505,6 +505,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				requireVisible: true,
 				timeoutMs: 8_000,
 			});
+			observation.activationFinished();
 			if (!activated.ok)
 				return {
 					status: "unconfirmed",
@@ -1972,7 +1973,9 @@ function observeChatgptToolRefresh(
 					"Exact app connection identity unavailable; Refresh tools was not activated.",
 				);
 			armed = true;
-			timer = setTimeout(() => settle(null), 20_000);
+		},
+		activationFinished: () => {
+			if (active) timer = setTimeout(() => settle(null), 20_000);
 		},
 		close: () => {
 			settle(null);

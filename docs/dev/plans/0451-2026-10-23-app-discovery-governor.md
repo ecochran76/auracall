@@ -3,7 +3,7 @@
 State: OPEN
 Lane: issue368
 Owner: primary agent for ecochran76
-Branch: fix/issue368-app-discovery-governor
+Branch: fix/issue368-catalog-repro
 Target: main
 Integration: pull request
 Base: 89800c458
@@ -80,3 +80,42 @@ observed red before repair); no-request diagnostic also covered.
 Full typecheck/build, scoped Biome, docs:list and whitespace checks pass.
 Primary review of the patch against cfe778d24: Standards and bounded diagnostic
 spec have no blocking findings; source does not establish the live root cause.
+
+## 2026-10-24 — Actual-symptom reproduction packet
+
+Owner: primary agent; branch fix/issue368-catalog-repro in isolated worktree.
+User invoked diagnosing-bugs after diagnostic-only qualification. The next gate
+is a red-capable loop for the actual missing-catalog symptom, not another test
+of failure wording. Prior generic receipt remains unknown. One new guarded exact
+OpenSign refresh is captured passively (path/status/body structure only) through
+the installed public command; no headers, secrets or body values captured.
+No additional activation/retry is permitted within this packet. Capture preserves
+independent request/response events so the observer result can be reconciled.
+If it reproduces, minimize the observed event sequence at the public adapter seam
+before ranking hypotheses or changing catalog logic. If it succeeds, report that
+the earlier failure remains unreproduced rather than inventing a cause.
+Private evidence: ~/.local/state/auracall-issue368-repro-20261024/.
+
+### Captured result and minimized timing defect
+
+One new attempt exits1/unconfirmed at the690000ms command deadline. Independent
+Network capture records POST refresh_actions at15:15:01Z, HTTP200 at15:15:09Z
+and31 catalog actions; the later links/list_accessible request aborts. The exact
+terminal stage is not preserved, so no post-settings acceptance is claimed.
+This is a different terminal message from the earlier missing-catalog receipt.
+
+The public-adapter fake-timer loop adds only25 seconds of pre-release activation
+latency to the existing successful fixture. It goes red (unconfirmed instead of
+completed) despite the same exact linked-app identity and valid catalog. Removing
+that delay restores the passing control. Ranked predictions: early observer
+deadline, attribution loss, separate post-read timeout. Moving only deadline
+start from pre-activation arm to post-activation completion makes the loop green.
+Listening/attribution still starts before activation; no-event timeout, one click,
+outer command bound and retrySafe=false remain intact. This confirms a source
+timing defect, not historical causality for either live receipt. No second live
+activation in this packet. Full live completion remains unqualified.
+
+Validation:71 focused adapter/command/governor tests, typecheck, scoped Biome,
+docs:list and whitespace checks pass. Primary Standards/Spec review of the
+bounded patch against421c6cd7 has no blocking findings. Live state is not graded
+as completed. Memory disposition forbidden: no explicit save request.
