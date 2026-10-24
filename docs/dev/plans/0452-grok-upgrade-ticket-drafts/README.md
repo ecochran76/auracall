@@ -1,8 +1,9 @@
 # Published Grok implementation tickets
 
 Parent specification: [GitHub #398](https://github.com/ecochran76/auracall/issues/398).
-Status: approved and published; all 16 issues are OPEN and ready-for-agent,
-subject to their recorded blockers. Each slice carries its CLI/API/MCP
+Status: approved and published; all16 issues were OPEN at publication. Current
+implementation and tracker status is maintained in the Plan0453 execution ledger;
+ready-for-agent labels remain subject to validated blockers. Each slice carries its CLI/API/MCP
 contract, relevant Ops readback, tests and docs as part of its behavior.
 
 1. [#399](https://github.com/ecochran76/auracall/issues/399) **[Govern Grok reads and expose effective account controls](01-governed-reads.md)**
@@ -45,27 +46,27 @@ contract, relevant Ops readback, tests and docs as part of its behavior.
    - Blocked by: T09.
    - Delivers: Create one owned Bot and edit its name, description, instructions and model defaults with saved-state readback.
 
-11. [#399](https://github.com/ecochran76/auracall/issues/399) **[Configure Bot Connectors, Skills and knowledge](11-bot-resources.md)**
+11. [#409](https://github.com/ecochran76/auracall/issues/409) **[Configure Bot Connectors, Skills and knowledge](11-bot-resources.md)**
    - Blocked by: T05, T06, T10.
    - Delivers: Configure supported Connector/tool permissions, Skills and knowledge sources for an exact owned Bot and verify its saved configuration.
 
-12. [#400](https://github.com/ecochran76/auracall/issues/400) **[Generate Build apps and retrieve their artifacts](12-build-generation.md)**
+12. [#410](https://github.com/ecochran76/auracall/issues/410) **[Generate Build apps and retrieve their artifacts](12-build-generation.md)**
    - Blocked by: T04.
    - Delivers: Generate an app in Grok Build mode and retain its preview/result and available local artifacts with app/version provenance.
 
-13. [#401](https://github.com/ecochran76/auracall/issues/401) **[Publish an explicitly selected Build app through Grok](13-build-publish.md)**
+13. [#411](https://github.com/ecochran76/auracall/issues/411) **[Publish an explicitly selected Build app through Grok](13-build-publish.md)**
    - Blocked by: T12.
    - Delivers: Publish/share a concrete generated app version through Grok-native controls and report exact publication readback.
 
-14. [#402](https://github.com/ecochran76/auracall/issues/402) **[Backfill Grok conversation indexes and follow changes](14-mirror-index.md)**
+14. [#412](https://github.com/ecochran76/auracall/issues/412) **[Backfill Grok conversation indexes and follow changes](14-mirror-index.md)**
    - Blocked by: T03.
    - Delivers: Run bounded resumable account-wide index backfill followed by incremental follow, with foreground preemption and restart recovery.
 
-15. [#403](https://github.com/ecochran76/auracall/issues/403) **[Mirror full Grok conversation content incrementally](15-mirror-content.md)**
+15. [#413](https://github.com/ecochran76/auracall/issues/413) **[Mirror full Grok conversation content incrementally](15-mirror-content.md)**
    - Blocked by: T14.
    - Delivers: Populate the local mirror with complete observed conversation content and referenced artifact metadata under bounded read budgets.
 
-16. [#404](https://github.com/ecochran76/auracall/issues/404) **[Materialize Grok referenced files and generated artifacts](16-mirror-artifacts.md)**
+16. [#414](https://github.com/ecochran76/auracall/issues/414) **[Materialize Grok referenced files and generated artifacts](16-mirror-artifacts.md)**
    - Blocked by: T12, T15.
    - Delivers: Retain verified local bytes for discoverable referenced files and generated artifacts and resume incomplete work without re-downloading proved assets.
 
