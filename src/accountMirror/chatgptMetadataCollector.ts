@@ -898,6 +898,9 @@ export function createChatgptAccountMirrorMetadataCollector(
 									input.limits.maxArtifactRowsPerCycle,
 									{
 										maxDetailReads,
+										skipAccountFiles: Boolean(input.providerTrafficPlanController) || honorRequestedDetailPhase,
+										freshnessEpoch: providerIndexEpoch.epochId,
+										providerCallTimeoutMs: resolveCollectorDetailCallTimeoutMs(input),
 										cursor: detailAttachmentCursor,
 										budgetYieldCause,
 										shouldYield: input.shouldYield,
@@ -2233,13 +2236,19 @@ export async function readBoundedAttachmentInventory(
 			await throwIfDetailProviderGuardObserved(readProviderGuard, conversation.id);
 			const context = contextResult.context;
 			const contextChunk = readAccountMirrorContextChunkMetadata(context);
+			if (conversation.provider === "grok" && !context) {
+				conversationDetailCursor = previousConversationDetail ?? {
+					conversationId: conversation.id, nextMessageIndex: 0,
+					messageLimit: CHATGPT_CONTEXT_CHUNK_MESSAGE_LIMIT, totalMessages: null,
+				};
+			}
 			if (freshnessEpoch) {
 				visitBundles.push(
 					createConversationVisitBundle({
 						conversationId: conversation.id,
 						freshnessEpoch,
 						context,
-						detailComplete: contextChunk?.nextMessageIndex == null,
+						detailComplete: contextChunk ? contextChunk.complete : true,
 						before: telemetryBefore,
 						after: telemetryAfter,
 					}),
@@ -2252,7 +2261,7 @@ export async function readBoundedAttachmentInventory(
 				conversationFiles.length > 0
 					? []
 					: selectPreviousConversationFiles(previousFiles, conversation);
-			if (context && contextChunk?.nextMessageIndex == null) {
+			if (context && (contextChunk ? contextChunk.complete : true)) {
 				progress.contextObservedConversationIds.push(conversation.id);
 				if (coalesceConversationReads || conversationFileResult?.observed) {
 					progress.detailObservedConversationIds.push(conversation.id);
@@ -2679,6 +2688,7 @@ export async function readBoundedGrokAccountFileInventory(
 	options: {
 		listOptions?: Parameters<BrowserAutomationClient["listAccountFiles"]>[0];
 		pacer?: BrowserInteractionGovernor;
+		providerCallTimeoutMs?: number | null;
 		observation?: AccountMirrorDomDriftObservationContext;
 	} = {},
 ): Promise<{
@@ -2706,7 +2716,7 @@ export async function readBoundedGrokAccountFileInventory(
 			surface: "account-mirror-account-files",
 			action: "list-account-files",
 		},
-		null,
+		options.providerCallTimeoutMs,
 		false,
 		options.pacer,
 	);
@@ -2729,6 +2739,9 @@ export async function readBoundedGrokDetailInventory(
 	maxRows: number,
 	options: {
 		maxDetailReads?: number;
+		skipAccountFiles?: boolean;
+		freshnessEpoch?: string | null;
+		providerCallTimeoutMs?: number | null;
 		cursor?: AttachmentInventoryCursor | null;
 		budgetYieldCause?: AttachmentInventoryCursor["yieldCause"] | null;
 		shouldYield?: () => Promise<boolean> | boolean;
@@ -2740,6 +2753,7 @@ export async function readBoundedGrokDetailInventory(
 	artifacts: ConversationArtifact[];
 	files: FileRef[];
 	media: AccountMirrorMediaManifestEntry[];
+	visitBundles: ConversationVisitBundle[];
 	truncated: boolean;
 	cursor: AttachmentInventoryCursor;
 	progress: AttachmentInventoryProgress;
@@ -2750,6 +2764,7 @@ export async function readBoundedGrokDetailInventory(
 			artifacts: [],
 			files: [],
 			media: [],
+			visitBundles: [],
 			truncated: true,
 			cursor: createAttachmentInventoryCursor(options.cursor, {
 				projectsLength: 0,
@@ -2762,8 +2777,11 @@ export async function readBoundedGrokDetailInventory(
 			progress: createAttachmentInventoryProgress(),
 		};
 	}
-	const accountFiles = await readBoundedGrokAccountFileInventory(client, limit, {
+	const accountFiles = options.skipAccountFiles
+		? { files: [], media: [], truncated: false }
+		: await readBoundedGrokAccountFileInventory(client, limit, {
 		listOptions: options.listOptions,
+		providerCallTimeoutMs: options.providerCallTimeoutMs,
 		pacer: options.pacer,
 		observation: options.observation,
 	});
@@ -2778,6 +2796,10 @@ export async function readBoundedGrokDetailInventory(
 		remainingRows,
 		{
 			maxDetailReads: options.maxDetailReads,
+			freshnessEpoch: options.freshnessEpoch,
+			providerCallTimeoutMs: options.providerCallTimeoutMs,
+			coalesceConversationReads: true,
+			usePerSurfaceTrafficContext: true,
 			cursor: options.cursor,
 			budgetYieldCause: options.budgetYieldCause,
 			shouldYield: options.shouldYield,
@@ -2789,6 +2811,7 @@ export async function readBoundedGrokDetailInventory(
 	);
 	return {
 		artifacts: conversationInventory.artifacts,
+		visitBundles: conversationInventory.visitBundles,
 		files: mergeFileRefs(accountFiles.files, conversationInventory.files),
 		media: accountFiles.media,
 		truncated: accountFiles.truncated || conversationInventory.truncated,
@@ -3028,6 +3051,14 @@ async function safeReadConversationFiles(
 	}
 }
 
+function readGrokObservedBotId(conversation: Conversation): string | undefined {
+	const provenance = conversation.metadata?.grokProvenance;
+	if (!provenance || typeof provenance !== "object") return undefined;
+	const record = provenance as Record<string, unknown>;
+	return record.source === "chats" && typeof record.botId === "string" && record.botId.trim()
+		? record.botId.trim() : undefined;
+}
+
 async function safeReadConversationContext(
 	client: Pick<BrowserAutomationClient, "getConversationContext"> &
 		Partial<Pick<BrowserAutomationClient, "buildListOptions">>,
@@ -3047,9 +3078,10 @@ async function safeReadConversationContext(
 	try {
 		await beforeAccountMirrorBrowserInteraction(listOptions, pacer, "conversation-read");
 		const isChatgpt = conversation.provider === "chatgpt";
+		const isBoundedContext = isChatgpt || conversation.provider === "grok";
 		const isChatgptChunkContinuation =
 			isChatgpt && cursor?.conversationId === conversation.id && cursor.nextMessageIndex > 0;
-		const chunk = isChatgpt
+		const chunk = isBoundedContext
 			? {
 					startMessageIndex:
 						cursor?.conversationId === conversation.id ? cursor.nextMessageIndex : 0,
@@ -3080,6 +3112,10 @@ async function safeReadConversationContext(
 				providerListOptions = {
 					...(providerListOptions ?? {}),
 					abortSignal,
+					...(conversation.provider === "grok" ? { accountMirrorConversationIdentity: {
+						projectId: conversation.projectId,
+						botId: readGrokObservedBotId(conversation),
+					} } : {}),
 					...(chunk ? { accountMirrorContextChunk: chunk } : {}),
 				};
 				if (isChatgpt && !providerListOptions.providerTrafficGovernor && client.buildListOptions) {
@@ -3093,7 +3129,7 @@ async function safeReadConversationContext(
 					.getConversationContext(conversation.id, {
 						projectId: conversation.projectId,
 						refresh: true,
-						...(isChatgpt
+						...(isBoundedContext
 							? {
 									allowCacheFallback: false,
 									retryAttempts: 0,
@@ -3249,7 +3285,7 @@ function readAccountMirrorContextChunkMetadata(
 			record.totalMessages === null || record.totalMessages === undefined
 				? null
 				: readNonNegativeInteger(record.totalMessages),
-		complete: record.complete === true || nextMessageIndex === null,
+		complete: record.complete === true,
 	};
 }
 

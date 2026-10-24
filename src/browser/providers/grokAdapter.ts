@@ -1,3 +1,4 @@
+import { boundObservedGrokContext } from './grokContext.js';
 import { withCdpCommandAbortSignal } from "../../../packages/browser-service/src/guardedCdp.js";
 import { collectGrokHistoryInventory, buildGrokHistoryPageExpression, buildGrokChatsOpenerExpression, type GrokHistoryPage } from "./grokHistoryInventory.js";
 import { recordGrokHistoryProgress } from "../grokHistoryProgress.js";
@@ -5465,21 +5466,24 @@ export function createGrokAdapter(): Pick<
       projectId?: string,
       options?: BrowserProviderListOptions,
     ): Promise<ConversationContext> {
+      options?.abortSignal?.throwIfAborted();
       const cleanProjectId = typeof projectId === 'string' && projectId.trim().length > 0 ? projectId.trim() : undefined;
       const targetUrl = resolveGrokConversationUrl(conversationId, cleanProjectId);
-      const connection = cleanProjectId
-        ? await connectToGrokProjectTab(options, cleanProjectId, targetUrl)
-        : await connectToGrokTab(options, targetUrl);
+      const connection = await connectToGrokTab(options, targetUrl);
       const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       try {
+        return await readGrokDiscoveryWithAdmission(client, 'provider:grok:conversation-context', async () => {
+        options?.abortSignal?.throwIfAborted();
         const allowNavigation = providerNavigationAllowed(options);
         if (cleanProjectId) {
           const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          options?.abortSignal?.throwIfAborted();
           if (shouldNavigate) {
             await navigateToProject(client, targetUrl);
           }
         } else {
           const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          options?.abortSignal?.throwIfAborted();
           if (shouldNavigate) {
             await navigateToConversation(client, targetUrl);
           }
@@ -5488,6 +5492,10 @@ export function createGrokAdapter(): Pick<
           }
         }
 
+        options?.abortSignal?.throwIfAborted();
+        if (!(await currentGrokUrlMatchesPreference(client, targetUrl))) {
+          throw new Error('Grok conversation route identity mismatch; refusing foreign conversation content.');
+        }
         const ready = await waitForGrokConversationSurface(client.Runtime, {
           timeoutMs: 10_000,
           requireResponse: true,
@@ -5495,11 +5503,12 @@ export function createGrokAdapter(): Pick<
         if (!ready.ok) {
           throw new Error(
             allowNavigation
-              ? 'Conversation content not found'
+              ? 'Grok conversation history unavailable: content not found'
               : `Grok active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
           );
         }
 
+        options?.abortSignal?.throwIfAborted();
         const evalResult = await client.Runtime.evaluate({
           expression: `(async () => {
             const normalize = (value) => String(value || '').replace(/\\r\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();
@@ -5515,7 +5524,19 @@ export function createGrokAdapter(): Pick<
               }
             };
             const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-            const rows = Array.from(document.querySelectorAll('main [id^="response-"]'));
+            const chunk = ${JSON.stringify(options?.accountMirrorContextChunk ?? null)};
+            const start = Math.max(0, Math.floor(chunk?.startMessageIndex ?? 0));
+            const limit = Math.max(1, Math.floor(chunk?.maxMessages ?? 10000));
+            const rows = Array.from(document.querySelectorAll('main [id^="response-"]')).filter((row) => {
+              const classes = String(row.getAttribute('class') || '');
+              return (classes.includes('items-end') || classes.includes('items-start')) && row.querySelector('[class*="response-content-markdown"], div.message-bubble');
+            });
+            const fallbackRows = rows.length ? [] : Array.from(document.querySelectorAll('div.message-bubble'));
+            const observedRows = rows.length ? rows : fallbackRows;
+            const inventory = observedRows.map((row, index) => row.id || row.closest('[id^="response-"]')?.id || String(index)).join('\\n');
+            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inventory));
+            const observation = { totalMessages: observedRows.length, fingerprint: Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('') };
+            const selectedRows = rows.slice(start, start + limit);
             const messages = [];
             const sources = [];
             const seenSourceKeys = new Set();
@@ -5562,13 +5583,12 @@ export function createGrokAdapter(): Pick<
               }
             };
 
-            for (const row of rows) {
+            for (const row of selectedRows) {
               pushFromRow(row);
             }
 
-            if (messages.length === 0) {
-              const fallbackRows = Array.from(document.querySelectorAll('div.message-bubble'));
-              for (const bubble of fallbackRows) {
+            if (rows.length === 0) {
+              for (const bubble of fallbackRows.slice(start, start + limit)) {
                 const row = bubble.closest('div[class*="items-start"], div[class*="items-end"]');
                 const classText = String(row?.getAttribute('class') || bubble.getAttribute('class') || '');
                 const role = classText.includes('items-end') ? 'user' : classText.includes('items-start') ? 'assistant' : null;
@@ -5656,6 +5676,8 @@ export function createGrokAdapter(): Pick<
               return findAccordionButtons().length > 0;
             };
 
+            if (${options?.accountMirrorInventory === true || options?.accountMirrorContextChunk ? 'true' : 'false'}) return { ok: true, messages, sources, observation };
+
             let openedSidebar = findAccordionButtons().length > 0;
             if (!openedSidebar) {
               const sourceChips = findSourceChips();
@@ -5683,29 +5705,35 @@ export function createGrokAdapter(): Pick<
               await collectAccordionLinks(undefined);
             }
 
-            return { ok: true, messages, sources };
+            return { ok: true, messages, sources, observation };
           })()`,
           returnByValue: true,
           awaitPromise: true,
         });
         const info = evalResult.result?.value as {
           ok?: boolean;
+          observation?: { totalMessages: number; fingerprint: string };
           messages?: Array<{ role: 'user' | 'assistant'; text: string }>;
           sources?: Array<{ url: string; title?: string; domain?: string; messageIndex?: number; sourceGroup?: string }>;
         } | undefined;
         const messages = Array.isArray(info?.messages) ? info.messages : [];
         const sources = Array.isArray(info?.sources) ? info.sources : [];
-        const files = await readVisibleConversationFilesWithClient(client, conversationId);
+        options?.abortSignal?.throwIfAborted();
+        const files = await readVisibleConversationFilesWithClient(client, conversationId, options?.accountMirrorContextChunk);
         if (messages.length === 0) {
-          throw new Error('Conversation messages not found');
+          throw Object.assign(new Error('Grok conversation history unavailable: no observed messages.'), { code: 'grok_history_unavailable' });
         }
-        return {
+        options?.abortSignal?.throwIfAborted();
+        if (!(await currentGrokUrlMatchesPreference(client, targetUrl))) throw new Error('Grok conversation route changed during detail read.');
+        options?.abortSignal?.throwIfAborted();
+        return boundObservedGrokContext({
           provider: 'grok',
           conversationId,
           messages,
           files,
           sources,
-        };
+        }, options?.accountMirrorContextChunk, { ...options?.accountMirrorConversationIdentity, projectId: cleanProjectId }, info?.observation);
+        }, options?.abortSignal);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -5775,12 +5803,14 @@ export async function connectToGrokTab(
   port: number;
   usedExisting: boolean;
 }> {
+  options?.abortSignal?.throwIfAborted();
   let host = options?.host ?? '127.0.0.1';
   let port = options?.port ?? resolvePortFromEnv();
   if (options?.tabTargetId && port) {
     const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
     await annotateClientMutationContext(client, options, 'provider:grok', options.tabTargetId);
+    if (options?.abortSignal?.aborted) { await closeGrokClient(client); options.abortSignal.throwIfAborted(); }
     if (hasProviderBackendRequestAdmission(options) && options?.tabUrl === 'about:blank') {
       try { await navigateAndSettle(client, {url: urlOverride ?? options?.configuredUrl ?? GROK_HOME_URL}); }
       catch (error) { await client.close(); throw error; }
@@ -6644,15 +6674,19 @@ async function readVisibleAccountFilesWithClient(client: ChromeClient): Promise<
 async function readVisibleConversationFilesWithClient(
   client: ChromeClient,
   conversationId: string,
+  chunk?: BrowserProviderListOptions["accountMirrorContextChunk"],
 ): Promise<FileRef[]> {
   const result = await client.Runtime.evaluate({
     expression: `(async () => {
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const chunk = ${JSON.stringify(chunk ?? null)};
+      const start = Math.max(0, Math.floor(chunk?.startMessageIndex ?? 0));
+      const end = chunk ? start + Math.max(1, Math.floor(chunk.maxMessages ?? 24)) : undefined;
       const collectRows = () => {
         const primary = Array.from(document.querySelectorAll('main [id^="response-"]'));
-        if (primary.length > 0) return primary;
-        return Array.from(document.querySelectorAll('main div[class*="items-end"]'));
+        if (primary.length > 0) return primary.slice(start, end);
+        return Array.from(document.querySelectorAll('main div[class*="items-end"]')).slice(start, end);
       };
       const collectItems = () => {
         const items = [];

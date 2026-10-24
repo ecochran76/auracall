@@ -3417,6 +3417,38 @@ describe("ChatGPT account mirror metadata collector", () => {
 		});
 	});
 
+	test("retains bounded Grok detail chunks and strict fresh-read custody", async () => {
+		const getConversationContext = vi.fn(async () => ({
+			provider: "grok" as const, conversationId: "chat-413",
+			messages: [{ role: "user" as const, text: "Observed first turn" }],
+			metadata: { accountMirrorContextChunk: { startMessageIndex: 0, endMessageIndex: 1,
+				nextMessageIndex: 1, maxMessages: 1, totalMessages: 2, complete: false } },
+		}));
+		const inventory = await readBoundedGrokDetailInventory({
+			listAccountFiles: vi.fn(async () => []), listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []), getConversationContext,
+		}, [{ id: "chat-413", title: "Scoped", provider: "grok", projectId: "project-413", metadata: { grokProvenance: { source: "chats", botId: "bot-413" } } }], 8,
+		{ maxDetailReads: 1, freshnessEpoch: "epoch-413", providerCallTimeoutMs: 500 });
+		expect(getConversationContext).toHaveBeenCalledWith("chat-413", expect.objectContaining({
+			projectId: "project-413", refresh: true, allowCacheFallback: false, retryAttempts: 0,
+			timeoutMs: 500, listOptions: expect.objectContaining({ accountMirrorConversationIdentity: { projectId: "project-413", botId: "bot-413" }, accountMirrorContextChunk: {
+				startMessageIndex: 0, maxMessages: 24,
+			} }),
+		}));
+		expect(inventory.visitBundles).toMatchObject([{ conversationId: "chat-413", freshnessEpoch: "epoch-413",
+			detail: { observed: true, complete: false, messageCount: 1 } }]);
+		expect(inventory.cursor.conversationDetail).toMatchObject({ conversationId: "chat-413", nextMessageIndex: 1 });
+		const failed = await readBoundedGrokDetailInventory({
+			listAccountFiles: vi.fn(async () => []), listProjectFiles: vi.fn(async () => []),
+			listConversationFiles: vi.fn(async () => []),
+			getConversationContext: vi.fn(async () => { throw new Error("Grok conversation history unavailable"); }),
+		}, [{ id: "chat-413", title: "Scoped", provider: "grok", projectId: "project-413" }], 8,
+		{ maxDetailReads: 1, cursor: inventory.cursor, freshnessEpoch: "epoch-413", skipAccountFiles: true });
+		expect(failed.cursor.conversationDetail).toEqual(inventory.cursor.conversationDetail);
+		expect(failed.visitBundles).toMatchObject([{ detail: { observed: false, complete: false } }]);
+
+	});
+
 	test("reads Grok account files separately from frontier-selected chat detail", async () => {
 		const calls: string[] = [];
 		const client = {
@@ -3469,7 +3501,6 @@ describe("ChatGPT account mirror metadata collector", () => {
 
 		expect(calls).toEqual([
 			"account-files",
-			"conversation-files:grok_changed",
 			"conversation-context:grok_changed",
 		]);
 		expect(inventory.media).toMatchObject([
