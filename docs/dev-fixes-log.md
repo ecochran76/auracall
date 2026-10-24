@@ -1,4 +1,12 @@
 
+## 2026-10-23 — Borrowed profiles need an explicit Recall action
+
+A browser profile can be legitimately borrowed by another agent and left open.
+Showing only unavailable/disabled Launch leaves the operator without recovery.
+Qualify the exact holder, offer Recall with an open-tabs warning, bind confirmation
+to its process generation, gracefully stop it and use normal AuraCall launching.
+No profile reset, guessed ownership adoption or automatic force-kill.
+
 ## 2026-10-23 — Qualify reused CDP ports against live ownership (#240)
 
 A retained dead browser is history, not an active claim on its old endpoint.

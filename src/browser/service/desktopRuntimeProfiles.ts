@@ -17,12 +17,13 @@ import {
 	applyDesktopProfileAssignments,
 	rememberDesktopProfileAssignment,
 } from "./desktopProfileAssignments.js";
-import { findNativeDesktopBrowser } from "./nativeDesktopRuntime.js";
+import { expectedNativeExecutable, findNativeDesktopBrowser } from "./nativeDesktopRuntime.js";
 import {
 	type NativeDesktopBrowser,
 	NativeDesktopStore,
 	nativeDesktopKey,
 } from "./nativeDesktopStore.js";
+import { inspectProfileRecall, stopProfileForRecall } from "./profileRecall.js";
 import { navigateAndSettle } from "./ui.js";
 
 export interface DesktopRuntimeProfile {
@@ -35,6 +36,7 @@ export interface DesktopRuntimeProfile {
 	desktopName?: string;
 	browserId?: string;
 	wakeable: boolean;
+	recallToken?: string;
 	message?: string;
 }
 function record(v: unknown): Record<string, unknown> {
@@ -98,6 +100,7 @@ export async function listDesktopRuntimeProfiles(
 			state: "dormant",
 			wakeable: true,
 		};
+		let recallPlan: ReturnType<typeof resolveBrowserLaunchPlan> | undefined;
 		try {
 			if (profile.engine && profile.engine !== "browser")
 				throw new Error("This runtime profile does not use a browser.");
@@ -113,6 +116,7 @@ export async function listDesktopRuntimeProfiles(
 				plan.launchPolicy.wslChromePreference === "windows"
 			)
 				throw new Error("This browser runs outside the local native desktop runtime.");
+			recallPlan = plan;
 			const matching = bindings.filter(
 				(b) => path.resolve(b.managedProfileDir) === path.resolve(directory),
 			);
@@ -165,6 +169,20 @@ export async function listDesktopRuntimeProfiles(
 			item.state = "unavailable";
 			item.wakeable = false;
 			item.message = error instanceof Error ? error.message : "Runtime profile unavailable.";
+			if (recallPlan?.launchPolicy.remoteViewDesktop) {
+				try {
+					const holder = await inspectProfileRecall(
+						recallPlan.managedBrowserProfile.directory,
+						await expectedNativeExecutable(recallPlan.launchPolicy),
+					);
+					if (holder) {
+						item.recallToken = holder.token;
+						item.message = "Browser profile is in use elsewhere. Recall to launch it here.";
+					}
+				} catch {
+					/* Unknown or inaccessible holders remain unavailable without Recall. */
+				}
+			}
 		}
 		result.push(item);
 	}
@@ -295,4 +313,32 @@ export async function wakeDesktopRuntimeProfile(
 		await openBlankProviderPage(binding, url);
 		return { runtimeProfileId: id, desktopName: result.desktopName, browserId: result.browserId };
 	});
+}
+
+/** Operator-confirmed recovery of a borrowed managed browser profile; placement stays automatic. */
+export async function recallDesktopRuntimeProfile(
+	config: ResolvedUserConfig,
+	id: string,
+	token: string,
+) {
+	const current = await effective(config);
+	const profile = getCurrentRuntimeProfiles(current)[id];
+	const provider = profile && providerFor(profile);
+	if (!provider) throw new Error("Select a supported browser runtime profile.");
+	const plan = resolveBrowserLaunchPlan({
+		source: { kind: "user-config", config: current },
+		intent: { runtimeProfileId: id, provider },
+	});
+	if (!plan.launchPolicy.remoteViewDesktop)
+		throw new Error("Recall requires a local AuraCall desktop browser profile.");
+	const directory = plan.managedBrowserProfile.directory;
+	await new NativeDesktopStore().exclusive(`recall:${path.resolve(directory)}`, async () => {
+		const row = (await listDesktopRuntimeProfiles(current)).find(
+			(item) => item.runtimeProfileId === id,
+		);
+		if (row?.state !== "unavailable" || row.recallToken !== token)
+			throw new Error("Browser profile holder changed; refresh before Recall.");
+		await stopProfileForRecall(directory, await expectedNativeExecutable(plan.launchPolicy), token);
+	});
+	return wakeDesktopRuntimeProfile(current, id);
 }

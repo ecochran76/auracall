@@ -741,6 +741,13 @@ If embedded viewing cannot connect, use **Open in Remote View** to complete
 any required sign-in in a top-level tab, then **Retry view after signing in**.
 Login pages that prohibit framing cannot be completed inside the viewer.
 
+**Recall** replaces Launch when a qualified local process is holding a managed
+browser profile outside AuraCall. Confirming Recall closes that browser and its
+open tabs, preserves the profile data, and launches it through ordinary AuraCall
+placement. If the holder changed, refresh and review the new state before retrying.
+Unknown, ambiguous, remote and Windows holders do not offer Recall. Recall never
+resets profile data or force-kills a browser that refuses graceful termination.
+
 **Launch** opens a dormant local browser runtime profile on its configured native
 desktop, or the selected existing desktop when no placement is configured. It
 uses the same managed browser directory, browser family, provider and configured
