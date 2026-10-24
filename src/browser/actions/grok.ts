@@ -1,36 +1,30 @@
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { BrowserAutomationError } from '../../oracle/errors.js';
 import type { ChromeClient, BrowserLogger, BrowserAttachment } from '../types.js';
 import { delay } from '../utils.js';
 import { GROK_PROVIDER } from '../providers/grok.js';
 import { detectGrokSignedInIdentity } from '../providers/grokIdentity.js';
-import { ensureServicesRegistry, resolveServiceModelLabels } from '../../services/registry.js';
+import { ensureServicesRegistry, normalizeServiceModelToken } from '../../services/registry.js';
 import {
   buildFindAllSelectorsExpression,
   buildFindFirstSelectorExpression,
   buildSelectorArrayLiteral,
 } from '../providers/shared.js';
 import {
-  GROK_MODEL_LABEL_NORMALIZER,
+  GROK_MODEL_MENU_ENTRIES_EXPRESSION,
+  type GrokModelMenuEntry,
   normalizeGrokModelLabel,
 } from '../providers/grokModelMenu.js';
-import {
-  isGrokRateLimitToastText,
-  type GrokAssistantSnapshot,
-} from '../providers/grokEvidence.js';
+import { isGrokRateLimitToastText, type GrokAssistantSnapshot } from '../providers/grokEvidence.js';
 import { navigateAndSettle, type NavigateAndSettleOptions } from '../service/ui.js';
 
 const GROK_SELECTORS = GROK_PROVIDER.selectors;
 const GROK_INPUT_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.input);
 const GROK_SEND_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.sendButton);
 const GROK_MODEL_BUTTON_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.modelButton);
-const GROK_MENU_ITEM_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.menuItem);
 const GROK_ASSISTANT_BUBBLE_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.assistantBubble);
 const GROK_ASSISTANT_ROLE_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.assistantRole);
-const GROK_MENU_CONTAINER_SELECTORS = JSON.stringify([
-  '[data-radix-dropdown-menu-content]',
-  '[data-radix-menu-content]',
-  'div[data-state="open"]',
-]);
 const GROK_VISIBLE_INPUT_EXPRESSION = `(() => {
   const selectors = ${GROK_INPUT_SELECTORS};
   const isVisible = (el) => {
@@ -46,9 +40,52 @@ const GROK_VISIBLE_INPUT_EXPRESSION = `(() => {
       rect.height > 0
     );
   };
-  for (const selector of selectors) {
-    const match = Array.from(document.querySelectorAll(selector)).find(isVisible);
-    if (match) return match;
+  const candidates = [...new Set(selectors.flatMap(selector => Array.from(document.querySelectorAll(selector))))]
+    .filter(el => isVisible(el) && !el.closest('[role="dialog"], [aria-modal="true"], [aria-hidden="true"]'));
+  if (candidates.length !== 1) return null;
+  return candidates[0];
+})()`;
+
+const GROK_COMPOSER_TOKEN_READER = `(root) => Array.from(root.querySelectorAll('[contenteditable="false"]'))
+  .filter(node => !node.parentElement?.closest('[contenteditable="false"]'))
+  .map(node => JSON.stringify([node.getAttribute('data-id'), node.getAttribute('data-entity-id'), node.getAttribute('data-type'), node.textContent || '']))`;
+
+// Read editable text without counting immutable mention/connector tokens as prompt
+// text. Paragraph and BR boundaries are significant, including blank lines.
+const GROK_COMPOSER_TEXT_READER = `(root) => {
+  const read = node => {
+    if (node.nodeType === 3) {
+      const siblings = Array.from(node.parentElement?.childNodes || []);
+      const previous = siblings[siblings.indexOf(node) - 1];
+      if (previous instanceof HTMLElement && previous.getAttribute('contenteditable') === 'false' && node.textContent === ' ') return '';
+      return node.textContent || '';
+    }
+    if (!(node instanceof HTMLElement) || node.getAttribute('contenteditable') === 'false') return '';
+    if (node.tagName === 'BR') return node.parentElement?.childNodes.length === 1 ? '' : '\\n';
+    let text = '';
+    Array.from(node.childNodes).forEach((child, index) => {
+      if (index > 0 && child instanceof HTMLElement && /^(P|DIV)$/.test(child.tagName)) text += '\\n';
+      text += read(child);
+    });
+    return text;
+  };
+  return read(root);
+}`;
+
+// Resolve controls from the selected editor outward, never from unrelated forms.
+const GROK_SCOPED_SUBMIT_EXPRESSION = `(() => {
+  const editor = ${GROK_VISIBLE_INPUT_EXPRESSION};
+  if (!editor) return null;
+  let root = editor.closest('form') || editor.parentElement;
+  while (root && root !== document.body) {
+    const candidates = [...new Set(${GROK_SEND_SELECTORS}.flatMap(selector => Array.from(root.querySelectorAll(selector))))]
+      .filter(candidate => candidate instanceof HTMLButtonElement && !candidate.disabled && candidate.getAttribute('aria-disabled') !== 'true' &&
+        candidate.getBoundingClientRect().width > 0 && candidate.getBoundingClientRect().height > 0 &&
+        window.getComputedStyle(candidate).display !== 'none' && window.getComputedStyle(candidate).visibility !== 'hidden');
+    if (candidates.length > 1) return null;
+    if (candidates.length === 1) return candidates[0];
+    if (root.tagName === 'FORM' || root.tagName === 'MAIN') return null;
+    root = root.parentElement;
   }
   return null;
 })()`;
@@ -61,12 +98,15 @@ export async function navigateToGrok(
   options: Pick<NavigateAndSettleOptions, 'mutationAudit' | 'mutationSource'> = {},
 ): Promise<void> {
   logger(`Navigating to ${url}`);
-  const settled = await navigateAndSettle({ Page, Runtime }, {
-    url,
-    timeoutMs: 45_000,
-    mutationAudit: options.mutationAudit,
-    mutationSource: options.mutationSource ?? 'legacy:grok:navigate',
-  });
+  const settled = await navigateAndSettle(
+    { Page, Runtime },
+    {
+      url,
+      timeoutMs: 45_000,
+      mutationAudit: options.mutationAudit,
+      mutationSource: options.mutationSource ?? 'legacy:grok:navigate',
+    },
+  );
   if (!settled.ok) {
     throw new Error(`Grok navigation to ${url} did not settle: ${settled.reason ?? settled.phase}`);
   }
@@ -77,7 +117,10 @@ export async function ensureGrokLoggedIn(
   logger: BrowserLogger,
   options: { headless: boolean; timeoutMs?: number } = { headless: false },
 ): Promise<void> {
-  const checkLogin = async (): Promise<{ ok: boolean; reason: 'identity' | 'guest-cta' | 'not-found' | 'unknown' }> => {
+  const checkLogin = async (): Promise<{
+    ok: boolean;
+    reason: 'identity' | 'guest-cta' | 'not-found' | 'unknown';
+  }> => {
     const href = await readLocationHref(Runtime);
     if (GROK_PROVIDER.loginUrlHints?.some((hint) => href.includes(hint))) {
       return { ok: false, reason: 'guest-cta' };
@@ -114,7 +157,9 @@ export async function ensureGrokLoggedIn(
   }
 
   if (options.headless) {
-    throw new Error('Grok login required; could not verify a signed-in Grok account. Please sign in to grok.com and retry.');
+    throw new Error(
+      'Grok login required; could not verify a signed-in Grok account. Please sign in to grok.com and retry.',
+    );
   }
 
   const deadline = Date.now() + Math.min(options.timeoutMs ?? 1_200_000, 10 * 60_000);
@@ -166,11 +211,15 @@ export async function setGrokPrompt(
   Runtime: ChromeClient['Runtime'],
   prompt: string,
 ): Promise<void> {
-  const normalizeText = (value: string): string => value.replace(/\r\n/g, '\n').replace(/\u00a0/g, ' ').trim();
+  const composerId = randomUUID();
+  const exactComposer = `document.querySelector('[data-auracall-grok-composer="${composerId}"]')`;
+  const normalizeText = (value: string): string => value.replace(/\r\n/g, '\n');
   const focusOutcome = await Runtime.evaluate({
     expression: `(() => {
       const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
       if (!el) return { ok: false };
+      el.setAttribute('data-auracall-grok-composer', ${JSON.stringify(composerId)});
+      const tokenEvidence = (${GROK_COMPOSER_TOKEN_READER})(el);
       const dispatchClick = (target) => {
         for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
           target.dispatchEvent(new MouseEvent(type, {
@@ -189,7 +238,7 @@ export async function setGrokPrompt(
         el.value = '';
         el.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
-        return { ok: true, mode: 'input' };
+        return { ok: true, mode: 'input', tokens: tokenEvidence };
       }
       if (el instanceof HTMLElement && el.isContentEditable) {
         const doc = el.ownerDocument;
@@ -200,10 +249,19 @@ export async function setGrokPrompt(
           selection.removeAllRanges();
           selection.addRange(range);
         }
-        el.textContent = '';
+        const tokens = Array.from(el.querySelectorAll('[contenteditable="false"]'))
+          .filter(token => !token.parentElement?.closest('[contenteditable="false"]'));
+        el.replaceChildren(...tokens.flatMap(token => [token, document.createTextNode(' ')]));
+        if (selection) {
+          const caret = doc.createRange();
+          caret.selectNodeContents(el);
+          caret.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(caret);
+        }
         el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, data: '', inputType: 'deleteByCut' }));
         el.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
-        return { ok: true, mode: 'contenteditable' };
+        return { ok: true, mode: 'contenteditable', tokens: tokenEvidence };
       }
       return { ok: false };
     })()`,
@@ -213,6 +271,7 @@ export async function setGrokPrompt(
     throw new Error('Unable to focus the Grok prompt composer.');
   }
 
+  const expectedTokens = JSON.stringify(focusOutcome.result?.value?.tokens ?? []);
   const mode = String(focusOutcome.result?.value?.mode ?? '');
   const shouldPreferDomInjection = mode === 'contenteditable' && prompt.includes('\n');
   if (!shouldPreferDomInjection) {
@@ -222,26 +281,28 @@ export async function setGrokPrompt(
 
   const verifyOutcome = await Runtime.evaluate({
     expression: `(() => {
-      const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
+      const el = ${exactComposer};
       if (!el) return { ok: false, text: '' };
       if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
-        return { ok: true, text: el.value || '' };
+        return { ok: true, text: el.value || '', tokens: (${GROK_COMPOSER_TOKEN_READER})(el) };
       }
       if (el instanceof HTMLElement && el.isContentEditable) {
-        return { ok: true, text: el.innerText || el.textContent || '' };
+        return { ok: true, text: (${GROK_COMPOSER_TEXT_READER})(el), tokens: (${GROK_COMPOSER_TOKEN_READER})(el) };
       }
       return { ok: false, text: '' };
     })()`,
     returnByValue: true,
   });
   const observedText = normalizeText(String(verifyOutcome.result?.value?.text ?? ''));
-  if (observedText === normalizeText(prompt)) {
+  if (JSON.stringify(verifyOutcome.result?.value?.tokens ?? []) !== expectedTokens)
+    throw new Error('Grok selected composer tokens changed; prompt was not submitted.');
+  if (verifyOutcome.result?.value?.ok && observedText === normalizeText(prompt)) {
     return;
   }
 
   const fallbackOutcome = await Runtime.evaluate({
     expression: `(() => {
-      const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
+      const el = ${exactComposer};
       if (!el) return false;
       const text = ${JSON.stringify(prompt)};
       if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
@@ -259,7 +320,9 @@ export async function setGrokPrompt(
         return true;
       }
       if (el instanceof HTMLElement && el.isContentEditable) {
-        el.replaceChildren();
+        const tokens = Array.from(el.querySelectorAll('[contenteditable="false"]'))
+          .filter(token => !token.parentElement?.closest('[contenteditable="false"]'));
+        el.replaceChildren(...tokens.flatMap(token => [token, document.createTextNode(' ')]));
         const lines = text.split(/\\r?\\n/);
         lines.forEach((line, index) => {
           if (index > 0) {
@@ -281,19 +344,23 @@ export async function setGrokPrompt(
 
   const postFallback = await Runtime.evaluate({
     expression: `(() => {
-      const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
+      const el = ${exactComposer};
       if (!el) return { ok: false, text: '' };
       if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
-        return { ok: true, text: el.value || '' };
+        return { ok: true, text: el.value || '', tokens: (${GROK_COMPOSER_TOKEN_READER})(el) };
       }
       if (el instanceof HTMLElement && el.isContentEditable) {
-        return { ok: true, text: el.innerText || el.textContent || '' };
+        return { ok: true, text: (${GROK_COMPOSER_TEXT_READER})(el), tokens: (${GROK_COMPOSER_TOKEN_READER})(el) };
       }
       return { ok: false, text: '' };
     })()`,
     returnByValue: true,
   });
-  if (normalizeText(String(postFallback.result?.value?.text ?? '')) !== normalizeText(prompt)) {
+  if (
+    !postFallback.result?.value?.ok ||
+    JSON.stringify(postFallback.result?.value?.tokens ?? []) !== expectedTokens ||
+    normalizeText(String(postFallback.result?.value?.text ?? '')) !== normalizeText(prompt)
+  ) {
     throw new Error('Unable to preserve Grok prompt formatting in the composer.');
   }
 }
@@ -302,6 +369,7 @@ export async function submitGrokPrompt(
   Input: ChromeClient['Input'],
   Runtime: ChromeClient['Runtime'],
 ): Promise<void> {
+  const submitId = randomUUID();
   const readSubmissionState = async (): Promise<{
     composerText: string;
     turnCount: number;
@@ -317,9 +385,8 @@ export async function submitGrokPrompt(
           return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
         };
         const selectors = ${GROK_SEND_SELECTORS};
-        const btn = selectors
-          .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
-          .find((candidate) => candidate instanceof HTMLButtonElement && isVisible(candidate) && !candidate.disabled) || null;
+        const btn = ${GROK_SCOPED_SUBMIT_EXPRESSION};
+        if (btn) btn.setAttribute('data-auracall-grok-submit', ${JSON.stringify(submitId)});
         const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
         const composerText =
           el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement
@@ -355,8 +422,10 @@ export async function submitGrokPrompt(
     throw new Error('Unable to locate Grok submit button.');
   }
 
-  const outcome = await Runtime.evaluate({
-    expression: `(() => {
+  let outcome: Awaited<ReturnType<ChromeClient['Runtime']['evaluate']>>;
+  try {
+    outcome = await Runtime.evaluate({
+      expression: `(() => {
       const isVisible = (el) => {
         if (!(el instanceof HTMLElement)) return false;
         const style = window.getComputedStyle(el);
@@ -364,45 +433,83 @@ export async function submitGrokPrompt(
         return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
       };
       const selectors = ${GROK_SEND_SELECTORS};
-      const btn = selectors
-        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
-        .find((candidate) => candidate instanceof HTMLButtonElement && isVisible(candidate) && !candidate.disabled) || null;
-      if (!btn) return false;
+      const btn = ${GROK_SCOPED_SUBMIT_EXPRESSION};
+      const captured = document.querySelector('[data-auracall-grok-submit="${submitId}"]');
+      if (!btn || btn !== captured) return false;
       btn.click();
       return true;
     })()`,
+      returnByValue: true,
+    });
+  } catch (error) {
+    throw new BrowserAutomationError(
+      'Grok submission outcome unknown after click dispatch; reconcile the conversation before retrying.',
+      { stage: 'grok-prompt-submit', effectState: 'unknown' },
+      error,
+    );
+  }
+  if (outcome.result?.value !== true) {
+    if (outcome.result?.value === false && !outcome.exceptionDetails)
+      throw new Error('Unable to locate the exact Grok submit button; no click dispatched.');
+    throw new BrowserAutomationError(
+      'Grok submission outcome unknown after click dispatch; reconcile the conversation before retrying.',
+      { stage: 'grok-prompt-submit', effectState: 'unknown' },
+    );
+  }
+
+  // Once a click has been dispatched, absence of an immediate UI change is
+  // uncertain effect custody. Observe the same target; never send Enter/reclick.
+  const commitDeadline = Date.now() + 5_000;
+  while (Date.now() < commitDeadline) {
+    let current: Awaited<ReturnType<typeof readSubmissionState>>;
+    try {
+      current = await readSubmissionState();
+    } catch (error) {
+      throw new BrowserAutomationError(
+        'Grok submission observation failed after one click; reconcile the conversation before retrying.',
+        { stage: 'grok-prompt-submit', effectState: 'unknown' },
+        error,
+      );
+    }
+    if (current.turnCount > baseline.turnCount) return;
+    await delay(250);
+  }
+  throw new BrowserAutomationError(
+    'Grok submission unconfirmed after one click; the prompt may have committed. Reconcile the conversation before retrying.',
+    { stage: 'grok-prompt-submit', effectState: 'unknown' },
+  );
+}
+
+/** Discover observed picker labels and account gates, including Build when exposed. */
+export async function discoverGrokModels(
+  Input: ChromeClient['Input'],
+  Runtime: ChromeClient['Runtime'],
+): Promise<GrokModelMenuEntry[]> {
+  if (!(await openGrokModelMenu(Runtime, Input)))
+    throw new Error('Unable to open Grok model menu.');
+  const outcome = await Runtime.evaluate({
+    expression: `(() => ${GROK_MODEL_MENU_ENTRIES_EXPRESSION}.map(({ label, selected, entitlement }) => ({ label, selected, entitlement })))()`,
     returnByValue: true,
   });
-  if (!outcome.result?.value) {
-    throw new Error('Unable to locate Grok submit button.');
-  }
+  const entries = outcome.result?.value;
+  if (!Array.isArray(entries) || entries.length === 0)
+    throw new Error('Unable to discover an unambiguous Grok model menu.');
+  return entries;
+}
 
-  await delay(600);
-  const afterClick = await readSubmissionState();
-  const committed =
-    afterClick.turnCount > baseline.turnCount ||
-    afterClick.submitDisabled ||
-    afterClick.composerText.trim().length === 0;
-  if (committed) {
-    return;
-  }
-
-  await Input.dispatchKeyEvent({
-    type: 'keyDown',
-    key: 'Enter',
-    code: 'Enter',
-    windowsVirtualKeyCode: 13,
-    nativeVirtualKeyCode: 13,
-    text: '\r',
-    unmodifiedText: '\r',
-  });
-  await Input.dispatchKeyEvent({
-    type: 'keyUp',
-    key: 'Enter',
-    code: 'Enter',
-    windowsVirtualKeyCode: 13,
-    nativeVirtualKeyCode: 13,
-  });
+/** Verify the selected entry without choosing a different model. */
+export async function verifyGrokCurrentModel(
+  Input: ChromeClient['Input'],
+  Runtime: ChromeClient['Runtime'],
+): Promise<string> {
+  const entries = await discoverGrokModels(Input, Runtime);
+  const selected = entries.filter((entry) => entry.selected);
+  if (selected.length !== 1)
+    throw new Error('Unable to verify the current Grok model unambiguously.');
+  if (selected[0].entitlement !== 'available')
+    throw new Error('Current Grok model is account-gated; required entitlement is unavailable.');
+  await pressKey(Input, 'Escape', 'Escape');
+  return selected[0].label;
 }
 
 export async function selectGrokMode(
@@ -410,52 +517,79 @@ export async function selectGrokMode(
   Runtime: ChromeClient['Runtime'],
   label: string,
   logger: BrowserLogger,
-): Promise<void> {
+): Promise<string> {
   const servicesRegistry = await ensureServicesRegistry();
-  const candidateLabels = resolveServiceModelLabels(servicesRegistry, 'grok', label);
+  const inputToken = normalizeServiceModelToken(label);
+  const candidateLabels = (servicesRegistry.services.grok?.models ?? [])
+    .filter((model) =>
+      [model.id, model.label, ...(model.aliases ?? [])].some(
+        (token) => normalizeServiceModelToken(token) === inputToken,
+      ),
+    )
+    .map((model) => model.label);
   const normalizedCandidates = candidateLabels
     .concat(candidateLabels.length === 0 ? [label] : [])
     .map((candidate) => normalizeGrokModelLabel(candidate))
     .filter(Boolean);
   const menuOpened = await openGrokModelMenu(Runtime, Input);
   if (!menuOpened) {
-    logger('Unable to open Grok model menu via click or keyboard.');
-    return;
+    throw new Error('Unable to open Grok model menu; explicit selection was not performed.');
   }
+  const matchExpression = `entry => ${JSON.stringify(normalizedCandidates.map((value) => value.toLowerCase()))}
+    .some(candidate => entry.label.toLowerCase() === candidate || entry.label.toLowerCase().startsWith(candidate + ' '))`;
   const outcome = await Runtime.evaluate({
     expression: `(() => {
-      const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
-      const menuSelectors = ${GROK_MENU_CONTAINER_SELECTORS};
-      const menu = menuSelectors.map((selector) => document.querySelector(selector)).find(Boolean);
-      const items = menu
-        ? ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS, 'menuItemSelectors')}.filter((el) => menu.contains(el))
-        : ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS)};
-      const candidates = ${JSON.stringify(normalizedCandidates)};
-      const target = items.find((el) => {
-        const text = normalize(el.textContent || '');
-        return candidates.some((candidate) => text.startsWith(candidate));
-      });
-      if (!target) {
-        return {
-          ok: false,
-          available: items.map((el) => normalize(el.textContent || '')).filter(Boolean),
-        };
-      }
-      target.click();
-      return { ok: true };
+      const entries = ${GROK_MODEL_MENU_ENTRIES_EXPRESSION};
+      const targets = entries.filter(${matchExpression});
+      if (targets.length !== 1) return { ok: false, available: entries.map(entry => entry.label) };
+      const target = targets[0];
+      if (target.entitlement !== 'available') return { ok: false, gated: true };
+      if (!target.selected) target.node.click();
+      return { ok: true, label: target.label };
     })()`,
     returnByValue: true,
   });
-  const result = outcome.result?.value as { ok?: boolean; available?: string[] } | undefined;
+  const result = outcome.result?.value as
+    | { ok?: boolean; available?: string[]; gated?: boolean; label?: string }
+    | undefined;
+  if (result?.gated)
+    throw new Error(`Grok model "${label}" is account-gated; required entitlement is unavailable.`);
   if (!result?.ok) {
-    const available = (result?.available ?? []).filter(Boolean);
-    const availableHint = available.length > 0 ? ` Available: ${available.join(', ')}.` : '';
-    logger(
-      `Unable to find Grok mode "${normalizedCandidates.join('" / "') || label}" in menu.${availableHint}`,
-    );
-    return;
+    const availableHint = result?.available?.length
+      ? ` Available: ${result.available.join(', ')}.`
+      : '';
+    throw new Error(`Unable to find Grok mode "${label}" unambiguously in menu.${availableHint}`);
   }
-  logger(`Selected Grok mode: ${normalizedCandidates[0] ?? label}`);
+  const verifyDeadline = Date.now() + 2_000;
+  let verified = false;
+  while (Date.now() < verifyDeadline) {
+    const observed = await Runtime.evaluate({
+      expression: `(() => {
+        const entries = ${GROK_MODEL_MENU_ENTRIES_EXPRESSION};
+        if (entries.length) return entries.filter(${matchExpression}).some(entry => entry.selected && entry.entitlement === 'available');
+        const trigger = ${buildFindFirstSelectorExpression(GROK_MODEL_BUTTON_SELECTORS)};
+        const entry = { label: (trigger?.textContent || '').trim() };
+        return Boolean(trigger && (${matchExpression})(entry));
+      })()`,
+      returnByValue: true,
+    });
+    if (observed.result?.value === true) {
+      verified = true;
+      break;
+    }
+    await delay(100);
+  }
+  if (!verified)
+    throw new Error(`Unable to verify selected Grok mode "${label}"; prompt was not submitted.`);
+  logger(`Selected Grok mode: ${result.label ?? normalizedCandidates[0] ?? label}`);
+  return result.label ?? normalizedCandidates[0] ?? label;
+}
+
+export interface GrokTextAssistantSnapshot extends GrokAssistantSnapshot {
+  responseId: string;
+  streaming: boolean;
+  terminal: boolean;
+  terminalEvidence: string;
 }
 
 export async function waitForGrokAssistantResponse(
@@ -478,8 +612,11 @@ export async function waitForGrokAssistantResult(
       lastMarkdown: string;
       lastHtml: string;
       toastText?: string;
+      responseId?: string;
     } | null;
     onResponseIncoming?: () => void;
+    checkWarning?: () => Promise<void>;
+    abortSignal?: AbortSignal;
   } = {},
 ): Promise<{ text: string; markdown: string; html?: string }> {
   const baseline = options.baseline ?? (await readAssistantSnapshot(Runtime));
@@ -488,6 +625,8 @@ export async function waitForGrokAssistantResult(
   let responseIncomingNotified = false;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    options.abortSignal?.throwIfAborted();
+    await options.checkWarning?.();
     const current = await readAssistantSnapshot(Runtime);
     if (current.toastText && isGrokRateLimitToastText(current.toastText)) {
       throw new Error(current.toastText);
@@ -496,7 +635,8 @@ export async function waitForGrokAssistantResult(
     const baselineSignature = baseline.lastMarkdown || baseline.lastText;
     const hasNewContent =
       current.count > baseline.count ||
-      (current.count === baseline.count && currentSignature.length > baselineSignature.length);
+      Boolean(current.responseId && current.responseId !== baseline.responseId) ||
+      (!baselineSignature.trim() && currentSignature !== baselineSignature);
 
     if (hasNewContent && currentSignature.trim().length > 0) {
       if (!responseIncomingNotified) {
@@ -509,7 +649,7 @@ export async function waitForGrokAssistantResult(
         stableCount = 0;
         lastSignature = currentSignature;
       }
-      if (stableCount >= 2) {
+      if (stableCount >= 2 && !current.streaming && current.terminal) {
         logger('Recovered assistant response');
         return {
           text: current.lastText,
@@ -520,7 +660,10 @@ export async function waitForGrokAssistantResult(
     }
     await delay(500);
   }
-  throw new Error('Timed out waiting for Grok response.');
+  throw new BrowserAutomationError('Timed out waiting for Grok response with terminal evidence.', {
+    stage: 'grok-response-observation',
+    effectState: 'effect_observed',
+  });
 }
 
 export async function uploadGrokAttachments(
@@ -566,7 +709,7 @@ export function buildGrokAssistantSnapshotExpressionForTest(): string {
 
 export async function readGrokAssistantSnapshotForRuntime(
   Runtime: ChromeClient['Runtime'],
-): Promise<GrokAssistantSnapshot> {
+): Promise<GrokTextAssistantSnapshot> {
   return readAssistantSnapshot(Runtime);
 }
 
@@ -600,14 +743,25 @@ function buildGrokAssistantSnapshotExpression(): string {
           .filter((text) => /query limit|too many requests|rate limit|request limit|try again in\\s+\\d+/i.test(text));
         return values[values.length - 1] || '';
       };
-      if (!last) return { count: candidates.length, lastText: '', lastMarkdown: '', lastHtml: '', toastText: readToastText() };
-
       const normalizeText = (value) =>
         String(value || '')
           .replace(/\\u200b/g, '')
           .replace(/\\r\\n/g, '\\n')
           .replace(/\\n{3,}/g, '\\n\\n')
           .trim();
+      if (!last) return { count: candidates.length, lastText: '', lastMarkdown: '', lastHtml: '', toastText: readToastText(), responseId: '', streaming: false, terminal: false, terminalEvidence: '' };
+      const responseRoot = last.closest('[id^="response-"]') || last;
+      const responseId = responseRoot.getAttribute('id') || last.getAttribute('data-message-id') || '';
+      const stopVisible = Array.from(document.querySelectorAll('button[aria-label*="Stop"], button[aria-label*="stop"], button[data-testid="stop-button"]')).some(isVisible);
+      const streaming = stopVisible || responseRoot.getAttribute('aria-busy') === 'true' ||
+        responseRoot.getAttribute('data-is-streaming') === 'true' ||
+        Array.from(responseRoot.querySelectorAll('[data-is-streaming="true"], [data-state="streaming"]')).some(isVisible);
+      const explicitComplete = responseRoot.getAttribute('data-state') === 'complete' || responseRoot.getAttribute('data-is-streaming') === 'false';
+      const actionGroup = responseRoot.querySelector('.action-buttons');
+      const terminalActions = actionGroup && isVisible(actionGroup) &&
+        Array.from(actionGroup.querySelectorAll('button[aria-label*="Copy"], button[title*="Copy"], button[aria-label*="Regenerate"]')).some(isVisible);
+      const terminalEvidence = !streaming && explicitComplete ? 'response-complete-state' : !streaming && terminalActions ? 'response-terminal-actions' : '';
+      const completion = { responseId, streaming, terminal: Boolean(terminalEvidence), terminalEvidence };
       const normalizeInlineWhitespace = (value) => String(value || '').replace(/\\s+/g, ' ');
       const collapseInline = (value) => normalizeText(normalizeInlineWhitespace(value));
       const normalizeCode = (value) => String(value || '').replace(/\\u200b/g, '').replace(/\\r\\n/g, '\\n').replace(/\\n$/, '');
@@ -768,6 +922,7 @@ function buildGrokAssistantSnapshotExpression(): string {
         );
         const text = cleanPlainText(markdownRoot);
         return {
+          ...completion,
           count: candidates.length,
           lastText: text || markdown,
           lastMarkdown: markdown || text,
@@ -802,6 +957,7 @@ function buildGrokAssistantSnapshotExpression(): string {
 
       const fallbackText = normalizeText(clone.textContent || '');
       return {
+        ...completion,
         count: candidates.length,
         lastText: fallbackText,
         lastMarkdown: fallbackText,
@@ -813,7 +969,7 @@ function buildGrokAssistantSnapshotExpression(): string {
 
 async function readAssistantSnapshot(
   Runtime: ChromeClient['Runtime'],
-): Promise<{ count: number; lastText: string; lastMarkdown: string; lastHtml: string; toastText: string }> {
+): Promise<GrokTextAssistantSnapshot> {
   const outcome = await Runtime.evaluate({
     expression: buildGrokAssistantSnapshotExpression(),
     returnByValue: true,
@@ -824,10 +980,17 @@ async function readAssistantSnapshot(
     lastMarkdown: outcome.result?.value?.lastMarkdown ?? '',
     lastHtml: outcome.result?.value?.lastHtml ?? '',
     toastText: outcome.result?.value?.toastText ?? '',
+    responseId: outcome.result?.value?.responseId ?? '',
+    streaming: outcome.result?.value?.streaming === true,
+    terminal: outcome.result?.value?.terminal === true,
+    terminalEvidence: outcome.result?.value?.terminalEvidence ?? '',
   };
 }
 
-async function _waitForDocumentReady(Runtime: ChromeClient['Runtime'], timeoutMs: number): Promise<void> {
+async function _waitForDocumentReady(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs: number,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const { result } = await Runtime.evaluate({
@@ -866,50 +1029,31 @@ async function queryFileInputNode(dom: ChromeClient['DOM']) {
 
 async function openGrokModelMenu(
   Runtime: ChromeClient['Runtime'],
-  Input: ChromeClient['Input'],
+  _Input: ChromeClient['Input'],
 ): Promise<boolean> {
+  const existing = await Runtime.evaluate({
+    expression: `Boolean(${GROK_MODEL_MENU_ENTRIES_EXPRESSION}.length)`,
+    returnByValue: true,
+  });
+  if (existing.result?.value) return true;
   const clicked = await Runtime.evaluate({
     expression: `(() => {
-      const btn = ${buildFindFirstSelectorExpression(GROK_MODEL_BUTTON_SELECTORS)};
-      if (!btn) return false;
-      btn.click();
+      const buttons = [...new Set(${GROK_MODEL_BUTTON_SELECTORS}.flatMap(selector => Array.from(document.querySelectorAll(selector))))]
+        .filter(node => node instanceof HTMLElement && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0 && window.getComputedStyle(node).display !== 'none' && window.getComputedStyle(node).visibility !== 'hidden' && !node.closest('[role="dialog"], [aria-hidden="true"]'));
+      if (buttons.length !== 1) return false;
+      buttons[0].click();
       return true;
     })()`,
     returnByValue: true,
   });
-  if (clicked.result?.value && (await waitForMenuItems(Runtime, 800))) {
-    return true;
-  }
-
-  await Runtime.evaluate({
-    expression: `(() => {
-      const editor = ${buildFindFirstSelectorExpression(GROK_INPUT_SELECTORS)};
-      editor?.focus();
-    })()`,
-  });
-  await pressKey(Input, 'Tab', 'Tab');
-  await pressKey(Input, 'Tab', 'Tab');
-  await pressKey(Input, ' ', 'Space');
-  return await waitForMenuItems(Runtime, 1000);
-}
-
-async function waitForMenuItems(
-  Runtime: ChromeClient['Runtime'],
-  timeoutMs: number,
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
+  if (!clicked.result?.value) return false;
+  const deadline = Date.now() + 1_000;
   while (Date.now() < deadline) {
-    const outcome = await Runtime.evaluate({
-      expression: `(() => {
-        const menuSelectors = ${GROK_MENU_CONTAINER_SELECTORS};
-        const menu = menuSelectors.map((selector) => document.querySelector(selector)).find(Boolean);
-        if (!menu) return false;
-        const items = ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS, 'menuItemSelectors')};
-        return items.some((el) => menu.contains(el));
-      })()`,
+    const observed = await Runtime.evaluate({
+      expression: `Boolean(${GROK_MODEL_MENU_ENTRIES_EXPRESSION}.length)`,
       returnByValue: true,
     });
-    if (outcome.result?.value) return true;
+    if (observed.result?.value) return true;
     await delay(100);
   }
   return false;
