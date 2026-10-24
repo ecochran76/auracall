@@ -1,3 +1,12 @@
+## 2026-10-24 — Issue368 retain backend continuation acknowledgment
+
+Recovery-enabled acceptance fails pre-refresh with a preserved native AbortError
+and observer-cleanup Invalid InterceptionId. New minimal after-wire-success
+phase reproduces cleanup failure despite a successful SDK acknowledgment. Opt
+backend continuation into receipt waiting after SDK send, bounded by existing3s;
+pre-wire cancellation still prevents send, rejected/missing receipts stay unknown.
+No historical ledger rewrite. Shared ChatGPT/Grok interceptor tests protect both.
+
 ## 2026-10-24 — Issue368 one bounded settings-load recovery
 
 Fresh captured attempt stops pre-effect at plugin-settings error; no tool refresh.

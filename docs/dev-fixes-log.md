@@ -1,3 +1,11 @@
+## 2026-10-24 — Retain a bounded protocol receipt after continuation send
+
+Native request cancellation can arrive before Chrome acknowledges an already
+sent continuation. Racing that cancellation against a valid acknowledgment
+creates avoidable unknown cleanup. Honor cancellation before SDK send, then
+retain the existing bounded wait for the receipt. Only a successful receipt
+settles the continuation; rejection or timeout remains unknown.
+
 ## 2026-10-24 — Recover plugin settings once without replaying tool refresh
 
 A terminal plugin-settings load error can recover with one page reload. Share

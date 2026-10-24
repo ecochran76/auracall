@@ -16,7 +16,7 @@ lanes:
     dependencies: []
     overlaps: []
     validation_status: settings-recovery-source-green-live-pending
-    integration_receipt: ae8a95cc744a0627a1e97e1fce5d07faf2be887d
+    integration_receipt: d33b14e04317f253fa034f79d20d8b0fc77a3c7b
     updated_at: 2026-10-23
   - id: P87-IQ2
     objective: Honor configured admission wait while reading refresh settings

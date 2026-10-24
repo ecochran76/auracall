@@ -3,7 +3,7 @@
 State: OPEN
 Lane: issue368
 Owner: primary agent for ecochran76
-Branch: fix/issue368-settings-recovery
+Branch: fix/issue368-continuation-receipt
 Target: main
 Integration: pull request
 Base: 89800c458
@@ -265,3 +265,38 @@ Full build, scoped Biome, docs:list and whitespace pass. Primary Standards/Spec
 review of this bounded recovery patch against87c4910ba has no blocking findings.
 The previous pre-effect receipt remains preserved; recovery-source tests do not
 qualify a live catalog refresh.
+
+PR421 sourcea0f62f164 mergedd33b14e04. Installed CLI prefix
+~/.auracall/user-runtime-issue368-recovery-a0f62f164; exact compiled module
+SHA2565cc04a05151597981edf8e0d2926d4d761761152fbadef546e7c7a2165b05380
+matches the tested build. App help passes; API PID1777322 is not restarted.
+Fresh zero-navigation settings snapshot remains healthy with the same saved
+connection/permission fingerprint. One new captured acceptance is running from
+that baseline on the repaired public command; the prior guard proved no refresh
+activation in its failed attempt. Private acceptance directory:
+~/.local/state/auracall-issue368-recovered-acceptance-20261024/.
+
+## 2026-10-24 — Cancellation must not discard a continuation receipt
+
+The recovery-enabled installed attempt fails during inventory, before a captured
+refresh_actions request. Preserved aggregate tree exposes native AbortError and
+Invalid InterceptionId during observer cleanup, rather than only the outer
+message. No historical request outcome is rewritten from that partial evidence.
+
+Minimize at the existing guarded CDP/interceptor/ledger seam: native cancellation
+after SDK send, followed by a successful protocol acknowledgment, incorrectly
+produces aggregate cleanup failure and outcome-unknown. The new phase goes red;
+existing before-wire, after-wire rejected, foreign-frame/request controls pass.
+The winning source hypothesis is that the abort promise races away a valid
+receipt. Opt only backend continuation into bounded receipt waiting after send.
+Keep cancellation checks before SDK invocation, the existing3-second timeout,
+strict unknown outcome for rejected/missing receipts and the native ownership
+hold. Success acknowledgment now settles the request. A no-ack timeout case
+proves uncertainty remains; no broad cancellation swallowing or fence clearing.
+This protects ChatGPT and Grok through the already-shared interceptor.
+
+Receipt-fix validation:140 focused ChatGPT/Grok admission/transport/app tests,
+full typecheck/build, scoped lint, docs:list and whitespace pass. Primary
+Standards/Spec review againstd33b14e04 finds no blocking issue; only the opted-in
+continuation waits through after-send cancellation, bounded by the original
+deadline. Historical unknown outcomes remain unchanged.
