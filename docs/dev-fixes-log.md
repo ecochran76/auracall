@@ -1,3 +1,11 @@
+## 2026-10-24 — Preserve tool-refresh observation failure reasons
+
+An unconfirmed catalog refresh must distinguish a missing expected request,
+unmatched/unreadable connection identity, incomplete response, HTTP error and
+unreadable/invalid catalog. Retain bounded messages without response bodies or
+credentials. Diagnostics do not authorize retry or weaken exact app attribution;
+an earlier generic receipt cannot establish which failure occurred.
+
 ## 2026-10-23 — Embedded clipboard needs parent permission delegation
 
 A cross-origin viewer cannot read the device clipboard unless each enclosing

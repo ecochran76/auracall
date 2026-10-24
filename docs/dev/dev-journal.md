@@ -1,3 +1,12 @@
+## 2026-10-24 — Issue368 refresh observation diagnosis
+
+Read-only reconciliation could not recover the prior response. Exact retained
+OpenSign settings has no terminal notice; service journal has no attempt-window
+entries. No replay. Fix the verified diagnostic defect: distinct failure classes
+previously collapsed to the same generic message. Three red assertions, then67
+focused adapter/CLI checks pass. Prior live refresh stays unconfirmed. Plan0451
+and #368 remain OPEN. Memory forbidden: no explicit save request.
+
 ## 2026-10-23 — Issue368 OpenSign live qualification
 
 OpenSign on wsl-chrome-3: installed read-only discovery passes. One guarded

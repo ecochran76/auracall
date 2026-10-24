@@ -546,8 +546,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			if (!catalog)
 				return {
 					status: "unconfirmed",
-					message:
-						"No attributable successful refreshed tool catalog was observed. Inspect before retrying.",
+					message: `No attributable successful refreshed tool catalog was observed. ${observation.failureReason()} Inspect before retrying.`,
 					app,
 					retrySafe: false,
 				};
@@ -1812,6 +1811,7 @@ function observeChatgptToolRefresh(
 	type Catalog = NonNullable<ChatgptDeveloperAppBrowserMutationOutcome["catalog"]>;
 	let active = true;
 	let armed = false;
+	let failureReason = "No request to the expected refresh endpoint was observed.";
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const requests = new Map<string, { status: number | null; identity: Promise<boolean> }>();
 	const linkResponses = new Set<string>();
@@ -1840,6 +1840,8 @@ function observeChatgptToolRefresh(
 			url.pathname !== "/backend-api/aip/connectors/mcp/refresh_actions"
 		)
 			return;
+		failureReason =
+			"Refresh request observed, but no completed attributable response was observed.";
 		const identity = (async () => {
 			try {
 				const postData =
@@ -1851,9 +1853,13 @@ function observeChatgptToolRefresh(
 				debugDeveloperApps(
 					`refresh request keys=${isRecord(body) ? Object.keys(body).join(",") : "none"}; attributable=${matched}`,
 				);
+				if (active && !matched)
+					failureReason =
+						"Observed refresh request connection identity did not match the exact app.";
 				return matched;
 			} catch {
 				debugDeveloperApps("refresh request identity unavailable");
+				if (active) failureReason = "Observed refresh request identity could not be read.";
 				return false;
 			}
 		})();
@@ -1901,6 +1907,9 @@ function observeChatgptToolRefresh(
 		if (!request || !(await request.identity) || !active) return;
 		const status = request.status;
 		if (!status || status < 200 || status >= 300) {
+			failureReason = status
+				? `Attributable refresh response returned HTTP ${status}.`
+				: "Attributable refresh response status was unavailable.";
 			settle(null);
 			return;
 		}
@@ -1920,11 +1929,13 @@ function observeChatgptToolRefresh(
 						isRecord(action) && typeof action.name === "string" && action.name.trim().length > 0,
 				)
 			) {
+				failureReason = "Attributable refresh response contained an invalid catalog.";
 				settle(null);
 				return;
 			}
 			const toolNames = body.actions.map((action) => (action as { name: string }).name).sort();
 			if (new Set(toolNames).size !== toolNames.length) {
+				failureReason = "Attributable refresh response contained duplicate tool names.";
 				settle(null);
 				return;
 			}
@@ -1934,11 +1945,13 @@ function observeChatgptToolRefresh(
 				sha256: createHash("sha256").update(JSON.stringify(body.actions)).digest("hex"),
 			});
 		} catch {
+			failureReason = "Attributable refresh response body could not be read or parsed.";
 			settle(null);
 		}
 	});
 	return {
 		result,
+		failureReason: () => failureReason,
 		start: async () => {
 			await client.Network.enable();
 		},
