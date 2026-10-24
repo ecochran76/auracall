@@ -15,7 +15,7 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: retained-settings-error-reproduced-terminal-handling-green
+    validation_status: settings-recovered-final-acceptance-owned-cleanup-unknown
     integration_receipt: ae8a95cc744a0627a1e97e1fce5d07faf2be887d
     updated_at: 2026-10-23
   - id: P87-IQ2
