@@ -1,3 +1,26 @@
+## 2026-10-24 — Issue368 recovery succeeded; cleanup acceptance blocked
+
+One settings reload recovers the exact OpenSign app/endpoint, connected-account
+and permission sections. Subsequent single captured final CLI attempt stops
+before any captured refresh request: aggregate operation/owned-cleanup failure.
+All90 backend ledger records settled, while utility lease remains outcome-unknown.
+Do not equate those boundaries or clear the fence. Primary cause was not emitted
+by the CLI. No further provider action. Plan0451 records evidence and next scoped
+cleanup reconciliation. Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Issue368 settings recovery and saved-baseline acceptance
+
+Guarded browser-tools inspection failed with desktop-control busy and left its
+own dead automation owner plus an empty transition directory. Isolated native
+identity verification succeeds; the earlier bounded recovery wait was ownership
+coordination, not failed browser identity. Preserve the exact own-dead transition
+by rename, then let normal gate acquisition reconcile the dead PID. Under a
+verified exact-browser automation hold, one page reload recovers OpenSign settings:
+exact app/endpoint, connected-account section and permissions are present. No
+tools refresh in recovery. Save that current settings baseline privately, then
+start one independently captured final refresh with the installed repaired CLI.
+Result pending; do not replay an ambiguous attempt.
+
 ## 2026-10-24 — Grok #399 bounded review accepted
 
 One independent Standards/Spec pass accepted three concrete blockers: fallback
