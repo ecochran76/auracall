@@ -1,6 +1,7 @@
 # T05: Use exact composer attachments and recent files
 
-Status: proposed; not a published implementation issue.
+Status: published, OPEN, ready-for-agent (subject to blockers).
+Issue: https://github.com/ecochran76/auracall/issues/403
 Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## What to build
@@ -9,7 +10,7 @@ Upload a local file or select a recent file by identity and submit only after th
 
 ## Blocked by
 
-- T04: Submit and complete Grok text prompts reliably
+- T04: Submit and complete Grok text prompts reliably — https://github.com/ecochran76/auracall/issues/402
 
 ## Acceptance criteria
 
@@ -20,3 +21,8 @@ Upload a local file or select a recent file by identity and submit only after th
 - [ ] Validate public behavior with the agreed source/installed/live evidence distinctions; update operator docs and decision traceability.
 
 No live effect is authorized by this draft. Bind exact target and authority in the execution packet.
+
+Publication approved explicitly in chat after breakdown review. Actor, canonical
+URL, full body, OPEN state, labels and blockers were individually read back.
+Native sub-issue/dependency mutations are outside the configured action registry;
+parent and blocker URLs in the issue body are the supported relationship record.

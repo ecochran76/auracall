@@ -1,6 +1,7 @@
 # T08: Invoke Connectors and qualify Mail Receipts through Grok
 
-Status: proposed; not a published implementation issue.
+Status: published, OPEN, ready-for-agent (subject to blockers).
+Issue: https://github.com/ecochran76/auracall/issues/406
 Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## What to build
@@ -9,8 +10,8 @@ Select the installed Connector in Grok and complete the agreed Mail Receipts rea
 
 ## Blocked by
 
-- T04: Submit and complete Grok text prompts reliably
-- T07: Install and authenticate exact custom MCP Connectors
+- T04: Submit and complete Grok text prompts reliably — https://github.com/ecochran76/auracall/issues/402
+- T07: Install and authenticate exact custom MCP Connectors — https://github.com/ecochran76/auracall/issues/405
 
 ## Acceptance criteria
 
@@ -22,3 +23,8 @@ Select the installed Connector in Grok and complete the agreed Mail Receipts rea
 - [ ] Validate public behavior with the agreed source/installed/live evidence distinctions; update operator docs and decision traceability.
 
 No live effect is authorized by this draft. Bind exact target and authority in the execution packet.
+
+Publication approved explicitly in chat after breakdown review. Actor, canonical
+URL, full body, OPEN state, labels and blockers were individually read back.
+Native sub-issue/dependency mutations are outside the configured action registry;
+parent and blocker URLs in the issue body are the supported relationship record.

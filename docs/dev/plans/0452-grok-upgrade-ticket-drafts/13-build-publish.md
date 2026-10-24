@@ -1,6 +1,7 @@
 # T13: Publish an explicitly selected Build app through Grok
 
-Status: proposed; not a published implementation issue.
+Status: published, OPEN, ready-for-agent (subject to blockers).
+Issue: https://github.com/ecochran76/auracall/issues/411
 Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## What to build
@@ -9,7 +10,7 @@ Publish/share a concrete generated app version through Grok-native controls and 
 
 ## Blocked by
 
-- T12: Generate Build apps and retrieve their artifacts
+- T12: Generate Build apps and retrieve their artifacts — https://github.com/ecochran76/auracall/issues/410
 
 ## Acceptance criteria
 
@@ -20,3 +21,8 @@ Publish/share a concrete generated app version through Grok-native controls and 
 - [ ] Validate public behavior with the agreed source/installed/live evidence distinctions; update operator docs and decision traceability.
 
 No live effect is authorized by this draft. Bind exact target and authority in the execution packet.
+
+Publication approved explicitly in chat after breakdown review. Actor, canonical
+URL, full body, OPEN state, labels and blockers were individually read back.
+Native sub-issue/dependency mutations are outside the configured action registry;
+parent and blocker URLs in the issue body are the supported relationship record.

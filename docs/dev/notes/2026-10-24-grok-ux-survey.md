@@ -248,3 +248,19 @@ enhancement/ready-for-agent labels were read back. Receipt stays user-scoped.
 Sixteen proposed implementation slices have separate drafts and an acyclic
 dependency graph. Granularity/edges review is pending before child issue creation.
 No implementation, installation or provider acceptance is claimed.
+
+
+## Approved ticket publication
+
+Explicit chat approval accepted the sixteen-ticket breakdown. The Previews review
+form returned no saved responses; no form approval is fabricated. Created and
+individually read back #399–#414, each with enhancement/ready-for-agent labels,
+canonical parent #398 and exact blocker URLs. Marker-based duplicate checks and
+per-issue receipts preserve retry custody. The initial generic preflight marker
+matched the parent through fuzzy search; a unique single-token batch marker and
+per-ticket markers resolved that false candidate before any creates.
+
+The action registry does not allow native planning/sub-issue mutations, so parent
+and blocker URLs in each issue body are the relationship record. Parent #398 was
+not modified or closed. Plan0452 closes the publication packet only; broader
+implementation/provider acceptance remains open. Initial frontier is #399.

@@ -1,11 +1,11 @@
 # Plan 0452 — Grok UX, traffic governance and ecosystem support
 
-State: PLANNED
+State: CLOSED
 Branch: docs/grok-ux-survey-20261024
 Target: main
 Owner: ecochran76
 Integration: scoped pull requests; no direct canonical-branch writes
-Scope: specification and proposed ticket graph; implementation not started
+Scope: specification and ticket publication complete; implementation not started
 Tracker: https://github.com/ecochran76/auracall/issues/398
 
 ## Current State
@@ -17,12 +17,14 @@ and validation confirmation is complete: response
 2026-10-24T15:39:53.965760Z. No changes requested. This settles the interview and
 public behavior test boundary, not implementation or live provider acceptance.
 
-GitHub specification #398 is published and its actor, marker, OPEN state and
-enhancement/ready-for-agent labels are verified. Sixteen proposed ticket drafts
-are linked in [the breakdown](0452-grok-upgrade-ticket-drafts/README.md).
-Ticket-breakdown review remains pending. These are this packet's outputs. Implementation tickets remain proposed until their concrete granularity
-and blocking edges are reviewed. No active implementation lane is registered by
-this specification-only packet. Existing ChatGPT work remains independent.
+GitHub specification #398 and all 16 approved implementation issues are published,
+with exact actor, marker, body, state, label and blocker readback. The
+[breakdown](0452-grok-upgrade-ticket-drafts/README.md) maps every ticket to its
+canonical issue. Explicit chat approval is the authority; the review form had no
+saved response. This specification/publication packet is CLOSED. Implementation,
+installation and provider acceptance remain open in the tickets; no active
+implementation lane or runtime effects were created by this packet. Initial
+frontier: [#399](https://github.com/ecochran76/auracall/issues/399).
 
 ## Problem Statement
 
@@ -201,5 +203,15 @@ Previews exposes their concrete review, and local documentation checks pass.
 Previews questionnaire `6246fed37ac2`, revision
 `8c6cfea3111bf5081c82496bf43a8d31ac22732cacbd05625a9fc3da0785c24f`,
 in session `a84de6dd5c31`. Proposed ticket bundle artifact `73c3d99fa642`.
-No implementation issues created yet. All 16 drafts and their dependency edges
-passed structural/link checks; no product tests were run for this docs-only slice.
+All 16 issues are published after explicit chat approval. Their local records and
+dependency edges passed structural/link checks; no product tests were run for
+this docs/tracker-only slice. Mutation receipts remain user-scoped.
+
+
+## Publication closeout
+
+All issues remain OPEN with enhancement/ready-for-agent labels. Parent and
+blocking relationships use explicit canonical issue URLs in the bodies. Native
+planning/sub-issue mutations are not allowlisted; no parent issue was modified.
+No assignee, milestone or Project changes were made. Preserve execution/live
+acceptance gates when beginning the first ticket.

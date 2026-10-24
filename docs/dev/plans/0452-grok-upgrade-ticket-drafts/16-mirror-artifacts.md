@@ -1,6 +1,7 @@
 # T16: Materialize Grok referenced files and generated artifacts
 
-Status: proposed; not a published implementation issue.
+Status: published, OPEN, ready-for-agent (subject to blockers).
+Issue: https://github.com/ecochran76/auracall/issues/414
 Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## What to build
@@ -9,8 +10,8 @@ Retain verified local bytes for discoverable referenced files and generated arti
 
 ## Blocked by
 
-- T12: Generate Build apps and retrieve their artifacts
-- T15: Mirror full Grok conversation content incrementally
+- T12: Generate Build apps and retrieve their artifacts — https://github.com/ecochran76/auracall/issues/410
+- T15: Mirror full Grok conversation content incrementally — https://github.com/ecochran76/auracall/issues/413
 
 ## Acceptance criteria
 
@@ -21,3 +22,8 @@ Retain verified local bytes for discoverable referenced files and generated arti
 - [ ] Validate public behavior with the agreed source/installed/live evidence distinctions; update operator docs and decision traceability.
 
 No live effect is authorized by this draft. Bind exact target and authority in the execution packet.
+
+Publication approved explicitly in chat after breakdown review. Actor, canonical
+URL, full body, OPEN state, labels and blockers were individually read back.
+Native sub-issue/dependency mutations are outside the configured action registry;
+parent and blocker URLs in the issue body are the supported relationship record.

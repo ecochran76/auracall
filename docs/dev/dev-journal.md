@@ -1,3 +1,12 @@
+## 2026-10-24 — Approved Grok tickets published
+
+Explicit chat approval accepted all sixteen slices. Published and individually
+verified issues #399–#414 with enhancement/ready-for-agent labels and canonical
+blocker URLs. Parent #398 unchanged; native planning mutations are not allowlisted.
+[Plan0452](plans/0452-2026-10-24-grok-upgrade-spec.md) CLOSED for specification/ticket
+publication only. Implementation and live acceptance remain open. First frontier:
+#399. No provider/runtime effects. Memory forbidden: no save request.
+
 ## 2026-10-24 — Grok specification and proposed slices
 
 Final scope/test-boundary confirmation accepted without changes. Published
