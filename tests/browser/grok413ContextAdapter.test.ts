@@ -216,3 +216,88 @@ test("public Grok chunk extraction reads and transports only the requested mount
 		accountMirrorContextChunk: { startMessageIndex: 24, endMessageIndex: 48, nextMessageIndex: 48 },
 	});
 });
+
+test.each([
+	"primary",
+	"fallback",
+])("chunked Grok files follow the same %s message inventory as content", async (surface) => {
+	const { runInNewContext } = await import("node:vm");
+	const { webcrypto } = await import("node:crypto");
+	const run = fixture();
+	const original = run.evaluate.getMockImplementation();
+	if (!original) throw new Error("Missing fixture transport");
+	const chip = {
+		querySelector: (selector: string) =>
+			selector.includes("span") ? { textContent: "last.txt" } : null,
+		closest: () => null,
+	};
+	const makeRow = (id: string, role: string, text: string) => {
+		const bubble: {
+			textContent: string;
+			closest: () => unknown;
+			getAttribute: () => string;
+			querySelectorAll: () => unknown[];
+		} = {
+			textContent: text,
+			closest: () => row,
+			getAttribute: () => role,
+			querySelectorAll: () => [],
+		};
+		const row = {
+			id,
+			getAttribute: (name: string) => (name === "class" ? role : id),
+			querySelector: (selector: string) =>
+				selector.includes("message-bubble") || selector.includes("response-content-markdown")
+					? bubble
+					: null,
+			querySelectorAll: (selector: string) =>
+				selector.includes("bg-chip") && role === "items-end" ? [chip] : [],
+		};
+		return { row, bubble };
+	};
+	const assistant = makeRow("response-assistant", "items-start", "Earlier answer");
+	const user = makeRow("response-last", "items-end", "Last observed prompt");
+	const nonMessage = {
+		id: "response-decoration",
+		getAttribute: () => "decoration",
+		querySelector: () => null,
+	};
+	run.evaluate.mockImplementation(async (input) => {
+		if (
+			input.expression.includes("const rowMessageIndex") ||
+			input.expression.includes("const collectItems")
+		) {
+			const value = await runInNewContext(input.expression, {
+				document: {
+					querySelectorAll: (selector: string) => {
+						if (selector.includes("main [id^="))
+							return surface === "primary" ? [nonMessage, assistant.row, user.row] : [];
+						if (selector === "div.message-bubble") return [assistant.bubble, user.bubble];
+						if (selector.includes('main div[class*="items-end"]')) return [user.row];
+						return [];
+					},
+				},
+				window: { location: { origin: "https://grok.com" } },
+				crypto: webcrypto,
+				TextEncoder,
+				URL,
+				HTMLAnchorElement: class {},
+				setTimeout: (callback: () => void) => {
+					callback();
+				},
+			});
+			return { result: { value } };
+		}
+		return original(input);
+	});
+	const result = (await readContext("chat", undefined, {
+		...run.options,
+		accountMirrorInventory: true,
+		accountMirrorContextChunk: { startMessageIndex: 1, maxMessages: 1 },
+	})) as ConversationContext;
+	expect(result.messages).toEqual([{ role: "user", text: "Last observed prompt" }]);
+	expect(result.files).toMatchObject([{ name: "last.txt" }]);
+	const list = createGrokAdapter().listConversationFiles;
+	if (!list) throw new Error("Missing Grok file inventory");
+	expect(await list("chat", run.options)).toMatchObject([{ name: "last.txt" }]);
+});
