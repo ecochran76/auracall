@@ -18,7 +18,9 @@ import {
 	resolveChatgptBackendRequestBudgetWaitMs,
 	resolveChatgptInteractionsPerMinute,
 } from "../runtime/tenantExecutionLimits.js";
+import { resolveGrokOperationsPerMinute, resolveGrokOperationBudgetWaitMs } from "../runtime/grokTrafficLimits.js";
 import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
+import { probeGrokRateLimitWarning } from "./grokProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
 import {
 	createOwnedBackendRequestAuthority,
@@ -53,6 +55,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 		input.userConfig.auracallProfile?.trim() || "default",
 	);
 	validateBackendRequestLimit(backendRequestLimit);
+	const grokOperationLimit = input.provider === "grok" ? resolveGrokOperationsPerMinute(input.userConfig as Record<string, unknown>, input.userConfig.auracallProfile?.trim() || "default") : null;
+	const grokOperationWaitMs = input.provider === "grok" ? resolveGrokOperationBudgetWaitMs(input.userConfig as Record<string, unknown>, input.userConfig.auracallProfile?.trim() || "default") : 0;
 	const now = input.now ?? (() => new Date());
 	const runtime = createBrowserTabConcurrencyRuntime(input.userConfig);
 	if (!runtime.registry || !runtime.ledger) {
@@ -130,6 +134,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 						})
 					: undefined;
 			const interactionGovernor = createLedgerBackedBrowserInteractionGovernor({
+				admissionWaitTimeoutMs: grokOperationWaitMs,
+				assertAdmission: assertOwnedLease,
 				ledger,
 				scope: { provider: input.provider, tenantKey, runtimeProfileId, managedBrowserProfile },
 				workloadId,
@@ -145,7 +151,9 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 									input.userConfig as Record<string, unknown>,
 									runtimeProfileId,
 								)
-							: null,
+							: input.provider === "grok"
+								? grokOperationLimit
+								: null,
 				},
 				baseGovernor:
 					input.baseOptions.interactionGovernor ??
@@ -170,9 +178,9 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 					input.provider === "chatgpt" && backendRequestLimit !== undefined
 						? backendRequests?.admit
 						: undefined,
-				probeWarning: input.provider === "chatgpt" ? probeChatgptRateLimitWarning : undefined,
+				probeWarning: input.provider === "chatgpt" ? probeChatgptRateLimitWarning : input.provider === "grok" ? probeGrokRateLimitWarning : undefined,
 				persistWarning:
-					input.provider === "chatgpt"
+					(input.provider === "chatgpt" || input.provider === "grok")
 						? async (warning) => {
 								const observedAt = now();
 								await ledger.recordProviderWarning({
@@ -187,7 +195,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 									observedAt: observedAt.toISOString(),
 									cooldownUntil: warning.cooldownUntil,
 								});
-								await recordChatgptRateLimitDetection({
+								if (input.provider === "chatgpt") await recordChatgptRateLimitDetection({
 									profileName: runtimeProfileId,
 									managedProfileDir: managedBrowserProfile,
 									action: `provider-traffic:${operationId}`,

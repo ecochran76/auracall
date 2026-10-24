@@ -1,3 +1,4 @@
+import { summarizeGrokTrafficControls, type GrokTrafficControlStatus } from "./grokTrafficStatus.js";
 import { createFileBackedTabLeaseRetirementAudit, type TabLeaseRetirementAuditSink } from "../../packages/browser-service/src/service/tabLeaseRetirementAudit.js";
 import path from "node:path";
 
@@ -19,6 +20,7 @@ import type { ResolvedUserConfig } from "../config.js";
 export type BrowserTabConcurrencyMode = "serialized" | "tab-affinity";
 
 export interface BrowserTabConcurrencyStatus {
+	providerControls?: { grok: GrokTrafficControlStatus };
 	mode: BrowserTabConcurrencyMode;
 	enabled: boolean;
 	storageRoot: string | null;
@@ -176,6 +178,7 @@ export function createBrowserTabConcurrencyRuntime(
 						return counts;
 					}, {}),
 				},
+				providerControls: { grok: summarizeGrokTrafficControls({ config: userConfig as Record<string, unknown>, interactions, warnings: activeWarnings, now }) },
 				aggregateUsage,
 				leaseStates: {
 					active: leases.filter((lease) => lease.state === "active").length,

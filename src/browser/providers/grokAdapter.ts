@@ -3325,6 +3325,27 @@ export async function ensureGrokTabVisible(
   );
 }
 
+async function readGrokDiscoveryWithAdmission<T>(
+  client: ChromeClient,
+  source: string,
+  read: () => Promise<T>,
+  abortSignal?: AbortSignal,
+): Promise<T> {
+  const governor = resolveProviderTrafficGovernor(client);
+  const action = await governor?.begin({
+    kind: 'provider-read', interactionClass: 'generic', source,
+    targetId: governor.attribution.targetId, abortSignal,
+  });
+  let value: T;
+  try { value = await read(); }
+  catch (error) {
+    await action?.settle({ outcome: 'failed', error: error instanceof Error ? error.message : 'Grok discovery read failed', probeContext: client.Runtime });
+    throw error;
+  }
+  await action?.settle({ outcome: 'succeeded', probeContext: client.Runtime });
+  return value;
+}
+
 export function createGrokAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
@@ -3416,7 +3437,7 @@ export function createGrokAdapter(): Pick<
           options?.discoveryAction ?? null,
         );
         try {
-          return await readGrokFeatureSignature(client);
+          return await readGrokDiscoveryWithAdmission(client, 'provider:grok:feature-read', () => readGrokFeatureSignature(client), options?.abortSignal);
         } finally {
           await restoreGrokImaginePrimaryMode(client.Runtime, discoveryAction?.restoreMode ?? null);
         }
@@ -4013,7 +4034,7 @@ export function createGrokAdapter(): Pick<
     ): Promise<import('./types.js').ProviderUserIdentity | null> {
       const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options);
       try {
-        const status = await detectGrokSignedInIdentity(client.Runtime);
+        const status = await readGrokDiscoveryWithAdmission(client, 'provider:grok:identity-read', () => detectGrokSignedInIdentity(client.Runtime), options?.abortSignal);
         let normalized = status.identity;
         if (!normalized && !status.guestAuthCta) {
           const serializedScripts = targetId

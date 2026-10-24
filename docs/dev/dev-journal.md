@@ -1,3 +1,13 @@
+## 2026-10-24 — Grok #399 implementation candidate
+
+Isolated integration branch from fresh c9beb45b6 plus confirmed scope. Reproduced
+Grok's unlimited generic authority and missing read-warning gate, then repaired
+shared operation caps, account-restrictive settings, cancellable capacity waits,
+owned identity/feature read admission and Ops/CLI readback.77 focused tests and
+separate-process capacity proof pass; source typecheck passed. Candidate review
+and required post-completion TDD turn remain before validation/closure. No live
+effects or installation. Plan0453 owns the timed waves and exact receipts.
+
 ## 2026-10-24 — Issue368 terminal plugin-settings error
 
 Retained utility tab shows “Couldn't load plugin settings” and Try again, rather

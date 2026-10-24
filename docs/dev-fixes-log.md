@@ -1,3 +1,11 @@
+## 2026-10-24 — A generic authority does not establish provider governance
+
+Grok already acquired shared traffic authority, but its non-ChatGPT operation
+limit was null and visible-warning preflight absent. Test the real GrokService
+read and shared stores, not only the governor interface. Charge read discovery
+explicitly; keep operation/request units separate and expose effective controls.
+Same-account runtime overrides must tighten the account ceiling, never raise it.
+
 ## 2026-10-24 — Plugin-settings errors are terminal readiness outcomes
 
 “Couldn't load plugin settings” cannot settle into connected accounts through

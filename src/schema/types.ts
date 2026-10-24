@@ -183,6 +183,7 @@ export const ChatgptServiceConfigSchema = ServiceConfigSchema.extend({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const GrokServiceConfigSchema = ServiceConfigSchema.extend({
+  operationBudgetWaitMs: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
   features: GrokFeatureSchema.optional(),
 });
 
