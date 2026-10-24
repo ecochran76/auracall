@@ -1,3 +1,5 @@
+import { createGrokConversationsService } from "./grokConversationsService.js";
+import { recordGrokHistoryProgress } from "./grokHistoryProgress.js";
 import {
 	summarizeGrokConnectorDiagnostics,
 	grokConnectorsFailureResult,
@@ -60,5 +62,26 @@ export async function createConfiguredGrokConnectorsService(
 		list: (query?: string) => read(() => service.list(query)),
 		inspect: (selector: Parameters<typeof service.inspect>[0]) =>
 			read(() => service.inspect(selector)),
+	};
+}
+
+export async function createConfiguredGrokConversationsService(
+	config: ResolvedUserConfig,
+	runtimeProfile?: string,
+	abortSignal?: AbortSignal,
+) {
+	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
+	const service = createGrokConversationsService(options);
+	const profile =
+		options.providerSessionAuthorization?.context.auracallRuntimeProfile ??
+		runtimeProfile ??
+		config.auracallProfile ??
+		"default";
+	return {
+		list: async (request?: Parameters<typeof service.list>[0]) => {
+			const result = await service.list(request);
+			await recordGrokHistoryProgress(profile, result.coverage);
+			return result;
+		},
 	};
 }

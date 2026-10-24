@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { createConfiguredGrokConnectorsService } from "../src/browser/configuredGrokDiscovery.js";
+import { GrokConversationsRequestSchema, runGrokConversationsCommand, grokConversationsFailureResult } from "../src/cli/grokConversationsCommand.js";
+import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../src/browser/configuredGrokDiscovery.js";
 import { runGrokConnectorsCommand, grokConnectorsFailureResult, GrokConnectorsRequestSchema } from "../src/cli/grokConnectorsCommand.js";
 import 'dotenv/config';
 import { resolveBrowserLoginLaunchOptions, type BrowserLoginLaunchOptions } from '../src/cli/browserLoginLaunch.js';
@@ -3423,6 +3424,19 @@ filesCommand
     }
   });
 
+
+
+program.command('grok-conversations').description('Read bounded Grok Chats inventory and coverage as JSON.')
+ .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--project-id <id>','Require positive project membership.')
+ .option('--query <text>','Search Chats.').option('--cursor <cursor>','Resume a scope-bound inventory cursor.')
+ .option('--limit <count>','Maximum returned rows.',Number).option('--since <date>','Restrict observed timestamps.')
+ .option('--max-pages <count>','Bound history pages.',Number).option('--timeout-ms <ms>','Bound page hydration time.',Number).option('--json','Print JSON.')
+ .action(async(commandOptions,command)=>{
+  const request=GrokConversationsRequestSchema.parse({runtimeProfile:commandOptions.runtimeProfile,projectId:commandOptions.projectId,query:commandOptions.query,cursor:commandOptions.cursor,limit:commandOptions.limit,since:commandOptions.since,maxPages:commandOptions.maxPages,timeoutMs:commandOptions.timeoutMs});
+  const userConfig=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+  let result;try{result=await runGrokConversationsCommand(request,await createConfiguredGrokConversationsService(userConfig,request.runtimeProfile));}catch{result=grokConversationsFailureResult(request.projectId);}
+  console.log(JSON.stringify(result,null,2));if(result.coverage.state==='failed')process.exitCode=1;
+ });
 
 program.command('grok-connectors').description('List or inspect Grok Connector inventory as JSON.')
  .option('--action <list|inspect>','Read operation.','list').option('--query <text>','Search visible Connector inventory.')

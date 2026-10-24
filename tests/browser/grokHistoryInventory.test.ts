@@ -185,3 +185,36 @@ test("current Chats opener uses exact identity and refuses ambiguous controls", 
 	});
 	expect(clicked).toBe("");
 });
+
+test("history progress supports long runtime IDs without leaking extra fields", async () => {
+	const { mkdtemp, rm } = await import("node:fs/promises");
+	const os = await import("node:os");
+	const path = await import("node:path");
+	const { setAuracallHomeDirOverrideForTest } = await import("../../src/auracallHome.js");
+	const { recordGrokHistoryProgress, readGrokHistoryProgress } = await import(
+		"../../src/browser/grokHistoryProgress.js"
+	);
+	const root = await mkdtemp(path.join(os.tmpdir(), "grok-history-progress-"));
+	setAuracallHomeDirOverrideForTest(root);
+	try {
+		const profile = "r".repeat(200);
+		await recordGrokHistoryProgress(profile, {
+			state: "incomplete",
+			source: "visible-chats",
+			scope: "root",
+			reason: "item-limit",
+			loadedCount: 1,
+			pages: 1,
+			nextCursor: "opaque-private-id",
+			observedAt: new Date().toISOString(),
+			privateText: "Private query",
+		} as never);
+		const progress = await readGrokHistoryProgress(profile);
+		expect(progress).toMatchObject({ loadedCount: 1, nextCursorAvailable: true });
+		expect(JSON.stringify(progress)).not.toContain("Private query");
+		expect(JSON.stringify(progress)).not.toContain("opaque-private-id");
+	} finally {
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(root, { recursive: true, force: true });
+	}
+});

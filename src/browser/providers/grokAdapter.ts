@@ -3789,13 +3789,15 @@ export function createGrokAdapter(): Pick<
       let historyCoverage: import('./grokHistoryInventory.js').GrokHistoryCoverage | undefined;
       const originalProgress=options?.onHistoryInventory;
       options={...options,onHistoryInventory:async coverage=>{historyCoverage=coverage;await originalProgress?.(coverage);}};
-      const finish=(items:Conversation[])=>items.filter(item=>!options?.historySearch || item.title.toLowerCase().includes(options.historySearch.toLowerCase())).slice(0,options?.includeHistory ? options.historyLimit??2000 : items.length).map(item=>historyCoverage?({...item,metadata:{...item.metadata,grokInventory:historyCoverage}}):item);
+      const finish=async(items:Conversation[])=>{await assertGrokBrowserAuthPreflight(client.Runtime,options);return items.filter(item=>!options?.historySearch || item.title.toLowerCase().includes(options.historySearch.toLowerCase())).slice(0,options?.includeHistory ? options.historyLimit??2000 : items.length).map(item=>historyCoverage?({...item,metadata:{...item.metadata,grokInventory:historyCoverage}}):item);};
       const resolvedProjectId = projectId?.trim() || undefined;
       const projectUrl = resolvedProjectId ? resolveGrokProjectUrl(resolvedProjectId) : undefined;
       const connection = projectUrl
         ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
         : await connectToGrokTab(options, projectUrl);
       const { client, targetId, shouldClose, host, port, usedExisting } = connection;
+      try {
+      await assertGrokBrowserAuthPreflight(client.Runtime,options);
       if (projectUrl) {
         if (!usedExisting) {
           await navigateToProject(client, projectUrl);
@@ -3803,7 +3805,6 @@ export function createGrokAdapter(): Pick<
         await ensureProjectPage(client, resolvedProjectId);
         await openConversationList(client, resolvedProjectId);
       }
-      try {
         const openConversations = await listOpenConversations(host, port, resolvedProjectId);
         let rootSidebarConversations: Conversation[] = [];
         if (resolvedProjectId) {
@@ -4002,7 +4003,8 @@ export function createGrokAdapter(): Pick<
           })()`,
           returnByValue: true,
         });
-        const payload = (result?.value ?? { items: [] }) as { items?: unknown[] };
+        const payload = (result?.value ?? { items: [] }) as { items?: unknown[]; error?:unknown };
+        if(payload.error)throw new Error("Grok root inventory DOM extraction failed.");
         const raw = Array.isArray(payload.items) ? payload.items : [];
         if (raw.length === 0) {
            // Debug logging if needed, can be enabled via env

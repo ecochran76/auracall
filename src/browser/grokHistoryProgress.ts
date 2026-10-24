@@ -1,69 +1,79 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import type { GrokHistoryCoverage } from "./providers/grokHistoryInventory.js";
-
 export type GrokHistoryProgress = Omit<GrokHistoryCoverage, "nextCursor"> & {
 	nextCursorAvailable: boolean;
 };
-function progressPath(runtimeProfileId: string): string {
+const reasons = new Set([
+	"page-limit",
+	"time-limit",
+	"item-limit",
+	"cursor-anchor-not-found",
+	"unattributed-project-rows",
+	"unknown-timestamps",
+	"loading",
+	"explicit-empty",
+	"visible-bottom",
+	"cancelled",
+	"history-failed",
+	"history-read-failed",
+	"history-invalid-request",
+	"history-account-unconfirmed",
+	"history-cleanup-unconfirmed",
+]);
+function progressPath(profile: string) {
 	return path.join(
 		getAuracallHomeDir(),
 		"cache",
 		"providers",
 		"grok",
 		"__runtime__",
-		`history-progress-${Buffer.from(runtimeProfileId).toString("base64url")}.json`,
+		`history-progress-${createHash("sha256").update(profile).digest("hex")}.json`,
 	);
 }
-/** Counts and bounded reason codes only; no chat text, query, IDs or account identity. */
+function sanitize(value: GrokHistoryCoverage | GrokHistoryProgress): GrokHistoryProgress {
+	return {
+		state: ["complete", "empty", "incomplete", "failed"].includes(value.state)
+			? value.state
+			: "failed",
+		source: "visible-chats",
+		scope: value.scope === "project" ? "project" : "root",
+		reason: reasons.has(value.reason) ? value.reason : "history-failed",
+		loadedCount:
+			Number.isSafeInteger(value.loadedCount) && value.loadedCount >= 0 ? value.loadedCount : 0,
+		pages: Number.isSafeInteger(value.pages) && value.pages >= 0 ? value.pages : 0,
+		nextCursorAvailable:
+			"nextCursor" in value
+				? typeof value.nextCursor === "string" && value.nextCursor.length > 0
+				: value.nextCursorAvailable === true,
+		observedAt:
+			typeof value.observedAt === "string" && Number.isFinite(Date.parse(value.observedAt))
+				? new Date(value.observedAt).toISOString()
+				: new Date().toISOString(),
+	};
+}
+/** Whitelisted counts/reason codes; never query, cursor, chat IDs or titles. */
 export async function recordGrokHistoryProgress(
-	runtimeProfileId: string,
+	profile: string,
 	coverage: GrokHistoryCoverage,
 ): Promise<void> {
-	const { nextCursor, reason, ...rest } = coverage;
-	const progress: GrokHistoryProgress = {
-		...rest,
-		reason: [
-			"page-limit",
-			"time-limit",
-			"item-limit",
-			"cursor-anchor-not-found",
-			"unattributed-project-rows",
-			"unknown-timestamps",
-			"loading",
-			"explicit-empty",
-			"visible-bottom",
-			"cancelled",
-		].includes(reason)
-			? reason
-			: "history-failed",
-		nextCursorAvailable: nextCursor !== null,
-	};
-	const destination = progressPath(runtimeProfileId),
+	const destination = progressPath(profile),
 		temporary = `${destination}.${randomUUID()}.tmp`;
 	await fs.mkdir(path.dirname(destination), { recursive: true });
 	try {
-		await fs.writeFile(temporary, JSON.stringify(progress), { mode: 0o600 });
+		await fs.writeFile(temporary, JSON.stringify(sanitize(coverage)), { mode: 0o600 });
 		await fs.rename(temporary, destination);
 	} finally {
 		await fs.rm(temporary, { force: true });
 	}
 }
 export async function readGrokHistoryProgress(
-	runtimeProfileId: string,
+	profile: string,
 ): Promise<GrokHistoryProgress | undefined> {
 	try {
-		const value = JSON.parse(await fs.readFile(progressPath(runtimeProfileId), "utf8"));
-		if (
-			value.source !== "visible-chats" ||
-			!["complete", "empty", "incomplete", "failed"].includes(value.state) ||
-			typeof value.loadedCount !== "number" ||
-			typeof value.pages !== "number"
-		)
-			throw new Error("Malformed Grok history progress.");
-		return value as GrokHistoryProgress;
+		return sanitize(JSON.parse(await fs.readFile(progressPath(profile), "utf8")));
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
 		throw error;

@@ -1256,3 +1256,13 @@ Catalog entries are separate from installed connections. Discovery never install
 authenticates, invokes, or removes a Connector. Ops shows counts and bounded
 reason codes; exact endpoints are returned only when safe, with stable hashes
 available for identity. Source tests do not establish installed/live acceptance.
+
+Grok Chats inventory has a structured read path: `auracall grok-conversations
+--limit 100 --max-pages 20 --json`, MCP `grok_conversations`, and operator-authorized
+POST `/v1/grok/conversations/query`. Request fields: `runtimeProfile`, `projectId`,
+`query`, `cursor`, `limit`, `since`, `maxPages`, `timeoutMs`. The result's `coverage`
+distinguishes visible complete, explicit empty, incomplete and failed reads;
+complete means the bounded visible UI, never account-wide backfill. Use returned
+opaque cursors only with the same project/search/since scope. An unseen cursor
+anchor remains incomplete. Project rows require positive membership; observed
+Bot provenance stays distinct. Ops stores only count/reason/continuation presence.

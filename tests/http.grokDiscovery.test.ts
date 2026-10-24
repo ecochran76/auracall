@@ -107,3 +107,68 @@ test("Ops Connector progress is whitelisted and excludes private inventory field
 	expect(JSON.stringify(status.providerControls)).not.toContain("private.example");
 	expect(JSON.stringify(status.providerControls)).not.toContain("Private account");
 });
+
+test("malformed Connector JSON never echoes request bytes or reaches service resolution", async () => {
+	await isolate();
+	const resolver = vi.fn(async () => ({
+		list: async () => inventory,
+		inspect: async () => {
+			throw new Error("unexpected");
+		},
+	}));
+	const server = await createResponsesHttpServer(
+		{ host: "127.0.0.1", port: 0 },
+		{ grokConnectorsServiceResolver: resolver },
+	);
+	const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+	try {
+		const response = await fetch(`http://127.0.0.1:${server.port}/v1/grok/connectors/query`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: "PRIVATE_CONNECTOR_TOKEN_123",
+		});
+		expect(response.status).toBe(400);
+		expect(await response.text()).not.toContain("PRIVATE");
+		expect(JSON.stringify(errors.mock.calls)).not.toContain("PRIVATE");
+		expect(resolver).not.toHaveBeenCalled();
+	} finally {
+		errors.mockRestore();
+		await server.close();
+	}
+});
+
+test("HTTP Grok history keeps an empty inventory distinct from failure", async () => {
+	await isolate();
+	const result = {
+		object: "grok_conversation_inventory" as const,
+		items: [],
+		coverage: {
+			state: "empty" as const,
+			source: "visible-chats" as const,
+			scope: "root" as const,
+			reason: "explicit-empty",
+			loadedCount: 0,
+			pages: 1,
+			nextCursor: null,
+			observedAt: "2026-10-24T17:00:00.000Z",
+		},
+	};
+	const list = vi.fn(async () => result);
+	const resolver = vi.fn(async () => ({ list }));
+	const server = await createResponsesHttpServer(
+		{ host: "127.0.0.1", port: 0 },
+		{ grokConversationsServiceResolver: resolver },
+	);
+	try {
+		const response = await fetch(`http://127.0.0.1:${server.port}/v1/grok/conversations/query`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ runtimeProfile: "default", limit: 5, maxPages: 2 }),
+		});
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual(result);
+		expect(list).toHaveBeenCalledWith({ limit: 5, maxPages: 2 });
+	} finally {
+		await server.close();
+	}
+});
