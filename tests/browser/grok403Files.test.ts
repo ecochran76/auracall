@@ -245,7 +245,7 @@ import { runGrokFilesCommand } from "../../src/cli/grokFilesCommand.js";
 import { createGrokFilesToolHandler } from "../../src/mcp/tools/grokFiles.js";
 import { fixtureConnectorServiceOptions } from "./grok404ConnectorDomFixture.js";
 
-test("public CLI and MCP local uploads execute actual DOM readiness under configured traffic/account authority", async () => {
+test("public CLI and MCP expose missing upload source binding under configured traffic/account authority", async () => {
 	const f = fixture();
 	let nextId = 0;
 	f.dom.setFileInputFiles.mockImplementation(async () => {
@@ -277,8 +277,8 @@ test("public CLI and MCP local uploads execute actual DOM readiness under config
 	});
 	const result = await runGrokFilesCommand({ action: "upload", paths: ["/tmp/same.txt"] }, service);
 	expect(result).toMatchObject({
-		status: "complete",
-		code: "grok_files_ready",
+		status: "unconfirmed",
+		code: "grok_file_source_binding_unavailable",
 		provenance: { targetId: "fixture-target", projectId: "project-1" },
 		files: [{ id: "file-1", state: "ready" }],
 	});
@@ -287,9 +287,9 @@ test("public CLI and MCP local uploads execute actual DOM readiness under config
 		action: "upload",
 		paths: ["/tmp/same.txt"],
 	});
-	expect(mcp.isError).toBe(false);
+	expect(mcp.isError).toBe(true);
 	expect(mcp.structuredContent).toMatchObject({
-		status: "complete",
+		status: "unconfirmed",
 		files: [{ id: "file-1" }, { id: "file-2" }],
 	});
 	expect(begin).toHaveBeenCalledWith(
@@ -299,7 +299,9 @@ test("public CLI and MCP local uploads execute actual DOM readiness under config
 			targetId: "fixture-target",
 		}),
 	);
-	expect(settle).toHaveBeenCalledWith(expect.objectContaining({ outcome: "succeeded" }));
+	expect(settle).toHaveBeenCalledWith(
+		expect.objectContaining({ outcome: "failed", effectState: "outcome-unknown" }),
+	);
 	expect(close).toHaveBeenCalledTimes(2);
 });
 
@@ -377,4 +379,23 @@ test("governed upload transport ambiguity keeps the owned target for reconciliat
 	expect(close).toHaveBeenCalledOnce();
 	expect(settle).toHaveBeenCalledWith(expect.objectContaining({ effectState: "outcome-unknown" }));
 	expect(JSON.stringify(result)).not.toContain("/private");
+});
+
+test("an unrelated new ready file cannot stand in for the selected native upload", async () => {
+	const f = fixture();
+	f.dom.setFileInputFiles.mockImplementation(async () => {
+		f.input.files = [{ name: "same.txt", size: 4 }];
+		// Intended file is absent. A different source appears in the same composer.
+		f.composer.append(
+			new Node("DIV", { "data-file-id": "foreign-ready-id", "data-state": "ready" }, "same.txt"),
+		);
+	});
+	const result = await createGrokFileClient(f.runtime as never, { timeoutMs: 0 }).upload(
+		f.dom as never,
+		["/tmp/same.txt"],
+	);
+	expect(result).toMatchObject({
+		status: "unconfirmed",
+		code: "grok_file_source_binding_unavailable",
+	});
 });
