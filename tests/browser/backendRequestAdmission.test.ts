@@ -2239,6 +2239,8 @@ test.each([
 	"document-before-wire",
 	"document-after-wire",
 	"foreign-document",
+	"after-wire-success",
+	"after-wire-timeout",
 ])("native request cancellation keeps exact dispatch certainty; phase=%s", async (phase) => {
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-native-cancel-"));
 	setAuracallHomeDirOverrideForTest(home);
@@ -2270,7 +2272,9 @@ test.each([
 				if (
 					command === "Fetch.continueRequest" &&
 					phase !== "after-wire" &&
-					phase !== "document-after-wire"
+					phase !== "document-after-wire" &&
+					phase !== "after-wire-success" &&
+					phase !== "after-wire-timeout"
 				)
 					cancelNative();
 				return gate.withAutomation("generation", effect, options);
@@ -2316,7 +2320,9 @@ test.each([
 		const afterWire = phase === "after-wire" || phase === "document-after-wire";
 		state.failContinuation = beforeWire || afterWire;
 		state.continuationError = "Invalid InterceptionId.";
-		if (afterWire) state.onContinueSent = cancelNative;
+		if (afterWire || phase === "after-wire-success" || phase === "after-wire-timeout")
+			state.onContinueSent = cancelNative;
+		if (phase === "after-wire-timeout") state.beforeContinue = () => new Promise(() => undefined);
 		if (!state.handler) throw new Error("Missing interceptor");
 		await state.handler({
 			requestId: "interception-1",
@@ -2324,7 +2330,7 @@ test.each([
 			frameId: "frame-1",
 			request: { url: "https://chatgpt.com/backend-api/conversations" },
 		});
-		if (afterWire) await expect(client.close()).rejects.toThrow();
+		if (afterWire || phase === "after-wire-timeout") await expect(client.close()).rejects.toThrow();
 		else await expect(client.close()).resolves.toBeUndefined();
 		expect(state.requests).toEqual(beforeWire ? [] : ["interception-1"]);
 		expect(state.loadingFailedHandler).toBeUndefined();
@@ -2335,7 +2341,11 @@ test.each([
 		const rows = (await ledger.list()).filter((row) => row.interactionClass === "backend-request");
 		expect(rows).toHaveLength(1);
 		expect(rows[0].effectState).toBe(
-			beforeWire ? "none" : afterWire ? "outcome-unknown" : "settled",
+			beforeWire
+				? "none"
+				: afterWire || phase === "after-wire-timeout"
+					? "outcome-unknown"
+					: "settled",
 		);
 	} finally {
 		await client?.close().catch(() => undefined);

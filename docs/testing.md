@@ -3789,3 +3789,9 @@ public progress reports 557 chars (matching snapshot) and the public collector r
 the full authoritative answer in 10832 ms. Compare non-whitespace content because
 rendered table cells introduce whitespace; retain the initial overly strict oracle
 as a false positive. This does not prove completion before the historical deadline.
+
+- Backend native-cancellation receipt regression (provider-free):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'native request cancellation keeps exact dispatch certainty'`.
+  After-wire success must settle despite native cancellation; rejection and
+  missing acknowledgment retain unknown effects, and before-wire cancellation
+  proves no SDK send. This does not repair historical unknown outcomes.

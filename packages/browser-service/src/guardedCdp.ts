@@ -24,6 +24,8 @@ interface CdpCommandTimeout {
   timeoutMs: number;
   timeoutMessage: string;
   abortSignal?: AbortSignal;
+  /** Once sent, retain bounded custody until the protocol acknowledgment arrives. */
+  awaitReceiptAfterSend?: boolean;
 }
 const commandTimeouts = new AsyncLocalStorage<CdpCommandTimeout>();
 const commandAbortSignals = new AsyncLocalStorage<AbortSignal>();
@@ -53,7 +55,7 @@ async function runTimedCdpEffect<T>(options: CdpCommandTimeout, effect: () => Pr
       Promise.resolve().then(() => { options.abortSignal?.throwIfAborted(); return effect(); }),
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(() => reject(new Error(options.timeoutMessage)), options.timeoutMs);
-        if (options.abortSignal) {
+        if (options.abortSignal && !options.awaitReceiptAfterSend) {
           onAbort = () => reject(options.abortSignal?.reason ?? new Error('CDP command cancelled.'));
           options.abortSignal.addEventListener('abort', onAbort, { once: true });
         }
