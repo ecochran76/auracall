@@ -1939,10 +1939,10 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: bda2b48e5eef25b848a9f3ab3948b5af199149c2
+    checkpoint: 4986f397110a07831dfa00d1dd16544ddea83ffe
     remote_ref: refs/remotes/origin/feat/grok-upgrade-integration
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: bots-source-accepted-files-partial-installation-separate
+    validation_status: six-tickets-closed-ten-open-files-installation-partial
     updated_at: 2026-10-24

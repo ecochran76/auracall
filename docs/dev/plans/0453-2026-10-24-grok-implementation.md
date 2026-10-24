@@ -10,10 +10,10 @@ Ledger: [execution ledger](0453-grok-execution-ledger.json)
 
 ## Current State
 
-Five tickets (#399,#400,#401,#402,#404) are merged and closed. Existing Bots
-(#407) are source-validated after public wiring, one Standards/Spec review,
-bounded remediation and post-completion TDD; main integration/tracker readback
-is the remaining closure gate. Exact file context/recent-ID selection and
+Six tickets (#399,#400,#401,#402,#404,#407) are merged and closed. Existing Bots
+(#407) landed through PR423 as4986f397110a07831dfa00d1dd16544ddea83ffe after public
+wiring, one Standards/Spec review, bounded remediation, post-completion TDD and
+verified tracker closure. Ten tickets remain open. Exact file context/recent-ID selection and
 conservative upload outcome handling are integrated, but #403 remains partial:
 provider evidence cannot yet bind selected native File/content to provider ID.
 Its dependents remain locked. #405 has25-test partial source backed up on
