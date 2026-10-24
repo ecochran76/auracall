@@ -1,3 +1,4 @@
+import { withCdpCommandAbortSignal } from "../../../packages/browser-service/src/guardedCdp.js";
 import { collectGrokHistoryInventory, buildGrokHistoryPageExpression, buildGrokChatsOpenerExpression, type GrokHistoryPage } from "./grokHistoryInventory.js";
 import { recordGrokHistoryProgress } from "../grokHistoryProgress.js";
 import fs from 'node:fs/promises';
@@ -3824,7 +3825,7 @@ export function createGrokAdapter(): Pick<
           for (const entry of openConversations) {
             mergeConversation(entry);
           }
-          return finish(Array.from(merged.values()));
+          return await finish(Array.from(merged.values()));
         }
         const includeHistory = Boolean(options?.includeHistory);
         let history: Conversation[] = [];
@@ -4039,7 +4040,7 @@ export function createGrokAdapter(): Pick<
         for (const entry of openConversations) {
           mergeConversation(entry);
         }
-        return finish(Array.from(merged.values()));
+        return await finish(Array.from(merged.values()));
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -10051,9 +10052,9 @@ export async function listHistoryConversations(
     if(response.result?.value!==true)throw new Error('Grok Chats search composer is missing or ambiguous.');
    },options.abortSignal);
   }
-  const inventory=await collectGrokHistoryInventory({projectId,options,governor:resolveProviderTrafficGovernor(client),probeContext:client.Runtime,onProgress:publish,readPage:async()=>{
+  const inventory=await collectGrokHistoryInventory({projectId,options,governor:resolveProviderTrafficGovernor(client),probeContext:client.Runtime,onProgress:publish,readPage:async(signal)=>{
 const expression = buildGrokHistoryPageExpression(projectId,resolveGrokConversationUrl(''));
-   const response=await client.Runtime.evaluate({expression,returnByValue:true});
+   const response=await withCdpCommandAbortSignal(signal,()=>client.Runtime.evaluate({expression,returnByValue:true}));
    if(response.exceptionDetails)throw new Error('Grok history DOM extraction failed.');
    const page=response.result?.value as GrokHistoryPage|undefined;
    if(!page||!Array.isArray(page.items))throw new Error('Grok history DOM returned no inventory.');

@@ -52,7 +52,7 @@ function bound(value: number | undefined, fallback: number, maximum: number, nam
 }
 /** Enumerates a bounded view. Reaching its bottom is not account-wide backfill proof. */
 export async function collectGrokHistoryInventory(input: {
-	readPage: () => Promise<GrokHistoryPage>;
+	readPage: (signal: AbortSignal) => Promise<GrokHistoryPage>;
 	projectId?: string;
 	options?: GrokHistoryOptions;
 	governor?: ProviderTrafficGovernor;
@@ -89,6 +89,7 @@ export async function collectGrokHistoryInventory(input: {
 	const cutoff = options.historySince ? Date.parse(options.historySince) : null;
 	if (cutoff !== null && !Number.isFinite(cutoff))
 		throw new Error("Grok history since must be a valid date.");
+	const excludedPrefix = new Set<string>();
 	let anchorFound = anchor === null,
 		pages = 0,
 		stableBottom = 0,
@@ -97,6 +98,39 @@ export async function collectGrokHistoryInventory(input: {
 	let reason = "page-limit";
 	const entries = new Map<string, Conversation>();
 	const deadline = performance.now() + timeoutMs;
+	const deadlineController = new AbortController();
+	const deadlineError = new Error("Grok history deadline exceeded.");
+	const timer = setTimeout(() => deadlineController.abort(deadlineError), timeoutMs);
+	timer.unref?.();
+	const signal = options.abortSignal
+		? AbortSignal.any([options.abortSignal, deadlineController.signal])
+		: deadlineController.signal;
+	async function bounded<T>(effect: () => Promise<T>): Promise<T> {
+		signal.throwIfAborted();
+		let onAbort: () => void = () => undefined;
+		const aborted = new Promise<never>((_, reject) => {
+			onAbort = () => reject(signal.reason);
+			signal.addEventListener("abort", onAbort, { once: true });
+		});
+		try {
+			return await Promise.race([
+				Promise.resolve().then(() => {
+					signal.throwIfAborted();
+					return effect();
+				}),
+				aborted,
+			]);
+		} finally {
+			signal.removeEventListener("abort", onAbort);
+		}
+	}
+	const runtime = input.probeContext as
+		| { evaluate?: (input: unknown) => Promise<unknown> }
+		| undefined;
+	const evaluate=runtime?.evaluate?.bind(runtime);
+ const probeContext = evaluate
+		? { evaluate: (value: unknown) => bounded(() => evaluate(value)) }
+		: input.probeContext;
 	let state: GrokHistoryCoverage["state"] = "incomplete";
 	const coverage = (): GrokHistoryCoverage => ({
 		state,
@@ -117,32 +151,50 @@ export async function collectGrokHistoryInventory(input: {
 	});
 	try {
 		while (pages < maximumPages) {
-			options.abortSignal?.throwIfAborted();
+			signal.throwIfAborted();
 			if (performance.now() >= deadline) {
 				reason = "time-limit";
 				break;
 			}
-			const action = await input.governor?.begin({
+			const admission = input.governor?.begin({
 				kind: "provider-read",
 				interactionClass: "generic",
 				source: "provider:grok:history-page",
-				abortSignal: options.abortSignal,
+				abortSignal: signal,
 				targetId: input.governor.attribution.targetId,
 			});
+			void admission?.then(
+				(action) => {
+					if (signal.aborted)
+						void action
+							.settle({
+								outcome: "failed",
+								effectState: "none",
+								error: "History admission cancelled before page dispatch",
+							})
+							.catch(() => undefined);
+				},
+				() => undefined,
+			);
+			const action = await bounded(async () => admission);
+
 			let page: GrokHistoryPage;
 			try {
-				page = await input.readPage();
+				page = await bounded(() => input.readPage(signal));
+				signal.throwIfAborted();
 				if (page.error) throw new Error(page.error);
 				if (!Array.isArray(page.items)) throw new Error("Malformed Grok history page.");
 			} catch (error) {
 				await action?.settle({
 					outcome: "failed",
-					probeContext: input.probeContext,
+					probeContext: signal.aborted ? undefined : probeContext,
+					effectState: signal.aborted ? "outcome-unknown" : "settled",
 					error: error instanceof Error ? error.message : "History page failed",
 				});
 				throw error;
 			}
-			await action?.settle({ outcome: "succeeded", probeContext: input.probeContext });
+			await bounded(async () => action?.settle({ outcome: "succeeded", probeContext }));
+			signal.throwIfAborted();
 			pages++;
 			const before = entries.size;
 			for (const row of page.items) {
@@ -165,9 +217,11 @@ export async function collectGrokHistoryInventory(input: {
 					continue;
 				}
 				if (!anchorFound) {
+					excludedPrefix.add(row.id);
 					if (row.id === anchor) anchorFound = true;
 					continue;
 				}
+				if (excludedPrefix.has(row.id)) continue;
 				if (query && !row.title.toLowerCase().includes(query.toLowerCase())) continue;
 				if (cutoff !== null) {
 					if (typeof row.timestamp !== "number") unknownTime = true;
@@ -236,13 +290,17 @@ export async function collectGrokHistoryInventory(input: {
 		};
 	} catch (error) {
 		state = "failed";
-		reason = options.abortSignal?.aborted
-			? "cancelled"
-			: error instanceof Error
-				? error.message
-				: "history-failed";
+		reason = deadlineController.signal.aborted
+			? "time-limit"
+			: options.abortSignal?.aborted
+				? "cancelled"
+				: error instanceof Error
+					? error.message
+					: "history-failed";
 		await input.onProgress?.(coverage());
 		throw error;
+	} finally {
+		clearTimeout(timer);
 	}
 }
 

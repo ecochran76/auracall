@@ -1,3 +1,5 @@
+import { runGrokUiOperation, closeGrokTransportBeforeShutdown } from "./grokUiOperation.js";
+import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -4772,6 +4774,7 @@ async function runRemoteGrokBrowserMode(
 
 	let client: ChromeClient | null = null;
 	let remoteTargetId: string | null = null;
+ let createdRemoteTarget = false;
 	let lastUrl: string | undefined;
 	let observedModel: string | null = null;
 	let connectedHost = host;
@@ -4812,8 +4815,16 @@ async function runRemoteGrokBrowserMode(
 			mutationAudit: remoteMutationAudit, provider: "grok", managedBrowserProfile: remoteManagedBrowserProfile,
 			baseOptions: { abortSignal: options.abortSignal },
 		});
-		const connection = await connectToRemoteChrome(host, port, logger, grokTargetUrl, {
-			exactTargetId: options.tabAffinity?.targetId,
+		let exactTargetId=options.tabAffinity?.targetId;
+        if(!exactTargetId){
+            const candidates=(await listChromeTargets(port,host,logger)).filter(target=>{try{return target.type==='page'&&new URL(target.url||'').origin==='https://grok.com';}catch{return false;}});
+            const selected=candidates.find(target=>target.url===grokTargetUrl)??candidates.at(-1);
+            if(selected)exactTargetId=selected.id;
+            else{const opened=await openChromeTarget(port,'about:blank',host,logger,{kind:'pre-lease-target-acquisition',operationId:randomUUID(),reason:'Grok owned prompt bootstrap'});exactTargetId=resolveChromeTargetIdForBrowserRun(opened);createdRemoteTarget=true;}
+        }
+        remoteTargetId=exactTargetId??null;
+        const connection = await connectToRemoteChrome(host, port, logger, undefined, {
+			exactTargetId,
 			mutationAudit: remoteMutationAudit,
 			providerTrafficGovernor: options.providerTrafficGovernor,
 			providerTrafficAuthorityFactory: remoteTrafficFactory,
@@ -4844,7 +4855,7 @@ async function runRemoteGrokBrowserMode(
 		installJavaScriptDialogAutoDismissal(Page, logger);
 
 		logger("Skipping cookie sync for remote Chrome (using existing session)");
-		await navigateToGrok(Page, Runtime, grokTargetUrl, logger);
+		await runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:navigate",kind:"navigate",abortSignal:options.abortSignal,effect:()=>navigateToGrok(Page,Runtime,grokTargetUrl,logger)});
 		await ensureNotBlocked(Runtime, config.headless, logger);
 		await ensureNoManualClearBlockingPage(Runtime, logger, {
 			action: "Grok remote prompt preparation",
@@ -4873,13 +4884,13 @@ async function runRemoteGrokBrowserMode(
 
 		const modelStrategy = config.modelStrategy ?? DEFAULT_MODEL_STRATEGY;
 		if (config.desiredModel && modelStrategy === "select") {
-			observedModel = await selectGrokMode(Input, Runtime, config.desiredModel, logger);
+			observedModel = await runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:model",kind:"in-page-click",abortSignal:options.abortSignal,effect:()=>selectGrokMode(Input,Runtime,config.desiredModel??"",logger)});
 			await ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger);
 			logger(
 				`Prompt textarea ready (after model switch, ${promptText.length.toLocaleString()} chars queued)`,
 			);
 		} else if (modelStrategy === "current") {
-			observedModel = await verifyGrokCurrentModel(Input, Runtime);
+			observedModel = await runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:current-model",kind:"in-page-click",abortSignal:options.abortSignal,effect:()=>verifyGrokCurrentModel(Input,Runtime)});
 		} else if (modelStrategy === "ignore") {
 			logger("Model picker: skipped (strategy=ignore)");
 		}
@@ -4888,12 +4899,12 @@ async function runRemoteGrokBrowserMode(
 			if (!DOM) {
 				throw new Error("Unable to upload attachments (DOM domain unavailable).");
 			}
-			await uploadGrokAttachments(DOM, Runtime, attachments, logger);
+			await runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:upload",kind:"input",abortSignal:options.abortSignal,effect:()=>uploadGrokAttachments(DOM,Runtime,attachments,logger)});
 		}
 
 		const grokAssistantBaseline = await readGrokAssistantSnapshotForRuntime(Runtime);
-		await setGrokPrompt(Input, Runtime, promptText);
-		await submitGrokPrompt(Input, Runtime);
+		await runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:composer-fill",kind:"input",abortSignal:options.abortSignal,effect:()=>setGrokPrompt(Input,Runtime,promptText)});
+		await runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:submit",kind:"in-page-click",abortSignal:options.abortSignal,effect:()=>submitGrokPrompt(Input,Runtime)});
 		recordBrowserPassiveObservation(passiveObservations, {
 			state: "thinking",
 			source: "browser-service",
@@ -4989,12 +5000,7 @@ async function runRemoteGrokBrowserMode(
 		} catch (error) {
 			if (hasUnknownOwnedRequestCleanup(error)) ownedCleanupFailure = error;
 		}
-		await closeRemoteChromeTarget(
-			connectedHost,
-			connectedPort,
-			remoteTargetId ?? undefined,
-			logger,
-		);
+        if(createdRemoteTarget && !ownedCleanupFailure)await closeRemoteChromeTarget(connectedHost,connectedPort,remoteTargetId??undefined,logger);
 		await disposeRemoteTransport?.().catch(error => { if (hasUnknownOwnedRequestCleanup(error)) ownedCleanupFailure = ownedCleanupFailure ? new AggregateError([ownedCleanupFailure, error], "Owned Grok cleanup failed.") : error; });
 		const totalSeconds = (Date.now() - startedAt) / 1000;
 		logger(`Remote session complete • ${totalSeconds.toFixed(1)}s total`);
@@ -5710,7 +5716,7 @@ async function runGrokBrowserMode({
 				? resolveGrokConversationUrl(config.conversationId, config.projectId)
 				: resolveGrokProjectUrl(config.projectId);
 		}
-		await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
+		await raceWithDisconnect(runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:navigate",kind:"navigate",abortSignal:options.abortSignal,effect:()=>navigateToGrok(Page,Runtime,grokTargetUrl,logger)}));
 		await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
 		await raceWithDisconnect(
 			ensureNoManualClearBlockingPage(Runtime, logger, { action: "Grok login/prompt preparation" }),
@@ -5728,7 +5734,7 @@ async function runGrokBrowserMode({
 		});
 		if (projectLookup.result?.value?.hasMissingProject && projectLookup.result?.value?.canGoHome) {
 			logger("Grok project link not found; returning home to refresh session and retrying.");
-			await Runtime.evaluate({
+			await runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:project-recovery",kind:"in-page-click",abortSignal:options.abortSignal,effect:()=>Runtime.evaluate({
 				expression: `(() => {
           const homeLink = Array.from(document.querySelectorAll('a,button')).find((el) =>
             (el.textContent || '').toLowerCase().includes('return home'),
@@ -5738,8 +5744,8 @@ async function runGrokBrowserMode({
           return true;
         })()`,
 				returnByValue: true,
-			});
-			await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
+			})});
+			await raceWithDisconnect(runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:navigate",kind:"navigate",abortSignal:options.abortSignal,effect:()=>navigateToGrok(Page,Runtime,grokTargetUrl,logger)}));
 			await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
 			await raceWithDisconnect(
 				ensureNoManualClearBlockingPage(Runtime, logger, {
@@ -5753,23 +5759,23 @@ async function runGrokBrowserMode({
 		await raceWithDisconnect(ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger));
 
 		if (config.desiredModel && config.modelStrategy === "select") {
-			observedModel = await raceWithDisconnect(selectGrokMode(Input, Runtime, config.desiredModel, logger));
+			observedModel = await raceWithDisconnect(runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:model",kind:"in-page-click",abortSignal:options.abortSignal,effect:()=>selectGrokMode(Input,Runtime,config.desiredModel??"",logger)}));
 		} else if (config.modelStrategy === "current") {
-			observedModel = await raceWithDisconnect(verifyGrokCurrentModel(Input, Runtime));
+			observedModel = await raceWithDisconnect(runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:current-model",kind:"in-page-click",abortSignal:options.abortSignal,effect:()=>verifyGrokCurrentModel(Input,Runtime)}));
 		}
 
 		if (attachments.length > 0) {
 			if (!DOM) {
 				throw new Error("Unable to upload attachments (DOM domain unavailable).");
 			}
-			await raceWithDisconnect(uploadGrokAttachments(DOM, Runtime, attachments, logger));
+			await raceWithDisconnect(runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:upload",kind:"input",abortSignal:options.abortSignal,effect:()=>uploadGrokAttachments(DOM,Runtime,attachments,logger)}));
 		}
 
 		const grokAssistantBaseline = await raceWithDisconnect(
 			readGrokAssistantSnapshotForRuntime(Runtime),
 		);
-		await raceWithDisconnect(setGrokPrompt(Input, Runtime, promptText));
-		await raceWithDisconnect(submitGrokPrompt(Input, Runtime));
+		await raceWithDisconnect(runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:composer-fill",kind:"input",abortSignal:options.abortSignal,effect:()=>setGrokPrompt(Input,Runtime,promptText)}));
+		await raceWithDisconnect(runGrokUiOperation({governor:resolveProviderTrafficGovernor(client),runtime:Runtime,source:"provider:grok:submit",kind:"in-page-click",abortSignal:options.abortSignal,effect:()=>submitGrokPrompt(Input,Runtime)}));
 		recordBrowserPassiveObservation(passiveObservations, {
 			state: "thinking",
 			source: "browser-service",
@@ -5878,13 +5884,9 @@ async function runGrokBrowserMode({
 		let ownedCleanupFailure: unknown;
 		try {
 			const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
-			if (!keepBrowserOpen && chrome) {
-				try {
-					await gracefulShutdownChrome(chrome, client ?? null, logger);
-				} catch {
-					// ignore
-				}
-			}
+            try {await closeGrokTransportBeforeShutdown(client,async()=>{if(!keepBrowserOpen&&chrome)await gracefulShutdownChrome(chrome,null,logger);});}
+            catch(error){ownedCleanupFailure=error;}
+
 			if (!keepBrowserOpen) {
 				const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
 					connectionClosedUnexpectedly,
@@ -5896,11 +5898,7 @@ async function runGrokBrowserMode({
 				}
 			}
 			removeTerminationHooks?.();
-			try {
-				await client?.close?.();
-			} catch (error) {
-				if (hasUnknownOwnedRequestCleanup(error)) ownedCleanupFailure = error;
-			}
+
 			if (keepBrowserOpen && !connectionClosedUnexpectedly && chrome) {
 				logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
 			}

@@ -218,3 +218,97 @@ test("history progress supports long runtime IDs without leaking extra fields", 
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+test("resumed history excludes its anchor prefix across overlapping pages", async () => {
+	const readPage = async () => ({
+		items: ["one", "two", "three"].map((id) => ({
+			id,
+			title: id,
+			url: `https://grok.com/c/${id}`,
+		})),
+		atBottom: true,
+	});
+	const first = await collectGrokHistoryInventory({ readPage, options: { historyLimit: 1 } });
+	const resumed = await collectGrokHistoryInventory({
+		readPage,
+		options: { historyLimit: 10, historyCursor: first.coverage.nextCursor },
+	});
+	expect(resumed.items.map((item) => item.id)).toEqual(["two", "three"]);
+	expect(resumed.coverage.state).toBe("complete");
+});
+
+test.each([
+	"deadline",
+	"cancel",
+])("history never publishes late empty evidence after %s", async (mode) => {
+	const controller = new AbortController();
+	const readPage = async () => {
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		if (mode === "cancel") controller.abort(new Error("cancel during read"));
+		return { items: [], atBottom: true, emptyEvidence: true };
+	};
+	await expect(
+		collectGrokHistoryInventory({
+			readPage,
+			options: { historyTimeoutMs: mode === "deadline" ? 1 : 1000, abortSignal: controller.signal },
+		}),
+	).rejects.toThrow(mode === "deadline" ? /deadline/i : /cancel during read/);
+});
+
+test("a hung history page cannot outlive its configured deadline", async () => {
+	await expect(
+		collectGrokHistoryInventory({
+			readPage: () => new Promise(() => undefined),
+			options: { historyTimeoutMs: 10 },
+		}),
+	).rejects.toThrow(/deadline/i);
+}, 1000);
+
+test("cancellation after page dispatch retains uncertain owned history custody", async () => {
+	const { mkdtemp, rm } = await import("node:fs/promises");
+	const os = await import("node:os");
+	const path = await import("node:path");
+	const { setAuracallHomeDirOverrideForTest } = await import("../../src/auracallHome.js");
+	const { createConfiguredProviderTrafficAuthorityFactory } = await import(
+		"../../src/browser/configuredProviderTrafficAuthority.js"
+	);
+	const { createBrowserTabConcurrencyRuntime } = await import(
+		"../../src/browser/tabConcurrencyRuntime.js"
+	);
+	const root = await mkdtemp(path.join(os.tmpdir(), "grok-history-uncertain-"));
+	setAuracallHomeDirOverrideForTest(root);
+	const controller = new AbortController();
+	const config = {
+		auracallProfile: "fixture",
+		services: { grok: { identity: { email: "operator@example.test" } } },
+	} as never;
+	const authority = await createConfiguredProviderTrafficAuthorityFactory({
+		userConfig: config,
+		provider: "grok",
+		managedBrowserProfile: path.join(root, "managed"),
+		mutationAudit: async () => undefined,
+		baseOptions: { interactionGovernor: { beforeInteraction: async () => undefined } },
+	}).acquire({ targetId: "fixture" });
+	try {
+		await expect(
+			collectGrokHistoryInventory({
+				governor: authority.governor,
+				options: { abortSignal: controller.signal },
+				readPage: async () => {
+					controller.abort(new Error("cancel after dispatch"));
+					return new Promise(() => undefined);
+				},
+			}),
+		).rejects.toThrow("cancel after dispatch");
+		const runtime = createBrowserTabConcurrencyRuntime(config);
+		expect(
+			(await runtime.ledger?.list())?.some((row) => row.effectState === "outcome-unknown"),
+		).toBe(true);
+		await authority.close().catch(() => undefined);
+		expect((await runtime.readStatus()).attention.outcomeUnknown).toBeGreaterThan(0);
+	} finally {
+		await authority.close().catch(() => undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(root, { recursive: true, force: true });
+	}
+});
