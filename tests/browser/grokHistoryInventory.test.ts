@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import {
-	collectGrokHistoryInventory,
 	buildGrokHistoryPageExpression,
+	collectGrokHistoryInventory,
 } from "../../src/browser/providers/grokHistoryInventory.js";
 
 test("bounded history returns a scope-bound cursor rather than claiming completion", async () => {
@@ -311,4 +311,38 @@ test("cancellation after page dispatch retains uncertain owned history custody",
 		setAuracallHomeDirOverrideForTest(null);
 		await rm(root, { recursive: true, force: true });
 	}
+});
+
+test("foreground preemption yields between history pages with qualified rows and continuation", async () => {
+	let reads = 0;
+	const result = await collectGrokHistoryInventory({
+		options: { historyMaxPages: 3, historyShouldYield: () => reads === 1 },
+		readPage: async () => {
+			reads++;
+			return { items: [{ id: "one", title: "One" }], canScroll: true, atBottom: false };
+		},
+	});
+	expect(reads).toBe(1);
+	expect(result.items.map((x) => x.id)).toEqual(["one"]);
+	expect(result.coverage).toMatchObject({
+		state: "incomplete",
+		reason: "foreground-yield",
+		nextCursor: expect.any(String),
+	});
+});
+
+test("a resumed final anchor reaches visible completion without new rows", async () => {
+	const readPage = async () => ({
+		items: [{ id: "last", title: "Last" }],
+		atBottom: true,
+		canScroll: false,
+	});
+	const first = await collectGrokHistoryInventory({ readPage, options: { historyLimit: 1 } });
+	const resumed = await collectGrokHistoryInventory({
+		readPage,
+		options: { historyLimit: 1, historyMaxPages: 2, historyCursor: first.coverage.nextCursor },
+	});
+	expect(resumed.items).toEqual([]);
+	expect(resumed.coverage.state).toBe("complete");
+	expect(resumed.coverage.nextCursor).toBeNull();
 });

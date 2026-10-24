@@ -1,3 +1,12 @@
+## 2026-10-24 — Commit Grok index rows with continuation
+
+A progress callback can report an advanced cursor before collected rows are
+retained. Never persist that callback as a restart checkpoint. Commit qualified
+scope rows and continuation together after the read returns successfully; an
+aborted scope replays from the previous commit. Share the history-page budget
+across scopes, and check foreground yield before each page and new inventory
+phase. Keep opaque cursors private, including conversation metadata.
+
 ## 2026-10-24 — Retain a bounded protocol receipt after continuation send
 
 Native request cancellation can arrive before Chrome acknowledges an already

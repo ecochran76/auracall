@@ -1,3 +1,4 @@
+import { normalizeGrokIndexProgress } from "../accountMirror/grokIndexProgress.js";
 import {
 	type LiveFollowMaterializationBacklogState,
 	type LiveFollowRoutineDecisionState,
@@ -873,6 +874,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 				}
 			: null,
 		scrapeBudget: summarizeLiveFollowScrapeBudget(scrapeBudget),
+		grokIndex: normalizeGrokIndexProgress(account.grokIndex),
 		accountLibraryCatchup: accountLibraryCatchup
 			? {
 					mode: readString(accountLibraryCatchup.mode) ?? "disabled",

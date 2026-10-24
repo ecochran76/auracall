@@ -1266,6 +1266,8 @@ complete means the bounded visible UI, never account-wide backfill. Use returned
 opaque cursors only with the same project/search/since scope. An unseen cursor
 anchor remains incomplete. Project rows require positive membership; observed
 Bot provenance stays distinct. Ops stores only count/reason/continuation presence.
+Account-mirror checkpoint and foreground-yield behavior is documented in
+[Grok index mirroring](grok-mirroring.md).
 
 Grok composer files are available through `auracall grok-files --action context`,
 `--action recent`, `--action select --id <observed-id>`, MCP `grok_files`, and

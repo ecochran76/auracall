@@ -1,4 +1,3 @@
-import type { GrokHistoryCoverage } from "../browser/providers/grokHistoryInventory.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -29,6 +28,7 @@ import type {
 	FileRef,
 	Project,
 } from "../browser/providers/domain.js";
+import type { GrokHistoryCoverage } from "../browser/providers/grokHistoryInventory.js";
 import {
 	type ProviderSessionProof,
 	summarizeProviderSessionProof,
@@ -68,6 +68,7 @@ import {
 	createConversationVisitBundle,
 	snapshotAccountMirrorVisitTelemetry,
 } from "./conversationVisitBundle.js";
+import { collectGrokMirrorIndex, createGrokIndexCheckpointStore } from "./grokIndexBackfill.js";
 import type {
 	AccountMirrorIdentityEvidenceConfidence,
 	AccountMirrorIdentityEvidenceSource,
@@ -565,8 +566,47 @@ export function createChatgptAccountMirrorMetadataCollector(
 				conversationBudget,
 				projects.items.length,
 			);
+			const grokIndexStore =
+				input.provider === "grok"
+					? createGrokIndexCheckpointStore(path.join(getAuracallHomeDir(), "cache"), {
+							runtimeProfileId: input.runtimeProfileId,
+							identityKey: detectedIdentityKey,
+						})
+					: null;
+			const grokIndex =
+				input.provider === "grok" && !honorRequestedDetailPhase && grokIndexStore
+					? await collectGrokMirrorIndex({
+							projects: projects.items,
+							projectsComplete: !projects.truncated,
+							maxRows: conversationBudget,
+							maxReads: input.limits.maxPageReadsPerCycle,
+							checkpoint: await grokIndexStore.read(),
+							commit: grokIndexStore.write,
+							abortSignal: input.abortSignal,
+							shouldYield: input.shouldYield,
+							read: (projectId, cursor, limit, maxPages) =>
+								readBoundedConversations(client, projectId, limit, {
+									listOptions: {
+										...indexListOptions,
+										historyCursor: cursor,
+										historyShouldYield: input.shouldYield,
+										historyMaxPages: Math.max(1, Math.min(200, maxPages)),
+									},
+									pacer,
+									observation: createAccountMirrorObservationContext(input, client),
+									providerCallTimeoutMs: resolveCollectorDiscoveryCallTimeoutMs(
+										input,
+										"conversation-read",
+									),
+								}),
+						})
+					: null;
+			const grokIndexProgress =
+				grokIndex?.progress ??
+				(input.provider === "grok" ? input.previousEvidence?.grokIndex : undefined);
 			const rootConversations =
-				honorRequestedDetailPhase || honorRequestedProjectConversationsPhase
+				grokIndex ??
+				(honorRequestedDetailPhase || honorRequestedProjectConversationsPhase
 					? { items: [] as Conversation[], truncated: false }
 					: await runCollectorDiagnosticStage(input, "root-rail", () =>
 							readCollectorRootConversations(
@@ -576,7 +616,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 								indexListOptions,
 								pacer,
 							),
-						);
+						));
 			const remainingConversationBudget = Math.max(
 				0,
 				honorRequestedProjectConversationsPhase
@@ -935,6 +975,7 @@ export function createChatgptAccountMirrorMetadataCollector(
 				visitBundles: readConversationVisitBundles(inventory),
 				evidence: {
 					identitySource: identity?.source ?? null,
+					...(grokIndexProgress ? { grokIndex: grokIndexProgress } : {}),
 					providerSessionProof: summarizeProviderSessionProof(providerSessionProof),
 					projectSampleIds: projects.items.slice(0, 8).map((project) => project.id),
 					conversationSampleIds: conversations.slice(0, 8).map((conversation) => conversation.id),
@@ -1509,7 +1550,11 @@ async function readCollectorProjects(
 	pacer: BrowserInteractionGovernor,
 ): Promise<{ items: Project[]; truncated: boolean }> {
 	await reportCollectorProgress(input, { phase: "projects", event: "started" });
+	if (input.provider === "grok" && (await input.shouldYield?.())) {
+		return { items: [], truncated: true };
+	}
 	const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle, {
+		maxProjectRows: input.provider === "grok" ? 10_000 : undefined,
 		tolerateReadFailure: input.provider === "gemini",
 		listOptions,
 		pacer,
@@ -1637,6 +1682,7 @@ export async function readBoundedProjects(
 		pacer?: BrowserInteractionGovernor;
 		observation?: AccountMirrorDomDriftObservationContext;
 		providerCallTimeoutMs?: number | null;
+		maxProjectRows?: number;
 	} = {},
 ): Promise<{ items: Project[]; truncated: boolean }> {
 	const pageBudget = Math.max(1, Math.floor(maxPageReads));
@@ -1670,7 +1716,10 @@ export async function readBoundedProjects(
 		}
 		projects = [];
 	}
-	const limit = pageBudget * 25;
+	const limit =
+		options.maxProjectRows === undefined
+			? pageBudget * 25
+			: Math.max(1, Math.min(10_000, Math.floor(options.maxProjectRows)));
 	return {
 		items: projects.slice(0, limit),
 		truncated: projects.length > limit,
@@ -2696,6 +2745,23 @@ export async function readBoundedGrokDetailInventory(
 	progress: AttachmentInventoryProgress;
 }> {
 	const limit = Math.max(0, Math.floor(maxRows));
+	if (await options.shouldYield?.()) {
+		return {
+			artifacts: [],
+			files: [],
+			media: [],
+			truncated: true,
+			cursor: createAttachmentInventoryCursor(options.cursor, {
+				projectsLength: 0,
+				conversationsLength: conversations.length,
+				detailReadLimit: options.maxDetailReads ?? 6,
+				scannedProjects: 0,
+				scannedConversations: 0,
+				yielded: true,
+			}),
+			progress: createAttachmentInventoryProgress(),
+		};
+	}
 	const accountFiles = await readBoundedGrokAccountFileInventory(client, limit, {
 		listOptions: options.listOptions,
 		pacer: options.pacer,
