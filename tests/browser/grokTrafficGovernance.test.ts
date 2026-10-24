@@ -367,3 +367,27 @@ test("separate OS processes cannot bypass Grok account capacity with a higher lo
 	expect((await run("first", "1")).stdout).toBe("admitted");
 	expect((await run("higher", "9")).stdout).toBe("denied-by-shared-cap");
 });
+
+test("serialized Grok reads refuse a second target on the same managed browser", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "grok-serialized-"));
+	roots.push(root);
+	setAuracallHomeDirOverrideForTest(root);
+	const factory = createConfiguredProviderTrafficAuthorityFactory({
+		userConfig: {
+			browser: { tabConcurrencyMode: "serialized" },
+			services: { grok: { identity: { email: "operator@example.test" } } },
+		} as never,
+		provider: "grok",
+		managedBrowserProfile: path.join(root, "managed"),
+		mutationAudit: async () => undefined,
+		baseOptions: {},
+	});
+	const first = await factory.acquire({ targetId: "first-target" });
+	try {
+		await expect(factory.acquire({ targetId: "competing-target" })).rejects.toThrow(
+			"workload-owned",
+		);
+	} finally {
+		await first.close();
+	}
+});

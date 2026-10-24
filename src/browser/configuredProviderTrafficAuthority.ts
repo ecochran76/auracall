@@ -90,7 +90,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 			const reserved = await registry.reserve({
 				scope,
 				targetId: requireValue(targetId, "target ID"),
-				workload: { kind: "ephemeral", operationId },
+				workload: { kind: "ephemeral", operationId: input.provider === "grok" ? "grok-serialized-utility" : operationId },
 				operationId,
 				now: now().toISOString(),
 				idleTtlMs: PROVIDER_TRAFFIC_IDLE_TTL_MS,
