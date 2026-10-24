@@ -1257,6 +1257,31 @@ authenticates, invokes, or removes a Connector. Ops shows counts and bounded
 reason codes; exact endpoints are returned only when safe, with stable hashes
 available for identity. Source tests do not establish installed/live acceptance.
 
+Grok custom Connector installation is explicit:
+`auracall grok-connectors --action install --name "Example" --endpoint
+https://example.test/mcp --expected-provider-account <discovery-account-sha256>
+--yes --json`. The endpoint must be canonical HTTPS without credentials, query or
+fragment. Use the discovery result's exact Grok account reference; a connected
+service account is a separate identity. The equivalent HTTP/MCP request is
+`{ "action": "install", "input": { "kind": "custom", "name": "Example",
+"endpoint": "https://example.test/mcp" }, "expectedProviderAccountRef":
+"<64-hex-discovery-account-reference>", "confirm": true }`. Reconcile with the
+same input/account and `action: "reconcile"` (CLI omits `--yes`). Repeated install
+calls also reconcile; they never submit Add again for a recorded account/endpoint.
+
+Awaiting-human and unconfirmed results retain their exact target and return
+`retrySafe=false`. Incomplete installation returns a nonzero CLI exit and MCP
+`isError=true`; HTTP retains the structured status in its response. Complete
+OAuth/consent manually on that target, then reconcile;
+AuraCall does not click consent or infer grants from advertised tools. The private
+installation journal fences restart and cross-runtime-profile duplicates; use the
+original AuraCall runtime profile to reconcile its target. Missing/corrupt custody
+stops the operation, with no automatic journal reset or replacement installation.
+Ops keeps installation status independently from subsequent inventory reads,
+without endpoint, target or account details. Built-in catalog installation remains `unsupported` until its native controls and
+stable identity are observed. The current source path does not prove saved
+entity/account/grants or satisfy ticket #405's installed/live acceptance gate.
+
 Grok Chats inventory has a structured read path: `auracall grok-conversations
 --limit 100 --max-pages 20 --json`, MCP `grok_conversations`, and operator-authorized
 POST `/v1/grok/conversations/query`. Request fields: `runtimeProfile`, `projectId`,

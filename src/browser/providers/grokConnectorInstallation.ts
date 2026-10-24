@@ -162,6 +162,10 @@ export function createGrokConnectorInstallationClient(
 			if (row.name === input.name || sameEndpoint) {
 				const exact =
 					row.name === input.name &&
+					Boolean(detail.connector?.id) &&
+					(!input.connectorId || input.connectorId === detail.connector?.id) &&
+					detail.auth === "connected" &&
+					detail.coverage.complete &&
 					sameEndpoint &&
 					input.accountRef &&
 					input.accountRef === detail.accountRef;

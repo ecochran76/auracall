@@ -3,8 +3,9 @@ import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import type { GrokConnectorStatus } from "./providers/grokConnectors.js";
+import type { GrokConnectorInstallationOutcome } from "./providers/grokConnectorInstallation.js";
 export interface GrokConnectorProgress {
-	status: GrokConnectorStatus;
+	status: GrokConnectorStatus | GrokConnectorInstallationOutcome["status"];
 	code: string;
 	scope: string;
 	complete: boolean;
@@ -15,16 +16,22 @@ export interface GrokConnectorProgress {
 	hasEndpointIdentity: boolean;
 	hasAccountIdentity: boolean;
 	auth: string | null;
+	effectDispatched?: boolean;
+	retrySafe?: boolean;
 	observedAt: string;
+	installation?: Pick<
+		GrokConnectorProgress,
+		"status" | "code" | "effectDispatched" | "retrySafe" | "observedAt"
+	>;
 }
-function destination(profile: string) {
+function destination(profile: string, installation = false) {
 	return path.join(
 		getAuracallHomeDir(),
 		"cache",
 		"providers",
 		"grok",
 		"__runtime__",
-		`connectors-progress-${createHash("sha256").update(profile).digest("hex")}.json`,
+		`${installation ? "connector-installation" : "connectors"}-progress-${createHash("sha256").update(profile).digest("hex")}.json`,
 	);
 }
 function sanitize(
@@ -32,11 +39,29 @@ function sanitize(
 ): GrokConnectorProgress {
 	const count = (n: number | null) => (Number.isSafeInteger(n) && Number(n) >= 0 ? n : null);
 	return {
-		status: ["complete", "incomplete", "account-gated", "failed"].includes(value.status)
+		status: [
+			"complete",
+			"incomplete",
+			"account-gated",
+			"failed",
+			"prepared",
+			"already-connected",
+			"unsupported",
+			"unconfirmed",
+			"awaiting-human",
+			"completed",
+		].includes(value.status)
 			? value.status
 			: "failed",
 		code: /^[a-z_]{1,100}$/.test(value.code) ? value.code : "grok_connector_discovery_failed",
-		scope: value.scope === "detail" ? "detail" : "visible",
+		scope:
+			value.scope === "installation"
+				? "installation"
+				: value.scope === "detail"
+					? "detail"
+					: "visible",
+		effectDispatched: value.effectDispatched === true,
+		retrySafe: value.retrySafe === true,
 		complete: value.complete === true,
 		installed: count(value.installed),
 		catalog: count(value.catalog),
@@ -59,7 +84,7 @@ export async function recordGrokConnectorProgress(
 	profile: string,
 	value: Omit<GrokConnectorProgress, "observedAt">,
 ) {
-	const file = destination(profile),
+	const file = destination(profile, value.scope === "installation"),
 		temporary = `${file}.${randomUUID()}.tmp`;
 	await fs.mkdir(path.dirname(file), { recursive: true });
 	try {
@@ -72,10 +97,26 @@ export async function recordGrokConnectorProgress(
 export async function readGrokConnectorProgress(
 	profile: string,
 ): Promise<GrokConnectorProgress | undefined> {
-	try {
-		return sanitize(JSON.parse(await fs.readFile(destination(profile), "utf8")));
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-		throw error;
+	async function read(installation: boolean): Promise<GrokConnectorProgress | undefined> {
+		try {
+			return sanitize(JSON.parse(await fs.readFile(destination(profile, installation), "utf8")));
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+			throw error;
+		}
 	}
+	const [inventory, installation] = await Promise.all([read(false), read(true)]);
+	const current = inventory ?? installation;
+	if (!current) return undefined;
+	if (!installation) return current;
+	return {
+		...current,
+		installation: {
+			status: installation.status,
+			code: installation.code,
+			effectDispatched: installation.effectDispatched,
+			retrySafe: installation.retrySafe,
+			observedAt: installation.observedAt,
+		},
+	};
 }
