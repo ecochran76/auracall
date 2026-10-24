@@ -7,8 +7,11 @@ binds PID/start/boot/executable/directory; stop that holder gracefully and use
 ordinary Wake/automatic placement. Preserve profile bytes, remote/unknown guards
 and operator-only HTTP authorization. Stale confirmation cannot close a replacement
 holder. Process, inventory, rendered confirmation and HTTP tests cover this path.
-Installed rollout pending; do not press Recall on the real borrowed profile as
-part of fixture validation. Memory forbidden: no explicit save request.
+PR386 merged956dca970; installed recall-281f34102, API PID1283976. Actual
+authenticated rail shows Recall on wsl-chrome-3; confirmation cancellation sends
+zero requests and borrower fingerprint remains unchanged. Exact inspection task
+closed; all14 captured processes gone. Real Recall left to operator. See
+[installed Recall](notes/2026-10-23-browser-recall-installed.md). Memory forbidden: no explicit save request.
 
 ## 2026-10-23 — Stale endpoint history blocks a verified browser (#240)
 
