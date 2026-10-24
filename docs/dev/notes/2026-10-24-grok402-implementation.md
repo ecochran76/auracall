@@ -124,3 +124,15 @@ revision before any broader claim.
 Memory disposition: **forbidden** — this delegated provider-free packet excludes
 external effects and leaves durable integration closeout to the coordinator. A
 machine-readable non-write receipt is retained outside Git.
+
+## Coordinator integration
+
+Normal serialized Grok session and stored-step callers now forward their full
+resolved runtime configuration; public callback tests resolve its actual account
+identity and request ceiling. CLI model overrides canonicalize exact known aliases
+only; unknown labels reach strict action validation intact. Direct Grok runs with
+neither full account configuration nor an explicit governor fail before effects.
+Post-completion TDD on worker73d8dbb2 reproduced lost serialized controls and fuzzy
+CLI override handling; coordinator repair turns those checks green.120 tests in
+8 focused files pass on integration, including normal callers and public prompt
+orchestration. Native/installed acceptance remains unperformed.

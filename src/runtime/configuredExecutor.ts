@@ -1081,7 +1081,7 @@ export function createConfiguredStoredStepExecutor(
       ...(libraryFiles.length > 0 ? { libraryFiles } : {}),
       browserOperationOwnerCommand: `response-run:${context.record.runId}:${context.step.agentId}`,
       tabAffinityUserConfig:
-        service === 'chatgpt' && affinityUserConfig.browser?.tabConcurrencyMode === 'tab-affinity'
+        service === 'grok' || (service === 'chatgpt' && affinityUserConfig.browser?.tabConcurrencyMode === 'tab-affinity')
           ? affinityUserConfig
           : undefined,
       config: {

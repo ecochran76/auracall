@@ -78,7 +78,7 @@ export async function runBrowserSessionExecution(
       ...options,
       config,
       tabAffinityUserConfig:
-        browserConfig.tabConcurrencyMode === 'tab-affinity' ? affinityUserConfig : undefined,
+        (browserConfig.target === 'grok' || browserConfig.tabConcurrencyMode === 'tab-affinity') ? affinityUserConfig : undefined,
     } as Parameters<typeof runBrowserMode>[0]);
   };
   const persistRuntimeHint = deps.persistRuntimeHint;

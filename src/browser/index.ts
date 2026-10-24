@@ -1779,7 +1779,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	const libraryFiles = options.libraryFiles ?? [];
 	const fallbackSubmission = options.fallbackSubmission;
 	const { config, target, logger } = await resolveBrowserRuntimeEntryContext(options);
-	if (target === "grok") promptText = options.prompt!;
+	if (target === "grok" && !options.tabAffinityUserConfig && !options.providerTrafficGovernor) throw new BrowserAutomationError("Grok browser runs require resolved account configuration or an explicit provider traffic governor.", {effectState:"pre_effect"});
+	if (target === "grok") promptText = options.prompt ?? "";
 	if (libraryFiles.length > 0 && target !== "chatgpt") {
 		throw new BrowserAutomationError(
 			"Provider Library file references are currently supported only for ChatGPT browser runs.",

@@ -92,6 +92,7 @@ test('public Grok text preserves prompt boundaries and current model while attac
   roots.push(root);
   setAuracallHomeDirOverrideForTest(root);
   const result = await runBrowserMode({
+    tabAffinityUserConfig: {auracallProfile:"fixture",services:{grok:{identity:{email:"operator@example.test"}}}} as never,
     prompt: '  first\nlast  ',
     config: {
       target: 'grok',
@@ -120,4 +121,10 @@ test('public Grok text preserves prompt boundaries and current model while attac
   });
   expect(boundary.events).toEqual(['authority', 'navigate']);
   expect(boundary.submit).toHaveBeenCalledOnce();
+});
+
+test('Grok refuses to infer shared-account authority from partial direct-call configuration',async()=>{
+ boundary.events.length=0;const {runBrowserMode}=await import('../../src/browser/index.js');
+ await expect(runBrowserMode({prompt:'Fixture',config:{target:'grok',remoteChrome:{host:'127.0.0.1',port:9222}}})).rejects.toThrow('resolved account configuration');
+ expect(boundary.events).not.toContain('navigate');
 });

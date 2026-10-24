@@ -386,3 +386,8 @@ describe('resolveBrowserModelLabel', () => {
     );
   });
 });
+
+test('preserves an explicit Grok model label for exact action validation',async()=>{
+ const config=await buildBrowserConfig({model:'grok-4.1',browserModelLabel:'Fastest'});
+ expect(config.desiredModel).toBe('Fastest');
+});
