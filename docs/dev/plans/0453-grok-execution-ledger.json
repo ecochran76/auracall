@@ -14,13 +14,69 @@
       "issue": 399,
       "url": "https://github.com/ecochran76/auracall/issues/399",
       "blockers": [],
-      "state": "running",
+      "state": "validated",
       "worker": "primary",
-      "ownedPaths": [],
-      "validation": [],
-      "review": null,
-      "postCompletionTdd": null,
-      "trackerResolved": false
+      "ownedPaths": [
+        "docs/configuration.md",
+        "docs/dev-fixes-log.md",
+        "docs/dev/dev-journal.md",
+        "docs/testing.md",
+        "packages/browser-service/src/service/ledgerInteractionGovernor.ts",
+        "packages/browser-service/src/service/mutationDispatcher.ts",
+        "src/browser/configuredProviderTrafficAuthority.ts",
+        "src/browser/grokProviderTraffic.ts",
+        "src/browser/grokTrafficStatus.ts",
+        "src/browser/providers/grokAdapter.ts",
+        "src/browser/providers/mutationAudit.ts",
+        "src/browser/tabConcurrencyRuntime.ts",
+        "src/cli/apiOpsBrowserCommand.ts",
+        "src/http/responsesServer.ts",
+        "src/runtime/grokTrafficLimits.ts",
+        "src/schema/types.ts",
+        "tests/browser/grokTrafficGovernance.test.ts",
+        "tests/cli/apiOpsBrowserCommand.test.ts"
+      ],
+      "validation": [
+        {
+          "command": "pnpm vitest run tests/browser/grokTrafficGovernance.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser-service/ledgerInteractionGovernor.test.ts tests/browser/grokAdapter.test.ts tests/browser/chatgptProofSession.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers=2",
+          "result": "81 passed across8 files after bounded review remediation"
+        },
+        {
+          "command": "pnpm vitest run tests/http.responsesServer.test.ts -t reports development-only posture --maxWorkers=1",
+          "result": "1 passed222 skipped; real /status includes Grok controls"
+        },
+        {
+          "command": "pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers=1",
+          "result": "2 passed; structured raw status preserves Grok controls"
+        },
+        {
+          "command": "pnpm run build",
+          "result": "passed"
+        },
+        {
+          "command": "pnpm run lint",
+          "result": "passed;246 repository warnings17 infos; new-file lint separately checked"
+        },
+        {
+          "command": "pnpm exec tsc --noEmit",
+          "result": "passed"
+        }
+      ],
+      "review": {
+        "fixedPoint": "9f260ee1b",
+        "tip": "1c0928758",
+        "standards": "2 accepted blocking status findings; remediated",
+        "spec": "1 additional accepted discovery-before-admission finding; remediated; status finding duplicates Standards",
+        "receipt": "docs/dev/notes/2026-10-24-grok399-review.md"
+      },
+      "postCompletionTdd": {
+        "red": "competing target incorrectly acquired serialized Grok workload",
+        "green": "stable Grok utility workload rejects second target before effects",
+        "commit": "1c0928758"
+      },
+      "trackerResolved": false,
+      "base": "9f260ee1b",
+      "resultSha": "1c0928758"
     },
     {
       "ticket": 2,

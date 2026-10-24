@@ -14,7 +14,9 @@ Start2026-10-24T16:13:30Z. Stop/checkpoint2026-10-24T18:13:30Z.
 Fresh origin/main and confirmed specification merged into an isolated integration
 worktree. Additive journal/fixes conflicts preserve both issue368 and Grok history.
 Dependencies validated against all16 published tickets. Only #399 is ready;
-primary owns it. No independent ticket is available for a worker yet.
+primary owns it. #399 source is validated after one review/remediation and
+post-completion TDD. #400 is the next serial ticket; tracker closure awaits PR
+integration. No independent implementation worker is eligible until #400 validates.
 
 ## Execution contract
 

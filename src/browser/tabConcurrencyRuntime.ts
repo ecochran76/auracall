@@ -178,7 +178,7 @@ export function createBrowserTabConcurrencyRuntime(
 						return counts;
 					}, {}),
 				},
-				providerControls: { grok: summarizeGrokTrafficControls({ config: userConfig as Record<string, unknown>, interactions, warnings: activeWarnings, now }) },
+				providerControls: { grok: summarizeGrokTrafficControls({ config: userConfig as Record<string, unknown>, interactions, warnings: activeWarnings, now, managedScopes: leases.map(lease => lease.scope) }) },
 				aggregateUsage,
 				leaseStates: {
 					active: leases.filter((lease) => lease.state === "active").length,

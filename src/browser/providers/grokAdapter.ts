@@ -3429,6 +3429,7 @@ export function createGrokAdapter(): Pick<
             },
           ).catch(() => undefined);
         }
+        return await readGrokDiscoveryWithAdmission(client, 'provider:grok:feature-read', async () => {
         if (options?.discoveryAction === 'grok-imagine-video-mode') {
           await waitForGrokImagineModeControls(client.Runtime);
         }
@@ -3437,10 +3438,11 @@ export function createGrokAdapter(): Pick<
           options?.discoveryAction ?? null,
         );
         try {
-          return await readGrokDiscoveryWithAdmission(client, 'provider:grok:feature-read', () => readGrokFeatureSignature(client), options?.abortSignal);
+          return await readGrokFeatureSignature(client);
         } finally {
           await restoreGrokImaginePrimaryMode(client.Runtime, discoveryAction?.restoreMode ?? null);
         }
+        }, options?.abortSignal);
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

@@ -19,6 +19,12 @@ export function summarizeGrokTrafficControls(input: {
 	interactions: ProviderInteractionRecord[];
 	warnings: Array<{ provider: string; tenantKey: string; cooldownUntil: string | null }>;
 	now: Date;
+	managedScopes?: Array<{
+		runtimeProfileId: string;
+		managedBrowserProfile: string;
+		tenantKey: string;
+		service: string;
+	}>;
 }): GrokTrafficControlStatus {
 	const profile =
 		typeof input.config.auracallProfile === "string" ? input.config.auracallProfile : "default";
@@ -26,11 +32,28 @@ export function summarizeGrokTrafficControls(input: {
 		serviceId: "grok",
 		runtimeProfileId: profile,
 	});
+	const fallbackAccounts = new Set(
+		[
+			...input.interactions
+				.filter((item) => item.scope.provider === "grok" && item.scope.runtimeProfileId === profile)
+				.map((item) => ({ ...item.scope, service: item.scope.provider })),
+			...(input.managedScopes ?? []).filter(
+				(scope) => scope.service === "grok" && scope.runtimeProfileId === profile,
+			),
+		]
+			.filter(
+				(scope) =>
+					scope.tenantKey === `managed-browser:${scope.managedBrowserProfile}`.toLowerCase(),
+			)
+			.map((scope) => scope.tenantKey),
+	);
+	const matchesAccount = (tenantKey: string) =>
+		account ? tenantKey === account : fallbackAccounts.has(tenantKey);
 	const configuredLimit = resolveGrokOperationsPerMinute(input.config, profile);
 	const recent = input.interactions.filter(
 		(item) =>
 			item.scope.provider === "grok" &&
-			item.scope.tenantKey === account &&
+			matchesAccount(item.scope.tenantKey) &&
 			Date.parse(item.startedAt ?? item.reservedAt) >= input.now.getTime() - 60_000,
 	);
 	const limits = [configuredLimit, ...recent.map((item) => item.maxInteractionsPerMinute)].filter(
@@ -49,7 +72,7 @@ export function summarizeGrokTrafficControls(input: {
 			(a, b) => Date.parse(a.startedAt ?? a.reservedAt) - Date.parse(b.startedAt ?? b.reservedAt),
 		);
 	const warning = input.warnings.filter(
-		(item) => item.provider === "grok" && item.tenantKey === account,
+		(item) => item.provider === "grok" && matchesAccount(item.tenantKey),
 	);
 	const limited = limit !== null && counted.length >= limit;
 	const warningUntil = warning.some((item) => item.cooldownUntil === null)
@@ -70,7 +93,12 @@ export function summarizeGrokTrafficControls(input: {
 		operationBudgetWaitMs: resolveGrokOperationBudgetWaitMs(input.config, profile),
 		usedOperationsLastMinute: counted.length,
 		remainingOperations: limit === null ? null : Math.max(0, limit - counted.length),
-		nextEligibleAt: warning.length ? warningUntil : capacityUntil,
+		nextEligibleAt:
+			warning.length && warningUntil === null
+				? null
+				: warningUntil && capacityUntil
+					? new Date(Math.max(Date.parse(warningUntil), Date.parse(capacityUntil))).toISOString()
+					: (warningUntil ?? capacityUntil),
 		blockedReason: warning.length
 			? "provider-warning"
 			: limited

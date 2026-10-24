@@ -51,6 +51,7 @@ const _dashboardHtml = `
 </script>`;
 
 const statusPayload = {
+  tabConcurrency: {providerControls: {grok: {maxOperationsPerMinute: 2, remainingOperations: 0, blockedReason: "minute-interaction-limit"}}},
   ok: true,
   accountMirrorScheduler: {
     enabled: true,
@@ -164,6 +165,7 @@ describe('mcp api_ops_browser_status tool', () => {
           hasCancelBinding: true,
         },
         status: {
+          raw: { tabConcurrency: statusPayload.tabConcurrency },
           liveFollow: {
             severity: 'paused',
           },

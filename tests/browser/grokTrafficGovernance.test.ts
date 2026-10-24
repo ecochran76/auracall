@@ -112,7 +112,10 @@ test("Grok owned read preflight freezes a visible limit before later account eff
 	}
 });
 
-test("Grok Ops readback exposes restrictive effective controls and next eligible time without identity", async () => {
+test.each([
+	true,
+	false,
+])("Grok Ops readback reports capacity with configured identity=%s", async (configuredIdentity) => {
 	const root = await mkdtemp(path.join(os.tmpdir(), "grok-controls-"));
 	roots.push(root);
 	setAuracallHomeDirOverrideForTest(root);
@@ -132,6 +135,7 @@ test("Grok Ops readback exposes restrictive effective controls and next eligible
 			fixture: { services: { grok: { liveFollow: { maxBrowserInteractionsPerMinute: 8 } } } },
 		},
 	};
+	if (!configuredIdentity) delete (config.services.grok as { identity?: unknown }).identity;
 	const authority = await createConfiguredProviderTrafficAuthorityFactory({
 		userConfig: config as never,
 		provider: "grok",
@@ -155,6 +159,28 @@ test("Grok Ops readback exposes restrictive effective controls and next eligible
 			blockedReason: "minute-interaction-limit",
 			nextEligibleAt: expect.any(String),
 		});
+		const runtime = createBrowserTabConcurrencyRuntime(config as never);
+		if (!runtime.ledger) throw new Error("Missing fixture ledger");
+		await runtime.ledger.recordProviderWarning({
+			scope: {
+				provider: "grok",
+				tenantKey: configuredIdentity
+					? "service-account:grok:operator@example.test"
+					: `managed-browser:${path.join(root, "managed")}`,
+				runtimeProfileId: "fixture",
+				managedBrowserProfile: path.join(root, "managed"),
+			},
+			classification: "rate-limit",
+			reason: "fixture warning",
+			observedAt: new Date().toISOString(),
+			cooldownUntil: new Date(Date.now() + 5000).toISOString(),
+		});
+		const warned = await runtime.readStatus();
+		expect(warned.providerControls?.grok.blockedReason).toBe("provider-warning");
+		expect(warned.providerControls?.grok.nextEligibleAt).toBe(
+			status.providerControls?.grok.nextEligibleAt,
+		);
+
 		expect(JSON.stringify(status.providerControls)).not.toContain("operator@example.test");
 	} finally {
 		await authority.close();
@@ -389,5 +415,53 @@ test("serialized Grok reads refuse a second target on the same managed browser",
 		);
 	} finally {
 		await first.close();
+	}
+});
+
+test("exhausted feature discovery never switches Imagine mode", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "grok-feature-cap-"));
+	roots.push(root);
+	setAuracallHomeDirOverrideForTest(root);
+	const authority = await createConfiguredProviderTrafficAuthorityFactory({
+		userConfig: {
+			services: { grok: { liveFollow: { maxBrowserInteractionsPerMinute: 1 } } },
+		} as never,
+		provider: "grok",
+		managedBrowserProfile: path.join(root, "managed"),
+		mutationAudit: async () => undefined,
+		baseOptions: {},
+	}).acquire({ targetId: "fixture-target" });
+	const first = await authority.governor.begin({
+		kind: "provider-read",
+		interactionClass: "generic",
+		source: "fixture:first",
+	});
+	await first.settle({ outcome: "succeeded" });
+	let switches = 0;
+	connection.connect.mockImplementation(async () => ({
+		Page: { enable: async () => undefined },
+		Runtime: {
+			enable: async () => undefined,
+			evaluate: async ({ expression }: { expression: string }) => {
+				if (expression.includes("const action = 'grok-imagine-video-mode'")) switches++;
+				return { result: { value: true } };
+			},
+		},
+		close: async () => undefined,
+	}));
+	const { createGrokAdapter } = await import("../../src/browser/providers/grokAdapter.js");
+	try {
+		await expect(
+			createGrokAdapter().getFeatureSignature!({
+				host: "127.0.0.1",
+				port: 9222,
+				tabTargetId: "fixture-target",
+				providerTrafficGovernor: authority.governor,
+				discoveryAction: "grok-imagine-video-mode",
+			}),
+		).rejects.toThrow("minute-interaction-limit");
+		expect(switches).toBe(0);
+	} finally {
+		await authority.close();
 	}
 });
