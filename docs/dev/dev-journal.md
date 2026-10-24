@@ -24,6 +24,51 @@ live cause. One guarded OpenSign refresh on wsl-chrome-3 is under independent
 passive endpoint/status/structure capture. Result pending; no further activation
 in this packet. Plan0451 records the stopping and minimization conditions.
 
+## 2026-10-24 — Approved Grok tickets published
+
+Explicit chat approval accepted all sixteen slices. Published and individually
+verified issues #399–#414 with enhancement/ready-for-agent labels and canonical
+blocker URLs. Parent #398 unchanged; native planning mutations are not allowlisted.
+[Plan0452](plans/0452-2026-10-24-grok-upgrade-spec.md) CLOSED for specification/ticket
+publication only. Implementation and live acceptance remain open. First frontier:
+#399. No provider/runtime effects. Memory forbidden: no save request.
+
+## 2026-10-24 — Grok specification and proposed slices
+
+Final scope/test-boundary confirmation accepted without changes. Published
+[specification #398](https://github.com/ecochran76/auracall/issues/398), with exact
+actor/marker/state/label readback. [Plan0452](plans/0452-2026-10-24-grok-upgrade-spec.md)
+and sixteen separate proposed ticket drafts preserve the dependency graph.
+Ticket breakdown awaits Previews review before issue creation. No implementation
+or live effects. Memory forbidden: no save request.
+
+## 2026-10-24 — Grok scope decisions, round 2
+
+Recorded Mail Receipts draft/edit qualification with read/write/send capability
+exposure, Grok-native publication, Bot configuration fields and account-wide
+backfill. Inspected offline draft/revision contracts without executing mutations.
+Published consolidated scope/validation and one final confirmation in the existing
+Previews session. [Decision record](notes/2026-10-24-grok-ux-survey.md).
+Specification follows confirmation; no provider effects. Memory forbidden: no save request.
+
+## 2026-10-24 — Grok scope decisions, round 1
+
+Consumed complete Previews response. Build publication included; Bots inventory,
+invoke/create/edit; CLI/API/MCP/Ops; full mirror; account-shared configurable waits.
+Acceptance example is Mail Receipts installation/qualification. Public OAuth/MCP
+metadata verified; no mailbox content or provider mutations. Recorded decisions
+in the [survey](notes/2026-10-24-grok-ux-survey.md) and domain terms in CONTEXT.md.
+Round 2 remains pending. Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Grok UX survey
+
+Default Grok browser opened and inspected: Chats, composer @ and /, model menu,
+Attach/recent files, Plugins Connectors/Skills/Bots, custom MCP form and blank Bot
+creation. Recorded current DOM algorithms, History→Chats drift, missing Build
+registry entry and ChatGPT-only live-follow cooldown seam. Survey only; no prompt,
+upload, installation or Bot creation. See [survey](notes/2026-10-24-grok-ux-survey.md).
+Memory forbidden: no explicit save request.
+
 ## 2026-10-24 — Issue368 refresh observation diagnosis
 
 Read-only reconciliation could not recover the prior response. Exact retained
