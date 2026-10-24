@@ -80,7 +80,9 @@
   changing the one-click/no-replay boundary. A fake-timer activation-latency
   regression protects catalog observation from expiring before governed release.
   Exact plugin-settings load-error cases terminate immediately before/after
-  activation, preserving zero/one click and unconfirmed/no-retry respectively. Three adapter cases cover temporary
+  activation, preserving zero/one click and unconfirmed/no-retry respectively.
+  One qualified reload can recover settings with account continuity; changed
+  accounts stop without activation and a later error cannot reload again. Three adapter cases cover temporary
   disabled controls and loading account data before/after the one activation.
   Existing replacement tests retain
   delete/recreate coverage. Native acceptance is recorded separately in Plan0433.
@@ -3788,6 +3790,12 @@ the full authoritative answer in 10832 ms. Compare non-whitespace content becaus
 rendered table cells introduce whitespace; retain the initial overly strict oracle
 as a false positive. This does not prove completion before the historical deadline.
 
+- Backend native-cancellation receipt regression (provider-free):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'native request cancellation keeps exact dispatch certainty'`.
+  After-wire success must settle despite native cancellation; rejection and
+  missing acknowledgment retain unknown effects, and before-wire cancellation
+  proves no SDK send. This does not repair historical unknown outcomes.
+
 ### Grok files and existing Bots (issues403/407)
 
 Focused presubmit: `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grok402Text.test.ts tests/browser/grok402Orchestration.test.ts tests/browser/grok403Files.test.ts tests/browser/grok407Bots.test.ts tests/browser/grokEcosystemProgress.test.ts tests/browser/grokConfiguredProgressFailure.test.ts tests/http.grokFilesBots.test.ts --maxWorkers=2`.
@@ -3802,3 +3810,4 @@ new IDs/counts and native basenames do not bind selected bytes to provider IDs.
 The implementation reports this gap as unconfirmed; do not classify it as a
 successful attachment or a completed issue403. No installed/live provider smoke
 or artifact byte materialization is implied by these fixtures.
+

@@ -6,6 +6,9 @@ describe("developer app tool refresh", () => {
 	afterEach(() => vi.useRealTimers());
 	it.each([
 		"success",
+		"settings-load-recovery",
+		"settings-load-recovery-account-change",
+		"settings-load-recovery-post-error",
 		"settings-load-error-after",
 		"settings-load-error-before",
 		"delayed-activation",
@@ -33,6 +36,8 @@ describe("developer app tool refresh", () => {
 		let response: (value: unknown) => void = () => {};
 		let finished: (value: unknown) => Promise<void> = async () => {};
 		const clicks: string[] = [];
+		let reloads = 0;
+		let identityReads = 0;
 		const controller = new AbortController();
 		let settingsReads = 0;
 		let postReads = 0;
@@ -45,7 +50,10 @@ describe("developer app tool refresh", () => {
 				const postLoading = scenario === "settling-after" && clicks.length > 0 && postReads++ === 0;
 				const text =
 					(scenario === "settings-load-error-after" && clicks.length) ||
-					scenario === "settings-load-error-before"
+					scenario === "settings-load-error-before" ||
+					(scenario.startsWith("settings-load-recovery") &&
+						(reloads === 0 ||
+							(scenario === "settings-load-recovery-post-error" && clicks.length > 0)))
 						? "Couldn't load plugin settings\nTry again"
 						: `Connected accounts\n${scenario === "connection-change" && clicks.length ? "Other account" : scenario === "account-loading-before" && firstRead ? "Connect another account" : "Fixture account"}\nAbout\nURL\nhttps://fixture.example/mcp\nApp ID\n${["identity-change", "app-member-change"].includes(scenario) && clicks.length ? "other" : "fixture"}\nRefresh tools`;
 				const control = {
@@ -96,7 +104,15 @@ describe("developer app tool refresh", () => {
 						},
 					},
 				} as never,
-				getUserIdentity: async () => null,
+				getUserIdentity: async () =>
+					scenario.startsWith("settings-load-recovery")
+						? {
+								email:
+									scenario === "settings-load-recovery-account-change" && identityReads++ > 0
+										? "other@example.invalid"
+										: "fixture@example.invalid",
+							}
+						: null,
 				connectDevTools: async () => ({
 					port: 1,
 					client: {
@@ -105,6 +121,10 @@ describe("developer app tool refresh", () => {
 						// biome-ignore lint/style/useNamingConvention: CDP protocol domains use canonical names.
 						Page: {
 							enable: async () => {},
+							reload: async () => {
+								reloads++;
+								return {};
+							},
 							navigate: async () => {
 								response({
 									requestId: "links",
@@ -240,7 +260,30 @@ describe("developer app tool refresh", () => {
 			expect(Date.now() - startedAt).toBeLessThan(8_000);
 			return;
 		}
+		if (scenario === "settings-load-recovery-account-change") {
+			await expect(resultPromise).rejects.toThrow(
+				"ChatGPT account changed or became unavailable during settings recovery",
+			);
+			expect(reloads).toBe(1);
+			expect(clicks).toEqual([]);
+			return;
+		}
+		if (scenario === "settings-load-recovery-post-error") {
+			await expect(resultPromise).resolves.toMatchObject({
+				status: "unconfirmed",
+				retrySafe: false,
+			});
+			expect(reloads).toBe(1);
+			expect(clicks).toEqual(["mouseReleased"]);
+			return;
+		}
 		const result = await resultPromise;
+		if (scenario === "settings-load-recovery") {
+			expect(result.status).toBe("completed");
+			expect(reloads).toBe(1);
+			expect(clicks).toEqual(["mouseReleased"]);
+			return;
+		}
 		if (scenario === "delayed-activation") {
 			expect(result.status).toBe("completed");
 			expect(result.catalog).toMatchObject({ toolCount: 1, toolNames: ["new_tool"] });

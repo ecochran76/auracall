@@ -3,7 +3,7 @@
 State: OPEN
 Lane: issue368
 Owner: primary agent for ecochran76
-Branch: fix/issue368-post-refresh-timeout
+Branch: fix/issue368-continuation-receipt
 Target: main
 Integration: pull request
 Base: 89800c458
@@ -224,3 +224,79 @@ above. #368 stays OPEN for final catalog/preservation acceptance.
 
 No code change or new tests: operational reconciliation only. docs:list and
 whitespace validation pass. Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Fresh captured acceptance after custody reconciliation
+
+Saved healthy settings baseline from the exact retained OpenSign page, under
+verified native-browser ownership and automation hold, without navigation.
+Expected app/endpoint, connected-account/permission sections and one enabled
+Refresh tools control are present. Connection/permission fingerprint remains
+28deb6881123168f134a36c621b7abd10a0c56baac2af85dd2d0d2b5a43dfa6a.
+One installed public-command refresh now retains nested errors, progress and
+independent backend metadata, so failure cannot silently discard primary causes.
+Compare the exact current settings against the saved baseline afterward.
+Private evidence: ~/.local/state/auracall-issue368-qualified-20261024/.
+
+### Guarded attempt stopped pre-effect; bounded recovery revision
+
+The044009ea0 attempt exits with the exact explicit error “Couldn't load plugin
+settings; Refresh tools was not activated.” No refresh_actions request was
+captured. This is a qualified pre-effect stop, not a repeated catalog mutation.
+The recovered retained page and current saved baseline remain healthy.
+
+The earlier operator-controlled one-reload recovery provides a concrete bounded
+path. Reproduce at the public adapter seam: error before activation becomes
+healthy after one reload, but current code stops without trying that recovery.
+Red observed. Add a single shared page-reload allowance across before/after
+settings reads. Require an exact settings URL, verified account identity and
+unchanged identity across reload; stop for missing/changed identity, human
+approval or persistent settings errors. Existing exact app/endpoint and final
+connection/permission comparison still govern activation/completion. Refresh
+tools remains one trusted activation; this retries only the settings read.
+This intentionally supersedes the prior source slice's no-automatic-reload
+policy with one qualified read-only recovery; no consent, warning clearance,
+app replacement or catalog-mutation retry is introduced.
+
+76 focused adapter/CLI/governor checks and typecheck pass. Recovery, account
+change and post-error cases prove one reload maximum, zero clicks on account
+change and one click with unconfirmed status if the second read fails.
+
+Full build, scoped Biome, docs:list and whitespace pass. Primary Standards/Spec
+review of this bounded recovery patch against87c4910ba has no blocking findings.
+The previous pre-effect receipt remains preserved; recovery-source tests do not
+qualify a live catalog refresh.
+
+PR421 sourcea0f62f164 mergedd33b14e04. Installed CLI prefix
+~/.auracall/user-runtime-issue368-recovery-a0f62f164; exact compiled module
+SHA2565cc04a05151597981edf8e0d2926d4d761761152fbadef546e7c7a2165b05380
+matches the tested build. App help passes; API PID1777322 is not restarted.
+Fresh zero-navigation settings snapshot remains healthy with the same saved
+connection/permission fingerprint. One new captured acceptance is running from
+that baseline on the repaired public command; the prior guard proved no refresh
+activation in its failed attempt. Private acceptance directory:
+~/.local/state/auracall-issue368-recovered-acceptance-20261024/.
+
+## 2026-10-24 — Cancellation must not discard a continuation receipt
+
+The recovery-enabled installed attempt fails during inventory, before a captured
+refresh_actions request. Preserved aggregate tree exposes native AbortError and
+Invalid InterceptionId during observer cleanup, rather than only the outer
+message. No historical request outcome is rewritten from that partial evidence.
+
+Minimize at the existing guarded CDP/interceptor/ledger seam: native cancellation
+after SDK send, followed by a successful protocol acknowledgment, incorrectly
+produces aggregate cleanup failure and outcome-unknown. The new phase goes red;
+existing before-wire, after-wire rejected, foreign-frame/request controls pass.
+The winning source hypothesis is that the abort promise races away a valid
+receipt. Opt only backend continuation into bounded receipt waiting after send.
+Keep cancellation checks before SDK invocation, the existing3-second timeout,
+strict unknown outcome for rejected/missing receipts and the native ownership
+hold. Success acknowledgment now settles the request. A no-ack timeout case
+proves uncertainty remains; no broad cancellation swallowing or fence clearing.
+This protects ChatGPT and Grok through the already-shared interceptor.
+
+Receipt-fix validation:140 focused ChatGPT/Grok admission/transport/app tests,
+full typecheck/build, scoped lint, docs:list and whitespace pass. Primary
+Standards/Spec review againstd33b14e04 finds no blocking issue; only the opted-in
+continuation waits through after-send cancellation, bounded by the original
+deadline. Historical unknown outcomes remain unchanged.

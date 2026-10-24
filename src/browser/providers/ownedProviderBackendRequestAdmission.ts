@@ -146,6 +146,7 @@ export async function attachOwnedProviderBackendRequestAdmission(
 										timeoutMs: 3_000,
 										timeoutMessage: "Owned backend request continuation timed out.",
 										abortSignal: requestSignal,
+										awaitReceiptAfterSend: true,
 									},
 									() => client.Fetch.continueRequest({ requestId: event.requestId }),
 								);

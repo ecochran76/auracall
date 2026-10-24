@@ -1,3 +1,30 @@
+## 2026-10-24 — Issue368 retain backend continuation acknowledgment
+
+Recovery-enabled acceptance fails pre-refresh with a preserved native AbortError
+and observer-cleanup Invalid InterceptionId. New minimal after-wire-success
+phase reproduces cleanup failure despite a successful SDK acknowledgment. Opt
+backend continuation into receipt waiting after SDK send, bounded by existing3s;
+pre-wire cancellation still prevents send, rejected/missing receipts stay unknown.
+No historical ledger rewrite. Shared ChatGPT/Grok interceptor tests protect both.
+
+## 2026-10-24 — Issue368 one bounded settings-load recovery
+
+Fresh captured attempt stops pre-effect at plugin-settings error; no tool refresh.
+Operator one-reload recovery is already proved on retained page. Red public-
+adapter fixture now becomes green with one shared reload allowance, exact URL
+and account continuity. Persistent errors and approval stop; no second Refresh
+tools activation.76 focused checks and typecheck pass. README records semantics.
+
+## 2026-10-24 — Issue368 fresh captured refresh acceptance
+
+After successful read-only discovery/cleanup and normal retirement of the old
+lease, save current healthy exact OpenSign settings under a native automation
+hold with no reload. App/endpoint, connected accounts and permissions are ready;
+connection/permission fingerprint matches the recovered page. Start one installed
+public-command refresh with nested errors and progress retained, independent
+backend metadata capture and a saved baseline for post-read comparison. No more
+than this one provider refresh in the packet. Result pending.
+
 ## 2026-10-24 — Issue368 cleanup reconciled through normal retirement
 
 Read-only installed public-command probe succeeds with26 apps and completes

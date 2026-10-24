@@ -1,3 +1,19 @@
+## 2026-10-24 — Retain a bounded protocol receipt after continuation send
+
+Native request cancellation can arrive before Chrome acknowledges an already
+sent continuation. Racing that cancellation against a valid acknowledgment
+creates avoidable unknown cleanup. Honor cancellation before SDK send, then
+retain the existing bounded wait for the receipt. Only a successful receipt
+settles the continuation; rejection or timeout remains unknown.
+
+## 2026-10-24 — Recover plugin settings once without replaying tool refresh
+
+A terminal plugin-settings load error can recover with one page reload. Share
+one reload allowance across both settings reads; verify account continuity and
+retain exact app/endpoint plus final connection/permission checks. Stop on
+persistent errors, unavailable/changed identity or approval. This read recovery
+must never repeat the trusted Refresh tools activation.
+
 ## 2026-10-24 — A generic authority does not establish provider governance
 
 Grok already acquired shared traffic authority, but its non-ChatGPT operation
