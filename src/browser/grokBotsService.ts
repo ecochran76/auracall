@@ -222,7 +222,7 @@ export function createGrokBotsService(
 				const base = { ...grokBotUnknown(), bot };
 				// The existing text pipeline preserves and rechecks selected composer tokens.
 				const baseline = await readGrokAssistantSnapshotForRuntime(client.Runtime);
-				await effect("input", "prompt", () => setGrokPrompt(client.Input, client.Runtime, prompt));
+				await effect("input", "prompt", () => setGrokPrompt(client.Input, client.Runtime, prompt, {id:bot.id,name:bot.name}));
 				try {
 					await effect("in-page-click", "submit", () =>
 						submitGrokPrompt(client.Input, client.Runtime),

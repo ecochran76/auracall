@@ -318,6 +318,7 @@ test("same-connection invocation proves exact Bot token before submission and re
 		artifacts: { status: "unknown" },
 	});
 	expect(prepare.mock.calls[0][1]).toBe(fixture.runtime);
+ expect(prepare.mock.calls[0][3]).toEqual({id:"bot-alice",name:"Helper"});
 	expect(submit.mock.calls[0][1]).toBe(fixture.runtime);
 });
 test("a different Bot token after picker selection prevents prompt preparation and Send", async () => {

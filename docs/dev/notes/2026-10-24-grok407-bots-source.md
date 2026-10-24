@@ -50,3 +50,19 @@ text pipeline exports at that collaborator boundary, and do not claim an end-to-
 real-text DOM run. Primary owns integration review and postcompletion TDD.
 
 Memory disposition: forbidden — this packet explicitly prohibits memory writes.
+
+## B1 bounded review remediation
+
+Accepted blocking candidate B1 only: selected Bot identity could change during
+baseline observation before preparation captured a new token baseline. The
+service now supplies expected `{id,name}` to real `setGrokPrompt`. Its initial
+DOM evaluation validates that exact sole Bot token atomically with composer and
+token capture. Token evidence also includes `data-bot-id` and `href`, so atomic
+submit rejects in-place stable-identity drift even when the label stays equal.
+
+Real `setGrokPrompt`/`submitGrokPrompt` tests reproduced baseline token replacement,
+removal and post-preparation in-place ID mutation: three red regressions followed
+by green. `pnpm vitest run tests/browser/grok402Text.test.ts tests/browser/grok407Bots.test.ts --maxWorkers=2`
+passes 33 tests (20 text, 13 Bot). The Bot orchestration test also checks that the
+expected ID/name reaches text preparation. No file upload code was changed.
+No additional review candidates were investigated. Memory remains forbidden.
