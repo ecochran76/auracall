@@ -83,6 +83,14 @@ const GROK_TIME_SELECTOR = cssClassContains('time');
 const GROK_TIMESTAMP_SELECTOR = cssClassContains('timestamp');
 const GROK_SOURCES_CONTENT_SELECTOR = 'div[id*="content-sources"]';
 const GROK_SOURCES_ROOT_SELECTOR = `${GROK_SOURCES_CONTENT_SELECTOR}, main`;
+// One mounted-card inventory keeps content and chunked file offsets aligned.
+const GROK_CONTEXT_ROW_INVENTORY = `const rows = Array.from(document.querySelectorAll('main [id^="response-"]')).filter((row) => {
+              const classes = String(row.getAttribute('class') || '');
+              return (classes.includes('items-end') || classes.includes('items-start')) && row.querySelector('[class*="response-content-markdown"], div.message-bubble');
+            });
+            const fallbackRows = rows.length ? [] : Array.from(document.querySelectorAll('div.message-bubble'));
+            const observedRows = rows.length ? rows : fallbackRows;`;
+
 const GROK_ASSET_ROW_SELECTOR = `div${cssClassContains('group/asset-row')}`;
 const GROK_SOURCES_FILES_ROW_SELECTOR = `div${cssClassContains('group/collapsible-row')}`;
 const _GROK_PROJECT_SOURCES_ATTACH_SELECTOR = `button[aria-label="Attach"]${cssClassContains('ms-[1px]')}`;
@@ -5527,12 +5535,7 @@ export function createGrokAdapter(): Pick<
             const chunk = ${JSON.stringify(options?.accountMirrorContextChunk ?? null)};
             const start = Math.max(0, Math.floor(chunk?.startMessageIndex ?? 0));
             const limit = Math.max(1, Math.floor(chunk?.maxMessages ?? 10000));
-            const rows = Array.from(document.querySelectorAll('main [id^="response-"]')).filter((row) => {
-              const classes = String(row.getAttribute('class') || '');
-              return (classes.includes('items-end') || classes.includes('items-start')) && row.querySelector('[class*="response-content-markdown"], div.message-bubble');
-            });
-            const fallbackRows = rows.length ? [] : Array.from(document.querySelectorAll('div.message-bubble'));
-            const observedRows = rows.length ? rows : fallbackRows;
+            ${GROK_CONTEXT_ROW_INVENTORY}
             const inventory = observedRows.map((row, index) => row.id || row.closest('[id^="response-"]')?.id || String(index)).join('\\n');
             const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inventory));
             const observation = { totalMessages: observedRows.length, fingerprint: Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('') };
@@ -6684,6 +6687,11 @@ async function readVisibleConversationFilesWithClient(
       const start = Math.max(0, Math.floor(chunk?.startMessageIndex ?? 0));
       const end = chunk ? start + Math.max(1, Math.floor(chunk.maxMessages ?? 24)) : undefined;
       const collectRows = () => {
+        if (chunk) {
+          ${GROK_CONTEXT_ROW_INVENTORY}
+          return observedRows.slice(start, end).map((row) => rows.length ? row :
+            row.closest('div[class*="items-start"], div[class*="items-end"]') || row);
+        }
         const primary = Array.from(document.querySelectorAll('main [id^="response-"]'));
         if (primary.length > 0) return primary.slice(start, end);
         return Array.from(document.querySelectorAll('main div[class*="items-end"]')).slice(start, end);

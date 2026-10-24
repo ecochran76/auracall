@@ -69,3 +69,12 @@ emits an unobserved/incomplete visit; its focused rerun passed. TypeScript
 `pnpm exec tsc --noEmit --pretty false` and `git diff --check` passed. Biome check
 on the new context module and new adapter/coverage tests passed without warnings.
 Installed/native/live evidence is unrun; no runtime or shared settings were changed.
+
+Closed-world card-inventory alignment follow-up: both primary response rows with
+an extra non-message decoration and fallback bubbles with an earlier assistant
+turn reproduced missing final attachment metadata. Exact red command:
+`pnpm vitest run tests/browser/grok413ContextAdapter.test.ts -t 'same.*message inventory' --maxWorkers=1`
+(two failures: content correct, files empty). Content and chunked file reads now
+share one mounted-card inventory script before slicing; ordinary unchunked file
+listing retains its existing selection. The full adapter fixture file passes
+7 tests, including both missing-file reproducers and unchanged unchunked listing.
