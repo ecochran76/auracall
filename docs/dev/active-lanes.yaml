@@ -6,16 +6,16 @@ lanes:
     work_items: [ecochran76/auracall#368]
     plan: docs/dev/plans/0451-2026-10-23-app-discovery-governor.md
     plan_ref: refs/remotes/origin/main
-    branch: fix/issue368-settings-recovery
+    branch: fix/issue368-continuation-receipt
     target: main
     plan_state: OPEN
     custody_state: INTEGRATED
-    checkpoint: a0f62f164ec2d644a97839af915e81bf7dfd2b62
-    remote_ref: refs/remotes/origin/fix/issue368-settings-recovery
+    checkpoint: 76aa429c0fa43a82642fae05f3ce7d11f163f010
+    remote_ref: refs/remotes/origin/fix/issue368-continuation-receipt
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: settings-recovery-source-green-live-pending
+    validation_status: continuation-receipt-regression-green-live-pending
     integration_receipt: d33b14e04317f253fa034f79d20d8b0fc77a3c7b
     updated_at: 2026-10-23
   - id: P87-IQ2
