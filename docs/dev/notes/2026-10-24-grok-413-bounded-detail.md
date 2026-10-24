@@ -107,3 +107,9 @@ All were observed red, then green. A primary10-file selection including the
 worker8-file list plus public HTTP/MCP index projection passed after remediation;
 see central journal for final count and build receipt. No broad whole-program
 review pass was consumed; this is implementation qualification of ticket413.
+
+Final primary receipt: **187 tests/10 files passed**,14.29 seconds,maxWorkers2,
+no retries. Exact project/Bot/changed-inventory rejection assertions were then
+added to the existing2-case context coverage file; focused rerun and fresh
+typecheck passed. Final build exit0 and targeted5-file lint exit0; logs/exit
+receipts are user-scoped under /tmp/grok413-final-*. Sourcef76545f7e.

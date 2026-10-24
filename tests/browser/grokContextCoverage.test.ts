@@ -40,6 +40,9 @@ test("bounded Grok observations resume exact project and Bot identity without in
 	expect(retained.messages).toEqual(context.messages);
 	expect(retained.sources).toEqual(context.sources);
 	expect(() => mergeObservedGrokContext({ ...first, metadata: {} }, last)).toThrow(/snapshot/);
+	expect(() => mergeObservedGrokContext({...first,metadata:{...first.metadata,projectId:"foreign-project"}},last)).toThrow(/snapshot/);
+	expect(() => mergeObservedGrokContext({...first,metadata:{...first.metadata,botId:"foreign-bot"}},last)).toThrow(/snapshot/);
+	expect(() => mergeObservedGrokContext({...first,metadata:{...first.metadata,historyCoverage:{fingerprint:"changed-inventory"}}},last)).toThrow(/snapshot/);
 	expect(last.messages).toEqual([{ role: "assistant", text: "Second" }]);
 	expect(last.sources).toEqual([{ url: "https://example.com/second", messageIndex: 0 }]);
 	expect(last.metadata?.accountMirrorContextChunk).toMatchObject({

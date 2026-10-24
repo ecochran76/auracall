@@ -12,9 +12,10 @@ Ledger: [execution ledger](0453-grok-execution-ledger.json)
 
 Seven children are closed; nine remain. #412 merged through PR430 as
 `ae21c97c907eb903360058c7b65c8bb267b70016` and is freshly CLOSED. Primary
-finished412 and owns serial integration. Worker `/root/grok413` implements the
-newly unblocked full observed-content ticket from that exact merged base.
-#405 and #410 partial source packets are integrated through245f1554e; their
+finished412 and owns serial integration. Worker `/root/grok413` returned full observed-content source; primary integrated
+and qualified it through f76545f7e with187 tests/10 files, typecheck/build/lint.
+#413 awaits main integration and tracker closure. No worker remains active.
+#405 and #410 partial source packets merged through PR431/16dbd7218; their
 native identity/grant and app/version/artifact gates remain open. #403/#408
 have concrete native discovery packets, with provider effects still pending.
 
