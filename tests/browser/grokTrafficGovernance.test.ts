@@ -450,9 +450,11 @@ test("exhausted feature discovery never switches Imagine mode", async () => {
 		close: async () => undefined,
 	}));
 	const { createGrokAdapter } = await import("../../src/browser/providers/grokAdapter.js");
+	const getFeatureSignature = createGrokAdapter().getFeatureSignature;
+	if (!getFeatureSignature) throw new Error("Missing Grok feature discovery");
 	try {
 		await expect(
-			createGrokAdapter().getFeatureSignature!({
+			getFeatureSignature({
 				host: "127.0.0.1",
 				port: 9222,
 				tabTargetId: "fixture-target",
