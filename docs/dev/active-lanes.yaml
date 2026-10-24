@@ -10,13 +10,13 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: INTEGRATED
-    checkpoint: 214c03d2cd47dc303d76dbba3a19a89ba1a77d22
+    checkpoint: 99ad14308258f12cadcffd5f3c1b8a4bf67bd5c9
     remote_ref: refs/remotes/origin/fix/issue368-catalog-repro
     integration: merge
     dependencies: []
     overlaps: []
     validation_status: catalog-http200-command-timeout-timing-regression-green
-    integration_receipt: fb026941f6c589f6297d3abb241a7d71ae4a312b
+    integration_receipt: 9d076ebf01ca83e835d603a3a899d6638d85b791
     updated_at: 2026-10-23
   - id: P87-IQ2
     objective: Honor configured admission wait while reading refresh settings

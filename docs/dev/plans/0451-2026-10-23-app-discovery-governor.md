@@ -119,3 +119,7 @@ Validation:71 focused adapter/command/governor tests, typecheck, scoped Biome,
 docs:list and whitespace checks pass. Primary Standards/Spec review of the
 bounded patch against421c6cd7 has no blocking findings. Live state is not graded
 as completed. Memory disposition forbidden: no explicit save request.
+
+PR394 source99ad14308 merged9d076ebf0; full build passes. CLI-only adoption
+uses ~/.auracall/user-runtime-issue368-timing-99ad14308. The API remains on its
+existing Recall/clipboard runtime; no API restart or further live refresh.
