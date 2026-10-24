@@ -1,3 +1,11 @@
+## 2026-10-24 — Plugin-settings errors are terminal readiness outcomes
+
+“Couldn't load plugin settings” cannot settle into connected accounts through
+polling alone. Recognize the visible terminal error before waiting through a
+backend-budget-sized deadline. Refuse before activation; after activation retain
+unconfirmed/no-retry and state that settings preservation is unverified. Do not
+click Try again or repeat Refresh tools automatically.
+
 ## 2026-10-24 — Start refresh observation deadline after activation
 
 Attach and arm exact-app observation before the click, but start its response

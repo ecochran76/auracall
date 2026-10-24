@@ -72,7 +72,9 @@
   approval and uncertain failure outcomes. Failure diagnostics distinguish missing
   expected request, wrong connection, HTTP error and malformed catalog without
   changing the one-click/no-replay boundary. A fake-timer activation-latency
-  regression protects catalog observation from expiring before governed release. Three adapter cases cover temporary
+  regression protects catalog observation from expiring before governed release.
+  Exact plugin-settings load-error cases terminate immediately before/after
+  activation, preserving zero/one click and unconfirmed/no-retry respectively. Three adapter cases cover temporary
   disabled controls and loading account data before/after the one activation.
   Existing replacement tests retain
   delete/recreate coverage. Native acceptance is recorded separately in Plan0433.

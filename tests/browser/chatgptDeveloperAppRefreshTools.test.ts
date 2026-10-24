@@ -6,6 +6,8 @@ describe("developer app tool refresh", () => {
 	afterEach(() => vi.useRealTimers());
 	it.each([
 		"success",
+		"settings-load-error-after",
+		"settings-load-error-before",
 		"delayed-activation",
 		"slow-before-budget",
 		"slow-after-budget",
@@ -41,7 +43,11 @@ describe("developer app tool refresh", () => {
 			if (expression.includes("refreshButtonCount:")) {
 				const firstRead = settingsReads++ === 0;
 				const postLoading = scenario === "settling-after" && clicks.length > 0 && postReads++ === 0;
-				const text = `Connected accounts\n${scenario === "connection-change" && clicks.length ? "Other account" : scenario === "account-loading-before" && firstRead ? "Connect another account" : "Fixture account"}\nAbout\nURL\nhttps://fixture.example/mcp\nApp ID\n${["identity-change", "app-member-change"].includes(scenario) && clicks.length ? "other" : "fixture"}\nRefresh tools`;
+				const text =
+					(scenario === "settings-load-error-after" && clicks.length) ||
+					scenario === "settings-load-error-before"
+						? "Couldn't load plugin settings\nTry again"
+						: `Connected accounts\n${scenario === "connection-change" && clicks.length ? "Other account" : scenario === "account-loading-before" && firstRead ? "Connect another account" : "Fixture account"}\nAbout\nURL\nhttps://fixture.example/mcp\nApp ID\n${["identity-change", "app-member-change"].includes(scenario) && clicks.length ? "other" : "fixture"}\nRefresh tools`;
 				const control = {
 					innerText: "Refresh tools",
 					disabled:
@@ -214,6 +220,24 @@ describe("developer app tool refresh", () => {
 		if (scenario === "foreign-connection") {
 			await expect(resultPromise).rejects.toThrow("Exact app connection identity unavailable");
 			expect(clicks).toEqual([]);
+			return;
+		}
+		if (scenario === "settings-load-error-before") {
+			await expect(resultPromise).rejects.toThrow(
+				"Couldn't load plugin settings; Refresh tools was not activated.",
+			);
+			expect(clicks).toEqual([]);
+			expect(Date.now() - startedAt).toBeLessThan(8_000);
+			return;
+		}
+		if (scenario === "settings-load-error-after") {
+			await expect(resultPromise).resolves.toMatchObject({
+				status: "unconfirmed",
+				message: expect.stringContaining("Couldn't load plugin settings"),
+				retrySafe: false,
+			});
+			expect(clicks).toEqual(["mouseReleased"]);
+			expect(Date.now() - startedAt).toBeLessThan(8_000);
 			return;
 		}
 		const result = await resultPromise;

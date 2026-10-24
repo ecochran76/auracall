@@ -488,6 +488,8 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				settingsReadTimeoutMs,
 				this.abortSignal,
 			);
+			if (before.settingsLoadError)
+				throw new Error("Couldn't load plugin settings; Refresh tools was not activated.");
 			if (before.humanApproval)
 				return {
 					status: "awaiting-human",
@@ -521,6 +523,13 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				settingsReadTimeoutMs,
 				this.abortSignal,
 			);
+			if (after.settingsLoadError)
+				return {
+					status: "unconfirmed",
+					message: `Refresh ${catalog ? "catalog response" : "activation"} observed, but Couldn't load plugin settings; preservation could not be verified. Inspect before retrying.`,
+					app,
+					retrySafe: false,
+				};
 			if (after.humanApproval)
 				return {
 					status: "awaiting-human",
@@ -1714,6 +1723,7 @@ function debugDeveloperApps(message: string): void {
 }
 
 interface ChatgptDeveloperAppRefreshSettings {
+	settingsLoadError?: boolean;
 	url: string;
 	text: string;
 	refreshButtonCount: number;
@@ -1735,10 +1745,11 @@ async function readChatgptDeveloperAppRefreshSettings(
 				refreshButtonCount: buttons.filter(el => el.innerText.trim().toLowerCase() === 'refresh tools' && !el.disabled && el.getAttribute('aria-disabled') !== 'true').length,
 				humanApproval: [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')].filter(visible).some(el => /approv|consent|permission|authoriz|connect account/i.test(el.innerText))};
 			const lines = state.text.split('\\n').map(line => line.trim()).filter(Boolean);
+			state.settingsLoadError = lines.includes("Couldn't load plugin settings");
 			const start = lines.indexOf('Connected accounts');
 			const end = lines.indexOf('About', start + 1);
 			const accountsReady = start >= 0 && end > start + 1 && lines.slice(start + 1, end).some(line => !/^(connect another account|loading[.\\s…]*|no connected accounts)$/i.test(line));
-			return state.humanApproval || (state.refreshButtonCount === 1 && accountsReady) ? state : null;
+			return state.settingsLoadError || state.humanApproval || (state.refreshButtonCount === 1 && accountsReady) ? state : null;
 		})()`,
 		{
 			timeoutMs,
