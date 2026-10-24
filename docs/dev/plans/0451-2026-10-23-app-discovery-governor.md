@@ -156,3 +156,37 @@ uses ~/.auracall/user-runtime-issue368-settings-044009ea0. The running API remai
 on its existing Recall/clipboard artifact; no API restart, settings retry or
 additional provider refresh. The remaining live gate is recovery/readback of the
 provider settings surface and preservation acceptance, not an unexplained poll.
+
+## 2026-10-24 — Recovered settings and saved acceptance baseline
+
+One gated page reload recovers the exact retained OpenSign settings. Native
+process identity verified; stale coordination left by our own failed helper was
+preserved by rename before normal dead-owner reconciliation. Current exact app,
+endpoint, connected-account section and permissions are present. This does not
+retroactively prove the older before/after equality. Save this current baseline
+and run one captured final refresh on the installed044009ea0 CLI, comparing saved
+settings afterward. Current packet permits only this one tool-refresh activation.
+Private receipts: ~/.local/state/auracall-issue368-settings-recovery-20261024/.
+
+### Recovery and final-attempt outcome
+
+Recovery succeeds: one reload, zero tool refreshes, exact app and endpoint,
+connected-account section, permission section and one enabled Refresh tools
+control. Private connection/permission fingerprint28deb6881123168f134a36c621b7abd10a0c56baac2af85dd2d0d2b5a43dfa6a.
+The original recovery timeout receipt incorrectly named identity verification;
+isolated verification passes and the preserved own-dead transition establishes
+coordination as its blocking stage. Preserve both receipts with this correction.
+
+The subsequent single final acceptance attempt exits1/unconfirmed/retrySafe=false:
+“Developer-app operation and owned cleanup failed.” Independent capture sees no
+refresh_actions request in this attempt; do not infer a repeated catalog refresh.
+The aggregate primary/cleanup causes were not serialized by the CLI, so the
+precise primary cause remains unknown. Read-only ledger reconciliation for
+operation chatgpt-service-0a250962-a706-4515-b7a8-8320f971ea2c finds90 settled
+backend records (74 succeeded/16 failed), three successful navigations and one
+successful list-read admission. No unsettled request records; the utility lease
+is nevertheless idle/outcome-unknown. Request settlement does not qualify clearing
+that separate custody fence. No new provider action or manual fence clearance.
+#368 stays OPEN. Next bounded work is owned-cleanup reconciliation, not another
+refresh. No source change in this operational packet. Docs:list and whitespace
+checks pass. Memory forbidden: no explicit save request.
