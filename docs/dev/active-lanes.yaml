@@ -6,16 +6,16 @@ lanes:
     work_items: [ecochran76/auracall#368]
     plan: docs/dev/plans/0451-2026-10-23-app-discovery-governor.md
     plan_ref: refs/remotes/origin/main
-    branch: fix/issue368-post-refresh-timeout
+    branch: fix/issue368-settings-recovery
     target: main
     plan_state: OPEN
     custody_state: INTEGRATED
-    checkpoint: 044009ea0fdc540bc7d3841f1072d7865ce874b9
-    remote_ref: refs/remotes/origin/fix/issue368-post-refresh-timeout
+    checkpoint: a0f62f164ec2d644a97839af915e81bf7dfd2b62
+    remote_ref: refs/remotes/origin/fix/issue368-settings-recovery
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: read-only-probe-passes-old-unknown-preserved-lease-retired
+    validation_status: settings-recovery-source-green-live-pending
     integration_receipt: ae8a95cc744a0627a1e97e1fce5d07faf2be887d
     updated_at: 2026-10-23
   - id: P87-IQ2
