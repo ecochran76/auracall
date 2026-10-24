@@ -3,7 +3,7 @@
 State: OPEN
 Lane: issue368
 Owner: primary agent for ecochran76
-Branch: fix/issue368-catalog-repro
+Branch: fix/issue368-post-refresh-timeout
 Target: main
 Integration: pull request
 Base: 89800c458
@@ -123,3 +123,30 @@ as completed. Memory disposition forbidden: no explicit save request.
 PR394 source99ad14308 merged9d076ebf0; full build passes. CLI-only adoption
 uses ~/.auracall/user-runtime-issue368-timing-99ad14308. The API remains on its
 existing Recall/clipboard runtime; no API restart or further live refresh.
+
+## 2026-10-24 — Post-refresh settings error, red/green
+
+No new provider refresh. Read-only inspection of the retained utility target
+D4B53D1123550B487E6673350C78CF69 finds the exact visible error “Couldn't load
+plugin settings” and Try again controls, with no connected-account section or
+Refresh tools control. Current source waits for those readiness conditions and
+does not recognize the terminal error. The captured response had HTTP200/31
+actions; the retained error explains a reproducible post-read timeout mechanism.
+The historical capture did not record the precise transition to this error state.
+
+Feedback loop: existing public-adapter fixture changes only the post-response
+visible text to the retained error. Red: read waits to its deadline and throws a
+generic settings timeout. Minimal fix returns the explicit terminal-error probe
+immediately; before activation it refuses with zero clicks, after activation it
+returns unconfirmed/retrySafe=false and says preservation remains unverified.
+No Try again, reload, consent, warning clearance or provider retry. Existing
+human-approval and exact endpoint/app checks remain. The exact patched predicate
+also recognizes the retained real DOM in a read-only CDP evaluation (zero refresh
+buttons). Private receipt: retained-settings-error-predicate.json in the repro
+state directory. This is real error-recognition proof, not a new completed refresh.
+
+Validation:73 focused adapter/CLI/governor tests and full typecheck pass; scoped
+Biome, docs:list and whitespace pass. Primary Standards/Spec review against
+18cbb4d39 finds no blocker: exact visible error recognition tightens fail-closed
+behavior and does not weaken attribution or permit a retry. Memory forbidden: no
+explicit request to save memory.

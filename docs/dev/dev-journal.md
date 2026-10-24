@@ -1,3 +1,12 @@
+## 2026-10-24 — Issue368 terminal plugin-settings error
+
+Retained utility tab shows “Couldn't load plugin settings” and Try again, rather
+than connected accounts/Refresh tools. Reproduce with exact text at the public
+adapter seam: generic post-read timeout before repair, immediate explicit
+unconfirmed/no-retry after repair. Patched predicate recognizes the actual
+retained DOM read-only. No new live refresh or Try again action. Exact historical
+error transition was not captured; current error and timeout mechanism are proved.
+
 ## 2026-10-24 — Issue368 timing loop red/green
 
 One captured live attempt returns690-second timeout despite HTTP200/31-action
