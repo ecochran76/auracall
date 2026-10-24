@@ -12062,6 +12062,7 @@ function createOperatorBrowserDashboardHtml(
         ['Leases', escapeHtml('active=' + Number(leaseStates.active || 0) + ' idle=' + Number(leaseStates.idle || 0) + ' retiring=' + Number(leaseStates.retiring || 0) + ' lost=' + Number(leaseStates.lost || 0))],
         ['Workloads', escapeHtml('conversation=' + Number(workloads.conversations || 0) + ' new=' + Number(workloads.newConversations || 0) + ' live-follow=' + Number(workloads.liveFollow || 0) + ' utility=' + Number(workloads.ephemeral || 0))],
         ...(grokControls ? [
+          ['Grok backend requests', escapeHtml('limit=' + (grokControls.maxBackendRequestsPerMinute == null ? 'unconfigured' : grokControls.maxBackendRequestsPerMinute) + ' used=' + Number(grokControls.usedBackendRequestsLastMinute || 0) + ' remaining=' + (grokControls.remainingBackendRequests == null ? 'unlimited' : grokControls.remainingBackendRequests) + ' wait limit=' + Number(grokControls.backendRequestBudgetWaitMs || 0) + 'ms')],
           ['Grok operation limit', escapeHtml(grokControls.maxOperationsPerMinute == null ? 'Unconfigured' : String(grokControls.maxOperationsPerMinute) + '/minute')],
           ['Grok operation capacity', escapeHtml('remaining=' + (grokControls.remainingOperations == null ? 'unlimited' : grokControls.remainingOperations) + ' wait limit=' + Number(grokControls.operationBudgetWaitMs || 0) + 'ms')],
           ['Grok admission', escapeHtml((grokControls.blockedReason || 'clear') + ' next=' + (grokControls.nextEligibleAt || 'none'))],

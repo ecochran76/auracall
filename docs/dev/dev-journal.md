@@ -1,3 +1,22 @@
+## 2026-10-24 — Grok #400 source acceptance and wave2
+
+175 focused tests pass after one bounded review/remediation;2 explicit public
+bootstrap variants also pass. Build/typecheck and targeted lint pass. An unset
+local request ceiling still meters and honors shared account contributions.
+Bootstrap failure retains exact created-target cleanup. Separate operation and
+request counts remain visible. #401 primary, #402 and #404 independent workers
+are now dependency-ready. No live mutation, install or deployment is included.
+
+## 2026-10-24 — Grok #400 request admission candidate
+
+#399 merged via PR415 and tracker closure verified. Captured homepage request-path
+metadata without headers/bodies; separated REST, telemetry and static categories.
+No numeric provider ceiling inferred. Extend owned guarded interception to Grok
+REST with explicit operator caps, request/operation status separation, native429
+fencing, duplicate exclusion and cross-process restrictive limits. Public bootstrap
+red/green now establishes custody before provider navigation. Plan0453 remains
+OPEN with the original18:13:30Z stop/checkpoint deadline.
+
 ## 2026-10-24 — Issue368 recovery succeeded; cleanup acceptance blocked
 
 One settings reload recovers the exact OpenSign app/endpoint, connected-account

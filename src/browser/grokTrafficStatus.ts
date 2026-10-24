@@ -3,15 +3,26 @@ import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdent
 import {
 	resolveGrokOperationsPerMinute,
 	resolveGrokOperationBudgetWaitMs,
+	resolveGrokBackendRequestsPerMinute,
+	resolveGrokBackendRequestBudgetWaitMs,
 } from "../runtime/grokTrafficLimits.js";
 
 export interface GrokTrafficControlStatus {
 	maxOperationsPerMinute: number | null;
+	maxBackendRequestsPerMinute: number | null;
+	backendRequestBudgetWaitMs: number;
+	usedBackendRequestsLastMinute: number;
+	remainingBackendRequests: number | null;
+	backendAdmissionEnabled: boolean;
 	operationBudgetWaitMs: number;
 	usedOperationsLastMinute: number;
 	remainingOperations: number | null;
 	nextEligibleAt: string | null;
-	blockedReason: "provider-warning" | "minute-interaction-limit" | null;
+	blockedReason:
+		| "provider-warning"
+		| "minute-interaction-limit"
+		| "minute-backend-request-limit"
+		| null;
 }
 
 export function summarizeGrokTrafficControls(input: {
@@ -71,6 +82,31 @@ export function summarizeGrokTrafficControls(input: {
 		.sort(
 			(a, b) => Date.parse(a.startedAt ?? a.reservedAt) - Date.parse(b.startedAt ?? b.reservedAt),
 		);
+	const requests = recent
+		.filter(
+			(item) =>
+				item.interactionClass === "backend-request" &&
+				(item.state === "reserved" ||
+					item.state === "started" ||
+					((item.state === "settled" || item.state === "frozen") && item.effectState !== "none")),
+		)
+		.sort(
+			(a, b) => Date.parse(a.startedAt ?? a.reservedAt) - Date.parse(b.startedAt ?? b.reservedAt),
+		);
+	const configuredBackendLimit = resolveGrokBackendRequestsPerMinute(input.config, profile);
+	const backendLimits = [
+		configuredBackendLimit,
+		...recent.map((item) => item.maxBackendRequestsPerMinute),
+	].filter((n): n is number => typeof n === "number");
+	const backendLimit = backendLimits.length ? Math.min(...backendLimits) : null;
+	const backendLimited = backendLimit !== null && requests.length >= backendLimit;
+	const backendRecord =
+		backendLimited && backendLimit !== null ? requests[requests.length - backendLimit] : undefined;
+	const backendUntil = backendRecord
+		? new Date(
+				Date.parse(backendRecord.startedAt ?? backendRecord.reservedAt) + 60_001,
+			).toISOString()
+		: null;
 	const warning = input.warnings.filter(
 		(item) => item.provider === "grok" && matchesAccount(item.tenantKey),
 	);
@@ -88,7 +124,16 @@ export function summarizeGrokTrafficControls(input: {
 				Date.parse(capacityRecord.startedAt ?? capacityRecord.reservedAt) + 60_001,
 			).toISOString()
 		: null;
+	const eligibilityTimes = [warningUntil, capacityUntil, backendUntil].filter(
+		(value): value is string => value !== null,
+	);
 	return {
+		maxBackendRequestsPerMinute: backendLimit,
+		backendRequestBudgetWaitMs: resolveGrokBackendRequestBudgetWaitMs(input.config, profile),
+		usedBackendRequestsLastMinute: requests.length,
+		remainingBackendRequests:
+			backendLimit === null ? null : Math.max(0, backendLimit - requests.length),
+		backendAdmissionEnabled: true,
 		maxOperationsPerMinute: limit,
 		operationBudgetWaitMs: resolveGrokOperationBudgetWaitMs(input.config, profile),
 		usedOperationsLastMinute: counted.length,
@@ -96,13 +141,15 @@ export function summarizeGrokTrafficControls(input: {
 		nextEligibleAt:
 			warning.length && warningUntil === null
 				? null
-				: warningUntil && capacityUntil
-					? new Date(Math.max(Date.parse(warningUntil), Date.parse(capacityUntil))).toISOString()
-					: (warningUntil ?? capacityUntil),
+				: eligibilityTimes.length
+					? new Date(Math.max(...eligibilityTimes.map(Date.parse))).toISOString()
+					: null,
 		blockedReason: warning.length
 			? "provider-warning"
 			: limited
 				? "minute-interaction-limit"
-				: null,
+				: backendLimited
+					? "minute-backend-request-limit"
+					: null,
 	};
 }

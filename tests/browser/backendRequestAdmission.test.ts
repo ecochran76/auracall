@@ -119,7 +119,11 @@ vi.mock("chrome-remote-interface", () => ({
 					for (let index = 0; index < fixture.page.bootstrapRequests; index++)
 						await state.handler({
 							requestId: `bootstrap-${index}`,
-							request: { url: "https://chatgpt.com/backend-api/conversations" },
+							request: {
+								url: fixture.page.url.startsWith("https://grok.com")
+									? "https://grok.com/rest/products"
+									: "https://chatgpt.com/backend-api/conversations",
+							},
 						});
 					return { frameId: "fixture-frame" };
 				}
@@ -127,6 +131,13 @@ vi.mock("chrome-remote-interface", () => ({
 					const expression = parameters.expression ?? "";
 					let value: unknown = [];
 					if (expression === "location.href") value = fixture.page.url;
+					else if (expression.includes("const identity = { id: null"))
+						value = {
+							email: "operator@example.test",
+							name: "Fixture",
+							source: "app",
+							guestAuthCta: false,
+						};
 					else if (expression.includes("/api/auth/session")) {
 						fixture.page.beforeIdentity?.();
 						value = { user: { id: "fixture-user", email: "operator@example.test" } };
@@ -2328,6 +2339,165 @@ test.each([
 		);
 	} finally {
 		await client?.close().catch(() => undefined);
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
+test.each([
+	"budget",
+	"warning",
+	"foreign-warning",
+	"uncertain",
+	"cancelled",
+])("Grok owned requests share account capacity and preserve %s", async (mode) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-grok-request-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	setCdpCommandAdmissionResolver(async ({ port }) => {
+		const gate = new DesktopControlGate(`grok-${port}`);
+		return {
+			run: (_command, effect) => gate.withAutomation("generation", effect),
+			hold: async () => {
+				const held = await gate.holdAutomation("generation");
+				return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+			},
+		};
+	});
+	const clients: Array<Awaited<ReturnType<typeof CDP>>> = [];
+	const cancellation = new AbortController();
+	try {
+		for (let index = 0; index < 2; index++) {
+			const client = await CDP({ host: "127.0.0.1", port: 45300 + index });
+			clients.push(client);
+			const factory = createConfiguredProviderTrafficAuthorityFactory({
+				userConfig: {
+					auracallProfile: `grok-${index}`,
+					services: {
+						grok: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 1 },
+					},
+				} as never,
+				provider: "grok",
+				managedBrowserProfile: `/fixture/grok-${index}`,
+				mutationAudit: async () => undefined,
+				baseOptions: { abortSignal: index === 1 ? cancellation.signal : undefined },
+			});
+			await annotateClientMutationContext(
+				client,
+				{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
+				"provider:grok",
+				`grok-target-${index}`,
+			);
+		}
+		const first = fixture.clients[0],
+			second = fixture.clients[1];
+		if (!first.handler || !second.handler) throw new Error("Missing Grok request admission");
+		const event = { requestId: "owned-1", request: { url: "https://grok.com/rest/products" } };
+		if (mode === "uncertain") first.failContinuation = true;
+		await Promise.all([first.handler(event), first.handler(event)]);
+		if (mode === "warning" || mode === "foreign-warning")
+			await second.responseHandler?.({
+				response: {
+					url:
+						mode === "warning"
+							? "https://grok.com/rest/products"
+							: "https://example.test/rest/products",
+					status: 429,
+				},
+			});
+		if (mode === "cancelled") cancellation.abort();
+		await second.handler({
+			requestId: "owned-2",
+			request: { url: "https://grok.com/rest/products" },
+		});
+		await first.handler({
+			requestId: "foreign",
+			request: { url: "https://example.test/rest/products" },
+		});
+		expect(first.requests).toEqual(["owned-1", "foreign"]);
+		expect(second.requests).toEqual([]);
+		expect(second.failures).toEqual(["owned-2"]);
+		expect(first.requests.filter((id) => id === "owned-1")).toHaveLength(1);
+		const runtime = createBrowserTabConcurrencyRuntime({
+			auracallProfile: "grok-0",
+			services: {
+				grok: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 1 },
+			},
+		} as never);
+		const rows = await runtime.ledger?.list();
+		expect(rows?.filter((row) => row.interactionClass === "backend-request")).toHaveLength(1);
+		if (mode === "uncertain") expect(rows?.[0].effectState).toBe("outcome-unknown");
+		const warnings = await runtime.ledger?.listActiveProviderWarnings({
+			now: new Date().toISOString(),
+		});
+		expect(warnings?.length).toBe(mode === "warning" ? 1 : 0);
+		expect((await runtime.readStatus()).providerControls?.grok).toMatchObject({
+			usedBackendRequestsLastMinute: 1,
+			remainingBackendRequests: 0,
+			maxBackendRequestsPerMinute: 1,
+			usedOperationsLastMinute: 0,
+		});
+	} finally {
+		await Promise.all(clients.map((client) => client.close().catch(() => undefined)));
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
+test.each([true,false])("public Grok identity bootstrap owns request admission before first provider navigation; local ceiling=%s", async (configuredCeiling) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-grok-bootstrap-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	fixture.page = {
+		url: "about:blank",
+		navigations: [],
+		bootstrapRequests: 1,
+		payloadReads: 0,
+		closeAttempts: 0,
+	};
+	const gate = new DesktopControlGate("grok-bootstrap");
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect) => gate.withAutomation("generation", effect),
+		hold: async () => {
+			const held = await gate.holdAutomation("generation");
+			return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+		},
+	}));
+	const resolveServiceTarget = vi.fn(async () => ({
+		host: "127.0.0.1",
+		port: 45350,
+		browserProfile: "fixture",
+		browserProcessId: 1234,
+		managedBrowserProfile: "/fixture/grok-bootstrap",
+		tab: { targetId: "grok-bootstrap", url: "about:blank" },
+	}));
+	try {
+		const { GrokService } = await import("../../src/browser/llmService/providers/grokService.js");
+		const config = {
+			auracallProfile: "fixture",
+			services: {
+				grok: { identity: { email: "operator@example.test" }, ...(configuredCeiling ? {maxBackendRequestsPerMinute:1} : {}) },
+			},
+		} as never;
+		const service = GrokService.create(config, {
+			browserService: { getConfig: () => ({}), resolveServiceTarget } as never,
+		});
+		await expect(service.getUserIdentity()).resolves.toMatchObject({
+			email: "operator@example.test",
+		});
+		expect(resolveServiceTarget).toHaveBeenCalledWith(
+			expect.objectContaining({ configuredUrl: "about:blank" }),
+		);
+		expect(fixture.page.navigations).toEqual(["https://grok.com/"]);
+		expect(
+			(await createBrowserTabConcurrencyRuntime(config).ledger?.list())?.filter(
+				(row) => row.interactionClass === "backend-request",
+			),
+		).toHaveLength(1);
+	} finally {
+		fixture.page = undefined;
 		setCdpCommandAdmissionResolver(undefined);
 		setAuracallHomeDirOverrideForTest(null);
 		await rm(home, { recursive: true, force: true });

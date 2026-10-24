@@ -18,7 +18,12 @@ import {
 	resolveChatgptBackendRequestBudgetWaitMs,
 	resolveChatgptInteractionsPerMinute,
 } from "../runtime/tenantExecutionLimits.js";
-import { resolveGrokOperationsPerMinute, resolveGrokOperationBudgetWaitMs } from "../runtime/grokTrafficLimits.js";
+import {
+	resolveGrokOperationsPerMinute,
+	resolveGrokOperationBudgetWaitMs,
+	resolveGrokBackendRequestsPerMinute,
+	resolveGrokBackendRequestBudgetWaitMs,
+} from "../runtime/grokTrafficLimits.js";
 import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import { probeGrokRateLimitWarning } from "./grokProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
@@ -42,21 +47,52 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 	now?: () => Date;
 	backendRequestLimit?: number;
 }): ProviderTrafficAuthorityFactory {
-	const backendRequestLimit =
+	let backendRequestLimit =
 		input.backendRequestLimit ??
 		(input.provider === "chatgpt"
 			? resolveChatgptBackendRequestsPerMinute(
 					input.userConfig as Record<string, unknown>,
 					input.userConfig.auracallProfile?.trim() || "default",
 				)
-			: undefined);
-	const budgetWaitTimeoutMs = resolveChatgptBackendRequestBudgetWaitMs(
-		input.userConfig as Record<string, unknown>,
-		input.userConfig.auracallProfile?.trim() || "default",
-	);
+			: input.provider === "grok"
+				? resolveGrokBackendRequestsPerMinute(
+						input.userConfig as Record<string, unknown>,
+						input.userConfig.auracallProfile?.trim() || "default",
+					)
+				: undefined);
+	if (input.provider === "grok") {
+		const configuredLimit = resolveGrokBackendRequestsPerMinute(
+			input.userConfig as Record<string, unknown>,
+			input.userConfig.auracallProfile?.trim() || "default",
+		);
+		if (configuredLimit !== undefined)
+			backendRequestLimit = Math.min(backendRequestLimit ?? configuredLimit, configuredLimit);
+	}
+	const budgetWaitTimeoutMs =
+		input.provider === "grok"
+			? resolveGrokBackendRequestBudgetWaitMs(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				)
+			: resolveChatgptBackendRequestBudgetWaitMs(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				);
 	validateBackendRequestLimit(backendRequestLimit);
-	const grokOperationLimit = input.provider === "grok" ? resolveGrokOperationsPerMinute(input.userConfig as Record<string, unknown>, input.userConfig.auracallProfile?.trim() || "default") : null;
-	const grokOperationWaitMs = input.provider === "grok" ? resolveGrokOperationBudgetWaitMs(input.userConfig as Record<string, unknown>, input.userConfig.auracallProfile?.trim() || "default") : 0;
+	const grokOperationLimit =
+		input.provider === "grok"
+			? resolveGrokOperationsPerMinute(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				)
+			: null;
+	const grokOperationWaitMs =
+		input.provider === "grok"
+			? resolveGrokOperationBudgetWaitMs(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				)
+			: 0;
 	const now = input.now ?? (() => new Date());
 	const runtime = createBrowserTabConcurrencyRuntime(input.userConfig);
 	if (!runtime.registry || !runtime.ledger) {
@@ -83,14 +119,18 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 
 	return {
 		backendRequestAdmissionEnabled:
-			input.provider === "chatgpt" && backendRequestLimit !== undefined,
+			input.provider === "grok" ||
+			(input.provider === "chatgpt" && backendRequestLimit !== undefined),
 		async acquire({ targetId }) {
 			const operationId = `provider-traffic-${randomUUID()}`;
 			const workloadId = `provider-client:${operationId}`;
 			const reserved = await registry.reserve({
 				scope,
 				targetId: requireValue(targetId, "target ID"),
-				workload: { kind: "ephemeral", operationId: input.provider === "grok" ? "grok-serialized-utility" : operationId },
+				workload: {
+					kind: "ephemeral",
+					operationId: input.provider === "grok" ? "grok-serialized-utility" : operationId,
+				},
 				operationId,
 				now: now().toISOString(),
 				idleTtlMs: PROVIDER_TRAFFIC_IDLE_TTL_MS,
@@ -114,7 +154,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 				}
 			};
 			const backendRequests =
-				input.provider === "chatgpt" && backendRequestLimit !== undefined
+				input.provider === "grok" ||
+				(input.provider === "chatgpt" && backendRequestLimit !== undefined)
 					? createOwnedBackendRequestAuthority({
 							ledger,
 							scope: {
@@ -127,6 +168,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 							operationId,
 							tabLeaseId: reserved.value.lease.leaseId,
 							backendRequestLimit,
+							observeWithoutLocalCeiling: input.provider === "grok",
 							budgetWaitTimeoutMs,
 							abortSignal: input.baseOptions.abortSignal,
 							assertOwnedLease,
@@ -175,12 +217,18 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 				settleInteraction: (settlement) => interactionGovernor.finish(settlement),
 				assertLease: assertOwnedLease,
 				admitBackendRequest:
-					input.provider === "chatgpt" && backendRequestLimit !== undefined
+					input.provider === "grok" ||
+					(input.provider === "chatgpt" && backendRequestLimit !== undefined)
 						? backendRequests?.admit
 						: undefined,
-				probeWarning: input.provider === "chatgpt" ? probeChatgptRateLimitWarning : input.provider === "grok" ? probeGrokRateLimitWarning : undefined,
+				probeWarning:
+					input.provider === "chatgpt"
+						? probeChatgptRateLimitWarning
+						: input.provider === "grok"
+							? probeGrokRateLimitWarning
+							: undefined,
 				persistWarning:
-					(input.provider === "chatgpt" || input.provider === "grok")
+					input.provider === "chatgpt" || input.provider === "grok"
 						? async (warning) => {
 								const observedAt = now();
 								await ledger.recordProviderWarning({
@@ -195,13 +243,14 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 									observedAt: observedAt.toISOString(),
 									cooldownUntil: warning.cooldownUntil,
 								});
-								if (input.provider === "chatgpt") await recordChatgptRateLimitDetection({
-									profileName: runtimeProfileId,
-									managedProfileDir: managedBrowserProfile,
-									action: `provider-traffic:${operationId}`,
-									reason: warning.reason,
-									now: observedAt.getTime(),
-								});
+								if (input.provider === "chatgpt")
+									await recordChatgptRateLimitDetection({
+										profileName: runtimeProfileId,
+										managedProfileDir: managedBrowserProfile,
+										action: `provider-traffic:${operationId}`,
+										reason: warning.reason,
+										now: observedAt.getTime(),
+									});
 							}
 						: undefined,
 			});

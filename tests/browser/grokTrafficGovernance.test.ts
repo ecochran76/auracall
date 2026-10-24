@@ -12,9 +12,46 @@ vi.mock("../../packages/browser-service/src/chromeLifecycle.js", async (original
 	connectToChromeTarget: connection.connect,
 }));
 
+const rawClient = vi.hoisted(() => ({ value: undefined as unknown }));
+vi.mock("chrome-remote-interface", () => ({ default: vi.fn(async () => rawClient.value) }));
+async function guardedFixtureClient(value: Record<string, unknown>) {
+	const { default: CDP, setCdpCommandAdmissionResolver } = await import(
+		"../../packages/browser-service/src/guardedCdp.js"
+	);
+	const { DesktopControlGate } = await import("../../src/browser/service/desktopControlGate.js");
+	const gate = new DesktopControlGate("grok-fixture");
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect) => gate.withAutomation("generation", effect),
+		hold: async () => {
+			const held = await gate.holdAutomation("generation");
+			return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+		},
+	}));
+	const client = {
+		...value,
+		send: async () => undefined,
+		Fetch: {
+			enable: async () => undefined,
+			disable: async () => undefined,
+			requestPaused: () => () => undefined,
+		},
+		Network: {
+			enable: async () => undefined,
+			responseReceived: () => () => undefined,
+			loadingFailed: () => () => undefined,
+		},
+	};
+	rawClient.value = client;
+	return CDP({ host: "127.0.0.1", port: 9222 });
+}
+
 const roots: string[] = [];
 afterEach(async () => {
 	setAuracallHomeDirOverrideForTest(null);
+	const { setCdpCommandAdmissionResolver } = await import(
+		"../../packages/browser-service/src/guardedCdp.js"
+	);
+	setCdpCommandAdmissionResolver(undefined);
 	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
@@ -88,7 +125,7 @@ test("Grok owned read preflight freezes a visible limit before later account eff
 	};
 	await expect(
 		annotateClientMutationContext(
-			client as never,
+			await guardedFixtureClient(client),
 			{
 				providerTrafficRequired: true,
 				providerTrafficAuthorityFactory: factory("first"),
@@ -258,29 +295,31 @@ test("GrokService identity read consumes shared discovery capacity before probin
 	setAuracallHomeDirOverrideForTest(root);
 	const { GrokService } = await import("../../src/browser/llmService/providers/grokService.js");
 	let identityReads = 0;
-	connection.connect.mockImplementation(async () => ({
-		Page: { enable: async () => undefined },
-		Runtime: {
-			enable: async () => undefined,
-			evaluate: async ({ expression }: { expression: string }) => {
-				if (expression.includes("const identity = { id: null")) {
-					identityReads++;
-					return {
-						result: {
-							value: {
-								email: "operator@example.test",
-								name: "Fixture",
-								source: "app",
-								guestAuthCta: false,
+	connection.connect.mockImplementation(async () =>
+		guardedFixtureClient({
+			Page: { enable: async () => undefined },
+			Runtime: {
+				enable: async () => undefined,
+				evaluate: async ({ expression }: { expression: string }) => {
+					if (expression.includes("const identity = { id: null")) {
+						identityReads++;
+						return {
+							result: {
+								value: {
+									email: "operator@example.test",
+									name: "Fixture",
+									source: "app",
+									guestAuthCta: false,
+								},
 							},
-						},
-					};
-				}
-				return { result: { value: null } };
+						};
+					}
+					return { result: { value: null } };
+				},
 			},
-		},
-		close: async () => undefined,
-	}));
+			close: async () => undefined,
+		}),
+	);
 	const service = GrokService.create(
 		{
 			auracallProfile: "fixture",
@@ -357,26 +396,30 @@ test("a higher-cap Grok runtime cannot bypass a lower configured ceiling for the
 	}
 });
 
-test("separate OS processes cannot bypass Grok account capacity with a higher local cap", async () => {
+test.each([
+	"operations",
+	"requests",
+	"requests-unset",
+])("separate OS processes cannot bypass Grok %s capacity with a higher local cap", async (budget) => {
 	const root = await mkdtemp(path.join(os.tmpdir(), "grok-processes-"));
 	roots.push(root);
 	const { execFile } = await import("node:child_process");
 	const { promisify } = await import("node:util");
 	const execute = promisify(execFile);
 	const source = `
+    import { createHash } from "node:crypto";
     import path from 'node:path';
     import { createConfiguredProviderTrafficAuthorityFactory } from './src/browser/configuredProviderTrafficAuthority.ts';
     const name = process.env.GROK_FIXTURE_PROFILE;
     const authority = await createConfiguredProviderTrafficAuthorityFactory({
-      userConfig: { auracallProfile: name, services: { grok: { identity: { email: 'operator@example.test' }, liveFollow: { maxBrowserInteractionsPerMinute: Number(process.env.GROK_FIXTURE_CAP) } } } },
+      userConfig: { auracallProfile: name, services: { grok: { identity: { email: 'operator@example.test' }, ...(process.env.GROK_FIXTURE_BUDGET.startsWith('requests') ? (process.env.GROK_FIXTURE_CAP === 'unset' ? {} : { maxBackendRequestsPerMinute: Number(process.env.GROK_FIXTURE_CAP) }) : {liveFollow: { maxBrowserInteractionsPerMinute: Number(process.env.GROK_FIXTURE_CAP) }}) } } },
       provider: 'grok', managedBrowserProfile: path.join(process.env.AURACALL_HOME_DIR, name),
       mutationAudit: async () => undefined, baseOptions: {},
     }).acquire({ targetId: name });
     try {
-      const action = await authority.governor.begin({ kind: 'provider-read', interactionClass: 'generic', source: 'fixture:process' });
-      await action.settle({ outcome: 'succeeded' });
+      if (process.env.GROK_FIXTURE_BUDGET.startsWith('requests')) await authority.governor.admitBackendRequest('sha256:'+createHash('sha256').update(name).digest('hex'),async()=>undefined); else {const action = await authority.governor.begin({ kind: 'provider-read', interactionClass: 'generic', source: 'fixture:process' }); await action.settle({ outcome: 'succeeded' });}
       process.stdout.write('admitted');
-    } catch (error) { process.stdout.write(error.reason === 'minute-interaction-limit' ? 'denied-by-shared-cap' : 'unexpected-error'); }
+    } catch (error) { process.stdout.write((error.reason === 'minute-interaction-limit' || error.name === 'ProviderBackendRequestBudgetExceededError') ? 'denied-by-shared-cap' : 'unexpected-error'); }
     finally { await authority.close(); }
   `;
 	const run = (profile: string, cap: string) =>
@@ -386,12 +429,15 @@ test("separate OS processes cannot bypass Grok account capacity with a higher lo
 				...process.env,
 				AURACALL_HOME_DIR: root,
 				GROK_FIXTURE_PROFILE: profile,
+				GROK_FIXTURE_BUDGET: budget,
 				GROK_FIXTURE_CAP: cap,
 			},
 			timeout: 15_000,
 		});
 	expect((await run("first", "1")).stdout).toBe("admitted");
-	expect((await run("higher", "9")).stdout).toBe("denied-by-shared-cap");
+	expect((await run("higher", budget === "requests-unset" ? "unset" : "9")).stdout).toBe(
+		"denied-by-shared-cap",
+	);
 });
 
 test("serialized Grok reads refuse a second target on the same managed browser", async () => {
@@ -438,17 +484,19 @@ test("exhausted feature discovery never switches Imagine mode", async () => {
 	});
 	await first.settle({ outcome: "succeeded" });
 	let switches = 0;
-	connection.connect.mockImplementation(async () => ({
-		Page: { enable: async () => undefined },
-		Runtime: {
-			enable: async () => undefined,
-			evaluate: async ({ expression }: { expression: string }) => {
-				if (expression.includes("const action = 'grok-imagine-video-mode'")) switches++;
-				return { result: { value: true } };
+	connection.connect.mockImplementation(async () =>
+		guardedFixtureClient({
+			Page: { enable: async () => undefined },
+			Runtime: {
+				enable: async () => undefined,
+				evaluate: async ({ expression }: { expression: string }) => {
+					if (expression.includes("const action = 'grok-imagine-video-mode'")) switches++;
+					return { result: { value: true } };
+				},
 			},
-		},
-		close: async () => undefined,
-	}));
+			close: async () => undefined,
+		}),
+	);
 	const { createGrokAdapter } = await import("../../src/browser/providers/grokAdapter.js");
 	const getFeatureSignature = createGrokAdapter().getFeatureSignature;
 	if (!getFeatureSignature) throw new Error("Missing Grok feature discovery");

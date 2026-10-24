@@ -6,6 +6,7 @@ import { describe, expect, test, vi } from 'vitest';
 const grokRunPromptMocks = vi.hoisted(() => ({
   cdpList: vi.fn(),
   cdpClose: vi.fn(),
+  cdpNew: vi.fn(),
   connectToChromeTarget: vi.fn(),
   openOrReuseChromeTarget: vi.fn(),
 }));
@@ -14,6 +15,7 @@ vi.mock('chrome-remote-interface', () => ({
   default: {
     List: grokRunPromptMocks.cdpList,
     Close: grokRunPromptMocks.cdpClose,
+    New: grokRunPromptMocks.cdpNew,
   },
 }));
 
@@ -2221,3 +2223,14 @@ function createFakeGrokImaginePromptClient(initialMode: 'Image' | 'Video') {
     close: vi.fn(async () => undefined),
   };
 }
+
+
+test('failed owned Grok bootstrap closes only its newly allocated target', async () => {
+ grokRunPromptMocks.cdpList.mockResolvedValue([]);
+ grokRunPromptMocks.cdpNew.mockResolvedValue({id:'grok-owned-blank',type:'page',url:'about:blank'});
+ grokRunPromptMocks.cdpClose.mockReset();grokRunPromptMocks.cdpClose.mockResolvedValue(undefined);
+ grokRunPromptMocks.connectToChromeTarget.mockRejectedValue(new Error('fixture attach failed'));
+ const adapter=createGrokAdapter();if(!adapter.getFeatureSignature)throw new Error('Missing feature signature');
+ await expect(adapter.getFeatureSignature({host:'127.0.0.1',port:9222,providerTrafficRequired:true,providerTrafficAuthorityFactory:{backendRequestAdmissionEnabled:true,acquire:async()=>{throw new Error('unexpected lease before attach')}}})).rejects.toThrow('fixture attach failed');
+ expect(grokRunPromptMocks.cdpClose).toHaveBeenCalledWith({host:'127.0.0.1',port:9222,id:'grok-owned-blank'});
+});

@@ -11,7 +11,7 @@ import {
 } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type { ChromeClient } from "../types.js";
 
-export async function attachOwnedChatgptBackendRequestAdmission(
+export async function attachOwnedProviderBackendRequestAdmission(
 	client: ChromeClient,
 	governor: ProviderTrafficGovernor,
 	options?: { abortSignal?: AbortSignal },
@@ -19,6 +19,14 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	const admit = governor.admitBackendRequest?.bind(governor);
 	if (!admit || !governor.attribution.targetId)
 		throw new Error("Owned backend request admission is unavailable.");
+	const provider = governor.attribution.provider;
+	const patterns =
+		provider === "grok"
+			? ["https://grok.com/rest/*"]
+			: provider === "chatgpt"
+				? ["https://chatgpt.com/backend-api/*", "https://chat.openai.com/backend-api/*"]
+				: [];
+	if (!patterns.length) throw new Error("Owned backend request provider is unsupported.");
 	const hold = await holdCdpCommandAdmission(client, options);
 	const namespace = randomUUID();
 	const requests = new Map<string, Promise<void>>();
@@ -109,8 +117,10 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 				}
 				const url = new URL(event.request.url);
 				if (
-					!["https://chatgpt.com", "https://chat.openai.com"].includes(url.origin) ||
-					!url.pathname.startsWith("/backend-api/")
+					!(provider === "grok"
+						? url.origin === "https://grok.com" && url.pathname.startsWith("/rest/")
+						: ["https://chatgpt.com", "https://chat.openai.com"].includes(url.origin) &&
+							url.pathname.startsWith("/backend-api/"))
 				) {
 					await client.Fetch.continueRequest({ requestId: event.requestId });
 					return;
@@ -232,10 +242,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	};
 	try {
 		await client.Fetch.enable({
-			patterns: [
-				{ urlPattern: "https://chatgpt.com/backend-api/*", requestStage: "Request" },
-				{ urlPattern: "https://chat.openai.com/backend-api/*", requestStage: "Request" },
-			],
+			patterns: patterns.map((urlPattern) => ({ urlPattern, requestStage: "Request" })),
 		});
 	} catch (error) {
 		try {

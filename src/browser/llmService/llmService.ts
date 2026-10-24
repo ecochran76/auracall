@@ -872,9 +872,10 @@ export abstract class LlmService {
 			? (overrides.configuredUrl ?? null)
 			: this.getConfiguredUrl();
 		const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
+		const grokOwnedBootstrap = this.providerId === "grok";
 		const resolvedTarget = await this.browserService.resolveServiceTarget({
 			serviceId: this.providerId,
-			configuredUrl,
+			configuredUrl: grokOwnedBootstrap ? "about:blank" : configuredUrl,
 			ensurePort: overrides.tabTargetId || hasExplicitEndpoint ? false : options.ensurePort,
 			abortSignal: overrides.abortSignal,
 			onStage: options.onPreflightStage,
@@ -961,7 +962,7 @@ export abstract class LlmService {
 				resolvedOptions.providerTrafficAuthorityFactory =
 					overrides.providerTrafficAuthorityFactory ??
 					createConfiguredProviderTrafficAuthorityFactory({
-						userConfig: this.userConfig,
+						userConfig: this.providerId === "grok" ? {...this.userConfig,auracallProfile:this.resolveActiveProfileName() ?? "default"} : this.userConfig,
 						mutationAudit,
 						provider: this.providerId,
 						managedBrowserProfile,
