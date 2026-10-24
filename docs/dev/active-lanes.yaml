@@ -15,7 +15,7 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: settings-recovered-final-acceptance-owned-cleanup-unknown
+    validation_status: read-only-probe-passes-old-unknown-preserved-lease-retired
     integration_receipt: ae8a95cc744a0627a1e97e1fce5d07faf2be887d
     updated_at: 2026-10-23
   - id: P87-IQ2
