@@ -49,5 +49,9 @@ is red with the exact error. Minimal repair reaches governed target reuse; fixtu
 transport was completed for that real reuse branch. 91 focused command/service/utility checks and 103 backend-admission/utility
 checks pass in separate overlapping selections. Mandatory ungoverned creation
 still raises the original error. Typecheck, build, scoped Biome, docs:list and whitespace checks pass.
-Installed qualification remains pending. Installed target selection remains pending.
+PR390 mergedfb026941f; CLI installation and compiled serialized-utility contract
+pass. API PID1777322 and its adopted clipboard helper remain unchanged. See
+[installed CLI boundary](../notes/2026-10-23-issue368-cli-governor.md).
+Provider discovery/catalog qualification remains pending the exact app/runtime
+target requested from the operator; no provider mutation occurred. Installed target selection remains pending.
 Memory disposition: forbidden; user has not requested saving memory.

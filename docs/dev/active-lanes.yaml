@@ -5,17 +5,18 @@ lanes:
     objective: Govern first-tab developer-app utility acquisition
     work_items: [ecochran76/auracall#368]
     plan: docs/dev/plans/0451-2026-10-23-app-discovery-governor.md
-    plan_ref: refs/heads/fix/issue368-app-discovery-governor
+    plan_ref: refs/remotes/origin/main
     branch: fix/issue368-app-discovery-governor
     target: main
     plan_state: OPEN
-    custody_state: INTEGRATION_READY
-    checkpoint: 214c03d2c
+    custody_state: INTEGRATED
+    checkpoint: 214c03d2cd47dc303d76dbba3a19a89ba1a77d22
     remote_ref: refs/remotes/origin/fix/issue368-app-discovery-governor
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: source-accepted-live-target-pending
+    validation_status: cli-contract-accepted-live-target-pending
+    integration_receipt: fb026941f6c589f6297d3abb241a7d71ae4a312b
     updated_at: 2026-10-23
   - id: P87-IQ2
     objective: Honor configured admission wait while reading refresh settings

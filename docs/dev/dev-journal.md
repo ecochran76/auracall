@@ -27,8 +27,12 @@ Plan0451 / fix/issue368-app-discovery-governor. Public command through real
 serialized service dispatch reproduces exact connect-tab missing-governor error.
 Request target custody for explicit serialized utility commands through the
 existing governed ephemeral-tab pipeline. Prompt mode, affinity identity rules
-and mandatory guard remain unchanged. Live refresh target requested; no provider
-mutation or warning clearance performed.
+and mandatory guard remain unchanged. PR390 mergedfb026941f; installed CLI issue368-fb026941f passes compiled
+serialized utility contract and app-list help. Concurrent clipboard PR388/389
+included and active helper byte-equivalent; API PID1777322 not restarted.
+91 consumer and 103 backend checks pass in overlapping selections, as do build
+and typecheck. Live target requested; no provider discovery/catalog mutation
+or warning clearance. See [CLI boundary](notes/2026-10-23-issue368-cli-governor.md).
 
 ## 2026-10-23 — Operator Browser Recall for borrowed profiles (#240)
 
