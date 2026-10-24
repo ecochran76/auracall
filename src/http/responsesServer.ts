@@ -6928,6 +6928,7 @@ function createLiveFollowTargetRollup(
 			latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
 			materializationOutcome: summarizeLiveFollowMaterializationOutcome(operation),
 			scrapeBudget: entry.metadataEvidence?.scrapeBudget ?? null,
+			grokIndex: entry.metadataEvidence?.grokIndex ?? null,
 			accountLibraryCatchup,
 			metadataCounts: entry.metadataCounts,
 			metadataCountEvidence: entry.metadataEvidence?.countEvidence ?? null,
@@ -14245,6 +14246,7 @@ function createOperatorBrowserDashboardHtml(
         nextAttemptAt: target.nextAttemptAt || null,
         completeness: target.mirrorCompleteness || null,
         counts: target.metadataCounts || null,
+        grokIndex: target.grokIndex || null,
       };
     }
 

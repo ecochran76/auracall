@@ -1,7 +1,7 @@
-import { cssClassContains } from "../service/selectors.js";
 import { createHash } from "node:crypto";
 import { setTimeout as pause } from "node:timers/promises";
 import type { ProviderTrafficGovernor } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
+import { cssClassContains } from "../service/selectors.js";
 import type { Conversation } from "./domain.js";
 
 export interface GrokHistoryOptions {
@@ -11,6 +11,7 @@ export interface GrokHistoryOptions {
 	historySearch?: string;
 	historyMaxPages?: number;
 	historyTimeoutMs?: number;
+	historyShouldYield?: () => boolean | Promise<boolean>;
 	abortSignal?: AbortSignal;
 }
 export interface GrokHistoryRow {
@@ -127,8 +128,8 @@ export async function collectGrokHistoryInventory(input: {
 	const runtime = input.probeContext as
 		| { evaluate?: (input: unknown) => Promise<unknown> }
 		| undefined;
-	const evaluate=runtime?.evaluate?.bind(runtime);
- const probeContext = evaluate
+	const evaluate = runtime?.evaluate?.bind(runtime);
+	const probeContext = evaluate
 		? { evaluate: (value: unknown) => bounded(() => evaluate(value)) }
 		: input.probeContext;
 	let state: GrokHistoryCoverage["state"] = "incomplete";
@@ -152,6 +153,10 @@ export async function collectGrokHistoryInventory(input: {
 	try {
 		while (pages < maximumPages) {
 			signal.throwIfAborted();
+			if (await options.historyShouldYield?.()) {
+				reason = "foreground-yield";
+				break;
+			}
 			if (performance.now() >= deadline) {
 				reason = "time-limit";
 				break;
@@ -259,7 +264,13 @@ export async function collectGrokHistoryInventory(input: {
 			}
 			const terminal = page.atBottom === true && !page.loading;
 			stableBottom = terminal && entries.size === before ? stableBottom + 1 : 0;
-			if (stableBottom >= 1 && anchorFound && !unknownScope && !unknownTime && entries.size > 0) {
+			if (
+				stableBottom >= 1 &&
+				anchorFound &&
+				!unknownScope &&
+				!unknownTime &&
+				(entries.size > 0 || anchor !== null)
+			) {
 				state = "complete";
 				reason = "visible-bottom";
 				break;

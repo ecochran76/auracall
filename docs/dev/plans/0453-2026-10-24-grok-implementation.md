@@ -10,26 +10,21 @@ Ledger: [execution ledger](0453-grok-execution-ledger.json)
 
 ## Current State
 
-Six tickets (#399,#400,#401,#402,#404,#407) are merged and closed. Existing Bots
-(#407) landed through PR423 as4986f397110a07831dfa00d1dd16544ddea83ffe after public
-wiring, one Standards/Spec review, bounded remediation, post-completion TDD and
-verified tracker closure. Ten tickets remain open. Exact file context/recent-ID selection and
-conservative upload outcome handling are integrated, but #403 remains partial:
-provider evidence cannot yet bind selected native File/content to provider ID.
-Its dependents remain locked. #405 has25-test partial source backed up on
-feat/grok-405-install; service/public wiring and saved identity/grants remain open.
-Manual monitoring is explicitly user-authorized after Codex Wake #319, preserving
-2MM fresh-token ceiling and original deadline20:17:24Z/checkpoint20:16:24Z.
-No controller stop records or shared MCP scope were altered. No new wave is
-started close to the fixed deadline; preserve all owned worktrees and the ledger.
+User explicitly renewed the two-hour/2MM-token allowance on 2026-10-24.
+Integration starts clean at 83e0951e8, freshly fetched from origin/main.
+Six children are closed; ten remain. Primary owns #412; isolated workers own
+#405, #408 and #410, one each; #403 is queued for the next free slot.
+The renewedRun ledger records current handles and deadline; older deadlines below
+are retained history. No Wake319/controller changes or live provider effects.
+Tickets close only on full acceptance and merged integration evidence.
 
 ## Execution contract
 
 Readiness means every blocker is validated on this integration branch. Each
 ready wave assigns one ticket to primary and up to three independent tickets to
 shallow workers in separate owned worktrees. Shared contracts have one owner;
-serialize integration. Every completed ticket gets a pinned Standards/Spec review
-and one post-completion TDD turn, with exact red/green receipts in the ledger.
+serialize integration. The renewed goal reserves one whole-integration code-review and one bounded
+TDD findings pass after the ticket work; earlier review receipts remain history.
 Keep implemented/integrated/validated/tracker-resolved states distinct. Close
 only criteria-complete issues after policy-required integration proof.
 

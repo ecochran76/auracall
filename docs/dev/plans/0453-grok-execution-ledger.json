@@ -225,7 +225,7 @@
       "blockers": [
         402
       ],
-      "state": "integrated",
+      "state": "blocked",
       "worker": null,
       "ownedPaths": [],
       "validation": [
@@ -259,8 +259,7 @@
       "resultSha": "bda2b48e5eef25b848a9f3ab3948b5af199149c2",
       "acceptanceState": "partial",
       "remainingAcceptance": [
-        "Bind exact selected native File/content to provider file ID; local uploads currently unconfirmed/source_binding_unavailable. Do not close issue or unlock dependents.",
-        "Installed/live UI acceptance remains separate."
+        "Native observed controls/source binding required; exact canary packet prepared; no provider effect authorized or executed."
       ],
       "workerResultShas": [
         "1efb8dd32",
@@ -313,8 +312,8 @@
       "blockers": [
         404
       ],
-      "state": "pending",
-      "worker": null,
+      "state": "implemented",
+      "worker": "/root/grok405",
       "ownedPaths": [],
       "validation": [
         {
@@ -330,7 +329,7 @@
         "terminal": "interrupted-before-implementation",
         "reason": "Supervisor native observation stop; no source implementation or test evidence completed"
       },
-      "acceptanceState": "partial-source-on-separate-branch",
+      "acceptanceState": "partial-source-worker-validated-not-yet-integrated",
       "branch": "feat/grok-405-install",
       "worktree": "/home/ecochran76/workspace.local/auracall-grok-405",
       "resultSha": "66e1b4327fe7c60b1395b133400279d238958519",
@@ -421,13 +420,16 @@
       "blockers": [
         407
       ],
-      "state": "pending",
-      "worker": null,
+      "state": "blocked",
+      "worker": "/root/grok408",
       "ownedPaths": [],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "remainingAcceptance": [
+        "Native observed controls/source binding required; exact canary packet prepared; no provider effect authorized or executed."
+      ]
     },
     {
       "ticket": 11,
@@ -453,8 +455,8 @@
       "blockers": [
         402
       ],
-      "state": "pending",
-      "worker": null,
+      "state": "implemented",
+      "worker": "/root/grok410",
       "ownedPaths": [],
       "validation": [],
       "review": null,
@@ -469,7 +471,8 @@
         "reason": "Worker runtime reported: blocked by safety systems \u2014 Potentially unintended activity. No completed result or passing implementation evidence accepted.",
         "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-410",
         "partialFiles": []
-      }
+      },
+      "acceptanceState": "partial-source-worker-validated-not-yet-integrated"
     },
     {
       "ticket": 13,
@@ -493,14 +496,15 @@
       "blockers": [
         401
       ],
-      "state": "partial",
+      "state": "implemented",
       "worker": "primary",
       "ownedPaths": [],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
       "trackerResolved": false,
-      "evidence": "docs/dev/notes/2026-10-24-grok412-index-coverage.md"
+      "evidence": "docs/dev/notes/2026-10-24-grok412-resumable-index.md",
+      "acceptanceState": "production-path-implemented-validation-in-progress"
     },
     {
       "ticket": 15,
@@ -625,5 +629,46 @@
     },
     "remaining": "Private account-bound atomic row/cursor checkpoints; cancellation/restart recovery; project/Bot scope coverage; foreground drain; consistent public status",
     "evidence": "docs/dev/notes/2026-10-24-grok412-index-coverage.md"
+  },
+  "renewedRun": {
+    "startedAt": "2026-10-24T23:02:46.334233+00:00",
+    "deadline": "2026-10-25T01:02:46.334233+00:00",
+    "tokenLimit": 2000000,
+    "authority": "User explicitly reset and renewed allowance; native goal active",
+    "base": "83e0951e8",
+    "monitoring": "manual; Wake319 excluded",
+    "primary": 412,
+    "workers": {
+      "405": "/root/grok405",
+      "408": "/root/grok408",
+      "410": "/root/grok410"
+    },
+    "queued": [
+      403
+    ],
+    "status": "running",
+    "reviewContract": "one whole-integration code-review then one bounded TDD findings pass after tickets validated",
+    "workerResults": {
+      "403": {
+        "state": "native-discovery-required",
+        "sha": "1a8254a7bd025a44fca1acd050d5e5b6b6a4f6f3",
+        "worker": "/root/grok408"
+      },
+      "408": {
+        "state": "native-discovery-required",
+        "sha": "3f7d3c849e92c62e046a38307b99fbc0a49367d0",
+        "worker": "/root/grok408"
+      },
+      "405": {
+        "state": "source-validated-not-integrated",
+        "sha": "c9be5f9e15ca4d094cc9182b079922b904a51d2e",
+        "worker": "/root/grok405"
+      },
+      "410": {
+        "state": "source-validated-not-integrated",
+        "sha": "b29984f63d14ce0d77dec9657797efa5861a7597",
+        "worker": "/root/grok410"
+      }
+    }
   }
 }

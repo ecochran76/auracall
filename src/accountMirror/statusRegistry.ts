@@ -20,6 +20,7 @@ import type {
 	AccountMirrorCompletionSweepMode,
 } from "./completionService.js";
 import type { ConversationFreshnessFrontierEvidence } from "./conversationFreshnessFrontier.js";
+import { type GrokIndexProgress, normalizeGrokIndexProgress } from "./grokIndexProgress.js";
 import {
 	isLiveFollowCollectorPhase,
 	type LiveFollowCollectorPhase,
@@ -234,6 +235,7 @@ export type AccountMirrorCollectorDiagnosticEvent = {
 };
 
 export type AccountMirrorMetadataEvidence = {
+	grokIndex?: GrokIndexProgress | null;
 	identitySource: string | null;
 	providerSessionProof?: ProviderSessionProofSummary | null;
 	projectSampleIds: string[];
@@ -1056,6 +1058,7 @@ function normalizeMetadataEvidence(
 	if (!value) return null;
 	return {
 		identitySource: readString(value.identitySource),
+		grokIndex: normalizeGrokIndexProgress(value.grokIndex),
 		projectSampleIds: normalizeStringArray(value.projectSampleIds),
 		conversationSampleIds: normalizeStringArray(value.conversationSampleIds),
 		detailConversationIdsThisPass: normalizeStringArray(value.detailConversationIdsThisPass),
