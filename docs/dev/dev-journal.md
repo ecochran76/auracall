@@ -1,3 +1,17 @@
+## 2026-10-23 — Clipboard helper deployed
+
+PR388 merged e517b8d26720b6e0403a509d172189932372c9df. The exact compiled helper
+matches the installed Recall module except clipboard permission delegation.
+Backed up and replaced that module only; SHA256466a693c64bec1dbc38ca7c7d2a14dc7034c1865a542cd28ce1e373b0277f923.
+API restarted1283976→1777322; HTTP200 /desktops serves the new helper. Unit/env/
+wrapper hashes preserved; Remote View's126 native/application births,22 slot
+snapshots and51 protected hashes still match. Existing Recall runtime retained;
+no full-package upgrade or browser/profile restart. Private rollback/provenance:
+~/.local/state/remote-view/clipboard-deploy-20261024/auracall/.
+Three focused tests and TypeScript check pass. Physical phone/Grok transfer
+remains operator acceptance. Refresh desktop page. Memory forbidden here: no
+explicit save request; Remote View owns its separate authorized closeout.
+
 ## 2026-10-23 — Clipboard embed delegation
 
 User requested mobile Paste repair and continuous clipboard passthrough. Remote
