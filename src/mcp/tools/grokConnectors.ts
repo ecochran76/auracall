@@ -2,9 +2,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
 	GrokConnectorsRequestSchema,
+	GrokConnectorInstallationInputSchema,
 	type GrokConnectorsResult,
 	type GrokConnectorsServiceResolver,
 	grokConnectorsFailureResult,
+	grokConnectorsResultIsError,
 	runGrokConnectorsCommand,
 } from "../../cli/grokConnectorsCommand.js";
 
@@ -21,11 +23,11 @@ export function createGrokConnectorsToolHandler(resolveService: GrokConnectorsSe
 			content: [
 				{
 					type: "text" as const,
-					text: `Grok Connector discovery: ${result.status} (${result.code}).`,
+					text: `Grok Connector operation: ${result.status} (${result.code}).`,
 				},
 			],
 			structuredContent: result as typeof result & Record<string, unknown>,
-			isError: result.status === "failed",
+			isError: grokConnectorsResultIsError(result),
 		};
 	};
 }
@@ -38,11 +40,17 @@ export function registerGrokConnectorsTool(
 	server.registerTool(
 		"grok_connectors",
 		{
-			title: "Discover Grok Connectors",
+			title: "Manage Grok Connectors",
 			description:
-				"List visible catalog and installed connections or inspect exact Connector identity, auth and visible tools. Does not install, authenticate or invoke tools. Visible inventory is incomplete account coverage.",
+				"List/inspect Grok Connectors, explicitly install an exact custom MCP endpoint, or reconcile its retained target. Install requires confirm=true and exact provider account hash. OAuth/consent remains human; never automatically retries an uncertain install.",
 			inputSchema: {
-				action: z.enum(["list", "inspect"]),
+				action: z.enum(["list", "inspect", "install", "reconcile"]),
+				input: GrokConnectorInstallationInputSchema.optional(),
+				expectedProviderAccountRef: z
+					.string()
+					.regex(/^[a-f0-9]{64}$/)
+					.optional(),
+				confirm: z.literal(true).optional(),
 				query: z.string().max(200).optional(),
 				selector: z
 					.object({

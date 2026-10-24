@@ -25982,3 +25982,13 @@ See the next-wave review receipt for reproductions and the open upload gate.
 ### 2026-10-24 — Grok mirror history coverage must outrank row counts (#412)
 
 The adapter caps history to the requested limit, so testing whether returned rows exceed that limit cannot establish completeness. Mirror reads now retain incomplete coverage and reject reported failed coverage; Grok reads without coverage remain partial. Visible-scope completion is not account-wide backfill proof. Regression fixtures cover capped and empty partial pages, failure tolerance and ordinary overflow. Restart-safe row/cursor persistence remains separate work.
+
+### 2026-10-24 — Fence Grok installation across process and runtime profile boundaries (#405)
+
+In-memory prepare tokens cannot prevent a restarted or different runtime profile
+from repeating a possibly committed Add. Claim a private account/endpoint journal
+before dispatch, retain the original target/custody, and route repeat calls to
+read-only reconciliation. Do not convert a rejected final DOM guard into a
+positive dispatched-effect claim, or let diagnostic persistence erase an unknown
+outcome. Public CLI/API/MCP fixtures cover the production path; saved provider
+identity, granted scopes and native built-in behavior remain separate open gates.

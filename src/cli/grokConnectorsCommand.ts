@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { GrokConnectorInstallationResult } from "../browser/grokConnectorInstallationService.js";
+import { validateGrokConnectorInstallationInput } from "../browser/providers/grokConnectorInstallation.js";
 import type { GrokConnectorsService } from "../browser/grokConnectorsService.js";
 import type {
 	GrokConnectorDetail,
@@ -19,6 +21,26 @@ export const GrokConnectorSelectorSchema = z
 		"A Connector selector is required",
 	);
 // biome-ignore lint/style/useNamingConvention: Public Zod schemas use the repository PascalCase convention.
+export const GrokConnectorInstallationInputSchema = z
+	.object({
+		kind: z.enum(["custom", "catalog"]),
+		name: z.string().min(1).max(100),
+		endpoint: z.string().max(4096).optional(),
+		connectorId: z.string().max(200).optional(),
+		accountRef: z
+			.string()
+			.regex(/^[a-f0-9]{64}$/)
+			.optional(),
+	})
+	.strict()
+	.superRefine((input, context) => {
+		try {
+			validateGrokConnectorInstallationInput(input);
+		} catch {
+			context.addIssue({ code: "custom", message: "Invalid Connector installation input." });
+		}
+	});
+// biome-ignore lint/style/useNamingConvention: Public Zod schemas use the repository PascalCase convention.
 export const GrokConnectorsRequestSchema = z.discriminatedUnion("action", [
 	z
 		.object({
@@ -34,9 +56,29 @@ export const GrokConnectorsRequestSchema = z.discriminatedUnion("action", [
 			runtimeProfile: z.string().min(1).max(200).optional(),
 		})
 		.strict(),
+	z
+		.object({
+			action: z.literal("install"),
+			input: GrokConnectorInstallationInputSchema,
+			expectedProviderAccountRef: z.string().regex(/^[a-f0-9]{64}$/),
+			confirm: z.literal(true),
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			action: z.literal("reconcile"),
+			input: GrokConnectorInstallationInputSchema,
+			expectedProviderAccountRef: z.string().regex(/^[a-f0-9]{64}$/),
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
 ]);
 export type GrokConnectorsRequest = z.infer<typeof GrokConnectorsRequestSchema>;
-export type GrokConnectorsResult = GrokConnectorInventory | GrokConnectorDetail;
+export type GrokConnectorsResult =
+	| GrokConnectorInventory
+	| GrokConnectorDetail
+	| GrokConnectorInstallationResult;
 export type GrokConnectorsServiceResolver = (
 	request: GrokConnectorsRequest,
 ) => Promise<GrokConnectorsService> | GrokConnectorsService;
@@ -48,12 +90,22 @@ export async function runGrokConnectorsCommand(
 ): Promise<GrokConnectorsResult> {
 	try {
 		const request = GrokConnectorsRequestSchema.parse(input);
-		return await (request.action === "list"
-			? service.list(request.query)
-			: service.inspect(request.selector));
+		if (request.action === "list") return await service.list(request.query);
+		if (request.action === "inspect") return await service.inspect(request.selector);
+		const operation = service[request.action];
+		if (!operation) throw new Error("grok_connector_install_service_unavailable");
+		return await operation(request);
 	} catch {
 		return grokConnectorsFailureResult();
 	}
+}
+
+/** Incomplete installation is an actionable terminal result, never shell/tool success. */
+export function grokConnectorsResultIsError(result: GrokConnectorsResult): boolean {
+	return (
+		result.status === "failed" ||
+		("operationId" in result && !["completed", "already-connected"].includes(result.status))
+	);
 }
 
 /** Aggregate status surface deliberately excludes endpoint/name/account/tool values. */
@@ -62,14 +114,16 @@ export function summarizeGrokConnectorDiagnostics(result: GrokConnectorsResult) 
 		status: result.status,
 		code: result.code,
 		hasProviderAccountIdentity: result.providerAccountRef !== null,
-		scope: result.coverage.scope,
-		complete: result.coverage.complete,
+		scope: "coverage" in result ? result.coverage.scope : "installation",
+		complete: "coverage" in result ? result.coverage.complete : result.status === "completed",
 		installed: "installed" in result ? result.installed.length : null,
 		catalog: "catalog" in result ? result.catalog.length : null,
 		tools: "tools" in result ? result.tools.length : null,
 		auth: "auth" in result ? result.auth : null,
 		hasEndpointIdentity: "endpointRef" in result ? result.endpointRef !== null : false,
 		hasAccountIdentity: "accountRef" in result ? result.accountRef !== null : false,
+		effectDispatched: "effectDispatched" in result ? result.effectDispatched : false,
+		retrySafe: "retrySafe" in result ? result.retrySafe : true,
 	};
 }
 

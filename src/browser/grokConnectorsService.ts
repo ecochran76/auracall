@@ -1,5 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and provider identity wire names are case-sensitive.
 import { createHash } from "node:crypto";
+import type { GrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
 import {
 	createGrokConnectorClient,
 	type GrokConnectorDetail,
@@ -18,7 +19,8 @@ export interface GrokConnectorConnection {
 	host: string;
 	port: number;
 }
-export interface GrokConnectorsService {
+export interface GrokConnectorsService
+	extends Partial<Pick<GrokConnectorInstallationService, "install" | "reconcile">> {
 	list(query?: string): Promise<GrokConnectorInventory>;
 	inspect(selector: GrokConnectorSelector): Promise<GrokConnectorDetail>;
 }
