@@ -179,3 +179,59 @@ Round 2 asks qualification depth and scopes, publication destination, required
 Bot configuration fields and initial mirror coverage. Numeric traffic ceilings
 need measurement; do not invent provider capacity. Existing foreground priority,
 warning fencing and request/operation separation remain settled requirements.
+
+
+## Scope decisions — questionnaire round 2
+
+Complete response `3aebfc2b6b704ad2841e0480eb55b53b`, recorded
+2026-10-24T15:25:52.567011Z, questionnaire `84f3318a7d35`, revision
+`f4abde171b570e6c3d4262c8d703e820f5ff557b33bbe7420246a2ffba3c76e9`.
+
+- Mail Receipts qualification includes draft creation/editing; sending remains
+  separate from qualification. Requested capabilities include read/write/send;
+  actual granted scopes must be observed rather than inferred.
+- Generated app publication targets Grok-native publish/share. No external host
+  deployment selected.
+- Bot create/edit must cover name/description/instructions, model defaults,
+  Connectors/tool permissions, Skills and knowledge sources when supported.
+  Memory and appearance controls were not selected.
+- Full mirroring begins with resumable account-wide backfill followed by
+  incremental follow, including project and Bot conversations when discoverable.
+- Optional extra constraints were skipped; no deadline or host is inferred.
+
+The installed Mail Receipts draft contracts were read, without executing them:
+`draft_create` creates account-owned offline drafts, `draft_read` retrieves them,
+and `draft_edit` requires `expected_revision`. Therefore draft qualification
+must not be represented as Outlook/Gmail server-draft acceptance.
+
+### Consolidated scope and proposed validation
+
+Round 1 scope remains binding, including CLI/API/MCP and Ops status, account-shared
+rate controls with bounded configurable waits, Connector/custom MCP installation,
+Bot inventory/invoke/create/edit, Build generation/artifacts/publication and full
+mirroring. Preserve foreground priority, separate operation/request budgets,
+warning fencing and unknown-effect custody. Numeric ceilings require measurement.
+
+Main test boundary: public Grok command/service operations with controlled CDP
+transport and isolated stores; verify wrapper parity across CLI/API/MCP. Reuse
+existing governor, ledger, ownership and Workbench contracts. Synthetic DOM drift,
+delayed submit, attachment readiness and paused-streaming cases must exercise
+real orchestration rather than only helper implementation. Cross-process tests
+prove shared-account budget/warning behavior. Scheduler/collector tests prove
+cursor-preserving interruption/restart and local artifact integrity. Separate
+bounded live acceptance is required for Mail Receipts, Bots and Build publication.
+
+Proposed Mail Receipts journey: install/reconcile exact endpoint, complete OAuth,
+verify account/scopes/catalog, bounded read, synthetic uniquely named offline
+create/read/edit/readback with revision protection. No send. Exact account and
+read acceptance data are bound in the future execution packet. Local direct MCP
+success does not establish Grok success. No Mail Receipts mutation occurred here.
+
+Final brief published as `0ff847ac4eb5`; final scope/test-boundary confirmation
+questionnaire `da55dff9014d`, revision
+`47fff8a41d1cb10caef1cbfacb0b76ec9f05ee09369eb2deafeae09c0596a03d`, in Previews
+session `a84de6dd5c31`. Confirmation remains pending. Grilling requires explicit
+shared understanding before proceeding; this confirmation also covers the
+specification skill's test-boundary check. No further product decision is currently
+unresolved; provider-specific technical gaps remain discovery tasks, not assumed
+capabilities. Specification and tickets have not yet been published.

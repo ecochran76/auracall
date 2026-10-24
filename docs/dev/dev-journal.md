@@ -1,3 +1,12 @@
+## 2026-10-24 — Grok scope decisions, round 2
+
+Recorded Mail Receipts draft/edit qualification with read/write/send capability
+exposure, Grok-native publication, Bot configuration fields and account-wide
+backfill. Inspected offline draft/revision contracts without executing mutations.
+Published consolidated scope/validation and one final confirmation in the existing
+Previews session. [Decision record](notes/2026-10-24-grok-ux-survey.md).
+Specification follows confirmation; no provider effects. Memory forbidden: no save request.
+
 ## 2026-10-24 — Grok scope decisions, round 1
 
 Consumed complete Previews response. Build publication included; Bots inventory,
