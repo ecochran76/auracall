@@ -88,6 +88,8 @@ export interface BrowserProviderListOptions extends GrokHistoryOptions {
 	accountMirrorInventory?: boolean;
 	/** Prevent a detail read from force-navigating an already admitted conversation route again. */
 	accountMirrorSingleConversationVisit?: boolean;
+	/** Positive index provenance, not proof of an undiscovered Bot scope. */
+	accountMirrorConversationIdentity?: { projectId?: string; botId?: string };
 	accountMirrorContextChunk?: {
 		startMessageIndex?: number | null;
 		maxMessages?: number | null;
