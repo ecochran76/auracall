@@ -1,5 +1,5 @@
-import { BrowserAutomationError } from "../oracle/errors.js";
 // biome-ignore-all lint/style/useNamingConvention: Public Zod schemas follow the repository PascalCase convention.
+import { BrowserAutomationError } from "../oracle/errors.js";
 import { z } from "zod";
 import type { GrokBotsService } from "../browser/grokBotsService.js";
 import { grokBotUnknown } from "../browser/grokBotsService.js";

@@ -1,5 +1,5 @@
-import { BrowserAutomationError } from "../oracle/errors.js";
 // biome-ignore-all lint/style/useNamingConvention: CDP protocol and provider identity wire names are case-sensitive.
+import { BrowserAutomationError } from "../oracle/errors.js";
 import { createHash } from "node:crypto";
 import {
 	createGrokBotClient,
