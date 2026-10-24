@@ -578,3 +578,37 @@ test('a closed picker verifies a real Build selection by reopening selected menu
   await expect(outcome).resolves.toBe('Build');
   expect(fixture.trigger.click).toHaveBeenCalledTimes(1);
 });
+
+test.each(['replacement', 'removal'] as const)('expected Bot rejects %s before preparation captures token baseline', async (change) => {
+  vi.useFakeTimers();
+  const fixture = submitFixture();
+  const rich = new Element('DIV', { class: 'ProseMirror', contenteditable: 'true' });
+  rich.ownerDocument = fixture.document;
+  const token = new Element('SPAN', { contenteditable: 'false', 'data-bot-id': 'bot-a' });
+  token.textContent = '@Helper';
+  rich.append(token);
+  fixture.form.children[0] = rich; rich.parentElement = fixture.form;
+  // Picker readback proved bot-a earlier; baseline observation yielded before preparation.
+  if (change === 'replacement') { const replacement = token.cloneNode(true); replacement.attrs['data-bot-id'] = 'bot-b'; replacement.parentElement = rich; rich.children[0] = replacement; }
+  else rich.children = [];
+  const preparation = setGrokPrompt(fixture.input as never, fixture.runtime as never, 'owned\ndraft', {id:'bot-a',name:'Helper'}).catch(error=>error);
+  await vi.runAllTimersAsync();
+  expect(await preparation).toMatchObject({message:expect.stringMatching(/Bot|composer/i)});
+  await expect(submitGrokPrompt(fixture.input as never,fixture.runtime as never)).rejects.toMatchObject({details:{effectState:'pre_effect'}});
+  expect(fixture.submit.click).not.toHaveBeenCalled();
+});
+
+test('in-place data-bot-id mutation with unchanged label blocks atomic submit', async () => {
+  vi.useFakeTimers();
+  const fixture = submitFixture();
+  const rich = new Element('DIV', { class: 'ProseMirror', contenteditable: 'true' });
+  rich.ownerDocument = fixture.document;
+  const token = new Element('SPAN', { contenteditable: 'false', 'data-bot-id': 'bot-a' });
+  token.textContent = '@Helper'; rich.append(token);
+  fixture.form.children[0] = rich; rich.parentElement = fixture.form;
+  const preparation=setGrokPrompt(fixture.input as never,fixture.runtime as never,'owned\ndraft',{id:'bot-a',name:'Helper'});
+  await vi.runAllTimersAsync(); await preparation;
+  token.attrs['data-bot-id']='bot-b';
+  await expect(submitGrokPrompt(fixture.input as never,fixture.runtime as never)).rejects.toMatchObject({details:{effectState:'pre_effect'}});
+  expect(fixture.submit.click).not.toHaveBeenCalled();
+});

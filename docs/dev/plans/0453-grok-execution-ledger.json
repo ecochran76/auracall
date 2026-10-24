@@ -225,13 +225,48 @@
       "blockers": [
         402
       ],
-      "state": "pending",
+      "state": "integrated",
       "worker": null,
       "ownedPaths": [],
-      "validation": [],
-      "review": null,
-      "postCompletionTdd": null,
-      "trackerResolved": false
+      "validation": [
+        {
+          "command": "focused service/public/remediation tests",
+          "result": "11 file tests, exact recent IDs and unknown source binding; integrated50-test remediation and93-test presubmit passed before final custody test"
+        }
+      ],
+      "review": {
+        "receipt": "docs/dev/notes/2026-10-24-grok-next-wave-review.md",
+        "standards": "no actionable candidates",
+        "spec": "F1 fixed; F2 confirmed and false success removed, positive identity binding remains open"
+      },
+      "postCompletionTdd": {
+        "red": "Ops uncertain upload effect misreported as none",
+        "green": "unknown effect custody preserved; diagnostic persistence failure also reproduced red/green"
+      },
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "branch": "feat/grok-403-files",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-403",
+      "lastAttempt": {
+        "worker": "/root/grok403_files",
+        "terminal": "failed",
+        "reason": "Worker runtime reported: blocked by safety systems \u2014 Potentially unintended activity. No completed result or passing implementation evidence accepted.",
+        "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-403",
+        "partialFiles": [
+          "tests/browser/grok403Files.test.ts"
+        ]
+      },
+      "resultSha": "bda2b48e5eef25b848a9f3ab3948b5af199149c2",
+      "acceptanceState": "partial",
+      "remainingAcceptance": [
+        "Bind exact selected native File/content to provider file ID; local uploads currently unconfirmed/source_binding_unavailable. Do not close issue or unlock dependents.",
+        "Installed/live UI acceptance remains separate."
+      ],
+      "workerResultShas": [
+        "1efb8dd32",
+        "e69ad4fc0",
+        "4e9fba0d6"
+      ]
     },
     {
       "ticket": 6,
@@ -281,10 +316,28 @@
       "state": "pending",
       "worker": null,
       "ownedPaths": [],
-      "validation": [],
+      "validation": [
+        {
+          "command": "worker focused tests, tsc and lint",
+          "result": "worker reports25 focused tests passed and tsc/lint clean; accepted as partial custody only, not integrated acceptance"
+        }
+      ],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "lastAttempt": {
+        "terminal": "interrupted-before-implementation",
+        "reason": "Supervisor native observation stop; no source implementation or test evidence completed"
+      },
+      "acceptanceState": "partial-source-on-separate-branch",
+      "branch": "feat/grok-405-install",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-405",
+      "resultSha": "66e1b4327fe7c60b1395b133400279d238958519",
+      "remainingAcceptance": [
+        "Durable service/journal and CLI/API/MCP wiring",
+        "Observed saved entity/account/granted scopes and built-in support"
+      ]
     },
     {
       "ticket": 8,
@@ -309,13 +362,55 @@
       "blockers": [
         402
       ],
-      "state": "pending",
+      "state": "validated",
       "worker": null,
       "ownedPaths": [],
-      "validation": [],
-      "review": null,
-      "postCompletionTdd": null,
-      "trackerResolved": false
+      "validation": [
+        {
+          "command": "focused public/source presubmit",
+          "result": "93 passed across13 files before final custody test;19 focused tests across3 files after custody repair passed"
+        },
+        {
+          "command": "pnpm run build; pnpm run lint",
+          "result": "passed; merged-main lint passed249 warnings18 infos; no fullsuite green claim"
+        },
+        {
+          "command": "CLI grok-files/grok-bots --help",
+          "result": "passed parser-only smoke"
+        },
+        {
+          "command": "post-main-merge backend admission + files/Bots/text/public tests",
+          "result": "145 passed across6 files; final merged-main typecheck/lint passed249 warnings18 infos"
+        }
+      ],
+      "review": {
+        "receipt": "docs/dev/notes/2026-10-24-grok-next-wave-review.md",
+        "standards": "no actionable candidates",
+        "spec": "B1 accepted blocking; atomic intended Bot ID/name and dispatch identity repair verified with3 realtext regressions"
+      },
+      "postCompletionTdd": {
+        "red": "operation cap rejection occurred after account discovery",
+        "green": "governor admission before identity discovery; public cleanup unknown target regression also red/green"
+      },
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "branch": "feat/grok-407-bots",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-407",
+      "lastAttempt": {
+        "worker": "/root/grok407_bots",
+        "terminal": "failed",
+        "reason": "Worker runtime reported: blocked by safety systems \u2014 Potentially unintended activity. No completed result or passing implementation evidence accepted.",
+        "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-407",
+        "partialFiles": [
+          "tests/browser/grok407Bots.test.ts"
+        ]
+      },
+      "resultSha": "bda2b48e5eef25b848a9f3ab3948b5af199149c2",
+      "acceptanceState": "source-accepted-pending-main-merge",
+      "workerResultShas": [
+        "c29cde3cfe58de2fcc264962bbd4e79da12e1c37",
+        "e0fcdb52a51beea6721326d88f2305a05d3e2d72"
+      ]
     },
     {
       "ticket": 10,
@@ -362,7 +457,17 @@
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "branch": "feat/grok-410-build",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-410",
+      "lastAttempt": {
+        "worker": "/root/grok410_build",
+        "terminal": "failed",
+        "reason": "Worker runtime reported: blocked by safety systems \u2014 Potentially unintended activity. No completed result or passing implementation evidence accepted.",
+        "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-410",
+        "partialFiles": []
+      }
     },
     {
       "ticket": 13,
@@ -428,7 +533,7 @@
   ],
   "integrationTip": "961ae38ce386523f3df31685edadcfe44508c2fe",
   "checkpoint": {
-    "status": "paused at requested two-hour checkpoint; five tickets merged and closed; eleven pending",
+    "status": "five tickets closed; Bots source acceptance pendingmain; files and installation partial",
     "readyNextWave": [
       403,
       405,
@@ -440,7 +545,6 @@
       403,
       405,
       406,
-      407,
       408,
       409,
       410,
@@ -450,7 +554,7 @@
       414
     ],
     "deadline": "2026-10-24T18:13:30Z",
-    "sourceSha": "ff54e63b3994e8713b7bd9a6e8930abd270e674f",
+    "sourceSha": "bda2b48e5eef25b848a9f3ab3948b5af199149c2",
     "integratedSha": "273dc6e26892f5db5ddf2bdc851a6b22cb117175",
     "closedIssues": [
       399,
@@ -460,5 +564,37 @@
       404
     ],
     "recordedAt": "2026-10-24T18:12:00Z"
+  },
+  "currentRun": {
+    "startedAt": "2026-10-24T18:17:24Z",
+    "deadline": "2026-10-24T20:17:24Z",
+    "checkpointAt": "2026-10-24T20:16:24Z",
+    "tokenLimit": 2000000,
+    "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+    "controller": "armed; qualified accounting; original allowance preserved after user-requested accounting fault recovery",
+    "status": "manual-monitoring-user-authorized",
+    "lastEvidence": {
+      "reason": "observation_unavailable",
+      "method": "thread/read",
+      "durationSeconds": 6.000884332985152,
+      "accounting": "qualified",
+      "boundedReadOnlyRecheck": "same exact thread read succeeded in0.049seconds; transient observation recovered but durable stop remains; no stop cleared"
+    },
+    "manualMonitoring": {
+      "authority": "User explicitly requested filing Codex Wake bug and resuming with manual resource monitoring",
+      "issue": "https://github.com/CochranResearchGroup/codex-wake/issues/319",
+      "deadline": "2026-10-24T20:17:24Z",
+      "checkpoint": "2026-10-24T20:16:24Z",
+      "tokenLimit": 2000000,
+      "noControllerMutation": true,
+      "cadence": "clock and qualified read-only token observation at each integration boundary and at most5min during implementation"
+    },
+    "lastManualObservation": {
+      "usedFreshTokens": 854866,
+      "limit": 2000000,
+      "accounting": "qualified",
+      "deadline": "2026-10-24T20:17:24Z",
+      "controllerRecordsUnchanged": true
+    }
   }
 }

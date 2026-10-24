@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+import { createConfiguredGrokFilesService, createConfiguredGrokBotsService } from "../src/browser/configuredGrokDiscovery.js";
+import { GrokFilesRequestSchema, runGrokFilesCommand } from "../src/cli/grokFilesCommand.js";
+import { grokFilesFailure } from "../src/browser/providers/grokFiles.js";
+import { GrokBotsRequestSchema, runGrokBotsCommand, grokBotsFailureResult } from "../src/cli/grokBotsCommand.js";
 import { GrokConversationsRequestSchema, runGrokConversationsCommand, grokConversationsFailureResult } from "../src/cli/grokConversationsCommand.js";
 import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../src/browser/configuredGrokDiscovery.js";
 import { runGrokConnectorsCommand, grokConnectorsFailureResult, GrokConnectorsRequestSchema } from "../src/cli/grokConnectorsCommand.js";
@@ -3425,6 +3429,34 @@ filesCommand
   });
 
 
+
+program.command('grok-files').description('Inspect exact Grok composer files, list recent IDs, select or upload without submitting a prompt.')
+ .option('--action <context|recent|select|upload>','Operation.','context').option('--id <id>','Exact recent file ID.')
+ .option('--paths <paths...>','Explicit local upload paths.').option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async(options,command)=>{
+  let result;
+  try {
+   if(options.action!=='upload'&&options.paths || options.action!=='select'&&options.id)throw new Error('Unexpected file selectors.');
+   const request=GrokFilesRequestSchema.parse({action:options.action,runtimeProfile:options.runtimeProfile,...(options.action==='select'?{id:options.id}:options.action==='upload'?{paths:options.paths}:{})});
+   const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+   result=await runGrokFilesCommand(request,await createConfiguredGrokFilesService(config,request.runtimeProfile));
+  }catch{result=grokFilesFailure();}
+  console.log(JSON.stringify(result,null,2));if(result.status==='failed'||result.status==='unconfirmed')process.exitCode=1;
+ });
+program.command('grok-bots').description('List owned/catalog Grok Bots or invoke an exact existing Bot without installing it.')
+ .option('--action <list|invoke>','Operation.','list').option('--source <owned|catalog>','Bot inventory source.','owned')
+ .option('--id <id>','Stable observed Bot ID.').option('--author <author>','Exact observed catalog author.').option('--prompt <text>','Exact prompt text.')
+ .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async(options,command)=>{
+  let result;
+  try {
+   if(options.action==='list'&&(options.id||options.author||options.prompt))throw new Error('Use invoke with a Bot selector.');
+   const request=GrokBotsRequestSchema.parse(options.action==='list'?{action:'list',source:options.source,runtimeProfile:options.runtimeProfile}:{action:options.action,selector:{id:options.id,source:options.source,author:options.author},prompt:options.prompt,runtimeProfile:options.runtimeProfile});
+   const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+   result=await runGrokBotsCommand(request,await createConfiguredGrokBotsService(config,request.runtimeProfile));
+  }catch{result=grokBotsFailureResult();}
+  console.log(JSON.stringify(result,null,2));if(result.status!=='supported')process.exitCode=1;
+ });
 
 program.command('grok-conversations').description('Read bounded Grok Chats inventory and coverage as JSON.')
  .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--project-id <id>','Require positive project membership.')

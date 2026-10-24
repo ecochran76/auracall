@@ -1,3 +1,9 @@
+import { createGrokFilesService } from "./grokFilesService.js";
+import { createGrokBotsService } from "./grokBotsService.js";
+import { grokFilesFailure } from "./providers/grokFiles.js";
+import { grokBotsFailureResult, summarizeGrokBotDiagnostics } from "../cli/grokBotsCommand.js";
+import { summarizeGrokFilesDiagnostics } from "../cli/grokFilesCommand.js";
+import { recordGrokEcosystemProgress } from "./grokEcosystemProgress.js";
 import { createGrokConversationsService } from "./grokConversationsService.js";
 import { recordGrokHistoryProgress } from "./grokHistoryProgress.js";
 import {
@@ -83,5 +89,89 @@ export async function createConfiguredGrokConversationsService(
 			await recordGrokHistoryProgress(profile, result.coverage);
 			return result;
 		},
+	};
+}
+
+export async function createConfiguredGrokFilesService(
+	config: ResolvedUserConfig,
+	runtimeProfile?: string,
+	abortSignal?: AbortSignal,
+) {
+	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
+	const service = createGrokFilesService(options);
+	const profile =
+		options.providerSessionAuthorization?.context.auracallRuntimeProfile ??
+		runtimeProfile ??
+		config.auracallProfile ??
+		"default";
+	async function run(action: () => Promise<Awaited<ReturnType<typeof service.context>>>) {
+		try {
+			const result = await action();
+			try {
+				await recordGrokEcosystemProgress("files", profile, summarizeGrokFilesDiagnostics(result));
+			} catch {
+				return { ...result, progressPersistence: "failed" as const };
+			}
+			return result;
+		} catch (error) {
+			try {
+				await recordGrokEcosystemProgress(
+					"files",
+					profile,
+					summarizeGrokFilesDiagnostics(grokFilesFailure()),
+				);
+			} catch {
+				/* Diagnostic persistence cannot replace the original operation error/custody. */
+			}
+			throw error;
+		}
+	}
+	return {
+		context: () => run(() => service.context()),
+		recent: () => run(() => service.recent()),
+		select: (id: string) => run(() => service.select(id)),
+		upload: (paths: string[]) => run(() => service.upload(paths)),
+	};
+}
+export async function createConfiguredGrokBotsService(
+	config: ResolvedUserConfig,
+	runtimeProfile?: string,
+	abortSignal?: AbortSignal,
+) {
+	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
+	const service = createGrokBotsService(options);
+	const profile =
+		options.providerSessionAuthorization?.context.auracallRuntimeProfile ??
+		runtimeProfile ??
+		config.auracallProfile ??
+		"default";
+	async function run<
+		T extends Awaited<ReturnType<typeof service.list>> | Awaited<ReturnType<typeof service.invoke>>,
+	>(action: () => Promise<T>) {
+		try {
+			const result = await action();
+			try {
+				await recordGrokEcosystemProgress("bots", profile, summarizeGrokBotDiagnostics(result));
+			} catch {
+				return { ...result, progressPersistence: "failed" as const };
+			}
+			return result;
+		} catch (error) {
+			try {
+				await recordGrokEcosystemProgress(
+					"bots",
+					profile,
+					summarizeGrokBotDiagnostics(grokBotsFailureResult()),
+				);
+			} catch {
+				/* Diagnostic persistence cannot replace the original operation error/custody. */
+			}
+			throw error;
+		}
+	}
+	return {
+		list: (source?: Parameters<typeof service.list>[0]) => run(() => service.list(source)),
+		invoke: (selector: Parameters<typeof service.invoke>[0], prompt: string) =>
+			run(() => service.invoke(selector, prompt)),
 	};
 }

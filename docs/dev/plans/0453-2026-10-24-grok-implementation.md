@@ -10,13 +10,18 @@ Ledger: [execution ledger](0453-grok-execution-ledger.json)
 
 ## Current State
 
-Start2026-10-24T16:13:30Z. Stop/checkpoint2026-10-24T18:13:30Z.
-Fresh origin/main and confirmed specification merged into an isolated integration
-worktree. Additive journal/fixes conflicts preserve both issue368 and Grok history.
-Dependencies validated against all16 published tickets. Only #399 is ready;
-primary owns it. #399 source is validated after one review/remediation and
-post-completion TDD. #400 is the next serial ticket; tracker closure awaits PR
-integration. No independent implementation worker is eligible until #400 validates.
+Five tickets (#399,#400,#401,#402,#404) are merged and closed. Existing Bots
+(#407) are source-validated after public wiring, one Standards/Spec review,
+bounded remediation and post-completion TDD; main integration/tracker readback
+is the remaining closure gate. Exact file context/recent-ID selection and
+conservative upload outcome handling are integrated, but #403 remains partial:
+provider evidence cannot yet bind selected native File/content to provider ID.
+Its dependents remain locked. #405 has25-test partial source backed up on
+feat/grok-405-install; service/public wiring and saved identity/grants remain open.
+Manual monitoring is explicitly user-authorized after Codex Wake #319, preserving
+2MM fresh-token ceiling and original deadline20:17:24Z/checkpoint20:16:24Z.
+No controller stop records or shared MCP scope were altered. No new wave is
+started close to the fixed deadline; preserve all owned worktrees and the ledger.
 
 ## Execution contract
 

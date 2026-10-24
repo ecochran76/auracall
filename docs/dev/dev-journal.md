@@ -56045,3 +56045,18 @@ disposition forbidden.
 
 
 Final tracker readback: PR418 merged as `273dc6e26892f5db5ddf2bdc851a6b22cb117175`; #401, #402 and #404 are CLOSED. Five of sixteen tickets are now merged and closed; eleven remain pending. Requested stop/checkpoint honored without dispatching another wave. Next wave: #403, #405, #407, #410, #412. Memory disposition: forbidden (explicit developer boundary; no requested memory update), non-write receipt `/tmp/grok-wave2-memory-disposition.json`.
+
+
+## 2026-10-24 Grok next wave resumed
+
+Original two-hour allocation resumes with 2MM fresh-token ceiling and deadline20:17:24Z, checkpoint20:16:24Z. Supervisor is armed after explicit user-requested accounting-fault recovery; allowance/deadline were preserved. Base87c4910ba includes merged issue368 reconciliation. Workers own #403 files, #407 existing Bots and #410 Build in separate worktrees; primary owns #405 Connector installation and all shared public wiring. #412 remains ready for next free slot. No live provider effects authorized by this implementation packet.
+
+
+## 2026-10-24 Grok resumption reconciliation
+
+No new tickets closed. The three worker runtimes for #403/#407/#410 reported terminal safety-system failures; partial uncommitted test drafts remain in their isolated worktrees and are not accepted implementation evidence. #405 had no completed source implementation before interruption. Ledger restores all four tickets to pending. Codex Wake0.20.1 controller deployment preserved original authority. A separate native thread/read timeout stopped the campaign; one exact-thread read-only recheck later succeeded in0.049seconds, which does not clear the durable stop. No additional stop flags, native goal state, shared MCP scope or provider/account state changed during this reconciliation. Original deadline20:17:24Z remains. Next-wave readiness is unchanged; execution awaits qualified supervision.
+
+
+## 2026-10-24 Grok manual-monitoring acceptance checkpoint
+
+User authorized manual resource monitoring after Codex Wake319 filed. Existing Bot listing/invocation now has CLI/API/MCP/Ops wiring, exact Bot token proof and response/artifact provenance. One review per ticket plus bounded remediation preserved unknown outcomes and target custody. Post-main merge145 tests across6 files pass;93-test presubmit plus focused causal reruns pass; build and typecheck/lint pass (249warnings18infos). No fullsuite or installed/live acceptance claimed. #407 source accepted pending merge/tracker readback. #403 stays partial with unconfirmed local uploads until actual source identity binding; #405 partial branch backed up separately. Main native-cancellation changes merged; additive testing-doc conflict preserves both intents. Original deadline20:17:24Z remains, no resource flags changed.
