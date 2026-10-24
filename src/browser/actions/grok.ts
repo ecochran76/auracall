@@ -6,11 +6,7 @@ import { delay } from '../utils.js';
 import { GROK_PROVIDER } from '../providers/grok.js';
 import { detectGrokSignedInIdentity } from '../providers/grokIdentity.js';
 import { ensureServicesRegistry, normalizeServiceModelToken } from '../../services/registry.js';
-import {
-  buildFindAllSelectorsExpression,
-  buildFindFirstSelectorExpression,
-  buildSelectorArrayLiteral,
-} from '../providers/shared.js';
+import { buildFindAllSelectorsExpression, buildSelectorArrayLiteral } from '../providers/shared.js';
 import {
   GROK_MODEL_MENU_ENTRIES_EXPRESSION,
   type GrokModelMenuEntry,
@@ -206,12 +202,21 @@ export async function ensureGrokPromptReady(
   throw new Error('Grok prompt not ready before timeout.');
 }
 
+type GrokPreparedPrompt = {
+  composerId: string;
+  prompt: string;
+  tokens: string;
+  state: 'invalid' | 'prepared' | 'dispatched';
+};
+const preparedGrokPrompts = new WeakMap<ChromeClient['Runtime'], GrokPreparedPrompt>();
+
 export async function setGrokPrompt(
   Input: ChromeClient['Input'],
   Runtime: ChromeClient['Runtime'],
   prompt: string,
 ): Promise<void> {
   const composerId = randomUUID();
+  preparedGrokPrompts.set(Runtime, { composerId, prompt, tokens: '[]', state: 'invalid' });
   const exactComposer = `document.querySelector('[data-auracall-grok-composer="${composerId}"]')`;
   const normalizeText = (value: string): string => value.replace(/\r\n/g, '\n');
   const focusOutcome = await Runtime.evaluate({
@@ -219,6 +224,7 @@ export async function setGrokPrompt(
       const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
       if (!el) return { ok: false };
       el.setAttribute('data-auracall-grok-composer', ${JSON.stringify(composerId)});
+      window.__auracallGrokPreparedComposer = { id: ${JSON.stringify(composerId)}, element: el, tokens: Array.from(el.querySelectorAll('[contenteditable="false"]')).filter(token => !token.parentElement?.closest('[contenteditable="false"]')) };
       const tokenEvidence = (${GROK_COMPOSER_TOKEN_READER})(el);
       const dispatchClick = (target) => {
         for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
@@ -282,7 +288,7 @@ export async function setGrokPrompt(
   const verifyOutcome = await Runtime.evaluate({
     expression: `(() => {
       const el = ${exactComposer};
-      if (!el) return { ok: false, text: '' };
+      if (!el || window.__auracallGrokPreparedComposer?.element !== el) return { ok: false, text: '' };
       if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
         return { ok: true, text: el.value || '', tokens: (${GROK_COMPOSER_TOKEN_READER})(el) };
       }
@@ -297,13 +303,19 @@ export async function setGrokPrompt(
   if (JSON.stringify(verifyOutcome.result?.value?.tokens ?? []) !== expectedTokens)
     throw new Error('Grok selected composer tokens changed; prompt was not submitted.');
   if (verifyOutcome.result?.value?.ok && observedText === normalizeText(prompt)) {
+    preparedGrokPrompts.set(Runtime, {
+      composerId,
+      prompt: normalizeText(prompt),
+      tokens: expectedTokens,
+      state: 'prepared',
+    });
     return;
   }
 
   const fallbackOutcome = await Runtime.evaluate({
     expression: `(() => {
       const el = ${exactComposer};
-      if (!el) return false;
+      if (!el || window.__auracallGrokPreparedComposer?.element !== el) return false;
       const text = ${JSON.stringify(prompt)};
       if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
         const prototype = el instanceof HTMLTextAreaElement
@@ -345,7 +357,7 @@ export async function setGrokPrompt(
   const postFallback = await Runtime.evaluate({
     expression: `(() => {
       const el = ${exactComposer};
-      if (!el) return { ok: false, text: '' };
+      if (!el || window.__auracallGrokPreparedComposer?.element !== el) return { ok: false, text: '' };
       if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
         return { ok: true, text: el.value || '', tokens: (${GROK_COMPOSER_TOKEN_READER})(el) };
       }
@@ -363,12 +375,24 @@ export async function setGrokPrompt(
   ) {
     throw new Error('Unable to preserve Grok prompt formatting in the composer.');
   }
+  preparedGrokPrompts.set(Runtime, {
+    composerId,
+    prompt: normalizeText(prompt),
+    tokens: expectedTokens,
+    state: 'prepared',
+  });
 }
 
 export async function submitGrokPrompt(
   Input: ChromeClient['Input'],
   Runtime: ChromeClient['Runtime'],
 ): Promise<void> {
+  const preparation = preparedGrokPrompts.get(Runtime);
+  if (preparation && preparation.state !== 'prepared')
+    throw new BrowserAutomationError(
+      'Grok prepared composer is unavailable or already dispatched; prepare and verify a new draft before sending.',
+      { stage: 'grok-prompt-submit', effectState: 'pre_effect' },
+    );
   const submitId = randomUUID();
   const readSubmissionState = async (): Promise<{
     composerText: string;
@@ -424,6 +448,7 @@ export async function submitGrokPrompt(
 
   let outcome: Awaited<ReturnType<ChromeClient['Runtime']['evaluate']>>;
   try {
+    if (preparation) preparation.state = 'dispatched';
     outcome = await Runtime.evaluate({
       expression: `(() => {
       const isVisible = (el) => {
@@ -433,6 +458,16 @@ export async function submitGrokPrompt(
         return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
       };
       const selectors = ${GROK_SEND_SELECTORS};
+      const expected = ${JSON.stringify(preparation ? { composerId: preparation.composerId, prompt: preparation.prompt, tokens: preparation.tokens } : null)};
+      if (expected) {
+        const editor = ${GROK_VISIBLE_INPUT_EXPRESSION};
+        const retained = window.__auracallGrokPreparedComposer;
+        if (!editor || retained?.element !== editor || retained.id !== expected.composerId || editor.getAttribute('data-auracall-grok-composer') !== expected.composerId) return 'prepared-composer-changed';
+        const tokens = Array.from(editor.querySelectorAll('[contenteditable="false"]')).filter(token => !token.parentElement?.closest('[contenteditable="false"]'));
+        if (tokens.length !== retained.tokens.length || tokens.some((token, index) => token !== retained.tokens[index])) return 'prepared-composer-changed';
+        const text = editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement ? editor.value : (${GROK_COMPOSER_TEXT_READER})(editor);
+        if (String(text).replace(/\\r\\n/g, '\\n') !== expected.prompt || JSON.stringify((${GROK_COMPOSER_TOKEN_READER})(editor)) !== expected.tokens) return 'prepared-composer-changed';
+      }
       const btn = ${GROK_SCOPED_SUBMIT_EXPRESSION};
       const captured = document.querySelector('[data-auracall-grok-submit="${submitId}"]');
       if (!btn || btn !== captured) return false;
@@ -449,6 +484,16 @@ export async function submitGrokPrompt(
     );
   }
   if (outcome.result?.value !== true) {
+    if (
+      preparation &&
+      (outcome.result?.value === false || outcome.result?.value === 'prepared-composer-changed')
+    )
+      preparation.state = 'prepared';
+    if (outcome.result?.value === 'prepared-composer-changed')
+      throw new BrowserAutomationError(
+        'Grok prepared composer identity, draft text or selected tokens changed; no click dispatched.',
+        { stage: 'grok-prompt-submit', effectState: 'pre_effect' },
+      );
     if (outcome.result?.value === false && !outcome.exceptionDetails)
       throw new Error('Unable to locate the exact Grok submit button; no click dispatched.');
     throw new BrowserAutomationError(
@@ -562,17 +607,20 @@ export async function selectGrokMode(
   }
   const verifyDeadline = Date.now() + 2_000;
   let verified = false;
+  let menuReopened = false;
   while (Date.now() < verifyDeadline) {
     const observed = await Runtime.evaluate({
       expression: `(() => {
         const entries = ${GROK_MODEL_MENU_ENTRIES_EXPRESSION};
         if (entries.length) return entries.filter(${matchExpression}).some(entry => entry.selected && entry.entitlement === 'available');
-        const trigger = ${buildFindFirstSelectorExpression(GROK_MODEL_BUTTON_SELECTORS)};
-        const entry = { label: (trigger?.textContent || '').trim() };
-        return Boolean(trigger && (${matchExpression})(entry));
+        return 'menu-closed';
       })()`,
       returnByValue: true,
     });
+    if (observed.result?.value === 'menu-closed' && !menuReopened) {
+      menuReopened = true;
+      await openGrokModelMenu(Runtime, Input);
+    }
     if (observed.result?.value === true) {
       verified = true;
       break;

@@ -177,6 +177,7 @@ function submitFixture() {
   form.append(editor, submit);
   main.append(form);
   document.append(main);
+  const window = { getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) };
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => ({
     result: {
       value: runInNewContext(expression, {
@@ -188,7 +189,7 @@ function submitFixture() {
         MouseEvent: class {},
         InputEvent: class {},
         Event: class {},
-        window: { getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) },
+        window,
       }),
     },
   }));
@@ -251,7 +252,7 @@ function modelFixture(labels: Array<{ text: string; selected?: boolean; gated?: 
   });
   menu.append(...items);
   fixture.document.append(trigger, menu);
-  return { ...fixture, items, trigger };
+  return { ...fixture, items, trigger, menu };
 }
 
 test('explicit missing or account-gated models reject before submission', async () => {
@@ -444,4 +445,136 @@ test('a dispatch transport failure retains unknown effect custody and never retr
   ).rejects.toMatchObject({ details: { effectState: 'unknown' } });
   expect(fixture.submit.click).toHaveBeenCalledTimes(1);
   expect(fixture.input.dispatchKeyEvent).not.toHaveBeenCalled();
+});
+
+test.each([
+  'replacement',
+  'text-change',
+] as const)('prepared composer rejects %s before the final send', async (change) => {
+  vi.useFakeTimers();
+  const fixture = submitFixture();
+  const preparation = setGrokPrompt(
+    fixture.input as never,
+    fixture.runtime as never,
+    'owned draft',
+  );
+  await vi.runAllTimersAsync();
+  await preparation;
+  if (change === 'replacement') {
+    const replacement = new Textarea();
+    replacement.attrs = { ...fixture.editor.attrs };
+    replacement.value = 'owned draft';
+    replacement.parentElement = fixture.form;
+    fixture.form.children[0] = replacement;
+  } else fixture.editor.value = 'foreign draft';
+  fixture.submit.click.mockImplementation(() =>
+    fixture.document.append(new Element('DIV', { id: 'response-foreign' })),
+  );
+  const outcome = submitGrokPrompt(fixture.input as never, fixture.runtime as never).catch(
+    (error) => error,
+  );
+  await vi.runAllTimersAsync();
+  expect(await outcome).toMatchObject({
+    message: expect.stringMatching(/prepared|composer|draft/i),
+  });
+  expect(fixture.submit.click).not.toHaveBeenCalled();
+  expect(fixture.input.dispatchKeyEvent).not.toHaveBeenCalled();
+});
+
+test('closed picker never verifies selection from a hidden model trigger', async () => {
+  vi.useFakeTimers();
+  const fixture = modelFixture([
+    { text: 'Fast Quick responses', selected: true },
+    { text: 'Build Create apps' },
+  ]);
+  const hidden = new Button({ id: 'model-select-trigger', 'aria-hidden': 'true' });
+  hidden.textContent = 'Build';
+  hidden.parentElement = fixture.document;
+  fixture.document.children.unshift(hidden);
+  fixture.items[1].click.mockImplementation(() => fixture.menu.remove());
+  fixture.trigger.click.mockImplementation(() => fixture.document.append(fixture.menu));
+  const outcome = selectGrokMode(
+    fixture.input as never,
+    fixture.runtime as never,
+    'Build',
+    vi.fn<(message: string) => void>(),
+  ).catch((error) => error);
+  await vi.runAllTimersAsync();
+  expect(await outcome).toMatchObject({ message: expect.stringMatching(/verify|selected/i) });
+  expect(hidden.click).not.toHaveBeenCalled();
+});
+
+test('prepared immutable token replacement rejects even when token metadata is unchanged', async () => {
+  vi.useFakeTimers();
+  const fixture = submitFixture();
+  const rich = new Element('DIV', { class: 'ProseMirror', contenteditable: 'true' });
+  rich.ownerDocument = fixture.document;
+  const token = new Element('SPAN', { contenteditable: 'false', 'data-id': 'connector-fixture' });
+  token.textContent = '@Mail';
+  rich.append(token);
+  fixture.form.children[0] = rich;
+  rich.parentElement = fixture.form;
+  const preparation = setGrokPrompt(
+    fixture.input as never,
+    fixture.runtime as never,
+    'owned\ndraft',
+  );
+  await vi.runAllTimersAsync();
+  await preparation;
+  const replacement = token.cloneNode(true);
+  replacement.parentElement = rich;
+  rich.children[0] = replacement;
+  fixture.submit.click.mockImplementation(() =>
+    fixture.document.append(new Element('DIV', { id: 'response-foreign' })),
+  );
+  await expect(
+    submitGrokPrompt(fixture.input as never, fixture.runtime as never),
+  ).rejects.toMatchObject({ details: { effectState: 'pre_effect' } });
+  expect(fixture.submit.click).not.toHaveBeenCalled();
+  expect(fixture.input.dispatchKeyEvent).not.toHaveBeenCalled();
+});
+
+test('verified prepared prompt can commit once and cannot be sent again without preparation', async () => {
+  vi.useFakeTimers();
+  const fixture = submitFixture();
+  const preparation = setGrokPrompt(
+    fixture.input as never,
+    fixture.runtime as never,
+    'owned draft',
+  );
+  await vi.runAllTimersAsync();
+  await preparation;
+  fixture.submit.click.mockImplementation(() =>
+    fixture.document.append(new Element('DIV', { id: 'response-owned' })),
+  );
+  await expect(
+    submitGrokPrompt(fixture.input as never, fixture.runtime as never),
+  ).resolves.toBeUndefined();
+  await expect(submitGrokPrompt(fixture.input as never, fixture.runtime as never)).rejects.toThrow(
+    /already dispatched/i,
+  );
+  expect(fixture.submit.click).toHaveBeenCalledTimes(1);
+});
+
+test('a closed picker verifies a real Build selection by reopening selected menu state', async () => {
+  vi.useFakeTimers();
+  const fixture = modelFixture([
+    { text: 'Fast Quick responses', selected: true },
+    { text: 'Build Create apps' },
+  ]);
+  fixture.items[1].click.mockImplementation(() => {
+    fixture.items[0].attrs['aria-checked'] = 'false';
+    fixture.items[1].attrs['aria-checked'] = 'true';
+    fixture.menu.remove();
+  });
+  fixture.trigger.click.mockImplementation(() => fixture.document.append(fixture.menu));
+  const outcome = selectGrokMode(
+    fixture.input as never,
+    fixture.runtime as never,
+    'Build',
+    vi.fn<(message: string) => void>(),
+  );
+  await vi.runAllTimersAsync();
+  await expect(outcome).resolves.toBe('Build');
+  expect(fixture.trigger.click).toHaveBeenCalledTimes(1);
 });
