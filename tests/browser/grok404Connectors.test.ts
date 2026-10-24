@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createGrokConnectorClient } from "../../src/browser/providers/grokConnectors.js";
-import { connectorDomFixture } from "./grok404ConnectorDomFixture.js";
+import { ConnectorFixtureNode, connectorDomFixture } from "./grok404ConnectorDomFixture.js";
 
 // CDP is the public boundary. Payloads are sanitized projections of the survey,
 // never copies of private account captures.
@@ -142,16 +142,16 @@ describe("Grok Connector public inventory", () => {
 		});
 		expect(result.coverage.complete).toBe(false);
 	});
-	it("reports complete detail only when the connection account is actually observed", async () => {
+	it("does not reuse an inventory account as fresh detail evidence", async () => {
 		const result = await createGrokConnectorClient(
 			connectorDomFixture({ accountLabel: "connected@example.test" }).runtime,
 		).inspect({ name: "Example", kind: "installed" });
 		expect(result).toMatchObject({
-			status: "complete",
+			status: "incomplete",
 			auth: "connected",
 			coverage: { complete: true },
 		});
-		expect(result.accountRef).toMatch(/^[a-f0-9]{64}$/);
+		expect(result.accountRef).toBeNull();
 		expect(JSON.stringify(result)).not.toContain("connected@example.test");
 	});
 	it("does not manufacture endpoint identity from malformed Server URL text", async () => {
@@ -178,4 +178,108 @@ describe("Grok Connector public inventory", () => {
 		expect(result.catalog.map((row) => row.name)).toEqual(["Search Result"]);
 		expect(fixture.document.querySelectorAll("input")[0].value).toBe("");
 	});
+});
+
+it("refuses name uniqueness when row 101 contains a duplicate beyond the scan bound", async () => {
+	const fixture = connectorDomFixture();
+	for (let index = 0; index < 99; index++) {
+		const row = new ConnectorFixtureNode("div", "", {}, [
+			new ConnectorFixtureNode(
+				"button",
+				index === 98 ? "Example\nsecond@example.test" : `Other ${index}\nother@example.test`,
+			),
+			new ConnectorFixtureNode("span", "Added"),
+		]);
+		row.parentElement = fixture.plugins;
+		fixture.plugins.children.push(row);
+	}
+	let clicks = 0;
+	fixture.installed.onClick = () => {
+		clicks++;
+	};
+	const result = await createGrokConnectorClient(fixture.runtime).inspect({
+		name: "Example",
+		kind: "installed",
+	});
+	expect(result.status).toBe("incomplete");
+	expect(result.code).toMatch(/coverage|limit/);
+	expect(clicks).toBe(0);
+});
+
+it("rejects a connection account switch between inventory and row activation", async () => {
+	const fixture = connectorDomFixture({ accountLabel: "first@example.test" });
+	let switched = false;
+	let clicks = 0;
+	const open = fixture.installed.onClick;
+	fixture.installed.onClick = () => {
+		clicks++;
+		open?.();
+	};
+	const runtime = {
+		evaluate: async (input: { expression: string }) => {
+			const result = await fixture.runtime.evaluate(input);
+			if (!switched && Array.isArray((result.result.value as { rows?: unknown[] })?.rows)) {
+				switched = true;
+				fixture.installed.ownText = "Example\nsecond@example.test";
+			}
+			return result;
+		},
+	};
+	const result = await createGrokConnectorClient(runtime).inspect({
+		name: "Example",
+		kind: "installed",
+	});
+	expect(result).toMatchObject({
+		status: "failed",
+		code: "grok_connector_row_changed",
+		accountRef: null,
+	});
+	expect(clicks).toBe(0);
+});
+
+it("restores search after cancellation delivered by its input mutation", async () => {
+	const fixture = connectorDomFixture();
+	const controller = new AbortController();
+	fixture.search.onInput = () => {
+		if (fixture.search.value === "changed") controller.abort(new Error("cancel-search"));
+	};
+	await expect(
+		createGrokConnectorClient(fixture.runtime, { abortSignal: controller.signal }).list("changed"),
+	).rejects.toThrow("cancel-search");
+	expect(fixture.search.value).toBe("");
+});
+
+it("closes its detail after cancellation delivered by the open click", async () => {
+	const fixture = connectorDomFixture();
+	const controller = new AbortController();
+	fixture.installed.onClick = () => {
+		fixture.detail.hidden = false;
+		controller.abort(new Error("cancel-detail"));
+	};
+	await expect(
+		createGrokConnectorClient(fixture.runtime, { abortSignal: controller.signal }).inspect({
+			name: "Example",
+			kind: "installed",
+		}),
+	).rejects.toThrow("cancel-detail");
+	expect(fixture.detail.hidden).toBe(true);
+});
+
+it("preserves cancellation and restoration failure together", async () => {
+	const fixture = connectorDomFixture();
+	const controller = new AbortController();
+	fixture.search.onInput = () => {
+		if (fixture.search.value === "changed") controller.abort(new Error("cancel-search"));
+		else throw new Error("restore-denied");
+	};
+	const failure = await createGrokConnectorClient(fixture.runtime, {
+		abortSignal: controller.signal,
+	})
+		.list("changed")
+		.catch((error) => error);
+	expect(failure).toBeInstanceOf(AggregateError);
+	expect(failure.errors.map((error: Error) => error.message)).toEqual([
+		"cancel-search",
+		"restore-denied",
+	]);
 });

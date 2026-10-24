@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
 
 /** Discovery only: none of these operations installs, invokes or authenticates. */
 export type GrokConnectorStatus = "complete" | "incomplete" | "account-gated" | "failed";
@@ -164,6 +165,26 @@ export function createGrokConnectorClient(
 			throw new Error("grok_connector_dom_failed");
 		return result.result.value as T;
 	}
+	async function cleanupEvaluate<T>(source: string): Promise<T> {
+		return withCdpCommandTimeout(
+			runtime,
+			{
+				timeoutMs: 2_000,
+				timeoutMessage: "grok_connector_cleanup_timeout",
+				abortSignal: AbortSignal.timeout(2_000),
+			},
+			async () => {
+				const result = await runtime.evaluate({
+					expression: source,
+					returnByValue: true,
+					awaitPromise: true,
+				});
+				if (result.exceptionDetails || result.result.value === undefined)
+					throw new Error("grok_connector_cleanup_failed");
+				return result.result.value as T;
+			},
+		);
+	}
 	function setSearch(value: string) {
 		return expression(`
       const root = plugins();
@@ -192,14 +213,33 @@ export function createGrokConnectorClient(
 		if (previous === null) throw new Error("grok_connector_search_not_observed");
 		let restored = false;
 		let result: InventoryProbe;
+		let primaryFailure: unknown;
 		try {
 			if (!(await evaluate<boolean>(setSearch(query))))
 				throw new Error("grok_connector_search_not_verified");
 			result = await evaluate<InventoryProbe>(INVENTORY);
+		} catch (error) {
+			primaryFailure = error;
+			throw error;
 		} finally {
-			restored = await evaluate<boolean>(setSearch(previous));
+			try {
+				restored = await cleanupEvaluate<boolean>(setSearch(previous));
+				if (!restored)
+					// biome-ignore lint/correctness/noUnsafeFinally: Collected and combined with the work error below.
+					throw new Error("grok_connector_search_restore_failed");
+			} catch (cleanupFailure) {
+				// biome-ignore lint/correctness/noUnsafeFinally: Preserve both work and owned restoration failures.
+				throw primaryFailure
+					? new AggregateError(
+							[primaryFailure, cleanupFailure],
+							"grok_connector_work_and_cleanup_failed",
+						)
+					: cleanupFailure;
+			}
 		}
-		if (!restored) throw new Error("grok_connector_search_restore_failed");
+		if (!restored)
+			// biome-ignore lint/correctness/noUnsafeFinally: Collected and combined with the work error below.
+			throw new Error("grok_connector_search_restore_failed");
 		return result;
 	}
 	function summary(row: ObservedRow): GrokConnectorSummary {
@@ -223,21 +263,38 @@ export function createGrokConnectorClient(
 		};
 	}
 	async function readRow(row: ObservedRow): Promise<GrokConnectorDetail> {
-		const clicked = await evaluate<boolean>(
-			expression(`
+		const activationId = randomUUID();
+		let result: GrokConnectorDetail;
+		let closed = false;
+		let primaryFailure: unknown;
+		let activationAttempted = false;
+		try {
+			activationAttempted = true;
+			const clicked = await evaluate<boolean>(
+				expression(`
           if (dialogs().some(d => d !== plugins())) return false;
           const root = plugins();
           const matches = Array.from(root?.querySelectorAll('[data-auracall-connector-read]') || []).filter(b =>
             visible(b) && b.getAttribute('data-auracall-connector-read') === ${JSON.stringify(row.handle)} &&
             text(b).split(/\\n+/)[0].trim() === ${JSON.stringify(row.name)});
           if (matches.length !== 1) return false;
-          matches[0].click(); return true;
+          const button = matches[0];
+          const lines = text(button).split(/\\n+/).map(s => s.trim()).filter(Boolean);
+          let container = button.parentElement;
+          let kind = null;
+          for (let depth = 0; container && container !== root && depth < 4; depth++, container = container.parentElement) {
+            const primary = buttons(container).filter(b => text(b).split(/\\n+/).filter(Boolean).length >= 2);
+            if (primary.length !== 1) break;
+            if (text(container).split(/\\n+/).map(s => s.trim()).includes('Added')) {kind = 'installed'; break;}
+            if (buttons(container).some(b => b.getAttribute('aria-label') === 'Add ' + lines[0] || text(b) === 'Add')) {kind = 'catalog'; break;}
+          }
+          const account = kind === 'installed' && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(lines[1] || '') ? lines[1] : null;
+          if (kind !== ${JSON.stringify(row.kind)} || account !== ${JSON.stringify(row.account ?? null)}) return false;
+          button.setAttribute('data-auracall-connector-activation', ${JSON.stringify(activationId)});
+          button.click(); return true;
         `),
-		);
-		if (!clicked) return detailFailure("grok_connector_row_changed");
-		let result: GrokConnectorDetail;
-		let closed = false;
-		try {
+			);
+			if (!clicked) return detailFailure("grok_connector_row_changed");
 			let detail = await evaluate<DetailProbe>(DETAIL);
 			const maximum = Math.min(10, Math.max(0, options.maxToolExpansions ?? 3));
 			for (
@@ -268,7 +325,10 @@ export function createGrokConnectorClient(
 					`grok_connector_detail_${detail.state}`,
 					detail.state === "account-gated" ? "account-gated" : "failed",
 				);
-			else if (detail.name !== row.name)
+			else if (
+				detail.name !== row.name ||
+				(detail.account && row.account && detail.account !== row.account)
+			)
 				result = detailFailure("grok_connector_detail_identity_changed");
 			else {
 				let endpoint: string | null = null;
@@ -290,7 +350,7 @@ export function createGrokConnectorClient(
 						/* A non-URL cannot establish endpoint identity. */
 					}
 				}
-				const account = detail.account || row.account || null;
+				const account = detail.account || null;
 				const complete =
 					!detail.hasMore &&
 					detail.toolsObserved &&
@@ -336,18 +396,38 @@ export function createGrokConnectorClient(
 												: "grok_connector_detail_observed",
 				};
 			}
+		} catch (error) {
+			primaryFailure = error;
+			throw error;
 		} finally {
-			// Close only the detail opened by this call. Never activate lifecycle controls.
-			closed = await evaluate<boolean>(
-				expression(`
+			try {
+				// Close only the detail opened by this call. Never activate lifecycle controls.
+				closed =
+					!activationAttempted ||
+					(await cleanupEvaluate<boolean>(
+						expression(`
             const root = dialogs().filter(d => d !== plugins()).at(-1);
             if (!root) return true;
+            const owners = Array.from(plugins()?.querySelectorAll('[data-auracall-connector-activation]') || []).filter(node => node.getAttribute('data-auracall-connector-activation') === ${JSON.stringify(activationId)});
+            if (owners.length !== 1) return false;
             if (text(root).split(/\\n+/)[0].trim() !== ${JSON.stringify(row.name)}) return false;
             const matches = buttons(root).filter(b => /^(close|back)$/i.test(b.getAttribute('aria-label') || text(b)));
             if (matches.length !== 1) return false;
             matches[0].click(); return true;
           `),
-			);
+					));
+				if (!closed)
+					// biome-ignore lint/correctness/noUnsafeFinally: Collected and combined with the work error below.
+					throw new Error("grok_connector_detail_cleanup_incomplete");
+			} catch (cleanupFailure) {
+				// biome-ignore lint/correctness/noUnsafeFinally: Preserve both work and owned restoration failures.
+				throw primaryFailure
+					? new AggregateError(
+							[primaryFailure, cleanupFailure],
+							"grok_connector_work_and_cleanup_failed",
+						)
+					: cleanupFailure;
+			}
 		}
 		if (!closed) return detailFailure("grok_connector_detail_cleanup_incomplete", "incomplete");
 		return result;
@@ -363,6 +443,8 @@ export function createGrokConnectorClient(
 						`grok_connector_${probe.state}`,
 						probe.state === "account-gated" ? "account-gated" : "failed",
 					);
+				if (probe.truncated)
+					return detailFailure("grok_connector_selection_coverage_incomplete", "incomplete");
 				const rows = probe.rows.filter(
 					(row) =>
 						(!selector.kind || row.kind === selector.kind) &&
@@ -387,7 +469,8 @@ export function createGrokConnectorClient(
 				if (rows.length > 10 || probe.truncated)
 					return detailFailure("grok_connector_endpoint_coverage_incomplete", "incomplete");
 				return matches[0] ?? detailFailure("grok_connector_endpoint_not_observed", "incomplete");
-			} catch {
+			} catch (error) {
+				if (error instanceof AggregateError) throw error;
 				options.abortSignal?.throwIfAborted();
 				return detailFailure("grok_connector_observation_failed");
 			}
@@ -418,7 +501,8 @@ export function createGrokConnectorClient(
 							? "grok_connector_visible_inventory"
 							: `grok_connector_${probe.state}`,
 				};
-			} catch {
+			} catch (error) {
+				if (error instanceof AggregateError) throw error;
 				options.abortSignal?.throwIfAborted();
 				return {
 					providerAccountRef: null,

@@ -171,3 +171,52 @@ provider and installed adoption remain unperformed.
 Post-completion TDD: the shared HTTP request/result contract fails with404 on
 pre-registration77ccd749d and passes on the wired route. Separate privacy checks
 prove resolver exception suppression and Ops field whitelisting.
+
+## Closed-world DOM remediation — bounded selection, account continuity, cancellation
+
+Worker base `48b373f52`; scope is the three coordinator-accepted DOM findings.
+No service, HTTP parsing/privacy, shared status, CLI or MCP edits are included.
+
+- Every inspect selector rejects a truncated inventory as
+  `grok_connector_selection_coverage_incomplete` before activation. A matching
+  visible name/id cannot establish uniqueness beyond the hundred-row bound.
+- Immediately before activation, the exact row handle/name is rechecked together
+  with installed/catalog kind and the observed connection account. A changed row
+  returns `grok_connector_row_changed` without a click. Original inventory account
+  text no longer substitutes for missing fresh detail account evidence. The
+  currently implemented detail DOM probe does not establish that evidence, so
+  row-only account observations now produce incomplete detail with null
+  `accountRef`; no account is invented and no complete connection is claimed.
+- Search restoration and owned detail closure use a separate two-second cleanup
+  deadline on the same guarded Runtime, independent of the already-aborted work
+  signal. Request/operation admission, warning fencing and the enclosing service
+  custody remain mandatory. A per-activation marker prevents cleanup from closing
+  a detail when the selected row was never activated. Work cancellation or failure
+  is retained; if restoration also fails, an AggregateError preserves both. A
+  denied cleanup admission remains a failure, never a capacity or authority bypass.
+
+The exact red command on the pinned source produced four failures: a duplicate in
+row 101, an A-to-B connection-account change before activation, cancellation after
+search mutation, and cancellation after opening detail:
+
+```
+pnpm vitest run tests/browser/grok404Connectors.test.ts --maxWorkers=1
+```
+
+Those regressions pass after repair. An additional fixture proves that work
+cancellation and restoration failure both survive. The prior row-account-only
+"complete" assertion is corrected to incomplete; it did not contain fresh detail
+account evidence.
+
+Focused verification passes **23 tests across three files**, one worker, no retries,
+in 2.77 seconds:
+
+```
+pnpm vitest run tests/browser/grok404Connectors.test.ts tests/browser/grok404ConnectorsService.test.ts tests/browser/grok404ConnectorsSurfaces.test.ts --maxWorkers=1
+```
+
+Touched-file Biome lint, `git diff --check` and
+`pnpm exec tsc --noEmit --pretty false` pass. DOM fixture evidence remains provider-free and does not qualify an
+installed binary, live Connector account or provider UI. Memory disposition:
+`forbidden`, because this delegated packet excludes external effects and the
+coordinator owns durable integration closeout.
