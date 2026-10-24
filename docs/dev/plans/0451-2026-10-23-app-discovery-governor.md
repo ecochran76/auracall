@@ -3,7 +3,7 @@
 State: OPEN
 Lane: issue368
 Owner: primary agent for ecochran76
-Branch: fix/issue368-post-refresh-timeout
+Branch: fix/issue368-settings-recovery
 Target: main
 Integration: pull request
 Base: 89800c458
@@ -224,3 +224,44 @@ above. #368 stays OPEN for final catalog/preservation acceptance.
 
 No code change or new tests: operational reconciliation only. docs:list and
 whitespace validation pass. Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Fresh captured acceptance after custody reconciliation
+
+Saved healthy settings baseline from the exact retained OpenSign page, under
+verified native-browser ownership and automation hold, without navigation.
+Expected app/endpoint, connected-account/permission sections and one enabled
+Refresh tools control are present. Connection/permission fingerprint remains
+28deb6881123168f134a36c621b7abd10a0c56baac2af85dd2d0d2b5a43dfa6a.
+One installed public-command refresh now retains nested errors, progress and
+independent backend metadata, so failure cannot silently discard primary causes.
+Compare the exact current settings against the saved baseline afterward.
+Private evidence: ~/.local/state/auracall-issue368-qualified-20261024/.
+
+### Guarded attempt stopped pre-effect; bounded recovery revision
+
+The044009ea0 attempt exits with the exact explicit error “Couldn't load plugin
+settings; Refresh tools was not activated.” No refresh_actions request was
+captured. This is a qualified pre-effect stop, not a repeated catalog mutation.
+The recovered retained page and current saved baseline remain healthy.
+
+The earlier operator-controlled one-reload recovery provides a concrete bounded
+path. Reproduce at the public adapter seam: error before activation becomes
+healthy after one reload, but current code stops without trying that recovery.
+Red observed. Add a single shared page-reload allowance across before/after
+settings reads. Require an exact settings URL, verified account identity and
+unchanged identity across reload; stop for missing/changed identity, human
+approval or persistent settings errors. Existing exact app/endpoint and final
+connection/permission comparison still govern activation/completion. Refresh
+tools remains one trusted activation; this retries only the settings read.
+This intentionally supersedes the prior source slice's no-automatic-reload
+policy with one qualified read-only recovery; no consent, warning clearance,
+app replacement or catalog-mutation retry is introduced.
+
+76 focused adapter/CLI/governor checks and typecheck pass. Recovery, account
+change and post-error cases prove one reload maximum, zero clicks on account
+change and one click with unconfirmed status if the second read fails.
+
+Full build, scoped Biome, docs:list and whitespace pass. Primary Standards/Spec
+review of this bounded recovery patch against87c4910ba has no blocking findings.
+The previous pre-effect receipt remains preserved; recovery-source tests do not
+qualify a live catalog refresh.

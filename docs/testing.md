@@ -80,7 +80,9 @@
   changing the one-click/no-replay boundary. A fake-timer activation-latency
   regression protects catalog observation from expiring before governed release.
   Exact plugin-settings load-error cases terminate immediately before/after
-  activation, preserving zero/one click and unconfirmed/no-retry respectively. Three adapter cases cover temporary
+  activation, preserving zero/one click and unconfirmed/no-retry respectively.
+  One qualified reload can recover settings with account continuity; changed
+  accounts stop without activation and a later error cannot reload again. Three adapter cases cover temporary
   disabled controls and loading account data before/after the one activation.
   Existing replacement tests retain
   delete/recreate coverage. Native acceptance is recorded separately in Plan0433.
