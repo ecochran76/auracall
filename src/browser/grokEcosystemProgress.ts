@@ -33,6 +33,10 @@ function sanitize(value: Record<string, unknown>): GrokEcosystemProgress {
 		status:
 			typeof value.status === "string" &&
 			[
+				"available",
+				"unavailable",
+				"partial",
+				"invalid",
 				"complete",
 				"incomplete",
 				"failed",

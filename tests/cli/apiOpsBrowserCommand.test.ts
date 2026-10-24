@@ -482,12 +482,13 @@ const statusPayload = {
 
 describe('api ops browser CLI helpers', () => {
   it('preserves Grok effective traffic controls through the public Ops CLI boundary', async () => {
-    const grok = { maxOperationsPerMinute: 1, operationBudgetWaitMs: 100, usedOperationsLastMinute: 1,
+    const grok = { build: {status: 'partial',code:'grok_build_app_version_not_observed'}, maxOperationsPerMinute: 1, operationBudgetWaitMs: 100, usedOperationsLastMinute: 1,
       remainingOperations: 0, blockedReason: 'minute-interaction-limit', nextEligibleAt: '2026-10-24T16:00:00.000Z' };
     const payload = { ...statusPayload, tabConcurrency: { providerControls: { grok } } };
     const summary = await readApiOpsBrowserStatusForCli({ host: '127.0.0.1', port: 18080 },
       (async (input: URL | RequestInfo) => String(input).endsWith('/status') ? Response.json(payload) : new Response(dashboardHtml)) as typeof fetch);
     expect((summary.status.raw as typeof payload).tabConcurrency.providerControls.grok).toEqual(grok);
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain('Grok Build: status=partial reason=grok_build_app_version_not_observed');
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain('Grok operations: limit=1 remaining=0 waitMs=100 reason=minute-interaction-limit next=2026-10-24T16:00:00.000Z');
   });
 

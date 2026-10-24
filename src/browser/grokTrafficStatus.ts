@@ -13,6 +13,7 @@ import {
 export interface GrokTrafficControlStatus {
  files?:GrokEcosystemProgress;
  bots?:GrokEcosystemProgress;
+ build?:GrokEcosystemProgress;
  historyInventory?: GrokHistoryProgress;
  connectorInventory?: GrokConnectorProgress;
 	maxOperationsPerMinute: number | null;

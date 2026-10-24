@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { GrokBuildRequestSchema, runGrokBuildCommand } from "../src/cli/grokBuildCommand.js";
+import { createConfiguredGrokBuildService } from "../src/browser/configuredGrokBuild.js";
+import { grokBuildUnknown } from "../src/browser/grokBuildService.js";
 import { createConfiguredGrokFilesService, createConfiguredGrokBotsService } from "../src/browser/configuredGrokDiscovery.js";
 import { GrokFilesRequestSchema, runGrokFilesCommand } from "../src/cli/grokFilesCommand.js";
 import { grokFilesFailure } from "../src/browser/providers/grokFiles.js";
@@ -3456,6 +3459,22 @@ program.command('grok-bots').description('List owned/catalog Grok Bots or invoke
    result=await runGrokBotsCommand(request,await createConfiguredGrokBotsService(config,request.runtimeProfile));
   }catch{result=grokBotsFailureResult();}
   console.log(JSON.stringify(result,null,2));if(result.status!=='supported')process.exitCode=1;
+ });
+
+program.command('grok-build').description('Discover Grok Build mode or request one confirmed generation; app/version artifacts remain separately qualified.')
+ .option('--action <discover|generate>','Operation.','discover').option('--prompt <text>','Exact generation prompt.')
+ .option('--yes','Confirm one generation.').option('--timeout-ms <milliseconds>','Response observation deadline (default 120000).',Number)
+ .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async(options,command)=>{
+  let result: import('../src/browser/grokBuildService.js').GrokBuildResult={...grokBuildUnknown('grok_build_request_invalid'),status:'invalid' as const};
+  try {
+   if(options.action==='discover'&&(options.prompt!==undefined||options.yes||options.timeoutMs!==undefined))throw new Error('Generation inputs require --action generate.');
+   const request=GrokBuildRequestSchema.parse(options.action==='discover'?{action:'discover',runtimeProfile:options.runtimeProfile}:{action:options.action,prompt:options.prompt,confirmed:options.yes===true,timeoutMs:options.timeoutMs,runtimeProfile:options.runtimeProfile});
+   result=grokBuildUnknown('grok_build_configuration_failed');
+   const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+   result=await runGrokBuildCommand(request,await createConfiguredGrokBuildService(config,request.runtimeProfile));
+  }catch{}
+  console.log(JSON.stringify(result,null,2));if(result.status!=='available')process.exitCode=1;
  });
 
 program.command('grok-conversations').description('Read bounded Grok Chats inventory and coverage as JSON.')
