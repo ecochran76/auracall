@@ -56,3 +56,6 @@ original2MM ceiling/deadline20:17:24Z remain, without stop-record mutation.
 Final custody verification: a previously noted Bot cleanup error could lose its known target through the public wrapper. The reproducer returned targetId null before repair; the bounded repair wraps failures with the verified target and preserves it in sanitized public unknown outcomes. Fifteen Bot tests and19 focused service/HTTP/diagnostic tests pass. Final presubmit before this extra custody case:93 tests across13 files passed. Build passed; merged-main lint passes249 warnings18 infos. No resource/control records were altered under manual monitoring.
 
 Final main integration verification:145 tests across6 files passed, including backend request admission/native continuation. Typecheck/lint passed with249warnings18infos. Additive testing-doc conflict preserved both Grok source qualification and backend cancellation proof.
+
+
+Final tracker readback: PR423 merged as4986f397110a07831dfa00d1dd16544ddea83ffe; issue407 CLOSED. Six of16 tickets are now merged/closed, ten remain. #403 is integrated/partial with the source-binding acceptance gate still open; #405 partial source remains isolated and backed up. Ready next wave: #403,#405,#408,#410,#412, with partial gates carried forward. No new wave dispatched near the fixed deadline.

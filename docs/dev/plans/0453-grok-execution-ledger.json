@@ -392,7 +392,7 @@
         "red": "operation cap rejection occurred after account discovery",
         "green": "governor admission before identity discovery; public cleanup unknown target regression also red/green"
       },
-      "trackerResolved": false,
+      "trackerResolved": true,
       "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
       "branch": "feat/grok-407-bots",
       "worktree": "/home/ecochran76/workspace.local/auracall-grok-407",
@@ -406,11 +406,13 @@
         ]
       },
       "resultSha": "bda2b48e5eef25b848a9f3ab3948b5af199149c2",
-      "acceptanceState": "source-accepted-pending-main-merge",
+      "acceptanceState": "source-accepted-main-merged",
       "workerResultShas": [
         "c29cde3cfe58de2fcc264962bbd4e79da12e1c37",
         "e0fcdb52a51beea6721326d88f2305a05d3e2d72"
-      ]
+      ],
+      "mergeCommit": "4986f397110a07831dfa00d1dd16544ddea83ffe",
+      "pullRequest": "https://github.com/ecochran76/auracall/pull/423"
     },
     {
       "ticket": 10,
@@ -533,11 +535,11 @@
   ],
   "integrationTip": "961ae38ce386523f3df31685edadcfe44508c2fe",
   "checkpoint": {
-    "status": "five tickets closed; Bots source acceptance pendingmain; files and installation partial",
+    "status": "six tickets merged and closed; ten remain; files/installation partial; fixed-deadline checkpoint",
     "readyNextWave": [
       403,
       405,
-      407,
+      408,
       410,
       412
     ],
@@ -555,15 +557,17 @@
     ],
     "deadline": "2026-10-24T18:13:30Z",
     "sourceSha": "bda2b48e5eef25b848a9f3ab3948b5af199149c2",
-    "integratedSha": "273dc6e26892f5db5ddf2bdc851a6b22cb117175",
+    "integratedSha": "4986f397110a07831dfa00d1dd16544ddea83ffe",
     "closedIssues": [
       399,
       400,
       401,
       402,
-      404
+      404,
+      407
     ],
-    "recordedAt": "2026-10-24T18:12:00Z"
+    "recordedAt": "2026-10-24T18:12:00Z",
+    "pullRequest": "https://github.com/ecochran76/auracall/pull/423"
   },
   "currentRun": {
     "startedAt": "2026-10-24T18:17:24Z",
