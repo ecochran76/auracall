@@ -32,8 +32,8 @@ inferred account. Affinity-mode identity requirements remain unchanged.
   preserve adapter cleanup and ledger/lease settlement and warning fences.
 - Run consumer/utility/governor tests, typecheck, build, review and integration.
 - Qualify installed read-only discovery separately from one named in-place app
-  refresh. The operator was asked for the exact app/runtime profile; no app is
-  guessed and no provider prompt, app replacement or warning clearance is allowed.
+  refresh. Operator selected OpenSign on wsl-chrome-3; no provider prompt,
+  app replacement or warning clearance is allowed.
 - Keep #368 open until its installed target/account/endpoint/connection evidence
   is qualified. Do not claim source tests prove provider catalog refresh.
 
@@ -52,6 +52,12 @@ still raises the original error. Typecheck, build, scoped Biome, docs:list and w
 PR390 mergedfb026941f; CLI installation and compiled serialized-utility contract
 pass. API PID1777322 and its adopted clipboard helper remain unchanged. See
 [installed CLI boundary](../notes/2026-10-23-issue368-cli-governor.md).
-Provider discovery/catalog qualification remains pending the exact app/runtime
-target requested from the operator; no provider mutation occurred. Installed target selection remains pending.
+Operator selected OpenSign on wsl-chrome-3. Installed read-only discovery exits0,
+observes30 apps and one enabled exact OpenSign match on the expected account.
+One guarded in-place refresh exits1/unconfirmed: trusted activation and settings
+preservation checks passed, but no attributable successful catalog was observed.
+retrySafe=false; no replay. #368 remains OPEN at this precise acceptance gap.
+Endpoint expectation comes from the OpenSign ingress inventory and OAuth docs;
+the refresh must independently match the saved app setting before activation.
+Private live receipts: ~/.local/state/auracall-issue368-opensign-20261023/.
 Memory disposition: forbidden; user has not requested saving memory.

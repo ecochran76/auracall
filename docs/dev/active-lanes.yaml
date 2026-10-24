@@ -15,7 +15,7 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: cli-contract-accepted-live-target-pending
+    validation_status: live-discovery-accepted-refresh-unconfirmed-no-replay
     integration_receipt: fb026941f6c589f6297d3abb241a7d71ae4a312b
     updated_at: 2026-10-23
   - id: P87-IQ2

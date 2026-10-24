@@ -54,3 +54,19 @@ app replacement or endpoint/permissions change was performed by this packet.
 #368 and Plan0451 remain OPEN pending the exact live target and provider evidence.
 Private install/compiled-contract receipts: ~/.local/state/auracall-issue368-20261023/.
 Memory forbidden: no explicit save request.
+
+## Live OpenSign qualification — 2026-10-23
+
+Operator selected OpenSign on wsl-chrome-3. The installed CLI list exits0 and
+observes30 apps, including one exact enabled OpenSign app on the expected account.
+The endpoint expectation was resolved from the OpenSign ingress inventory and
+OAuth docs. A single guarded refresh-tools invocation exits1/status unconfirmed:
+“No attributable successful refreshed tool catalog was observed. Inspect before
+retrying.” retrySafe=false. The exact-settings checks before and after trusted
+activation passed; identity, endpoint, connection and permission snapshot were
+preserved. No catalog count/hash was returned, so refresh success is unproved.
+No replay, app replacement, provider prompt, consent or warning clearance.
+This supersedes the target-pending gate above. #368/Plan0451 stay OPEN pending
+read-only reconciliation of the missing catalog observation, not another click.
+Private receipts: ~/.local/state/auracall-issue368-opensign-20261023/.
+Memory disposition forbidden: no explicit request to save memory.
