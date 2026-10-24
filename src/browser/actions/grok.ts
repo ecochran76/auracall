@@ -44,7 +44,7 @@ const GROK_VISIBLE_INPUT_EXPRESSION = `(() => {
 
 const GROK_COMPOSER_TOKEN_READER = `(root) => Array.from(root.querySelectorAll('[contenteditable="false"]'))
   .filter(node => !node.parentElement?.closest('[contenteditable="false"]'))
-  .map(node => JSON.stringify([node.getAttribute('data-id'), node.getAttribute('data-entity-id'), node.getAttribute('data-type'), node.textContent || '']))`;
+  .map(node => JSON.stringify([node.getAttribute('data-id'), node.getAttribute('data-entity-id'), node.getAttribute('data-type'), node.getAttribute('data-bot-id'), node.getAttribute('href'), node.textContent || '']))`;
 
 // Read editable text without counting immutable mention/connector tokens as prompt
 // text. Paragraph and BR boundaries are significant, including blank lines.
@@ -214,6 +214,7 @@ export async function setGrokPrompt(
   Input: ChromeClient['Input'],
   Runtime: ChromeClient['Runtime'],
   prompt: string,
+  expectedBot?: { id: string; name: string },
 ): Promise<void> {
   const composerId = randomUUID();
   preparedGrokPrompts.set(Runtime, { composerId, prompt, tokens: '[]', state: 'invalid' });
@@ -223,6 +224,17 @@ export async function setGrokPrompt(
     expression: `(() => {
       const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
       if (!el) return { ok: false };
+      const expectedBot = ${JSON.stringify(expectedBot ?? null)};
+      if (expectedBot) {
+        const botTokens = Array.from(el.querySelectorAll('[contenteditable="false"]')).filter(token => !token.parentElement?.closest('[contenteditable="false"]'));
+        const token = botTokens.length === 1 ? botTokens[0] : null;
+        let botId = token?.getAttribute('data-bot-id');
+        if (!botId && token?.getAttribute('href')) {
+          try { const url = new URL(token.getAttribute('href'), location.href); if (url.origin === 'https://grok.com') botId = /^\\/(?:bot|bots)\\/([^/?#]+)\\/?$/.exec(url.pathname)?.[1] || null; } catch {}
+        }
+        if (!token || botId !== expectedBot.id || String(token.textContent || '').trim().replace(/^@/, '') !== expectedBot.name)
+          return { ok: false, botMismatch: true };
+      }
       el.setAttribute('data-auracall-grok-composer', ${JSON.stringify(composerId)});
       window.__auracallGrokPreparedComposer = { id: ${JSON.stringify(composerId)}, element: el, tokens: Array.from(el.querySelectorAll('[contenteditable="false"]')).filter(token => !token.parentElement?.closest('[contenteditable="false"]')) };
       const tokenEvidence = (${GROK_COMPOSER_TOKEN_READER})(el);
@@ -273,6 +285,7 @@ export async function setGrokPrompt(
     })()`,
     returnByValue: true,
   });
+  if (focusOutcome.result?.value?.botMismatch) throw new Error('Expected Grok Bot changed before prompt preparation; prompt was not submitted.');
   if (!focusOutcome.result?.value?.ok) {
     throw new Error('Unable to focus the Grok prompt composer.');
   }
