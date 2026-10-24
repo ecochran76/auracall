@@ -1,6 +1,6 @@
 export interface GrokIndexProgress {
 	phase: "backfill" | "follow";
-	state: "active" | "paused" | "partial";
+	state: "active" | "paused" | "partial" | "failed";
 	completedScopes: number;
 	totalScopes: number;
 	retainedRows: number;
@@ -15,7 +15,14 @@ export function normalizeGrokIndexProgress(value: unknown): GrokIndexProgress | 
 		typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 	return {
 		phase: input.phase === "follow" ? "follow" : "backfill",
-		state: input.state === "paused" ? "paused" : input.state === "active" ? "active" : "partial",
+		state:
+			input.state === "failed"
+				? "failed"
+				: input.state === "paused"
+					? "paused"
+					: input.state === "active"
+						? "active"
+						: "partial",
 		completedScopes: count(input.completedScopes),
 		totalScopes: count(input.totalScopes),
 		retainedRows: count(input.retainedRows),

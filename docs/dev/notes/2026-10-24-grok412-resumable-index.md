@@ -25,7 +25,8 @@ custody bound cooperative drain; no second coordination mechanism is introduced.
 Existing persisted target eligibility/failure backoff remains authoritative.
 Public status, refresh, MCP declared output contracts, HTTP/Ops and CLI summaries
 retain sanitized Grok progress; continuation tokens are omitted from that
-projection and retained conversation metadata. Fresh read failures still throw
+projection and retained conversation metadata. Running/fresh-failure state overrides retained checkpoint state consistently.
+Fresh read failures still throw
 through the existing refresh failure path; retained cache cannot become success.
 
 ## Verification
@@ -55,7 +56,9 @@ pnpm run build
 ```
 
 Focused presubmit203 tests/14 files passed before the final page-yield state case;
-after that change,28 tests/4 causal files passed. Typecheck and build passed.
+after that change,28 tests/4 causal files passed. Final active/failed status
+projection is verified by a further42 tests/5 causal files and fresh typecheck.
+Build passed before that small status projection addition.
 Targeted Biome lint passed with one pre-existing HTTP Location naming warning.
 One earlier parallel run timed out while importing the collector inside a test;
 imports moved to suite collection and subsequent runs passed. A transient

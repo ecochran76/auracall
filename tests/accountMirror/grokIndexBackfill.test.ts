@@ -363,7 +363,7 @@ test("public status retains sanitized Grok continuation progress alongside opera
 	const entry = registry.readStatus({}).entries.find((x) => x.provider === "grok");
 	expect(entry?.metadataEvidence?.grokIndex).toEqual({
 		phase: "backfill",
-		state: "paused",
+		state: "failed",
 		completedScopes: 1,
 		totalScopes: 2,
 		retainedRows: 10,
@@ -371,6 +371,21 @@ test("public status retains sanitized Grok continuation progress alongside opera
 	});
 	expect(entry?.lastFailureAt).toBe("2026-10-24T23:00:00.000Z");
 	expect(JSON.stringify(entry)).not.toContain("must-not-leak");
+	registry.mergeState({ provider: "grok", runtimeProfileId: "default" }, { running: true });
+	expect(
+		registry.readStatus({ provider: "grok" }).entries[0].metadataEvidence?.grokIndex?.state,
+	).toBe("active");
+	registry.mergeState(
+		{ provider: "grok", runtimeProfileId: "default" },
+		{
+			running: false,
+			lastSuccessAtMs: Date.parse("2026-10-24T23:00:01Z"),
+			consecutiveFailureCount: 0,
+		},
+	);
+	expect(
+		registry.readStatus({ provider: "grok" }).entries[0].metadataEvidence?.grokIndex?.state,
+	).toBe("paused");
 });
 
 test("Grok project discovery retains a bounded inventory beyond the legacy 25-row window", async () => {
@@ -389,7 +404,15 @@ test("Grok project discovery retains a bounded inventory beyond the legacy 25-ro
 	expect(result.truncated).toBe(false);
 });
 
-test('page-level foreground yield is publicly paused rather than ordinary partial work', async () => {
- const result=await collectGrokMirrorIndex({projects:[],maxRows:10,maxReads:2,read:async()=>({items:[],historyCoverage:{...coverage('retained-anchor'),reason:'foreground-yield'}})});
- expect(result.progress.state).toBe('paused');
+test("page-level foreground yield is publicly paused rather than ordinary partial work", async () => {
+	const result = await collectGrokMirrorIndex({
+		projects: [],
+		maxRows: 10,
+		maxReads: 2,
+		read: async () => ({
+			items: [],
+			historyCoverage: { ...coverage("retained-anchor"), reason: "foreground-yield" },
+		}),
+	});
+	expect(result.progress.state).toBe("paused");
 });

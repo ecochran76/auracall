@@ -55,8 +55,21 @@ test("declared MCP refresh and status contracts retain sanitized Grok progress",
 		typeof registry.readStatus
 	>;
 	expect(parsed.entries[0].metadataEvidence?.grokIndex).toEqual(progress);
+	registry.mergeState(
+		{ provider: "grok", runtimeProfileId: "default" },
+		{ lastFailureAtMs: 1000, consecutiveFailureCount: 1 },
+	);
+	const failedStatus = statusSchema.parse(registry.readStatus({ provider: "grok" })) as ReturnType<
+		typeof registry.readStatus
+	>;
+	expect(failedStatus.entries[0].metadataEvidence?.grokIndex?.state).toBe("failed");
 	const refreshEvidence = refreshTool.outputSchema.metadataEvidence;
 	expect(
 		((refreshEvidence as z.ZodType).parse(evidence) as { grokIndex: unknown }).grokIndex,
 	).toEqual(progress);
+	const failedEvidence = (refreshEvidence as z.ZodType).parse({
+		...evidence,
+		grokIndex: { ...progress, state: "failed" },
+	}) as { grokIndex: { state: string } };
+	expect(failedEvidence.grokIndex.state).toBe("failed");
 });

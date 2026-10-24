@@ -656,6 +656,13 @@ function createStatusEntry(
 ): AccountMirrorStatusEntry {
 	const metadataCounts = normalizeMetadataCounts(state.metadataCounts);
 	const metadataEvidence = normalizeMetadataEvidence(state.metadataEvidence);
+	if (target.provider === "grok" && metadataEvidence?.grokIndex) {
+		const latestFailure = state.lastFailureAtMs ?? 0;
+		const latestSuccess = state.lastSuccessAtMs ?? 0;
+		if (state.running === true) metadataEvidence.grokIndex.state = "active";
+		else if (latestFailure > 0 && latestFailure >= latestSuccess && (state.consecutiveFailureCount ?? 0) > 0)
+			metadataEvidence.grokIndex.state = "failed";
+	}
 	const backfillLedger = normalizeAccountMirrorBackfillLedger(state.backfillLedger);
 	return {
 		provider: target.provider,

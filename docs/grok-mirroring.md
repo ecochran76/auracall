@@ -19,8 +19,9 @@ provider effect or authorize another browser owner.
 
 Public account-mirror metadata evidence adds `grokIndex`: visible-scope
 `phase` (`backfill` or `follow`), `state`, completed/total scope counts, retained
-row count and omissions. Existing refresh state and eligibility/backoff remain
-authoritative for active, paused and failed operations. Opaque cursors are absent
+row count and omissions. Public progress reports `active` while a refresh runs
+and `failed` when the latest failed refresh is unresolved, overriding older
+checkpoint state. Existing eligibility/backoff remains authoritative. Opaque cursors are absent
 from this public evidence and mirrored conversation metadata.
 
 Visible Chats completion does not prove hidden or undiscovered Bot scopes.

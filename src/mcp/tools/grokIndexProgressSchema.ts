@@ -4,7 +4,7 @@ import { z } from "zod";
 export const grokIndexProgressSchema = z
 	.object({
 		phase: z.enum(["backfill", "follow"]),
-		state: z.enum(["active", "paused", "partial"]),
+		state: z.enum(["active", "paused", "partial", "failed"]),
 		completedScopes: z.number().int().nonnegative(),
 		totalScopes: z.number().int().nonnegative(),
 		retainedRows: z.number().int().nonnegative(),
