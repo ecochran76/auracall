@@ -10,13 +10,13 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: INTEGRATED
-    checkpoint: 99ad14308258f12cadcffd5f3c1b8a4bf67bd5c9
+    checkpoint: 044009ea0fdc540bc7d3841f1072d7865ce874b9
     remote_ref: refs/remotes/origin/fix/issue368-post-refresh-timeout
     integration: merge
     dependencies: []
     overlaps: []
     validation_status: retained-settings-error-reproduced-terminal-handling-green
-    integration_receipt: 9d076ebf01ca83e835d603a3a899d6638d85b791
+    integration_receipt: ae8a95cc744a0627a1e97e1fce5d07faf2be887d
     updated_at: 2026-10-23
   - id: P87-IQ2
     objective: Honor configured admission wait while reading refresh settings
