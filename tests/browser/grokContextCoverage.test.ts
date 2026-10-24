@@ -36,6 +36,9 @@ test("bounded Grok observations resume exact project and Bot identity without in
 		{ projectId: "project", botId: "bot" },
 	);
 	expect(mergeObservedGrokContext(first, last).messages).toEqual(context.messages);
+	const retained = mergeObservedGrokContext(mergeObservedGrokContext(first, last), first);
+	expect(retained.messages).toEqual(context.messages);
+	expect(retained.sources).toEqual(context.sources);
 	expect(() => mergeObservedGrokContext({ ...first, metadata: {} }, last)).toThrow(/snapshot/);
 	expect(last.messages).toEqual([{ role: "assistant", text: "Second" }]);
 	expect(last.sources).toEqual([{ url: "https://example.com/second", messageIndex: 0 }]);
@@ -43,4 +46,19 @@ test("bounded Grok observations resume exact project and Bot identity without in
 		nextMessageIndex: null,
 		complete: false,
 	});
+});
+
+test("an unreadable mounted card cannot advance an observed content cursor", () => {
+	expect(() =>
+		boundObservedGrokContext(
+			{
+				provider: "grok",
+				conversationId: "chat",
+				messages: [{ role: "assistant", text: "One readable card" }],
+			},
+			{ startMessageIndex: 0, maxMessages: 2 },
+			{},
+			{ totalMessages: 2, fingerprint: "mounted-two" },
+		),
+	).toThrow(/unavailable.*mounted card/i);
 });

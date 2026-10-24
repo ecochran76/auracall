@@ -1,3 +1,12 @@
+## 2026-10-24 — Keep bounded Grok detail aligned and attributable
+
+Slice content and referenced files against the same mounted-card inventory.
+Persist compatible qualified cache tails during bounded follow; a partial read
+does not prove those older observations disappeared. Missing card content cannot
+advance a cursor. Preserve literal later-chunk text instead of applying first
+message prefix cleanup again, and check cancellation after awaited cache/receipt
+publication before returning success.
+
 ## 2026-10-24 — Commit Grok index rows with continuation
 
 A progress callback can report an advanced cursor before collected rows are

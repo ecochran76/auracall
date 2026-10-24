@@ -305,10 +305,33 @@ describe("project-scoped conversation context normalization", () => {
 		try {
 			for (const index of [0, 1]) await service.getConversationContext("resumed", { allowCacheFallback: false,
 				listOptions: { accountMirrorContextChunk: { startMessageIndex: index, maxMessages: 1 } } });
+			// A later bounded follow must not delete an already qualified tail while
+			// only the first chunk of the same mounted inventory is refreshed.
+			await service.getConversationContext("resumed", { allowCacheFallback: false,
+				listOptions: { accountMirrorContextChunk: { startMessageIndex: 0, maxMessages: 1 } } });
 			const cached = await service.getConversationContext("resumed", { refresh: false, cacheOnly: true });
 			expect(cached.messages).toEqual(full.messages);
 			expect(cached.metadata).toMatchObject({ contextReadSource: "cache", projectId: "p", botId: "b", historyCoverage: { state: "partial" } });
 		} finally { await rm(homeDir, { recursive: true, force: true }); }
+	});
+
+	test("resumed Grok chunks preserve later assistant text that quotes project instructions", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-grok-quoted-prefix-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext = { provider: "grok", userConfig: {}, listOptions: {}, identityKey: "fixture@example.com" } as ProviderCacheContext;
+		const store = new JsonCacheStore();
+		vi.spyOn(store, "readProjectInstructions").mockResolvedValue({items:{content:"Project instructions"}} as never);
+		const messages: ConversationContext["messages"] = Array.from({length:24},()=>({role:"user",text:"Earlier question"}));
+		messages.push({role:"assistant",text:"Project instructions\n\nQuoted later answer"});
+		const full: ConversationContext = {provider:"grok",conversationId:"quoted",messages};
+		const service = new TestContextLlmService({id:"grok",config:{id:"grok",selectors:{}},
+			readConversationContext:async (_id:string,_project:unknown,options:BrowserProviderListOptions)=>boundObservedGrokContext(full,options.accountMirrorContextChunk,{projectId:"p"}),
+		} as never,store,cacheContext);
+		try {
+			for(const start of [0,24]) await service.getConversationContext("quoted",{projectId:"p",allowCacheFallback:false,listOptions:{accountMirrorContextChunk:{startMessageIndex:start,maxMessages:24}}});
+			const cached=await service.getConversationContext("quoted",{refresh:false,cacheOnly:true});
+			expect(cached.messages[24].text).toBe("Project instructions\n\nQuoted later answer");
+		} finally {await rm(homeDir,{recursive:true,force:true});}
 	});
 
 	test("Grok cancellation during an already dispatched cache write cannot publish success or fallback", async () => {
@@ -330,6 +353,23 @@ describe("project-scoped conversation context normalization", () => {
 				listOptions: { abortSignal: controller.signal } })).rejects.toMatchObject({ outcome: "aborted" });
 			const receipt = await readConversationContextReadReceipt(cacheContext, "publication");
 			expect(receipt.items).toMatchObject({ outcome: "aborted" });
+		} finally { await rm(homeDir, { recursive: true, force: true }); }
+	});
+
+	test("Grok cancellation during receipt delivery cannot return late success", async () => {
+		const homeDir = await mkdtemp(path.join(os.tmpdir(), "auracall-grok-receipt-abort-"));
+		setAuracallHomeDirOverrideForTest(homeDir);
+		const cacheContext = { provider: "grok", userConfig: {}, listOptions: {}, identityKey: "fixture@example.com" } as ProviderCacheContext;
+		const controller = new AbortController();
+		const service = new TestContextLlmService({ id: "grok", config: { id: "grok", selectors: {} },
+			readConversationContext: async () => ({ provider: "grok", conversationId: "receipt-abort", messages: [{role: "user", text: "Observed"}] }),
+		} as never, new JsonCacheStore(), cacheContext);
+		try {
+			await expect(service.getConversationContext("receipt-abort", {
+				listOptions: { abortSignal: controller.signal },
+				onReceipt: async receipt => { if (receipt.outcome === "succeeded") controller.abort(); },
+			})).rejects.toMatchObject({ outcome: "aborted" });
+			expect((await readConversationContextReadReceipt(cacheContext, "receipt-abort")).items).toMatchObject({outcome:"aborted"});
 		} finally { await rm(homeDir, { recursive: true, force: true }); }
 	});
 

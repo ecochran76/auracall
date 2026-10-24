@@ -3013,7 +3013,8 @@ export abstract class LlmService {
 			);
 			lastStage = "provider:readConversationContext.complete";
 			let normalized = this.normalizeConversationContext(context, conversationId);
-			if (typeof options?.projectId === "string" && options.projectId.trim().length > 0) {
+			if (typeof options?.projectId === "string" && options.projectId.trim().length > 0 &&
+				!(this.providerId === "grok" && (scopedListOptions.accountMirrorContextChunk?.startMessageIndex ?? 0) > 0)) {
 				const cachedInstructions = await this.cacheStore.readProjectInstructions(
 					cacheContext,
 					options.projectId.trim(),
@@ -3036,6 +3037,7 @@ export abstract class LlmService {
 			controller.signal.throwIfAborted();
 			lastStage = "complete";
 			await writeReceipt("succeeded", null);
+			if (this.providerId === "grok") controller.signal.throwIfAborted();
 			return normalized;
 		} catch (error) {
 			let terminalError = abortError ?? error;

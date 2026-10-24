@@ -66,3 +66,12 @@ a local bound does not clear a provider warning.
 Validation is provider-free source evidence. Installation, current native Grok
 history pagination/end-boundary observation, and hidden Bot scope discovery remain
 separate qualification gates. No live effects or scheduler enablement are implied.
+
+A bounded follow read preserves previously qualified messages and references
+outside its current chunk when the mounted-row inventory and conversation,
+project and Bot custody still match. An unreadable mounted card is unavailable
+content, rather than permission to advance past missing text. Later chunks
+preserve literal assistant text even when it quotes project instructions.
+Cancellation remains authoritative after cache and receipt delivery boundaries;
+a pre-dispatched local write may finish, but cannot become a successful Grok read
+after cancellation.

@@ -78,3 +78,32 @@ turn reproduced missing final attachment metadata. Exact red command:
 share one mounted-card inventory script before slicing; ordinary unchunked file
 listing retains its existing selection. The full adapter fixture file passes
 7 tests, including both missing-file reproducers and unchanged unchunked listing.
+
+## Primary integration qualification
+
+Accepted worker source7f97ddfa2 as09088ea87 on top of merged source wave
+PR431/16dbd7218. Independent primary run:180 tests/8 files passed. Accepted
+closed-world adapter follow-up4e08da07b as05fd60104: content and chunked file
+selection share one mounted-card inventory, including primary decoration rows
+and fallback assistant/user alignment; ordinary unchunked listing remains intact.
+
+Primary reproduced and fixed these additional exact content/cancellation risks:
+
+- cancellation during public receipt delivery could still return success; Grok
+  now checks cancellation after that awaited boundary and retains an aborted receipt;
+- first-chunk follow could erase a qualified cache tail from the same mounted-row
+  inventory; compatible observed messages and indexed references now survive
+  bounded refresh, while changed scope/inventory still rejects continuation;
+- an unreadable mounted card could advance the row cursor despite missing text;
+  it now returns explicit unavailable history without advancing qualified cache;
+- project-prefix cleanup could alter a later assistant message in a resumed
+  chunk; Grok continuation preserves the literal later message.
+
+Exact causal commands were `pnpm vitest run tests/browser/llmServiceContext.test.ts
+-t 'Grok cancellation during receipt' --maxWorkers=1`, `-t 'Grok resumed public'`,
+`-t 'quotes project instructions'`, and `pnpm vitest run
+tests/browser/grokContextCoverage.test.ts -t 'unreadable mounted' --maxWorkers=1`.
+All were observed red, then green. A primary10-file selection including the
+worker8-file list plus public HTTP/MCP index projection passed after remediation;
+see central journal for final count and build receipt. No broad whole-program
+review pass was consumed; this is implementation qualification of ticket413.
