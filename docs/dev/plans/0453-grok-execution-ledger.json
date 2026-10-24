@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "spec": "https://github.com/ecochran76/auracall/issues/398",
+  "plan": "docs/dev/plans/0453-2026-10-24-grok-implementation.md",
+  "branch": "feat/grok-upgrade-integration",
+  "canonicalBase": "c9beb45b687be636a43ca5bc2c3bc950c5efd2c8",
+  "integrationBase": "6ae3860c1",
+  "startedAt": "2026-10-24T16:13:30Z",
+  "checkpointDeadline": "2026-10-24T18:13:30Z",
+  "owner": "ecochran76",
+  "tickets": [
+    {
+      "ticket": 1,
+      "issue": 399,
+      "url": "https://github.com/ecochran76/auracall/issues/399",
+      "blockers": [],
+      "state": "running",
+      "worker": "primary",
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 2,
+      "issue": 400,
+      "url": "https://github.com/ecochran76/auracall/issues/400",
+      "blockers": [
+        399
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 3,
+      "issue": 401,
+      "url": "https://github.com/ecochran76/auracall/issues/401",
+      "blockers": [
+        400
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 4,
+      "issue": 402,
+      "url": "https://github.com/ecochran76/auracall/issues/402",
+      "blockers": [
+        400
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 5,
+      "issue": 403,
+      "url": "https://github.com/ecochran76/auracall/issues/403",
+      "blockers": [
+        402
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 6,
+      "issue": 404,
+      "url": "https://github.com/ecochran76/auracall/issues/404",
+      "blockers": [
+        400
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 7,
+      "issue": 405,
+      "url": "https://github.com/ecochran76/auracall/issues/405",
+      "blockers": [
+        404
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 8,
+      "issue": 406,
+      "url": "https://github.com/ecochran76/auracall/issues/406",
+      "blockers": [
+        402,
+        405
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 9,
+      "issue": 407,
+      "url": "https://github.com/ecochran76/auracall/issues/407",
+      "blockers": [
+        402
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 10,
+      "issue": 408,
+      "url": "https://github.com/ecochran76/auracall/issues/408",
+      "blockers": [
+        407
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 11,
+      "issue": 409,
+      "url": "https://github.com/ecochran76/auracall/issues/409",
+      "blockers": [
+        403,
+        404,
+        408
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 12,
+      "issue": 410,
+      "url": "https://github.com/ecochran76/auracall/issues/410",
+      "blockers": [
+        402
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 13,
+      "issue": 411,
+      "url": "https://github.com/ecochran76/auracall/issues/411",
+      "blockers": [
+        410
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 14,
+      "issue": 412,
+      "url": "https://github.com/ecochran76/auracall/issues/412",
+      "blockers": [
+        401
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 15,
+      "issue": 413,
+      "url": "https://github.com/ecochran76/auracall/issues/413",
+      "blockers": [
+        412
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    },
+    {
+      "ticket": 16,
+      "issue": 414,
+      "url": "https://github.com/ecochran76/auracall/issues/414",
+      "blockers": [
+        410,
+        413
+      ],
+      "state": "pending",
+      "worker": null,
+      "ownedPaths": [],
+      "validation": [],
+      "review": null,
+      "postCompletionTdd": null,
+      "trackerResolved": false
+    }
+  ]
+}
