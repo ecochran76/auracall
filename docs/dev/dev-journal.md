@@ -1,3 +1,13 @@
+## 2026-10-24 — Issue368 retrospective
+
+Reviewed visible session evidence and current source/check configuration. Report
+four scoped improvements: causal CLI receipts, owner-aware transition recovery,
+execution of existing CI, and earlier use of existing diagnosis/suspension gates.
+No speculative root cause for absent CI runs; workflow is present/active, while
+readback has no runs. Recommendations only; no runtime/global-policy changes.
+See [retrospective](notes/2026-10-24-issue368-retrospective.md). Memory forbidden:
+no save request.
+
 ## 2026-10-24 — Issue368 live acceptance complete
 
 Installed76aa429c0 public command returns completed. One attributable HTTP200
