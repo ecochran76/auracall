@@ -1,3 +1,12 @@
+## 2026-10-24 — Grok UX drift and plugin boundaries
+
+Survey finds History-only opener against live Chats, Build absent from the bundled
+model registry, and Plugins split into Connectors/Skills/Bots. Composer @ exposes
+Bots/Connectors and / exposes modes/Skills. Existing simple Grok guard is not proof
+of ChatGPT live-follow governance parity. Record observed labels separately from
+model IDs, installed state separately from catalog, and UI forms separately from
+accepted provider mutations. [Survey](dev/notes/2026-10-24-grok-ux-survey.md).
+
 ## 2026-10-24 — Preserve tool-refresh observation failure reasons
 
 An unconfirmed catalog refresh must distinguish a missing expected request,

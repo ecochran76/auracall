@@ -1,3 +1,12 @@
+## 2026-10-24 — Grok UX survey
+
+Default Grok browser opened and inspected: Chats, composer @ and /, model menu,
+Attach/recent files, Plugins Connectors/Skills/Bots, custom MCP form and blank Bot
+creation. Recorded current DOM algorithms, History→Chats drift, missing Build
+registry entry and ChatGPT-only live-follow cooldown seam. Survey only; no prompt,
+upload, installation or Bot creation. See [survey](notes/2026-10-24-grok-ux-survey.md).
+Memory forbidden: no explicit save request.
+
 ## 2026-10-24 — Issue368 refresh observation diagnosis
 
 Read-only reconciliation could not recover the prior response. Exact retained
