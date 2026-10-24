@@ -1,3 +1,12 @@
+## 2026-10-24 — Grok specification and proposed slices
+
+Final scope/test-boundary confirmation accepted without changes. Published
+[specification #398](https://github.com/ecochran76/auracall/issues/398), with exact
+actor/marker/state/label readback. [Plan0452](plans/0452-2026-10-24-grok-upgrade-spec.md)
+and sixteen separate proposed ticket drafts preserve the dependency graph.
+Ticket breakdown awaits Previews review before issue creation. No implementation
+or live effects. Memory forbidden: no save request.
+
 ## 2026-10-24 — Grok scope decisions, round 2
 
 Recorded Mail Receipts draft/edit qualification with read/write/send capability
