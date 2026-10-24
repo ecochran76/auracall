@@ -11,6 +11,17 @@ type WarningEvaluator = {
 export async function probeGrokRateLimitWarning(
 	context: unknown,
 ): Promise<ProviderTrafficWarning | null> {
+	const native = (context as { nativeProviderResponse?: { url?: string; status?: number } } | null)
+		?.nativeProviderResponse;
+	if (native?.status === 429 && typeof native.url === "string") {
+		try {
+			const url = new URL(native.url);
+			if (url.origin === "https://grok.com" && url.pathname.startsWith("/rest/"))
+				return { classification: "rate-limit", reason: "Owned Grok backend returned HTTP 429." };
+		} catch {
+			return null;
+		}
+	}
 	const runtime = context as Partial<WarningEvaluator> | null;
 	if (!runtime?.evaluate) return null;
 	const result = await runtime.evaluate({

@@ -1,3 +1,4 @@
+import { resolveGrokBackendRequestsPerMinute } from "../../runtime/grokTrafficLimits.js";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -872,9 +873,10 @@ export abstract class LlmService {
 			? (overrides.configuredUrl ?? null)
 			: this.getConfiguredUrl();
 		const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
+		const grokOwnedBootstrap = this.providerId === "grok" && resolveGrokBackendRequestsPerMinute(this.userConfig as Record<string,unknown>,this.resolveActiveProfileName() ?? "default") !== undefined;
 		const resolvedTarget = await this.browserService.resolveServiceTarget({
 			serviceId: this.providerId,
-			configuredUrl,
+			configuredUrl: grokOwnedBootstrap ? "about:blank" : configuredUrl,
 			ensurePort: overrides.tabTargetId || hasExplicitEndpoint ? false : options.ensurePort,
 			abortSignal: overrides.abortSignal,
 			onStage: options.onPreflightStage,
@@ -961,7 +963,7 @@ export abstract class LlmService {
 				resolvedOptions.providerTrafficAuthorityFactory =
 					overrides.providerTrafficAuthorityFactory ??
 					createConfiguredProviderTrafficAuthorityFactory({
-						userConfig: this.userConfig,
+						userConfig: this.providerId === "grok" ? {...this.userConfig,auracallProfile:this.resolveActiveProfileName() ?? "default"} : this.userConfig,
 						mutationAudit,
 						provider: this.providerId,
 						managedBrowserProfile,

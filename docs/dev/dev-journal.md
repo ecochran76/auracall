@@ -1,3 +1,13 @@
+## 2026-10-24 — Grok #400 request admission candidate
+
+#399 merged via PR415 and tracker closure verified. Captured homepage request-path
+metadata without headers/bodies; separated REST, telemetry and static categories.
+No numeric provider ceiling inferred. Extend owned guarded interception to Grok
+REST with explicit operator caps, request/operation status separation, native429
+fencing, duplicate exclusion and cross-process restrictive limits. Public bootstrap
+red/green now establishes custody before provider navigation. Plan0453 remains
+OPEN with the original18:13:30Z stop/checkpoint deadline.
+
 ## 2026-10-24 — Grok #399 bounded review accepted
 
 One independent Standards/Spec pass accepted three concrete blockers: fallback

@@ -181,7 +181,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
 function formatGrokTrafficControlLines(raw: unknown): string[] {
   const controls = readObjectField(readObjectField(readObjectField(raw, 'tabConcurrency'), 'providerControls'), 'grok');
   if (!controls) return [];
-  return [`Grok operations: limit=${readNumberField(controls, 'maxOperationsPerMinute') ?? 'unconfigured'} remaining=${readNumberField(controls, 'remainingOperations') ?? 'unlimited'} waitMs=${readNumberField(controls, 'operationBudgetWaitMs') ?? 0} reason=${readStringField(controls, 'blockedReason') ?? 'clear'} next=${readStringField(controls, 'nextEligibleAt') ?? 'none'}`];
+  return [`Grok operations: limit=${readNumberField(controls, 'maxOperationsPerMinute') ?? 'unconfigured'} remaining=${readNumberField(controls, 'remainingOperations') ?? 'unlimited'} waitMs=${readNumberField(controls, 'operationBudgetWaitMs') ?? 0} reason=${readStringField(controls, 'blockedReason') ?? 'clear'} next=${readStringField(controls, 'nextEligibleAt') ?? 'none'}`, `Grok backend requests: limit=${readNumberField(controls, 'maxBackendRequestsPerMinute') ?? 'unconfigured'} used=${readNumberField(controls, 'usedBackendRequestsLastMinute') ?? 0} remaining=${readNumberField(controls, 'remainingBackendRequests') ?? 'unlimited'} waitMs=${readNumberField(controls, 'backendRequestBudgetWaitMs') ?? 0}`];
 }
 
 function formatTabConcurrencyStatusLine(raw: unknown): string {

@@ -357,26 +357,29 @@ test("a higher-cap Grok runtime cannot bypass a lower configured ceiling for the
 	}
 });
 
-test("separate OS processes cannot bypass Grok account capacity with a higher local cap", async () => {
+test.each([
+	"operations",
+	"requests",
+])("separate OS processes cannot bypass Grok %s capacity with a higher local cap", async (budget) => {
 	const root = await mkdtemp(path.join(os.tmpdir(), "grok-processes-"));
 	roots.push(root);
 	const { execFile } = await import("node:child_process");
 	const { promisify } = await import("node:util");
 	const execute = promisify(execFile);
 	const source = `
+    import { createHash } from "node:crypto";
     import path from 'node:path';
     import { createConfiguredProviderTrafficAuthorityFactory } from './src/browser/configuredProviderTrafficAuthority.ts';
     const name = process.env.GROK_FIXTURE_PROFILE;
     const authority = await createConfiguredProviderTrafficAuthorityFactory({
-      userConfig: { auracallProfile: name, services: { grok: { identity: { email: 'operator@example.test' }, liveFollow: { maxBrowserInteractionsPerMinute: Number(process.env.GROK_FIXTURE_CAP) } } } },
+      userConfig: { auracallProfile: name, services: { grok: { identity: { email: 'operator@example.test' }, ...(process.env.GROK_FIXTURE_BUDGET === 'requests' ? { maxBackendRequestsPerMinute: Number(process.env.GROK_FIXTURE_CAP) } : {liveFollow: { maxBrowserInteractionsPerMinute: Number(process.env.GROK_FIXTURE_CAP) }}) } } },
       provider: 'grok', managedBrowserProfile: path.join(process.env.AURACALL_HOME_DIR, name),
       mutationAudit: async () => undefined, baseOptions: {},
     }).acquire({ targetId: name });
     try {
-      const action = await authority.governor.begin({ kind: 'provider-read', interactionClass: 'generic', source: 'fixture:process' });
-      await action.settle({ outcome: 'succeeded' });
+      if (process.env.GROK_FIXTURE_BUDGET === 'requests') await authority.governor.admitBackendRequest('sha256:'+createHash('sha256').update(name).digest('hex'),async()=>undefined); else {const action = await authority.governor.begin({ kind: 'provider-read', interactionClass: 'generic', source: 'fixture:process' }); await action.settle({ outcome: 'succeeded' });}
       process.stdout.write('admitted');
-    } catch (error) { process.stdout.write(error.reason === 'minute-interaction-limit' ? 'denied-by-shared-cap' : 'unexpected-error'); }
+    } catch (error) { process.stdout.write((error.reason === 'minute-interaction-limit' || error.name === 'ProviderBackendRequestBudgetExceededError') ? 'denied-by-shared-cap' : 'unexpected-error'); }
     finally { await authority.close(); }
   `;
 	const run = (profile: string, cap: string) =>
@@ -386,6 +389,7 @@ test("separate OS processes cannot bypass Grok account capacity with a higher lo
 				...process.env,
 				AURACALL_HOME_DIR: root,
 				GROK_FIXTURE_PROFILE: profile,
+				GROK_FIXTURE_BUDGET: budget,
 				GROK_FIXTURE_CAP: cap,
 			},
 			timeout: 15_000,

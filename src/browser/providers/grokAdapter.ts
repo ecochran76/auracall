@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { hasProviderBackendRequestAdmission } from '../../../packages/browser-service/src/service/providerTrafficGovernor.js';
 import CDP from '../cdp.js';
 import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
 import type {
@@ -18,7 +19,7 @@ import {
 } from './providerSessionAuthority.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
 import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource, resolveProviderTrafficGovernor } from './mutationAudit.js';
-import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
+import { connectToChromeTarget, openOrReuseChromeTarget, openChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import {
   detectGrokSignedInIdentity,
   extractGrokIdentityFromSerializedScripts,
@@ -5764,6 +5765,10 @@ async function connectToGrokTab(
     const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
     await annotateClientMutationContext(client, options, 'provider:grok', options.tabTargetId);
+    if (hasProviderBackendRequestAdmission(options) && options?.tabUrl === 'about:blank') {
+      try { await navigateAndSettle(client, {url: urlOverride ?? options?.configuredUrl ?? GROK_HOME_URL}); }
+      catch (error) { await client.close(); throw error; }
+    }
     setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
     return {
       client,
@@ -5788,7 +5793,7 @@ async function connectToGrokTab(
   if (serviceResolver?.resolveServiceTarget) {
     const target = await serviceResolver.resolveServiceTarget({
       serviceId: 'grok',
-      configuredUrl: preferredUrl,
+      configuredUrl: hasProviderBackendRequestAdmission(options) ? "about:blank" : preferredUrl,
       ensurePort: true,
     });
     host = target.host ?? host;
@@ -5831,7 +5836,7 @@ async function connectToGrokTab(
   let shouldClose = false;
   let usedExisting = Boolean(resolveGrokTargetId(targetInfo));
   const tabPolicy = resolveBrowserTabPolicy(options);
-  if (!targetInfo && preferredUrl) {
+  if (!targetInfo && preferredUrl && !hasProviderBackendRequestAdmission(options)) {
     const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
       host,
       reusePolicy: 'same-origin',
@@ -5853,6 +5858,11 @@ async function connectToGrokTab(
   } else if (!targetInfo) {
     targetInfo = candidates[0];
     usedExisting = Boolean(resolveGrokTargetId(targetInfo));
+  }
+  if (!resolveGrokTargetId(targetInfo) && hasProviderBackendRequestAdmission(options)) {
+    options?.abortSignal?.throwIfAborted();
+    targetInfo = await openChromeTarget(resolvedPort, 'about:blank', host, undefined, {kind:'pre-lease-target-acquisition',operationId:randomUUID(),reason:'Grok owned request bootstrap'});
+    shouldClose = options?.preserveActiveTab !== true;
   }
   if (!resolveGrokTargetId(targetInfo)) {
     const fallbackUrl = preferredUrl ?? GROK_HOME_URL;
@@ -5882,6 +5892,10 @@ async function connectToGrokTab(
   const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
   await annotateClientMutationContext(client, options, 'provider:grok', targetId);
+  if (hasProviderBackendRequestAdmission(options) && targetInfo?.url === 'about:blank') {
+    try { await navigateAndSettle(client, {url: preferredUrl}); }
+    catch(error) { await client.close(); throw error; }
+  }
   setClientSuppressFocus(client, tabPolicy.suppressFocus);
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
 }

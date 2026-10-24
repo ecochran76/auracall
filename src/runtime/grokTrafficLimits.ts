@@ -52,3 +52,50 @@ export function resolveGrokOperationBudgetWaitMs(
 		throw new Error("Grok operationBudgetWaitMs must be a nonnegative safe integer.");
 	return value;
 }
+
+/** Explicit operator ceiling; no provider quota is inferred. */
+export function resolveGrokBackendRequestsPerMinute(
+	config: Record<string, unknown>,
+	runtimeProfileId: string,
+): number | undefined {
+	const account = resolveConfiguredServiceAccountId(config, {
+		serviceId: "grok",
+		runtimeProfileId,
+	});
+	const profiles = getCurrentRuntimeProfiles(config);
+	const services = [
+		record(record(config.services)?.grok),
+		...Object.entries(profiles)
+			.filter(
+				([id]) =>
+					id === runtimeProfileId ||
+					(account !== null &&
+						resolveConfiguredServiceAccountId(config, {
+							serviceId: "grok",
+							runtimeProfileId: id,
+						}) === account),
+			)
+			.map(([, profile]) => record(record(profile.services)?.grok)),
+	];
+	const limits = services.flatMap((service) => {
+		const value = service?.maxBackendRequestsPerMinute;
+		if (value === undefined) return [];
+		if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
+			throw new Error("Grok maxBackendRequestsPerMinute must be a positive safe integer.");
+		return [value];
+	});
+	return limits.length ? Math.min(...limits) : undefined;
+}
+export function resolveGrokBackendRequestBudgetWaitMs(
+	config: Record<string, unknown>,
+	runtimeProfileId: string,
+): number {
+	const globalService = record(record(config.services)?.grok);
+	const profile = record(getCurrentRuntimeProfiles(config)[runtimeProfileId]);
+	const service = record(record(profile?.services)?.grok);
+	const value =
+		service?.backendRequestBudgetWaitMs ?? globalService?.backendRequestBudgetWaitMs ?? 0;
+	if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0)
+		throw new Error("Grok backendRequestBudgetWaitMs must be a nonnegative safe integer.");
+	return value;
+}

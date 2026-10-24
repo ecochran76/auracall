@@ -10,7 +10,7 @@ import {
 } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { OwnedBackendRequestCleanupError } from "../ownedBackendRequestAuthority.js";
 import type { ChromeClient } from "../types.js";
-import { attachOwnedChatgptBackendRequestAdmission } from "./chatgptBackendRequestAdmission.js";
+import { attachOwnedProviderBackendRequestAdmission } from "./ownedProviderBackendRequestAdmission.js";
 import type { BrowserProviderListOptions } from "./types.js";
 
 export const OWNED_PROVIDER_SOCKET_CLOSE_TIMEOUT_MS = 3_000;
@@ -89,7 +89,7 @@ export async function annotateClientMutationContext(
 	const governor = extendedClient.__auracallProviderTrafficGovernor;
 	let observer: { dispose(): Promise<void> } | undefined;
 	let backendObserver: { dispose(): Promise<void> } | undefined;
-	if (governor?.attribution.provider === "chatgpt" && governor.attribution.targetId) {
+	if ((governor?.attribution.provider === "chatgpt" || governor?.attribution.provider === "grok") && governor.attribution.targetId) {
 		if (client.Network?.responseReceived && governor.checkWarning) {
 			const pending = new Set<Promise<void>>();
 			let failure: unknown;
@@ -210,7 +210,7 @@ export async function annotateClientMutationContext(
 	}
 	if (governor?.admitBackendRequest) {
 		try {
-			backendObserver = await attachOwnedChatgptBackendRequestAdmission(client, governor, { abortSignal: options?.abortSignal });
+			backendObserver = await attachOwnedProviderBackendRequestAdmission(client, governor, { abortSignal: options?.abortSignal });
 			ownedClientCloseDeadlines.add(client);
 		} catch (error) {
 			try {

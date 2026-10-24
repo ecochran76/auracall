@@ -60,6 +60,10 @@
         {
           "command": "pnpm exec tsc --noEmit",
           "result": "passed"
+        },
+        {
+          "command": "pnpm test -- --maxWorkers=2",
+          "result": "4087 passed65 skipped2 failed; native timeout passes isolated; ChatGPT source-shape assertion reproduces unchanged on c9beb45b6; relevant checks green"
         }
       ],
       "review": {
@@ -74,9 +78,11 @@
         "green": "stable Grok utility workload rejects second target before effects",
         "commit": "1c0928758"
       },
-      "trackerResolved": false,
+      "trackerResolved": true,
       "base": "9f260ee1b",
-      "resultSha": "1c0928758"
+      "resultSha": "c0a9799ec53431f622034a26f50847aa1c54b4fc",
+      "mergeCommit": "abedf744797b71df83c49d579689a6b3c64cb7c6",
+      "pullRequest": "https://github.com/ecochran76/auracall/pull/415"
     },
     {
       "ticket": 2,
@@ -85,13 +91,14 @@
       "blockers": [
         399
       ],
-      "state": "pending",
-      "worker": null,
+      "state": "running",
+      "worker": "primary",
       "ownedPaths": [],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "abedf744797b71df83c49d579689a6b3c64cb7c6"
     },
     {
       "ticket": 3,
