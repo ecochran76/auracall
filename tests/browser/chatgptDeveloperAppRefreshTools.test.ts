@@ -16,6 +16,7 @@ describe("developer app tool refresh", () => {
 		"account-loading-before",
 		"body-fallback",
 		"foreign-refresh-link",
+		"no-refresh-request",
 		"http-error",
 		"malformed",
 		"identity-change",
@@ -114,6 +115,7 @@ describe("developer app tool refresh", () => {
 							dispatchMouseEvent: async ({ type }: { type: string }) => {
 								if (type === "mouseReleased") {
 									clicks.push(type);
+									if (scenario === "no-refresh-request") return;
 									request({
 										requestId: "refresh",
 										request: {
@@ -212,6 +214,12 @@ describe("developer app tool refresh", () => {
 			return;
 		}
 		const result = await resultPromise;
+		if (scenario === "no-refresh-request")
+			expect(result.message).toContain("No request to the expected refresh endpoint");
+		if (scenario === "http-error") expect(result.message).toContain("HTTP 500");
+		if (scenario === "malformed") expect(result.message).toContain("invalid catalog");
+		if (scenario === "foreign-refresh-link")
+			expect(result.message).toContain("connection identity did not match");
 		expect(result.status).toBe(
 			[
 				"success",

@@ -69,7 +69,9 @@
   `pnpm vitest run tests/browser/chatgptDeveloperAppRefreshTools.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`.
   Protects exact account/app/endpoint qualification, trusted single activation,
   attributable tool catalog metadata, identity/connection preservation, human
-  approval and uncertain failure outcomes. Three adapter cases cover temporary
+  approval and uncertain failure outcomes. Failure diagnostics distinguish missing
+  expected request, wrong connection, HTTP error and malformed catalog without
+  changing the one-click/no-replay boundary. Three adapter cases cover temporary
   disabled controls and loading account data before/after the one activation.
   Existing replacement tests retain
   delete/recreate coverage. Native acceptance is recorded separately in Plan0433.

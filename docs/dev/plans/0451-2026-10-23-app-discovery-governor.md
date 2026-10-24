@@ -61,3 +61,22 @@ Endpoint expectation comes from the OpenSign ingress inventory and OAuth docs;
 the refresh must independently match the saved app setting before activation.
 Private live receipts: ~/.local/state/auracall-issue368-opensign-20261023/.
 Memory disposition: forbidden; user has not requested saving memory.
+
+## 2026-10-24 — Bounded observation diagnosis
+
+Read-only inspection of the retained exact OpenSign settings page found an enabled
+Refresh tools control and no visible success/error alert or retained refresh resource.
+The OpenSign service journal contains no entries during the attempt window. This
+cannot reconstruct the response or authorize replay. No refresh was repeated.
+
+The existing observer discards failure reasons. Provider-free regressions reproduce
+this diagnostic defect for HTTP500, malformed catalog and foreign connection.
+Retain explicit bounded reason messages for missing request, missing completion,
+unreadable/unmatched identity, HTTP failure, unreadable/invalid catalog and duplicate
+tool names. Preserve exact attribution, success criteria, one activation and
+retrySafe=false. The earlier live outcome remains unknown; these diagnostics do
+not retroactively qualify it. Focused adapter/CLI selection:67 pass (three assertions
+observed red before repair); no-request diagnostic also covered.
+Full typecheck/build, scoped Biome, docs:list and whitespace checks pass.
+Primary review of the patch against cfe778d24: Standards and bounded diagnostic
+spec have no blocking findings; source does not establish the live root cause.
