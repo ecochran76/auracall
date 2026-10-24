@@ -1,4 +1,12 @@
 
+## 2026-10-23 — Acquire a utility target before first app connection
+
+A target-bound authority factory cannot govern creation of a target that does
+not exist yet. Serialized developer-app discovery reached that gap while fixtures
+with pre-existing targets passed. Explicit utility commands must acquire the
+existing ephemeral target/lease/governor before identity and app operations.
+Keep first-tab and pre-existing-target regressions distinct.
+
 ## 2026-10-23 — Borrowed profiles need an explicit Recall action
 
 A browser profile can be legitimately borrowed by another agent and left open.

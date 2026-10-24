@@ -1,3 +1,9 @@
+- Developer-app first-tab authority (#368, provider-free):
+  `pnpm vitest run tests/cli/chatgptDeveloperAppsGovernor.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts --maxWorkers=1`.
+  Real serialized utility dispatch and physical target admission reproduce the
+  missing-governor failure before the repair; list/confirmed refresh exercise
+  exact governed custody. Source fixtures do not qualify live catalog refresh.
+
 - Long ChatGPT result preservation (#134, provider-free):
   `pnpm vitest run tests/browser/chatgptAffinityExecutor.test.ts tests/browser/chatgptAffinityRuntime.test.ts tests/browser/legacyChatgptAffinityRuntime.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts tests/terminalSessionReceipts.test.ts --maxWorkers=1`
   Controlled1703.3-second completions across maintenance preserve the exact answer,

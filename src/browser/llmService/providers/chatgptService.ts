@@ -104,7 +104,18 @@ export class ChatgptService extends LlmService {
 		mutability: "read-only" | "provider-mutating";
 		run: (options: BrowserProviderListOptions) => Promise<TResult>;
 	}): Promise<TResult> {
-		if (!this.usesUtilityAffinity()) return super.runUtilityBrowserOperation(input);
+		if (!this.usesUtilityAffinity()) {
+			return this.runUtilityOperation({
+				userConfig: this.getResolvedUserConfig(),
+				browserService: this.getBrowserService(),
+				utilityId: this.utilityAffinityId,
+				requireTargetLease: true,
+				options: input.options,
+				mutability: input.mutability,
+				buildListOptions: (overrides) => this.buildListOptions(overrides, { ensurePort: true }),
+				run: input.run,
+			}) as Promise<TResult>;
+		}
 		return input.mutability === "provider-mutating"
 			? this.runWithUtilityMutationAffinity(input.options, input.run)
 			: this.runWithUtilityAffinity(input.options, input.run);
