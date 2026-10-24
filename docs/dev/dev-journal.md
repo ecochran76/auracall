@@ -1,3 +1,12 @@
+## 2026-10-23 — Issue368 OpenSign live qualification
+
+OpenSign on wsl-chrome-3: installed read-only discovery passes. One guarded
+refresh activates and preserves exact app settings, but exits1/unconfirmed because
+no attributable successful catalog response was observed. retrySafe=false; no
+replay. #368 and Plan0451 remain OPEN. See
+[live evidence](notes/2026-10-23-issue368-cli-governor.md#live-opensign-qualification--2026-10-23).
+Memory forbidden: no explicit save request.
+
 ## 2026-10-23 — Clipboard helper deployed
 
 PR388 merged e517b8d26720b6e0403a509d172189932372c9df. The exact compiled helper
