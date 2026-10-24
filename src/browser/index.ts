@@ -43,6 +43,7 @@ import {
 	navigateToGrok,
 	readGrokAssistantSnapshotForRuntime,
 	selectGrokMode,
+	verifyGrokCurrentModel,
 	setGrokPrompt,
 	submitGrokPrompt,
 	uploadGrokAttachments,
@@ -1769,7 +1770,7 @@ function createWindowsManagedProfileRetryReset(options: {
 
 export async function runBrowserMode(options: BrowserRunOptions): Promise<BrowserRunResult> {
 	options.abortSignal?.throwIfAborted();
-	const promptText = options.prompt?.trim();
+	let promptText = options.prompt?.trim();
 	if (!promptText) {
 		throw new Error("Prompt text is required when using browser mode.");
 	}
@@ -1778,6 +1779,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 	const libraryFiles = options.libraryFiles ?? [];
 	const fallbackSubmission = options.fallbackSubmission;
 	const { config, target, logger } = await resolveBrowserRuntimeEntryContext(options);
+	if (target === "grok") promptText = options.prompt!;
 	if (libraryFiles.length > 0 && target !== "chatgpt") {
 		throw new BrowserAutomationError(
 			"Provider Library file references are currently supported only for ChatGPT browser runs.",
@@ -1894,6 +1896,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 			runtimeHintCb,
 			auracallProfileName: options.config?.auracallProfileName ?? null,
 			browserOperationOwnerCommand: options.browserOperationOwnerCommand ?? null,
+			options,
 		});
 	}
 
@@ -4769,6 +4772,7 @@ async function runRemoteGrokBrowserMode(
 	let client: ChromeClient | null = null;
 	let remoteTargetId: string | null = null;
 	let lastUrl: string | undefined;
+	let observedModel: string | null = null;
 	let connectedHost = host;
 	let connectedPort = port;
 	let connectionClosedUnexpectedly = false;
@@ -4800,7 +4804,19 @@ async function runRemoteGrokBrowserMode(
 				? resolveGrokConversationUrl(config.conversationId, config.projectId)
 				: resolveGrokProjectUrl(config.projectId);
 		}
+		const remoteManagedBrowserProfile = resolveBrowserLaunchPlan({ source: { kind: "session-config", config } }).managedBrowserProfile.directory;
+		const remoteMutationAudit = createInMemoryBrowserMutationLog().record;
+		const remoteTrafficFactory = options.providerTrafficGovernor ? undefined : createConfiguredProviderTrafficAuthorityFactory({
+			userConfig: options.tabAffinityUserConfig ?? ({ auracallProfile: config.auracallProfileName ?? "default", browser: { tabConcurrencyMode: "serialized" } } as ResolvedUserConfig),
+			mutationAudit: remoteMutationAudit, provider: "grok", managedBrowserProfile: remoteManagedBrowserProfile,
+			baseOptions: { abortSignal: options.abortSignal },
+		});
 		const connection = await connectToRemoteChrome(host, port, logger, grokTargetUrl, {
+			exactTargetId: options.tabAffinity?.targetId,
+			mutationAudit: remoteMutationAudit,
+			providerTrafficGovernor: options.providerTrafficGovernor,
+			providerTrafficAuthorityFactory: remoteTrafficFactory,
+			providerTrafficRequired: true,
 			compatibleHosts: resolveCompatibleHostsForUrl(grokTargetUrl),
 			serviceTabLimit: config.serviceTabLimit ?? undefined,
 			blankTabLimit: config.blankTabLimit ?? undefined,
@@ -4811,6 +4827,8 @@ async function runRemoteGrokBrowserMode(
 		connectedHost = connection.host;
 		connectedPort = connection.port;
 		disposeRemoteTransport = connection.dispose ?? null;
+		if (!remoteTargetId) throw new Error("Remote Grok browser run requires an exact target ID.");
+		await attachBrowserRunProviderTraffic({ client, options, provider: "grok", managedBrowserProfile: remoteManagedBrowserProfile, targetId: remoteTargetId });
 		await emitRuntimeHint();
 		client.on("disconnect", () => {
 			connectionClosedUnexpectedly = true;
@@ -4853,12 +4871,14 @@ async function runRemoteGrokBrowserMode(
 		}
 
 		const modelStrategy = config.modelStrategy ?? DEFAULT_MODEL_STRATEGY;
-		if (config.desiredModel && modelStrategy !== "ignore") {
-			await selectGrokMode(Input, Runtime, config.desiredModel, logger);
+		if (config.desiredModel && modelStrategy === "select") {
+			observedModel = await selectGrokMode(Input, Runtime, config.desiredModel, logger);
 			await ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger);
 			logger(
 				`Prompt textarea ready (after model switch, ${promptText.length.toLocaleString()} chars queued)`,
 			);
+		} else if (modelStrategy === "current") {
+			observedModel = await verifyGrokCurrentModel(Input, Runtime);
 		} else if (modelStrategy === "ignore") {
 			logger("Model picker: skipped (strategy=ignore)");
 		}
@@ -4891,6 +4911,8 @@ async function runRemoteGrokBrowserMode(
 
 		const answer = await waitForGrokAssistantResult(Runtime, config.timeoutMs, logger, {
 			baseline: grokAssistantBaseline,
+			abortSignal: options.abortSignal,
+			checkWarning: async () => { await resolveProviderTrafficGovernor(client)?.checkWarning?.(Runtime); },
 			onResponseIncoming: () => {
 				recordBrowserPassiveObservation(passiveObservations, {
 					state: "response-incoming",
@@ -4924,6 +4946,8 @@ async function runRemoteGrokBrowserMode(
 			userDataDir: undefined,
 			chromeTargetId: remoteTargetId ?? undefined,
 			tabUrl: lastUrl,
+			conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+			observedModel,
 			passiveObservations,
 			controllerPid: process.pid,
 		};
@@ -4956,12 +4980,13 @@ async function runRemoteGrokBrowserMode(
 			},
 		});
 	} finally {
+		let ownedCleanupFailure: unknown;
 		try {
-			if (!connectionClosedUnexpectedly && client) {
+			if (client) {
 				await client.close();
 			}
-		} catch {
-			// ignore
+		} catch (error) {
+			if (hasUnknownOwnedRequestCleanup(error)) ownedCleanupFailure = error;
 		}
 		await closeRemoteChromeTarget(
 			connectedHost,
@@ -4969,9 +4994,11 @@ async function runRemoteGrokBrowserMode(
 			remoteTargetId ?? undefined,
 			logger,
 		);
-		await disposeRemoteTransport?.().catch(() => undefined);
+		await disposeRemoteTransport?.().catch(error => { if (hasUnknownOwnedRequestCleanup(error)) ownedCleanupFailure = ownedCleanupFailure ? new AggregateError([ownedCleanupFailure, error], "Owned Grok cleanup failed.") : error; });
 		const totalSeconds = (Date.now() - startedAt) / 1000;
 		logger(`Remote session complete • ${totalSeconds.toFixed(1)}s total`);
+		// biome-ignore lint/correctness/noUnsafeFinally: An uncertain owned request cleanup must override apparent success.
+		if (ownedCleanupFailure) throw ownedCleanupFailure;
 	}
 }
 
@@ -5362,6 +5389,7 @@ async function runGrokBrowserMode({
 	runtimeHintCb,
 	auracallProfileName,
 	browserOperationOwnerCommand,
+	options,
 }: {
 	promptText: string;
 	attachments: BrowserAttachment[];
@@ -5370,11 +5398,14 @@ async function runGrokBrowserMode({
 	runtimeHintCb?: BrowserRunOptions["runtimeHintCb"];
 	auracallProfileName?: string | null;
 	browserOperationOwnerCommand?: string | null;
+	options: BrowserRunOptions;
 }): Promise<BrowserRunResult> {
 	const passiveObservations: BrowserPassiveObservation[] = [];
 	let chrome: LaunchedChrome | null = null;
 	let chromeHost = "127.0.0.1";
 	let lastUrl: string | undefined;
+	let observedModel: string | null = null;
+	let grokTargetId: string | undefined;
 	let answerText = "";
 	let answerMarkdown = "";
 	let answerHtml = "";
@@ -5401,7 +5432,7 @@ async function runGrokBrowserMode({
 			chromePid: chrome.pid,
 			chromePort: chrome.port,
 			chromeHost,
-			chromeTargetId: undefined,
+			chromeTargetId: grokTargetId,
 			tabUrl: lastUrl,
 			conversationId,
 			userDataDir,
@@ -5637,6 +5668,10 @@ async function runGrokBrowserMode({
 		const raceWithDisconnect = <T>(promise: Promise<T>): Promise<T> =>
 			Promise.race([promise, disconnectPromise]);
 
+		const targetInfo = await client.Target.getTargetInfo({});
+		grokTargetId = targetInfo?.targetInfo?.targetId;
+		if (!grokTargetId) throw new Error("Grok browser run requires an exact target ID.");
+		await attachBrowserRunProviderTraffic({ client, options, provider: "grok", managedBrowserProfile: userDataDir, targetId: grokTargetId });
 		const { Network, Page, Runtime, Input, DOM } = client;
 		const domainEnablers = [Network.enable({}), Page.enable(), Runtime.enable()];
 		if (DOM && typeof DOM.enable === "function") {
@@ -5716,8 +5751,10 @@ async function runGrokBrowserMode({
 		);
 		await raceWithDisconnect(ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger));
 
-		if (config.desiredModel && config.modelStrategy !== "ignore") {
-			await raceWithDisconnect(selectGrokMode(Input, Runtime, config.desiredModel, logger));
+		if (config.desiredModel && config.modelStrategy === "select") {
+			observedModel = await raceWithDisconnect(selectGrokMode(Input, Runtime, config.desiredModel, logger));
+		} else if (config.modelStrategy === "current") {
+			observedModel = await raceWithDisconnect(verifyGrokCurrentModel(Input, Runtime));
 		}
 
 		if (attachments.length > 0) {
@@ -5749,6 +5786,8 @@ async function runGrokBrowserMode({
 		const answer = await raceWithDisconnect(
 			waitForGrokAssistantResult(Runtime, config.timeoutMs, logger, {
 				baseline: grokAssistantBaseline,
+				abortSignal: options.abortSignal,
+				checkWarning: async () => { await resolveProviderTrafficGovernor(client)?.checkWarning?.(Runtime); },
 				onResponseIncoming: () => {
 					recordBrowserPassiveObservation(passiveObservations, {
 						state: "response-incoming",
@@ -5786,9 +5825,10 @@ async function runGrokBrowserMode({
 			chromePort: chrome.port,
 			chromeHost,
 			userDataDir,
-			chromeTargetId: undefined,
+			chromeTargetId: grokTargetId,
 			tabUrl: currentUrl,
 			conversationId: extractConversationIdFromUrl(currentUrl),
+			observedModel,
 			passiveObservations,
 			controllerPid: chrome.process?.pid,
 		};
@@ -5808,7 +5848,7 @@ async function runGrokBrowserMode({
 				chromePort: chrome?.port,
 				chromeHost,
 				userDataDir,
-				chromeTargetId: undefined,
+				chromeTargetId: grokTargetId,
 				tabUrl: undefined,
 				controllerPid: process.pid,
 			};
@@ -5834,6 +5874,7 @@ async function runGrokBrowserMode({
 		const message = guardedError.message || "Grok browser automation failed.";
 		throw new BrowserAutomationError(message, { stage: "execute-browser" }, guardedError);
 	} finally {
+		let ownedCleanupFailure: unknown;
 		try {
 			const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
 			if (!keepBrowserOpen && chrome) {
@@ -5856,8 +5897,8 @@ async function runGrokBrowserMode({
 			removeTerminationHooks?.();
 			try {
 				await client?.close?.();
-			} catch {
-				// ignore
+			} catch (error) {
+				if (hasUnknownOwnedRequestCleanup(error)) ownedCleanupFailure = error;
 			}
 			if (keepBrowserOpen && !connectionClosedUnexpectedly && chrome) {
 				logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
@@ -5865,6 +5906,8 @@ async function runGrokBrowserMode({
 		} finally {
 			await browserOperation?.release();
 		}
+		// biome-ignore lint/correctness/noUnsafeFinally: An uncertain owned request cleanup must override apparent success.
+		if (ownedCleanupFailure) throw ownedCleanupFailure;
 	}
 }
 
