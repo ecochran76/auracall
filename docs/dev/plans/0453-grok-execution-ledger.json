@@ -231,7 +231,19 @@
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "branch": "feat/grok-403-files",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-403",
+      "lastAttempt": {
+        "worker": "/root/grok403_files",
+        "terminal": "failed",
+        "reason": "Worker runtime reported: blocked by safety systems \u2014 Potentially unintended activity. No completed result or passing implementation evidence accepted.",
+        "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-403",
+        "partialFiles": [
+          "tests/browser/grok403Files.test.ts"
+        ]
+      }
     },
     {
       "ticket": 6,
@@ -284,7 +296,12 @@
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "lastAttempt": {
+        "terminal": "interrupted-before-implementation",
+        "reason": "Supervisor native observation stop; no source implementation or test evidence completed"
+      }
     },
     {
       "ticket": 8,
@@ -315,7 +332,19 @@
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "branch": "feat/grok-407-bots",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-407",
+      "lastAttempt": {
+        "worker": "/root/grok407_bots",
+        "terminal": "failed",
+        "reason": "Worker runtime reported: blocked by safety systems \u2014 Potentially unintended activity. No completed result or passing implementation evidence accepted.",
+        "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-407",
+        "partialFiles": [
+          "tests/browser/grok407Bots.test.ts"
+        ]
+      }
     },
     {
       "ticket": 10,
@@ -362,7 +391,17 @@
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+      "branch": "feat/grok-410-build",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-410",
+      "lastAttempt": {
+        "worker": "/root/grok410_build",
+        "terminal": "failed",
+        "reason": "Worker runtime reported: blocked by safety systems \u2014 Potentially unintended activity. No completed result or passing implementation evidence accepted.",
+        "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-410",
+        "partialFiles": []
+      }
     },
     {
       "ticket": 13,
@@ -428,7 +467,7 @@
   ],
   "integrationTip": "961ae38ce386523f3df31685edadcfe44508c2fe",
   "checkpoint": {
-    "status": "paused at requested two-hour checkpoint; five tickets merged and closed; eleven pending",
+    "status": "five tickets merged and closed; eleven pending; next-wave workers failed; native observation stop held",
     "readyNextWave": [
       403,
       405,
@@ -460,5 +499,21 @@
       404
     ],
     "recordedAt": "2026-10-24T18:12:00Z"
+  },
+  "currentRun": {
+    "startedAt": "2026-10-24T18:17:24Z",
+    "deadline": "2026-10-24T20:17:24Z",
+    "checkpointAt": "2026-10-24T20:16:24Z",
+    "tokenLimit": 2000000,
+    "base": "87c4910ba69a471570cf7655e368a8ba5f6f2890",
+    "controller": "armed; qualified accounting; original allowance preserved after user-requested accounting fault recovery",
+    "status": "held_native_observation_timeout",
+    "lastEvidence": {
+      "reason": "observation_unavailable",
+      "method": "thread/read",
+      "durationSeconds": 6.000884332985152,
+      "accounting": "qualified",
+      "boundedReadOnlyRecheck": "same exact thread read succeeded in0.049seconds; transient observation recovered but durable stop remains; no stop cleared"
+    }
   }
 }
