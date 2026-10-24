@@ -1,3 +1,10 @@
+## 2026-10-23 — Embedded clipboard needs parent permission delegation
+
+A cross-origin viewer cannot read the device clipboard unless each enclosing
+frame delegates clipboard-read/write. Add these permissions to the bundled
+Remote View helper. Browser grants and viewer input custody still govern reads;
+no clipboard text is captured by AuraCall. Reload the desktop page after adoption.
+
 
 ## 2026-10-23 — Borrowed profiles need an explicit Recall action
 
