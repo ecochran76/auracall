@@ -91,14 +91,46 @@
       "blockers": [
         399
       ],
-      "state": "running",
+      "state": "validated",
       "worker": "primary",
       "ownedPaths": [],
-      "validation": [],
-      "review": null,
-      "postCompletionTdd": null,
+      "validation": [
+        {
+          "command": "pnpm vitest run tests/browser/backendRequestAdmission.test.ts tests/browser/ownedBackendRequestAuthority.test.ts tests/browser/grokTrafficGovernance.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser/grokAdapter.test.ts tests/browser/chatgptProofSession.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers=2",
+          "result": "175 passed across9files after bounded remediation"
+        },
+        {
+          "command": "pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t public Grok identity bootstrap --maxWorkers=1",
+          "result": "2 passed; configured and unset local ceiling"
+        },
+        {
+          "command": "pnpm exec tsc --noEmit",
+          "result": "passed"
+        },
+        {
+          "command": "pnpm run build",
+          "result": "passed"
+        },
+        {
+          "command": "pnpm exec biome lint [seven affected files]",
+          "result": "passed clean"
+        }
+      ],
+      "review": {
+        "fixedPoint": "abedf7447",
+        "tip": "146aa1801",
+        "receipt": "docs/dev/notes/2026-10-24-grok400-review.md",
+        "standards": "bootstrap custody accepted and remediated; status finding reconciled with always-metered Grok; counting smell nonblocking backlog",
+        "spec": "unset local cap bypass accepted blocking and remediated"
+      },
+      "postCompletionTdd": {
+        "red": "separate process without local request ceiling bypasses prior account ceiling",
+        "green": "requests-unset process rejected by shared account ceiling",
+        "receipt": "docs/dev/notes/2026-10-24-grok400-review.md"
+      },
       "trackerResolved": false,
-      "base": "abedf744797b71df83c49d579689a6b3c64cb7c6"
+      "base": "abedf744797b71df83c49d579689a6b3c64cb7c6",
+      "resultSha": "961ae38ce386523f3df31685edadcfe44508c2fe"
     },
     {
       "ticket": 3,
@@ -314,5 +346,6 @@
       "postCompletionTdd": null,
       "trackerResolved": false
     }
-  ]
+  ],
+  "integrationTip": "961ae38ce386523f3df31685edadcfe44508c2fe"
 }
