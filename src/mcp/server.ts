@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { registerGrokBuildTool } from "./tools/grokBuild.js";
+import { createConfiguredGrokBuildService } from "../browser/configuredGrokBuild.js";
 import { registerGrokFilesTool } from "./tools/grokFiles.js";
 import { registerGrokBotsTool } from "./tools/grokBots.js";
 import { createConfiguredGrokFilesService, createConfiguredGrokBotsService } from "../browser/configuredGrokDiscovery.js";
@@ -158,6 +160,7 @@ export async function startMcpServer(): Promise<void> {
   registerGrokConnectorsTool(server, request => createConfiguredGrokConnectorsService(services.resolvedUserConfig,request.runtimeProfile));
   registerGrokFilesTool(server,request=>createConfiguredGrokFilesService(services.resolvedUserConfig,request.runtimeProfile));
   registerGrokBotsTool(server,request=>createConfiguredGrokBotsService(services.resolvedUserConfig,request.runtimeProfile));
+  registerGrokBuildTool(server,request=>createConfiguredGrokBuildService(services.resolvedUserConfig,request.runtimeProfile));
   registerConsultTool(server);
   registerResponseCreateTool(server, {
     responsesService: services.responsesService,

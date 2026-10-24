@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { getAuracallHomeDir } from "../auracallHome.js";
-export type GrokEcosystemSurface = "files" | "bots";
+export type GrokEcosystemSurface = "files" | "bots" | "build";
 export interface GrokEcosystemProgress {
 	status: string;
 	code: string;
@@ -33,6 +33,10 @@ function sanitize(value: Record<string, unknown>): GrokEcosystemProgress {
 		status:
 			typeof value.status === "string" &&
 			[
+				"available",
+				"unavailable",
+				"partial",
+				"invalid",
 				"complete",
 				"incomplete",
 				"failed",

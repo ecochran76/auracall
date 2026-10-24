@@ -1,3 +1,4 @@
+import { createGrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
 import { createGrokFilesService } from "./grokFilesService.js";
 import { createGrokBotsService } from "./grokBotsService.js";
 import { grokFilesFailure } from "./providers/grokFiles.js";
@@ -42,6 +43,7 @@ export async function createConfiguredGrokConnectorsService(
 ) {
 	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
 	const service = createGrokConnectorsService(options);
+	const installation = createGrokConnectorInstallationService(options);
 	const profile =
 		options.providerSessionAuthorization?.context.auracallRuntimeProfile ??
 		runtimeProfile ??
@@ -50,17 +52,21 @@ export async function createConfiguredGrokConnectorsService(
 	async function read<
 		T extends
 			| Awaited<ReturnType<typeof service.list>>
-			| Awaited<ReturnType<typeof service.inspect>>,
+			| Awaited<ReturnType<typeof service.inspect>>
+			| Awaited<ReturnType<typeof installation.install>>,
 	>(action: () => Promise<T>): Promise<T> {
 		try {
 			const result = await action();
-			await recordGrokConnectorProgress(profile, summarizeGrokConnectorDiagnostics(result));
+			try {
+				await recordGrokConnectorProgress(profile, summarizeGrokConnectorDiagnostics(result));
+			} catch {
+				return { ...result, progressPersistence: "failed" as const };
+			}
 			return result;
 		} catch (error) {
-			await recordGrokConnectorProgress(
-				profile,
-				summarizeGrokConnectorDiagnostics(grokConnectorsFailureResult()),
-			);
+			try {
+				await recordGrokConnectorProgress(profile, summarizeGrokConnectorDiagnostics(grokConnectorsFailureResult()));
+			} catch { /* Preserve original provider outcome and target custody. */ }
 			throw error;
 		}
 	}
@@ -68,6 +74,8 @@ export async function createConfiguredGrokConnectorsService(
 		list: (query?: string) => read(() => service.list(query)),
 		inspect: (selector: Parameters<typeof service.inspect>[0]) =>
 			read(() => service.inspect(selector)),
+		install: (request: Parameters<typeof installation.install>[0]) => read(() => installation.install(request)),
+		reconcile: (request: Parameters<typeof installation.reconcile>[0]) => read(() => installation.reconcile(request)),
 	};
 }
 

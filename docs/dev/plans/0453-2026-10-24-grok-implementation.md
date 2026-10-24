@@ -10,13 +10,19 @@ Ledger: [execution ledger](0453-grok-execution-ledger.json)
 
 ## Current State
 
-User explicitly renewed the two-hour/2MM-token allowance on 2026-10-24.
-Integration starts clean at 83e0951e8, freshly fetched from origin/main.
-Six children are closed; ten remain. Primary owns #412; isolated workers own
-#405, #408 and #410, one each; #403 is queued for the next free slot.
-The renewedRun ledger records current handles and deadline; older deadlines below
-are retained history. No Wake319/controller changes or live provider effects.
-Tickets close only on full acceptance and merged integration evidence.
+Seven children are closed; nine remain. #412 merged through PR430 as
+`ae21c97c907eb903360058c7b65c8bb267b70016` and is freshly CLOSED. Primary
+finished412 and owns serial integration. Worker `/root/grok413` implements the
+newly unblocked full observed-content ticket from that exact merged base.
+#405 and #410 partial source packets are integrated through245f1554e; their
+native identity/grant and app/version/artifact gates remain open. #403/#408
+have concrete native discovery packets, with provider effects still pending.
+
+User explicitly renewed the two-hour/2MM-token allowance on2026-10-24.
+The renewedRun ledger records current handles/deadline; older deadlines below
+are retained history. Manual monitoring continues; no Wake319/controller changes,
+runtime installation or live provider effects occurred. Tickets close only on
+full acceptance and merged integration evidence.
 
 ## Execution contract
 

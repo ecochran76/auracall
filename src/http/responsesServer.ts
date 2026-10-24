@@ -1,3 +1,6 @@
+import { GrokBuildRequestSchema, runGrokBuildCommand, type GrokBuildServiceResolver } from "../cli/grokBuildCommand.js";
+import { createConfiguredGrokBuildService } from "../browser/configuredGrokBuild.js";
+import { grokBuildUnknown } from "../browser/grokBuildService.js";
 import { GrokFilesRequestSchema, runGrokFilesCommand, type GrokFilesServiceResolver } from "../cli/grokFilesCommand.js";
 import { grokFilesFailure } from "../browser/providers/grokFiles.js";
 import { GrokBotsRequestSchema, runGrokBotsCommand, grokBotsFailureResult, type GrokBotsServiceResolver } from "../cli/grokBotsCommand.js";
@@ -382,6 +385,7 @@ export interface ResponsesHttpServerOptions {
 export interface ResponsesHttpServerDeps {
  grokFilesServiceResolver?: GrokFilesServiceResolver;
  grokBotsServiceResolver?: GrokBotsServiceResolver;
+ grokBuildServiceResolver?: GrokBuildServiceResolver;
  grokConnectorsServiceResolver?: GrokConnectorsServiceResolver;
  grokConversationsServiceResolver?: GrokConversationsServiceResolver;
   desktopClient?: {
@@ -916,6 +920,7 @@ interface HttpStatusResponse {
         grokConnectors?: string;
         grokFiles?:string;
         grokBots?:string;
+        grokBuild?:string;
         grokConversations?: string;
 		tenantPoolTeamEnsure: string;
 		agentSetupPackagesCreate: string;
@@ -3949,6 +3954,22 @@ export async function createResponsesHttpServer(
                 finally{res.removeListener('close',onClose);finish();}
             }
 
+            if(req.method==='POST'&&url.pathname==='/v1/grok/build/query'){
+                const denied=authorizeOperatorConfigAccess(apiAuthContext);
+                if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
+                let request: import("../cli/grokBuildCommand.js").GrokBuildRequest;
+                try{request=GrokBuildRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
+                catch{sendJson(res,400,{error:{message:'Invalid Grok Build request.',type:'invalid_request_error'}});return;}
+                if(!deps.grokBuildServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();
+                const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once('close',onClose);
+                try{
+                    const service=deps.grokBuildServiceResolver?await deps.grokBuildServiceResolver(request):await createConfiguredGrokBuildService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    sendJson(res,200,await runGrokBuildCommand(request,service));return;
+                }catch{sendJson(res,200,grokBuildUnknown('grok_build_configuration_failed'));return;}
+                finally{res.removeListener('close',onClose);finish();}
+            }
+
             if(req.method==='POST'&&url.pathname==='/v1/grok/bots/query'){
                 const denied=authorizeOperatorConfigAccess(apiAuthContext);
                 if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
@@ -5410,6 +5431,7 @@ function createHttpStatusResponse(input: {
             grokConnectors: "POST /v1/grok/connectors/query",
             grokFiles:"POST /v1/grok/files/query",
             grokBots:"POST /v1/grok/bots/query",
+            grokBuild:"POST /v1/grok/build/query",
             grokConversations: "POST /v1/grok/conversations/query",
 			tenantPoolTeamEnsure: "POST /v1/tenant-pool-teams/ensure",
 			agentSetupPackagesCreate: "POST /v1/agent-setup-packages",

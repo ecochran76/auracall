@@ -312,7 +312,7 @@
       "blockers": [
         404
       ],
-      "state": "implemented",
+      "state": "integrated",
       "worker": "/root/grok405",
       "ownedPaths": [],
       "validation": [
@@ -329,14 +329,15 @@
         "terminal": "interrupted-before-implementation",
         "reason": "Supervisor native observation stop; no source implementation or test evidence completed"
       },
-      "acceptanceState": "partial-source-worker-validated-not-yet-integrated",
+      "acceptanceState": "partial-source-integrated-native-gates-open",
       "branch": "feat/grok-405-install",
       "worktree": "/home/ecochran76/workspace.local/auracall-grok-405",
       "resultSha": "66e1b4327fe7c60b1395b133400279d238958519",
       "remainingAcceptance": [
         "Durable service/journal and CLI/API/MCP wiring",
         "Observed saved entity/account/granted scopes and built-in support"
-      ]
+      ],
+      "integrationSourceCheckpoint": "245f1554e847fbe75f8d6f9841fcf10187d9ee31"
     },
     {
       "ticket": 8,
@@ -455,7 +456,7 @@
       "blockers": [
         402
       ],
-      "state": "implemented",
+      "state": "integrated",
       "worker": "/root/grok410",
       "ownedPaths": [],
       "validation": [],
@@ -472,7 +473,8 @@
         "partialWorktree": "/home/ecochran76/workspace.local/auracall-grok-410",
         "partialFiles": []
       },
-      "acceptanceState": "partial-source-worker-validated-not-yet-integrated"
+      "acceptanceState": "partial-source-integrated-native-gates-open",
+      "integrationSourceCheckpoint": "245f1554e847fbe75f8d6f9841fcf10187d9ee31"
     },
     {
       "ticket": 13,
@@ -496,15 +498,23 @@
       "blockers": [
         401
       ],
-      "state": "implemented",
+      "state": "validated",
       "worker": "primary",
       "ownedPaths": [],
-      "validation": [],
+      "validation": [
+        {
+          "command": "14-file focused presubmit",
+          "result": "203 passed; later28 causal tests/4 files and42 status tests/5 files passed; final typecheck/build/lint passed"
+        }
+      ],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false,
+      "trackerResolved": true,
       "evidence": "docs/dev/notes/2026-10-24-grok412-resumable-index.md",
-      "acceptanceState": "production-path-implemented-validation-in-progress"
+      "acceptanceState": "index-implementation-accepted-main-merged",
+      "resultSha": "875f0081ee4744c272de768bb749964a51b4526c",
+      "mergeCommit": "ae21c97c907eb903360058c7b65c8bb267b70016",
+      "pullRequest": "https://github.com/ecochran76/auracall/pull/430"
     },
     {
       "ticket": 15,
@@ -513,13 +523,16 @@
       "blockers": [
         412
       ],
-      "state": "pending",
-      "worker": null,
+      "state": "running",
+      "worker": "/root/grok413",
       "ownedPaths": [],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "base": "ae21c97c907eb903360058c7b65c8bb267b70016",
+      "branch": "feat/grok-413-resume",
+      "worktree": "/home/ecochran76/workspace.local/auracall-grok-413-resume"
     },
     {
       "ticket": 16,
@@ -643,10 +656,8 @@
       "408": "/root/grok408",
       "410": "/root/grok410"
     },
-    "queued": [
-      403
-    ],
-    "status": "running",
+    "queued": [],
+    "status": "seven-closed-nine-open; source405/410-integrated; worker413-running; native403/408-gated",
     "reviewContract": "one whole-integration code-review then one bounded TDD findings pass after tickets validated",
     "workerResults": {
       "403": {
@@ -669,6 +680,38 @@
         "sha": "b29984f63d14ce0d77dec9657797efa5861a7597",
         "worker": "/root/grok410"
       }
-    }
+    },
+    "sourceCheckpoint": "245f1554e847fbe75f8d6f9841fcf10187d9ee31",
+    "activeWorkers": {
+      "413": "/root/grok413"
+    },
+    "primaryTicketCompleted": 412,
+    "lastManualObservation": {
+      "nativeTokensUsed": 763438,
+      "timeUsedSeconds": 1678,
+      "availableMemoryMiB": 44159,
+      "swapUsedMiB": 80299,
+      "controllerMutation": false
+    },
+    "closedIssues": [
+      399,
+      400,
+      401,
+      402,
+      404,
+      407,
+      412
+    ],
+    "remainingOpen": [
+      403,
+      405,
+      406,
+      408,
+      409,
+      410,
+      411,
+      413,
+      414
+    ]
   }
 }
