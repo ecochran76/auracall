@@ -1231,12 +1231,13 @@ text output and Browser Ops display the same controls. Grok remains serialized;
 this does not enable tab-affinity execution or deploy the source to an installed
 runtime. Source fixture acceptance is separate from native/provider acceptance.
 
-Grok owned REST backend request admission is a separate opt-in ceiling:
+Grok owned REST backend requests are always metered, with a separate optional ceiling:
 `services.grok.maxBackendRequestsPerMinute` and
 `services.grok.backendRequestBudgetWaitMs` (also supported on runtime service
 bindings). Same-account ceilings combine restrictively across configured runtime
 bindings and durable callers. Wait defaults to zero. No request ceiling is guessed
-when unset; `backendAdmissionEnabled=false` makes that coverage boundary explicit.
+when unset; metering still honors active account ceilings contributed by other
+callers. `backendAdmissionEnabled=true` reports owned REST admission.
 The setting is an operator budget, not a measured Grok subscription quota.
 Requests under `https://grok.com/rest/` on the continuously owned target get one
 pre-dispatch permit per Fetch interception ID. Static assets, telemetry, other

@@ -119,8 +119,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 
 	return {
 		backendRequestAdmissionEnabled:
-			(input.provider === "chatgpt" || input.provider === "grok") &&
-			backendRequestLimit !== undefined,
+			input.provider === "grok" ||
+			(input.provider === "chatgpt" && backendRequestLimit !== undefined),
 		async acquire({ targetId }) {
 			const operationId = `provider-traffic-${randomUUID()}`;
 			const workloadId = `provider-client:${operationId}`;
@@ -154,8 +154,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 				}
 			};
 			const backendRequests =
-				(input.provider === "chatgpt" || input.provider === "grok") &&
-				backendRequestLimit !== undefined
+				input.provider === "grok" ||
+				(input.provider === "chatgpt" && backendRequestLimit !== undefined)
 					? createOwnedBackendRequestAuthority({
 							ledger,
 							scope: {
@@ -168,6 +168,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 							operationId,
 							tabLeaseId: reserved.value.lease.leaseId,
 							backendRequestLimit,
+							observeWithoutLocalCeiling: input.provider === "grok",
 							budgetWaitTimeoutMs,
 							abortSignal: input.baseOptions.abortSignal,
 							assertOwnedLease,
@@ -216,8 +217,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 				settleInteraction: (settlement) => interactionGovernor.finish(settlement),
 				assertLease: assertOwnedLease,
 				admitBackendRequest:
-					(input.provider === "chatgpt" || input.provider === "grok") &&
-					backendRequestLimit !== undefined
+					input.provider === "grok" ||
+					(input.provider === "chatgpt" && backendRequestLimit !== undefined)
 						? backendRequests?.admit
 						: undefined,
 				probeWarning:

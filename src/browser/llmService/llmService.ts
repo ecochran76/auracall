@@ -1,4 +1,3 @@
-import { resolveGrokBackendRequestsPerMinute } from "../../runtime/grokTrafficLimits.js";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -873,7 +872,7 @@ export abstract class LlmService {
 			? (overrides.configuredUrl ?? null)
 			: this.getConfiguredUrl();
 		const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
-		const grokOwnedBootstrap = this.providerId === "grok" && resolveGrokBackendRequestsPerMinute(this.userConfig as Record<string,unknown>,this.resolveActiveProfileName() ?? "default") !== undefined;
+		const grokOwnedBootstrap = this.providerId === "grok";
 		const resolvedTarget = await this.browserService.resolveServiceTarget({
 			serviceId: this.providerId,
 			configuredUrl: grokOwnedBootstrap ? "about:blank" : configuredUrl,

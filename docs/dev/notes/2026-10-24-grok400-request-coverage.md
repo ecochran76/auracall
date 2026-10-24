@@ -18,7 +18,9 @@ an admissible concurrent owner. No claim covers future non-REST API families,
 service workers, WebSockets or background traffic outside this owned attachment.
 
 No numeric ceiling is proposed. Request ceilings are explicit operator opt-ins;
-unset means request admission disabled and is visible in status. Operation counts
+unset means no local numeric ceiling. All owned Grok REST callers still meter
+and honor ceilings contributed by other same-account callers. Admission remains
+enabled and visible in status. Operation counts
 remain distinct. Provider-free tests drive real guarded transport admission,
 configured authority and durable stores. They prove one permit before continue,
 duplicate-event deduplication, account sharing, cancellation, native429 fencing

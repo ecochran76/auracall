@@ -3326,6 +3326,11 @@ export async function ensureGrokTabVisible(
   );
 }
 
+async function closeGrokClient(client: ChromeClient): Promise<void> {
+  if (resolveProviderTrafficGovernor(client)?.admitBackendRequest) await client.close();
+  else await client.close().catch(() => undefined);
+}
+
 async function readGrokDiscoveryWithAdmission<T>(
   client: ChromeClient,
   source: string,
@@ -3445,7 +3450,7 @@ export function createGrokAdapter(): Pick<
         }
         }, options?.abortSignal);
       } finally {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -3591,7 +3596,7 @@ export function createGrokAdapter(): Pick<
           devtoolsPort: port,
         };
       } finally {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -3631,7 +3636,7 @@ export function createGrokAdapter(): Pick<
           fullQualityActivationContext: input.fullQualityActivationContext ?? null,
         });
       } finally {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -4972,7 +4977,7 @@ export function createGrokAdapter(): Pick<
         void client.close().catch(() => undefined);
       };
       if (abortSignal?.aborted) {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -5859,9 +5864,11 @@ async function connectToGrokTab(
     targetInfo = candidates[0];
     usedExisting = Boolean(resolveGrokTargetId(targetInfo));
   }
+  let createdOwnedTargetId: string | undefined;
   if (!resolveGrokTargetId(targetInfo) && hasProviderBackendRequestAdmission(options)) {
     options?.abortSignal?.throwIfAborted();
     targetInfo = await openChromeTarget(resolvedPort, 'about:blank', host, undefined, {kind:'pre-lease-target-acquisition',operationId:randomUUID(),reason:'Grok owned request bootstrap'});
+    createdOwnedTargetId = resolveGrokTargetId(targetInfo);
     shouldClose = options?.preserveActiveTab !== true;
   }
   if (!resolveGrokTargetId(targetInfo)) {
@@ -5889,15 +5896,21 @@ async function connectToGrokTab(
   if (!targetId) {
     throw new Error('No grok.com tab found. Launch a Grok browser session and retry.');
   }
-  const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
-  await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  await annotateClientMutationContext(client, options, 'provider:grok', targetId);
-  if (hasProviderBackendRequestAdmission(options) && targetInfo?.url === 'about:blank') {
-    try { await navigateAndSettle(client, {url: preferredUrl}); }
-    catch(error) { await client.close(); throw error; }
+  let client: ChromeClient | undefined;
+  try {
+    client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
+    await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    await annotateClientMutationContext(client, options, 'provider:grok', targetId);
+    if (hasProviderBackendRequestAdmission(options) && targetInfo?.url === 'about:blank') await navigateAndSettle(client, {url: preferredUrl});
+    setClientSuppressFocus(client, tabPolicy.suppressFocus);
+    return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
+  } catch(error) {
+    const failures: unknown[] = [error];
+    if (createdOwnedTargetId) { try { await CDP.Close({host,port:resolvedPort,id:createdOwnedTargetId}); } catch(cleanup) { failures.push(cleanup); } }
+    try { await client?.close(); } catch(cleanup) { failures.push(cleanup); }
+    if (failures.length > 1) throw new AggregateError(failures, 'Grok bootstrap and cleanup failed.');
+    throw error;
   }
-  setClientSuppressFocus(client, tabPolicy.suppressFocus);
-  return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
 }
 
 async function openCreateProjectModalWithClient(client: ChromeClient): Promise<void> {
@@ -10317,7 +10330,7 @@ async function readGrokSerializedIdentityScriptsForTarget(
     await annotateClientMutationContext(client, options, 'provider:grok', targetId);
     return await readGrokSerializedIdentityScriptsWithRetry(client.Runtime);
   } finally {
-    await client.close().catch(() => undefined);
+    await closeGrokClient(client);
   }
 }
 

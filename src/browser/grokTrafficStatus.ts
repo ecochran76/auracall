@@ -133,7 +133,7 @@ export function summarizeGrokTrafficControls(input: {
 		usedBackendRequestsLastMinute: requests.length,
 		remainingBackendRequests:
 			backendLimit === null ? null : Math.max(0, backendLimit - requests.length),
-		backendAdmissionEnabled: configuredBackendLimit !== undefined,
+		backendAdmissionEnabled: true,
 		maxOperationsPerMinute: limit,
 		operationBudgetWaitMs: resolveGrokOperationBudgetWaitMs(input.config, profile),
 		usedOperationsLastMinute: counted.length,
