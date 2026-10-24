@@ -114,6 +114,10 @@
         {
           "command": "pnpm exec biome lint [seven affected files]",
           "result": "passed clean"
+        },
+        {
+          "command": "pnpm vitest run tests/http.responsesServer.test.ts -t reports development-only posture --maxWorkers=1",
+          "result": "1 passed222 skipped"
         }
       ],
       "review": {
@@ -139,13 +143,18 @@
       "blockers": [
         400
       ],
-      "state": "pending",
-      "worker": null,
-      "ownedPaths": [],
+      "state": "running",
+      "worker": "primary",
+      "ownedPaths": [
+        "src/browser/providers/grokAdapter.ts",
+        "history-specific tests"
+      ],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "branch": "feat/grok-upgrade-integration",
+      "base": "1299787d9a2223edc819eb89067d83b34ad25ece"
     },
     {
       "ticket": 4,
@@ -154,13 +163,20 @@
       "blockers": [
         400
       ],
-      "state": "pending",
-      "worker": null,
-      "ownedPaths": [],
+      "state": "running",
+      "worker": "/root/ticket402_text",
+      "ownedPaths": [
+        "src/browser/actions/grok.ts",
+        "src/browser/providers/grokModelMenu.ts",
+        "src/browser/index.ts",
+        "new Grok text tests/modules"
+      ],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "branch": "feat/grok-402-text",
+      "base": "1299787d9a2223edc819eb89067d83b34ad25ece"
     },
     {
       "ticket": 5,
@@ -184,13 +200,17 @@
       "blockers": [
         400
       ],
-      "state": "pending",
-      "worker": null,
-      "ownedPaths": [],
+      "state": "running",
+      "worker": "/root/ticket404_connectors",
+      "ownedPaths": [
+        "new Grok connector provider/service/CLI/MCP modules and tests"
+      ],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "branch": "feat/grok-404-connectors",
+      "base": "1299787d9a2223edc819eb89067d83b34ad25ece"
     },
     {
       "ticket": 7,
