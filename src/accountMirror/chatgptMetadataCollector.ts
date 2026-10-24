@@ -1,3 +1,4 @@
+import type { GrokHistoryCoverage } from "../browser/providers/grokHistoryInventory.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -1687,7 +1688,7 @@ export async function readBoundedConversations(
 		tolerateReadFailure?: boolean;
 		providerCallTimeoutMs?: number | null;
 	} = {},
-): Promise<{ items: Conversation[]; truncated: boolean }> {
+): Promise<{ items: Conversation[]; truncated: boolean; historyCoverage?: GrokHistoryCoverage }> {
 	const limit = Math.max(0, Math.floor(maxRows));
 	if (limit <= 0) {
 		return { items: [], truncated: true };
@@ -1698,6 +1699,7 @@ export async function readBoundedConversations(
 		"conversation-read",
 	);
 	let conversations: Conversation[];
+	let historyCoverage: GrokHistoryCoverage | undefined;
 	try {
 		const providerListOptions = withAccountMirrorTabLifecycle(
 			options.listOptions,
@@ -1709,6 +1711,10 @@ export async function readBoundedConversations(
 				...(abortSignal ? { abortSignal } : {}),
 				historyLimit: limit,
 				includeHistory: true,
+				onHistoryInventory: async (coverage) => {
+					historyCoverage = coverage;
+					await providerListOptions?.onHistoryInventory?.(coverage);
+				},
 			}) as Promise<Conversation[]>;
 		conversations = (await (options.providerCallTimeoutMs
 			? withProviderCallTimeout(
@@ -1734,9 +1740,16 @@ export async function readBoundedConversations(
 		}
 		throw error;
 	}
+	if (historyCoverage?.state === "failed") {
+		throw new Error(`Grok history discovery failed: ${historyCoverage.reason}`);
+	}
 	return {
 		items: conversations.slice(0, limit),
-		truncated: conversations.length > limit,
+		truncated:
+			conversations.length > limit ||
+			historyCoverage?.state === "incomplete" ||
+			(options.observation?.provider === "grok" && !historyCoverage),
+		...(historyCoverage ? { historyCoverage } : {}),
 	};
 }
 

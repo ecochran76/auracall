@@ -493,13 +493,14 @@
       "blockers": [
         401
       ],
-      "state": "pending",
-      "worker": null,
+      "state": "partial",
+      "worker": "primary",
       "ownedPaths": [],
       "validation": [],
       "review": null,
       "postCompletionTdd": null,
-      "trackerResolved": false
+      "trackerResolved": false,
+      "evidence": "docs/dev/notes/2026-10-24-grok412-index-coverage.md"
     },
     {
       "ticket": 15,
@@ -600,5 +601,29 @@
       "deadline": "2026-10-24T20:17:24Z",
       "controllerRecordsUnchanged": true
     }
+  },
+  "resumedPacket": {
+    "id": "grok412-coverage-20261024",
+    "authority": "User continue; AuraCall only; manual resource monitoring; Codex Wake319 owned by another agent",
+    "base": "161c743971057df7d15ff219324fc2c779019d42",
+    "startedAt": "2026-10-24T22:14:29Z",
+    "checkpointAt": "2026-10-24T22:20:00Z",
+    "scope": "First bounded source slice for412: prevent false complete/healthy history inventory",
+    "status": "source-validated; ticket remains open",
+    "progressClassification": "blocker_reduction",
+    "monitoring": {
+      "mode": "manual",
+      "availableMemoryMiB": 43150,
+      "swapUsedMiB": 75065,
+      "controllerMutation": false,
+      "priorTimeAllowance": "expired; no reset"
+    },
+    "review": "One read-only bounded review; no blocking findings. Added missing-coverage conservative behavior and empty/overflow/failure-tolerance fixtures.",
+    "tdd": {
+      "red": "3 coverage regression cases failed before implementation; unrelated provider read passed",
+      "green": "93 tests passed across3 files; targeted Biome lint passed"
+    },
+    "remaining": "Private account-bound atomic row/cursor checkpoints; cancellation/restart recovery; project/Bot scope coverage; foreground drain; consistent public status",
+    "evidence": "docs/dev/notes/2026-10-24-grok412-index-coverage.md"
   }
 }

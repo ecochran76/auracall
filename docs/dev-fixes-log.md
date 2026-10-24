@@ -25968,3 +25968,8 @@ retained target. A ready chip with a new provider ID plus a native basename/coun
 is insufficient proof of local upload identity; report unconfirmed until an
 actual binding is observed. Recent selection uses the exact provider file ID.
 See the next-wave review receipt for reproductions and the open upload gate.
+
+
+### 2026-10-24 — Grok mirror history coverage must outrank row counts (#412)
+
+The adapter caps history to the requested limit, so testing whether returned rows exceed that limit cannot establish completeness. Mirror reads now retain incomplete coverage and reject reported failed coverage; Grok reads without coverage remain partial. Visible-scope completion is not account-wide backfill proof. Regression fixtures cover capped and empty partial pages, failure tolerance and ordinary overflow. Restart-safe row/cursor persistence remains separate work.

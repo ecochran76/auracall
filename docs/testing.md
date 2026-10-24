@@ -3811,3 +3811,10 @@ The implementation reports this gap as unconfirmed; do not classify it as a
 successful attachment or a completed issue403. No installed/live provider smoke
 or artifact byte materialization is implied by these fixtures.
 
+
+
+### Grok mirror index coverage (#412, partial source slice)
+
+Run `pnpm vitest run tests/accountMirror/grokIndexCoverage.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/browser/grokHistoryInventory.test.ts`.
+
+Incomplete provider coverage keeps the mirror pending even when rows fit within its limit. A Grok read without coverage evidence also stays partial; explicit failed coverage fails the read instead of turning retained rows into fresh success. These fixtures establish source behavior only. They do not prove account-wide discovery, persisted row/cursor restart recovery, project/Bot scope coverage, installed behavior or a live crawl.
