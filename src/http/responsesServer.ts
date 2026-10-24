@@ -1,3 +1,6 @@
+import { GrokConversationsRequestSchema, runGrokConversationsCommand, grokConversationsFailureResult, type GrokConversationsServiceResolver } from "../cli/grokConversationsCommand.js";
+import { GrokConnectorsRequestSchema, runGrokConnectorsCommand, grokConnectorsFailureResult, type GrokConnectorsServiceResolver } from "../cli/grokConnectorsCommand.js";
+import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../browser/configuredGrokDiscovery.js";
 import { RemoteViewConfigSchema } from '../schema/types.js';
 import { maintainDesktopPool } from '../browser/service/nativeDesktopPool.js';
 import { applyDesktopProfileAssignments } from "../browser/service/desktopProfileAssignments.js";
@@ -373,6 +376,8 @@ export interface ResponsesHttpServerOptions {
 }
 
 export interface ResponsesHttpServerDeps {
+ grokConnectorsServiceResolver?: GrokConnectorsServiceResolver;
+ grokConversationsServiceResolver?: GrokConversationsServiceResolver;
   desktopClient?: {
     list: () => ReturnType<typeof listDesktopViews>;
     profiles?: () => ReturnType<typeof listDesktopRuntimeProfiles>;
@@ -902,6 +907,8 @@ interface HttpStatusResponse {
 		teamRunsCreate: string;
 		teamRunInspection: string;
 		projectEnsure: string;
+        grokConnectors?: string;
+        grokConversations?: string;
 		tenantPoolTeamEnsure: string;
 		agentSetupPackagesCreate: string;
 		agentSetupHandoffsCreate: string;
@@ -3890,6 +3897,33 @@ export async function createResponsesHttpServer(
 				}
 			}
 
+
+
+            if (req.method === "POST" && url.pathname === "/v1/grok/conversations/query") {
+                const permissionError=authorizeOperatorConfigAccess(apiAuthContext);
+                if(permissionError){sendJson(res,403,{error:{message:permissionError,type:"permission_error"}});return;}
+                let request:import("../cli/grokConversationsCommand.js").GrokConversationsRequest;
+                try{request=GrokConversationsRequestSchema.parse(JSON.parse((await readRequestBody(req))||"{}"));}catch{sendJson(res,400,{error:{message:"Invalid Grok conversation inventory request.",type:"invalid_request_error"}});return;}
+                if(!deps.grokConversationsServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:"Grok inventory requires configured runtime authority.",type:"configuration_error"}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once("close",onClose);
+                try{const service=deps.grokConversationsServiceResolver?await deps.grokConversationsServiceResolver(request):await createConfiguredGrokConversationsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);sendJson(res,200,await runGrokConversationsCommand(request,service));return;}
+                catch{sendJson(res,200,grokConversationsFailureResult(request.projectId));return;}finally{res.removeListener("close",onClose);finish();}
+            }
+            if (req.method === "POST" && url.pathname === "/v1/grok/connectors/query") {
+                const permissionError=authorizeOperatorConfigAccess(apiAuthContext);
+                if(permissionError){sendJson(res,403,{error:{message:permissionError,type:"permission_error"}});return;}
+                let request: import("../cli/grokConnectorsCommand.js").GrokConnectorsRequest;
+                try {request=GrokConnectorsRequestSchema.parse(JSON.parse((await readRequestBody(req))||"{}"));}
+                catch {sendJson(res,400,{error:{message:"Invalid Grok Connector discovery request.",type:"invalid_request_error"}});return;}
+                const configuredResolver=deps.grokConnectorsServiceResolver ?? (resolvedUserConfig ? (request: import("../cli/grokConnectorsCommand.js").GrokConnectorsRequest)=>createConfiguredGrokConnectorsService(resolvedUserConfig,request.runtimeProfile) : undefined);
+                if(!configuredResolver){sendJson(res,503,{error:{message:"Grok discovery requires configured runtime authority.",type:"configuration_error"}});return;}
+                const finish=beginForegroundAuraCallWork();
+                const cancellation=new AbortController();const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once("close",onClose);
+                try {
+                    const service=deps.grokConnectorsServiceResolver ? await configuredResolver(request) : await createConfiguredGrokConnectorsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    sendJson(res,200,await runGrokConnectorsCommand(request,service));return;
+                } catch {sendJson(res,200,grokConnectorsFailureResult());return;} finally {res.removeListener("close",onClose);finish();}
+            }
 			if (req.method === "POST" && url.pathname === "/v1/projects/ensure") {
 				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
 				if (operatorAuthError) {
@@ -5333,6 +5367,8 @@ function createHttpStatusResponse(input: {
 			teamRunInspection:
 				"/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}",
 			projectEnsure: "POST /v1/projects/ensure",
+            grokConnectors: "POST /v1/grok/connectors/query",
+            grokConversations: "POST /v1/grok/conversations/query",
 			tenantPoolTeamEnsure: "POST /v1/tenant-pool-teams/ensure",
 			agentSetupPackagesCreate: "POST /v1/agent-setup-packages",
 			agentSetupHandoffsCreate: "POST /v1/agent-setup-handoffs",
@@ -12062,6 +12098,8 @@ function createOperatorBrowserDashboardHtml(
         ['Leases', escapeHtml('active=' + Number(leaseStates.active || 0) + ' idle=' + Number(leaseStates.idle || 0) + ' retiring=' + Number(leaseStates.retiring || 0) + ' lost=' + Number(leaseStates.lost || 0))],
         ['Workloads', escapeHtml('conversation=' + Number(workloads.conversations || 0) + ' new=' + Number(workloads.newConversations || 0) + ' live-follow=' + Number(workloads.liveFollow || 0) + ' utility=' + Number(workloads.ephemeral || 0))],
         ...(grokControls ? [
+          ...(grokControls.connectorInventory ? [['Grok Connectors', escapeHtml('status=' + grokControls.connectorInventory.status + ' installed=' + grokControls.connectorInventory.installed + ' catalog=' + grokControls.connectorInventory.catalog + ' tools=' + grokControls.connectorInventory.tools + ' reason=' + grokControls.connectorInventory.code)]] : []),
+          ...(grokControls.historyInventory ? [['Grok history', escapeHtml('state=' + grokControls.historyInventory.state + ' count=' + grokControls.historyInventory.loadedCount + ' pages=' + grokControls.historyInventory.pages + ' reason=' + grokControls.historyInventory.reason)]] : []),
           ['Grok backend requests', escapeHtml('limit=' + (grokControls.maxBackendRequestsPerMinute == null ? 'unconfigured' : grokControls.maxBackendRequestsPerMinute) + ' used=' + Number(grokControls.usedBackendRequestsLastMinute || 0) + ' remaining=' + (grokControls.remainingBackendRequests == null ? 'unlimited' : grokControls.remainingBackendRequests) + ' wait limit=' + Number(grokControls.backendRequestBudgetWaitMs || 0) + 'ms')],
           ['Grok operation limit', escapeHtml(grokControls.maxOperationsPerMinute == null ? 'Unconfigured' : String(grokControls.maxOperationsPerMinute) + '/minute')],
           ['Grok operation capacity', escapeHtml('remaining=' + (grokControls.remainingOperations == null ? 'unlimited' : grokControls.remainingOperations) + ' wait limit=' + Number(grokControls.operationBudgetWaitMs || 0) + 'ms')],

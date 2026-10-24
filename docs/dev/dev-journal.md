@@ -1,3 +1,11 @@
+## 2026-10-24 — Grok #401 core candidate and worker integration
+
+Bound Chats hydration and retain scope/cursor evidence;61 targeted tests and
+typecheck pass. Structured public history entrypoints remain. Both independent
+workers returned committed clean source slices for #402/#404; coordinator now
+owns serial integration, normal-caller wiring, review and post-completion TDD.
+No ticket closure is inferred from worker completion.
+
 ## 2026-10-24 — Grok #400 source acceptance and wave2
 
 175 focused tests pass after one bounded review/remediation;2 explicit public
@@ -55984,3 +55992,8 @@ Canonical acceptance note closes scoped Plan0386; issue165closure follows the
 acceptance PR. Wider P92/Plan0411 changed-frontier and scheduler continuation stay
 open; scheduler/all17subscriptions paused,0queued/running/warnings. Memory
 disposition forbidden.
+
+
+## 2026-10-24 Grok wave 2 checkpoint (#398)
+
+#399 and #400 merged and closed. #401 history inventory, #402 strict governed text/model/composer flow, and #404 connector discovery passed bounded review remediation and provider-free acceptance. See `docs/dev/notes/2026-10-24-grok-wave2-review.md` and Plan0453 ledger for exact proof and pending integration. In-flight reads must propagate the SDK abort signal and preserve unknown effects; final account proof must finish before CDP cleanup. No installed/live acceptance claimed.

@@ -293,7 +293,9 @@ function resolveGrokModeLabel(
   servicesRegistry: Awaited<ReturnType<typeof ensureServicesRegistry>>,
 ): string {
   if (override && override.trim().length > 0) {
-    return resolveServiceModelLabels(servicesRegistry, 'grok', override)[0] ?? override.trim();
+    const exact=override.trim().toLowerCase();
+    const entry=servicesRegistry.services.grok?.models?.find(model=>[model.id,model.label,...(model.aliases??[])].some(label=>label.trim().toLowerCase()===exact));
+    return entry?.label ?? override.trim();
   }
   return resolveServiceModelLabels(servicesRegistry, 'grok', model)[0] ?? 'Auto';
 }
