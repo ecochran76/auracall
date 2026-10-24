@@ -18,7 +18,7 @@ export class ConnectorFixtureNode {
 	}
 	constructor(
 		readonly tag: string,
-		readonly ownText = "",
+		public ownText = "",
 		attributes: Record<string, string> = {},
 		children: ConnectorFixtureNode[] = [],
 	) {
@@ -188,6 +188,11 @@ export function connectorDomFixture({
 			}),
 		},
 		document,
+		installed,
+		detail,
+		search,
+		plugins,
+		close,
 		setUserEmail: (value: string) => {
 			activeEmail = value;
 		},
