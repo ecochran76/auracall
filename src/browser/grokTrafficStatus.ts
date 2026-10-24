@@ -1,3 +1,4 @@
+import type { GrokEcosystemProgress } from "./grokEcosystemProgress.js";
 import type { GrokConnectorProgress } from "./grokConnectorProgress.js";
 import type { GrokHistoryProgress } from "./grokHistoryProgress.js";
 import type { ProviderInteractionRecord } from "../../packages/browser-service/src/service/interactionLedger.js";
@@ -10,6 +11,8 @@ import {
 } from "../runtime/grokTrafficLimits.js";
 
 export interface GrokTrafficControlStatus {
+ files?:GrokEcosystemProgress;
+ bots?:GrokEcosystemProgress;
  historyInventory?: GrokHistoryProgress;
  connectorInventory?: GrokConnectorProgress;
 	maxOperationsPerMinute: number | null;

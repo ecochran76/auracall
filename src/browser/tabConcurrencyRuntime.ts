@@ -1,3 +1,4 @@
+import { readGrokEcosystemProgress } from "./grokEcosystemProgress.js";
 import { readGrokConnectorProgress } from "./grokConnectorProgress.js";
 import { readGrokHistoryProgress } from "./grokHistoryProgress.js";
 import { summarizeGrokTrafficControls, type GrokTrafficControlStatus } from "./grokTrafficStatus.js";
@@ -180,7 +181,7 @@ export function createBrowserTabConcurrencyRuntime(
 						return counts;
 					}, {}),
 				},
-				providerControls: { grok: { ...summarizeGrokTrafficControls({ config: userConfig as Record<string, unknown>, interactions, warnings: activeWarnings, now, managedScopes: leases.map(lease => lease.scope) }), historyInventory: await readGrokHistoryProgress(userConfig.auracallProfile?.trim() || "default"), connectorInventory: await readGrokConnectorProgress(userConfig.auracallProfile?.trim() || "default") } },
+				providerControls: { grok: { ...summarizeGrokTrafficControls({ config: userConfig as Record<string, unknown>, interactions, warnings: activeWarnings, now, managedScopes: leases.map(lease => lease.scope) }), historyInventory: await readGrokHistoryProgress(userConfig.auracallProfile?.trim() || "default"), connectorInventory: await readGrokConnectorProgress(userConfig.auracallProfile?.trim() || "default"), files:await readGrokEcosystemProgress("files",userConfig.auracallProfile?.trim()||"default"), bots:await readGrokEcosystemProgress("bots",userConfig.auracallProfile?.trim()||"default") } },
 				aggregateUsage,
 				leaseStates: {
 					active: leases.filter((lease) => lease.state === "active").length,

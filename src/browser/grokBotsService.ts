@@ -125,8 +125,6 @@ export function createGrokBotsService(
 					return result.ok && key ? createHash("sha256").update(`grok:${key}`).digest("hex") : null;
 				});
 			await governor.checkWarning?.(client.Runtime);
-			const account = await verify(client.Runtime, options);
-			if (!account) throw new Error("grok_bot_account_not_verified");
 			const action = await governor.begin({
 				kind: "provider-read",
 				interactionClass: "generic",
@@ -135,6 +133,8 @@ export function createGrokBotsService(
 				abortSignal: options.abortSignal,
 			});
 			try {
+				const account = await verify(client.Runtime, options);
+				if (!account) throw new Error("grok_bot_account_not_verified");
 				const result = await body({
 					client,
 					account,

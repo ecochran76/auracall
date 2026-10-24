@@ -1,3 +1,7 @@
+import { GrokFilesRequestSchema, runGrokFilesCommand, type GrokFilesServiceResolver } from "../cli/grokFilesCommand.js";
+import { grokFilesFailure } from "../browser/providers/grokFiles.js";
+import { GrokBotsRequestSchema, runGrokBotsCommand, grokBotsFailureResult, type GrokBotsServiceResolver } from "../cli/grokBotsCommand.js";
+import { createConfiguredGrokFilesService, createConfiguredGrokBotsService } from "../browser/configuredGrokDiscovery.js";
 import { GrokConversationsRequestSchema, runGrokConversationsCommand, grokConversationsFailureResult, type GrokConversationsServiceResolver } from "../cli/grokConversationsCommand.js";
 import { GrokConnectorsRequestSchema, runGrokConnectorsCommand, grokConnectorsFailureResult, type GrokConnectorsServiceResolver } from "../cli/grokConnectorsCommand.js";
 import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../browser/configuredGrokDiscovery.js";
@@ -376,6 +380,8 @@ export interface ResponsesHttpServerOptions {
 }
 
 export interface ResponsesHttpServerDeps {
+ grokFilesServiceResolver?: GrokFilesServiceResolver;
+ grokBotsServiceResolver?: GrokBotsServiceResolver;
  grokConnectorsServiceResolver?: GrokConnectorsServiceResolver;
  grokConversationsServiceResolver?: GrokConversationsServiceResolver;
   desktopClient?: {
@@ -908,6 +914,8 @@ interface HttpStatusResponse {
 		teamRunInspection: string;
 		projectEnsure: string;
         grokConnectors?: string;
+        grokFiles?:string;
+        grokBots?:string;
         grokConversations?: string;
 		tenantPoolTeamEnsure: string;
 		agentSetupPackagesCreate: string;
@@ -3924,6 +3932,38 @@ export async function createResponsesHttpServer(
                     sendJson(res,200,await runGrokConnectorsCommand(request,service));return;
                 } catch {sendJson(res,200,grokConnectorsFailureResult());return;} finally {res.removeListener("close",onClose);finish();}
             }
+
+            if(req.method==='POST'&&url.pathname==='/v1/grok/files/query'){
+                const denied=authorizeOperatorConfigAccess(apiAuthContext);
+                if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
+                let request;
+                try{request=GrokFilesRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
+                catch{sendJson(res,400,{error:{message:'Invalid Grok files request.',type:'invalid_request_error'}});return;}
+                if(!deps.grokFilesServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();
+                const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once('close',onClose);
+                try{
+                    const service=deps.grokFilesServiceResolver?await deps.grokFilesServiceResolver(request):await createConfiguredGrokFilesService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    sendJson(res,200,await runGrokFilesCommand(request,service));return;
+                }catch{sendJson(res,200,grokFilesFailure());return;}
+                finally{res.removeListener('close',onClose);finish();}
+            }
+
+            if(req.method==='POST'&&url.pathname==='/v1/grok/bots/query'){
+                const denied=authorizeOperatorConfigAccess(apiAuthContext);
+                if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
+                let request;
+                try{request=GrokBotsRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
+                catch{sendJson(res,400,{error:{message:'Invalid Grok bots request.',type:'invalid_request_error'}});return;}
+                if(!deps.grokBotsServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();
+                const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once('close',onClose);
+                try{
+                    const service=deps.grokBotsServiceResolver?await deps.grokBotsServiceResolver(request):await createConfiguredGrokBotsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    sendJson(res,200,await runGrokBotsCommand(request,service));return;
+                }catch{sendJson(res,200,grokBotsFailureResult());return;}
+                finally{res.removeListener('close',onClose);finish();}
+            }
 			if (req.method === "POST" && url.pathname === "/v1/projects/ensure") {
 				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
 				if (operatorAuthError) {
@@ -5368,6 +5408,8 @@ function createHttpStatusResponse(input: {
 				"/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}",
 			projectEnsure: "POST /v1/projects/ensure",
             grokConnectors: "POST /v1/grok/connectors/query",
+            grokFiles:"POST /v1/grok/files/query",
+            grokBots:"POST /v1/grok/bots/query",
             grokConversations: "POST /v1/grok/conversations/query",
 			tenantPoolTeamEnsure: "POST /v1/tenant-pool-teams/ensure",
 			agentSetupPackagesCreate: "POST /v1/agent-setup-packages",

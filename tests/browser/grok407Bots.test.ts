@@ -453,3 +453,12 @@ test("unknown invocation retains its exact browser target locator for reconcilia
 	const result = await fixture.service.invoke({ id: "bot-alice", source: "owned" }, "Question");
 	expect(result).toMatchObject({ targetId: "target", effectState: "none", status: "unknown" });
 });
+
+test('operation admission rejects before Bot account discovery begins', async () => {
+ const verifyAccount=vi.fn(async()=> 'account-ref');
+ const close=vi.fn(async()=>{});
+ const begin=vi.fn(async()=>{throw new Error('operation-cap');});
+ const service=createGrokBotsService({}, {connect:async()=>({client:{Runtime:fixture().runtime,close,__auracallProviderTrafficGovernor:{attribution:{provider:'grok',targetId:'target'},admitBackendRequest:async()=>{},begin}},targetId:'target',shouldClose:false,host:'localhost',port:1}),verifyAccount});
+ await expect(service.list('catalog')).rejects.toThrow('operation-cap');
+ expect(verifyAccount).not.toHaveBeenCalled();expect(close).toHaveBeenCalledOnce();
+});
