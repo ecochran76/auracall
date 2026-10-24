@@ -1,3 +1,11 @@
+## 2026-10-23 — Clipboard embed delegation
+
+User requested mobile Paste repair and continuous clipboard passthrough. Remote
+View PR628 owns the shared viewer; this slice delegates clipboard-read/write in
+AuraCall’s bundled parent helper. Preserve Recall and other installed runtime
+behavior. Focused helper regression fails before the one-line repair. Deployment
+requires exact canonical helper bytes, backup and API/runtime acceptance.
+
 
 ## 2026-10-23 — Operator Browser Recall for borrowed profiles (#240)
 
