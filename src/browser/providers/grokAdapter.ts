@@ -5753,7 +5753,7 @@ export function createGrokAdapter(): Pick<
   };
 }
 
-async function connectToGrokTab(
+export async function connectToGrokTab(
   options?: BrowserProviderListOptions,
   urlOverride?: string,
 ): Promise<{
