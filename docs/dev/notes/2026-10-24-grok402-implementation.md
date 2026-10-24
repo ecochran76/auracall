@@ -136,3 +136,43 @@ Post-completion TDD on worker73d8dbb2 reproduced lost serialized controls and fu
 CLI override handling; coordinator repair turns those checks green.120 tests in
 8 focused files pass on integration, including normal callers and public prompt
 orchestration. Native/installed acceptance remains unperformed.
+
+## Closed-world review remediation — prepared custody and picker evidence
+
+Base `d1072bdf9`; only the two coordinator-accepted action findings are changed.
+The prepared composer proof is retained per Runtime transport. It binds the exact
+browser element reference, marker, immutable token node references, token identity
+metadata and exact normalized prompt text. The final click validates all of these
+in the same DOM evaluation before dispatch. A replaced editor (even with a copied
+marker), changed draft or replaced token fails with `pre_effect` and zero sends.
+Preparation failure invalidates its proof; dispatched proof cannot be reused for
+a second send. Existing direct-submit-only fixtures remain deliberately compatible;
+the public orchestration path always prepares first.
+
+Picker selection no longer treats trigger text as selected-model evidence after
+menu closure. It reopens the picker once and requires selected/entitlement state
+from the menu. Hidden Build plus visible Fast cannot turn a no-op selection into
+success; a real closed-picker Build selection remains accepted by selected-state
+readback.
+
+Red command on the pinned base (three failures: replacement editor, changed text,
+and hidden-trigger/no-op selection):
+
+```
+pnpm vitest run tests/browser/grok402Text.test.ts --maxWorkers=1
+```
+
+The same command turns green after the repair. Positive controls additionally
+prove one verified prepared send, consumed-proof rejection, immutable token-node
+replacement rejection with unchanged metadata, and successful closed-picker
+selection. Focused validation passes **31 tests across three files**, one worker,
+no retries:
+
+```
+pnpm vitest run tests/browser/grok402Text.test.ts tests/browser/grokActions.test.ts tests/browser/grokModelMenu.test.ts --maxWorkers=1
+```
+
+Touched-file Biome lint, `git diff --check`, and `pnpm exec tsc --noEmit --pretty false` all pass.
+No index/shared-file changes, new discovery, provider/browser effects or installed
+acceptance were added. Memory disposition remains `forbidden` under the delegated
+provider-free boundary; the coordinator owns final integration closeout.
