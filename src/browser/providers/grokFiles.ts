@@ -185,11 +185,19 @@ export function createGrokFileClient(
 				const added = current.files.filter((f) => !baseline.files.some((old) => old.id === f.id));
 				if (added.length > paths.length || current.code === "grok_file_identity_ambiguous")
 					return { ...current, status: "unconfirmed", code: "grok_file_identity_ambiguous" };
-				if (added.length === paths.length)
-					return waitReady(
+				if (added.length === paths.length) {
+					const observed = await waitReady(
 						added.map((f) => f.id),
 						baseline,
 					);
+					// Native FileList proves only local selection. New provider
+					// IDs and readiness prove only composer state. No surveyed
+					// DOM evidence binds either ID to that exact selected File
+					// object or its content. Names/counts cannot bridge this gap.
+					return observed.status === "complete"
+						? { ...observed, status: "unconfirmed", code: "grok_file_source_binding_unavailable" }
+						: observed;
+				}
 				if (Date.now() >= deadline)
 					return { ...current, status: "unconfirmed", code: "grok_file_identity_unconfirmed" };
 				await delay(options.pollMs ?? 100);

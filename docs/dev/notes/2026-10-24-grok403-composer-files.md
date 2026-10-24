@@ -1,6 +1,8 @@
 # Grok exact composer files — #403
 
-Source implementation for Plan0452 T05, based on frozen base `87c4910ba`.
+Partial source implementation for Plan0452 T05, based on frozen base `87c4910ba`.
+Local-upload identity acceptance remains OPEN: observed provider file IDs cannot
+yet be bound to the exact native selected File or its bytes.
 No installed or live provider acceptance. The controlled DOM fixtures exercise
 actual evaluated browser algorithms; their structure is synthetic and sanitized.
 
@@ -34,7 +36,7 @@ governor with native backend admission and exact target attribution, and checks
 configured provider session authority before and after the operation. It settles
 operations through that governor. Unknown mutation outcomes retain an owned tab
 for reconciliation while closing the transport. Public errors omit raw transport
-messages and local paths. Successful envelopes retain hashed provider account,
+messages and local paths. Observed envelopes retain hashed provider account,
 exact browser target, composer, project/conversation and provider file identity;
 no artifact-byte materialization or provider persistence is claimed.
 
@@ -59,3 +61,32 @@ separate unexecuted gates. Do not infer them from these fixtures.
 
 Memory disposition: forbidden — no explicit memory-write authorization; this
 repository implementation note is the decision and validation record.
+
+
+## Accepted F2 remediation — native selection is not provider identity
+
+Controlled DOM reproduction: the input selects intended `same.txt`, size 4;
+the intended provider attachment never appears, but an unrelated newly ready
+`foreign-ready-id` chip with the same basename appears in the exact composer.
+`pnpm vitest run tests/browser/grok403Files.test.ts -t 'unrelated new ready'`
+failed red because the operation returned `complete/grok_files_ready`.
+
+Adjudication: blocking, confirmed. Native FileList selection plus matching new-ID
+count proves neither provider identity nor content provenance. The survey supplies
+no authoritative DOM binding between those two evidence surfaces. No synthetic
+attribute or basename/size surrogate is introduced as supposed provider proof.
+
+The bounded correction retains native selection, exact composer/project fences,
+new stable ID observations, progress/error checks and explicit ready-state reads,
+but promotes no local upload to complete without the missing source binding.
+After ready-state observation it returns
+`unconfirmed/grok_file_source_binding_unavailable`. Public CLI/MCP preserve that
+state and governor settlement retains unknown-effect custody. A source-only
+fixture cannot close the local-upload acceptance gap. Exact recent-ID selection
+continues to qualify against that same ID in the composer.
+
+A future authorized provider inspection must establish a real binding from the
+selected native File/content to its provider file ID, then prove the algorithm on
+controlled fixtures and separately through installed/live qualification. Until
+then, local-upload prompt execution fails before submission and #403 remains
+partially implemented. This is an explicit gap, not successful acceptance.
