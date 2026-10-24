@@ -8,16 +8,17 @@ lanes:
     plan_ref: refs/remotes/origin/main
     branch: fix/issue368-continuation-receipt
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: INTEGRATED
     checkpoint: 76aa429c0fa43a82642fae05f3ce7d11f163f010
     remote_ref: refs/remotes/origin/fix/issue368-continuation-receipt
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: continuation-receipt-regression-green-live-pending
-    integration_receipt: d33b14e04317f253fa034f79d20d8b0fc77a3c7b
-    updated_at: 2026-10-23
+    validation_status: installed-accepted-31-tools-exact-settings-preserved
+    validation_ref: docs/dev/notes/2026-10-24-issue368-live-acceptance.md
+    integration_receipt: 24a86240794a26a30c6311b79439e332c61ce0b5
+    updated_at: 2026-10-24
   - id: P87-IQ2
     objective: Honor configured admission wait while reading refresh settings
     work_items: [Plan0393-IQ2]

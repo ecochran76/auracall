@@ -1,3 +1,24 @@
+## 2026-10-24 — Issue368 live acceptance complete
+
+Installed76aa429c0 public command returns completed. One attributable HTTP200
+refresh yields31 OpenSign tools. Independent read of its exact retained target
+matches the saved app/endpoint/connected-account/permission baseline. Account
+matches; cleanup effects settled;394 ownership reads all200. No prompt, consent,
+replacement, warning clearance or API restart. Plan0451 CLOSED; issue closure
+follows receipt integration. Historical failed/unknown evidence is retained.
+See [acceptance](notes/2026-10-24-issue368-live-acceptance.md). Memory forbidden:
+no explicit save request.
+
+## 2026-10-24 — Issue368 acceptance resumed after active desktop owner
+
+Mail Receipts submitted app test held wsl-chrome-3's display through a live
+process; do not interrupt it. It exited during resume setup. Cancel the pending
+self-wake (409612e7) before continuing. An empty transition directory stranded
+by that dead automation PID143314 was preserved by rename; normal gate acquisition
+then reconciles the dead owner. Fresh zero-navigation baseline remains healthy
+and fingerprint unchanged. The installed76aa429c0 command is now under one
+captured final acceptance run; no other provider operation is initiated.
+
 ## 2026-10-24 — Issue368 retain backend continuation acknowledgment
 
 Recovery-enabled acceptance fails pre-refresh with a preserved native AbortError

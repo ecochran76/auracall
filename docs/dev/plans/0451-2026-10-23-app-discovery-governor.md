@@ -1,9 +1,9 @@
 # Plan0451 — Govern developer-app bootstrap (#368)
 
-State: OPEN
+State: CLOSED
 Lane: issue368
 Owner: primary agent for ecochran76
-Branch: fix/issue368-continuation-receipt
+Branch: docs/issue368-closeout
 Target: main
 Integration: pull request
 Base: 89800c458
@@ -11,19 +11,21 @@ Work item: ecochran76/auracall#368
 
 ## Current State
 
-Existing backend-admission fixtures pass but start with a target/factory. A new
-public CLI regression through the real ChatgptService utility dispatch and shared
-physical target guard fails with the exact provider:chatgpt:connect-tab missing-
-governor error when serialized discovery needs its first tab. The factory cannot
-acquire target-bound authority before a target exists.
+Installed acceptance is complete on wsl-chrome-3 for the operator-selected
+OpenSign app. The real installed public-command operation returns completed,
+with exactly one attributable refresh_actions POST, HTTP200 and31 tools.
+An independent read of that operation's exact retained target matches the saved
+pre-refresh app ID, endpoint, connected accounts and permissions. Configured
+account matches; cleanup effect state is settled. No provider prompt, consent,
+warning clearance, app replacement or API restart.
 
-Serialized explicit utility commands now request target custody through the
-existing ephemeral-tab acquisition/governor pipeline before identity/inventory
-or catalog refresh. Prompt concurrency configuration is unchanged. No synthetic
-target identity, guard bypass, automatic provider retry or warning clearance.
-Configured account scope remains authoritative; serialized discovery without
-configured identity uses the existing managed-browser scope convention, not an
-inferred account. Affinity-mode identity requirements remain unchanged.
+Source76aa429c0 in PR422 includes the first-target governor repair, observation
+deadline correction, terminal settings-error recognition, one qualified settings
+reload and bounded continuation acknowledgment.140 focused receipt/admission/
+transport tests and76 recovery/command tests pass in overlapping selections;
+these counts are not additive. Typecheck/build and scoped checks pass. See
+[final live receipt](../notes/2026-10-24-issue368-live-acceptance.md).
+Historical unknown outcomes and failed receipts remain preserved.
 
 ## Scope and acceptance
 
@@ -300,3 +302,39 @@ full typecheck/build, scoped lint, docs:list and whitespace pass. Primary
 Standards/Spec review againstd33b14e04 finds no blocking issue; only the opted-in
 continuation waits through after-send cancellation, bounded by the original
 deadline. Historical unknown outcomes remain unchanged.
+
+PR422 source76aa429c0 merged24a862407. CLI-only adoption prefix
+~/.auracall/user-runtime-issue368-receipt-76aa429c0 includes both the one-reload
+settings recovery and bounded continuation-receipt fix. No API restart. Final
+acceptance is captured under ~/.local/state/auracall-issue368-terminal-acceptance-20261024/.
+
+### Installed receipt fix; transient Remote View qualification
+
+Installed76aa429c0 modules (guarded CDP, shared interceptor, app adapter) match
+the tested build; help passes. The terminal-acceptance attempt passes inventory
+but fails before any captured refresh_actions request with Remote View
+application-operation unavailability, also propagated by observer cleanup.
+A direct exact-generation read afterward returns HTTP200/one window at generation1,
+viewingGeneration11. Do not attribute this dependency failure to the repaired
+acknowledgment race or clear historical unknown outcomes.
+
+One final attempt after that dependency recovery is recorded under
+~/.local/state/auracall-issue368-dependency-acceptance-20261024/. A diagnostic
+fetch wrapper records only read operation/status/error-code metadata for the
+loopback consumer endpoint; it sends no additional requests and captures no
+credentials or response bodies. The saved healthy settings baseline still has
+the same connection/permission fingerprint. This is the packet's final live attempt; on failure, retain the exact blocker
+rather than replaying.
+
+## Final acceptance — 2026-10-24
+
+All acceptance gates pass. Private acceptance.json binds installed source76aa429c0
+to completed operation, one HTTP200/31-action refresh and exact independent
+preservation checks. Catalog SHA256:
+6e6391c246338646ee8f58ab25cfc6cd2ddd33c6240c9773177df31c9ebcbe65.
+The successful run records394 Remote View ownership responses, all HTTP200.
+Fresh scoped OS readback finds the retained browser and API PID1777322 alive;
+no API restart or CLI/API full-artifact parity is claimed. The exact utility
+lease is terminal/lost with settled effects, not an active custody claim.
+The failed/unknown historical requests were not rewritten.
+Memory disposition forbidden: no explicit request to save memory.
