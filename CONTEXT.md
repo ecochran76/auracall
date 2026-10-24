@@ -205,3 +205,17 @@ BROWSER_CDP_NOT_READY preserves unknown exit attribution and grants no restart.
 Read-only utility stale-lease reconciliation observes the exact managed browser
 directory/service domain despite tenant metadata drift. Fresh adoption and provider
 identity remain tenant-scoped; live-owner and uncertain-effect fences remain intact.
+
+
+**Grok Connector**:
+An external service connected to Grok through its Plugins connector surface,
+including a custom MCP server. Its connected account and permissions are distinct
+from a generated app or a Bot.
+
+**Grok Bot**:
+A named Grok agent with its own configuration that an operator can select for a
+conversation. It is distinct from an AuraCall runtime profile or execution agent.
+
+**Grok generated app**:
+An app created through Grok Build mode. Generation, preview, artifact retrieval
+and publication are distinct outcomes; a Connector is not a generated app.

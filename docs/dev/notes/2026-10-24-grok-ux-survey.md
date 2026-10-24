@@ -128,3 +128,54 @@ and reproducible by the exact default-profile browser-tools command above.
 Memory disposition: forbidden — no explicit user request to save agent memory;
 repository notes are the requested survey record. A non-write receipt is retained
 with the private evidence. Graphiti discovery was advisory, not runtime proof.
+
+
+## Scope decisions — questionnaire round 1
+
+Saved response `ec33b69c63534016879ccffd1833f424`, recorded
+2026-10-24T15:15:44.790918Z, questionnaire `27aca55f4966`, revision
+`d0c7ae0a55b59818b220bf2fcbd2b3f57c915b721c18e780d5a350fcc8de1ff8`.
+Previews session: `a84de6dd5c31`. Answers are complete; conditional Other fields
+are inactive/unanswered, not negative votes.
+
+- Include Build-generated app execution, artifacts and publication workflows.
+  This supersedes the survey's proposed P2 deferral; sequencing still needs a spec.
+- Bots: inventory, invocation, creation and editing selected. Catalog installation,
+  removal and scheduling were not selected; defer them for this release.
+- Deliver CLI structured JSON, local API/MCP contracts and Ops status. Graphical
+  management forms were not selected.
+- Live-follow includes chat content plus referenced files and generated artifacts.
+- Rate handling uses configurable bounded waits with visible reason/next eligible
+  time and immediate-yield option. Settings are shared by provider account across
+  runtime profiles with advanced overrides and effective-value readback.
+- Concrete success example: “install and qualify the Mail Receipts MCP”.
+
+These are product scope decisions, not authorization to install a connector,
+read mailbox content through Grok, create a Bot, publish an app or enable a worker.
+No implementation or provider mutation took place while consuming the answers.
+
+### Follow-up research
+
+The installed Mail Receipts client exposes a local stdio MCP with explicit
+account allowlists and read/write/send/derive scope options. Authorized local
+account discovery responded successfully; no mail search/content read was made.
+Local discovery is not proof of the account grant available to Grok.
+
+Reviewed the active external OAuth service's configuration without printing
+credentials. Public metadata endpoints returned HTTP200:
+
+- `https://mail-receipts.ecochran.dyndns.org/.well-known/oauth-authorization-server`
+  advertises authorization-code/refresh-token, PKCE S256 and read/send/write.
+- `https://mail-receipts.ecochran.dyndns.org/.well-known/oauth-protected-resource/mcp`
+  identifies `https://mail-receipts.ecochran.dyndns.org/mcp` and the same issuer/scopes.
+
+This establishes a candidate URL and advertised auth contract, not Grok OAuth,
+transport compatibility, installed catalog or tool-use acceptance. Server-wide
+scope support is not a grant. Existing app adapter contracts distinguish
+completed, awaiting-human, unconfirmed and failed outcomes; preserve that
+qualification distinction in Grok's lifecycle design.
+
+Round 2 asks qualification depth and scopes, publication destination, required
+Bot configuration fields and initial mirror coverage. Numeric traffic ceilings
+need measurement; do not invent provider capacity. Existing foreground priority,
+warning fencing and request/operation separation remain settled requirements.

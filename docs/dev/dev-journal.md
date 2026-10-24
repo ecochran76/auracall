@@ -1,3 +1,12 @@
+## 2026-10-24 — Grok scope decisions, round 1
+
+Consumed complete Previews response. Build publication included; Bots inventory,
+invoke/create/edit; CLI/API/MCP/Ops; full mirror; account-shared configurable waits.
+Acceptance example is Mail Receipts installation/qualification. Public OAuth/MCP
+metadata verified; no mailbox content or provider mutations. Recorded decisions
+in the [survey](notes/2026-10-24-grok-ux-survey.md) and domain terms in CONTEXT.md.
+Round 2 remains pending. Memory forbidden: no explicit save request.
+
 ## 2026-10-24 — Grok UX survey
 
 Default Grok browser opened and inspected: Chats, composer @ and /, model menu,
