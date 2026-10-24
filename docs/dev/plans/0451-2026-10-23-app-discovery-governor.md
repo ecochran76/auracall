@@ -190,3 +190,37 @@ that separate custody fence. No new provider action or manual fence clearance.
 #368 stays OPEN. Next bounded work is owned-cleanup reconciliation, not another
 refresh. No source change in this operational packet. Docs:list and whitespace
 checks pass. Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Cleanup reconciliation packet
+
+Branch fix/issue368-cleanup-reconciliation. Refine the prior ledger summary:
+one of90 backend records is settled with effectState outcome-unknown;15 failed
+records have effectState none and74 succeeded with settled effects. A settled
+ledger transition alone does not establish a settled provider effect. The
+unknown request key contains a random in-memory namespace, so saved metadata
+cannot reconstruct its URL. No historical fence clearance or provider refresh.
+
+One read-only public app-list probe retains recursive, redacted errors and stage
+transitions; passive capture retains backend path/method/status/shape only. This
+can reproduce preflight/cleanup behavior without invoking Refresh tools. Do not
+select a repair before obtaining the probe verdict and a minimized failing loop.
+Private evidence: ~/.local/state/auracall-issue368-cleanup-20261024/.
+
+### Cleanup packet outcome
+
+The installed read-only public-command probe succeeds (observed26 apps); identity,
+attachment, inventory and cleanup complete. No refreshed catalog or provider
+mutation was requested. The previous aggregate failure did not reproduce; no
+root cause is invented and no source repair/regression is justified by this run.
+
+Normal expired-lease retirement moves the old failed utility to lost, preserving
+effectState outcome-unknown, finalDisposition preserved and the physical tab.
+The new probe lease ends lost without a retirement disposition; its effectState is settled and
+its operation succeeds. The old lease is no longer an active/idle custody fence;
+the historical unknown request outcome remains intact. No manual fence reset or
+claim of retroactive provider settlement. Reconciliation receipt is stored in
+the cleanup state directory. This supersedes the active-cleanup-blocker wording
+above. #368 stays OPEN for final catalog/preservation acceptance.
+
+No code change or new tests: operational reconciliation only. docs:list and
+whitespace validation pass. Memory forbidden: no explicit save request.

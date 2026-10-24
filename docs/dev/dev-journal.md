@@ -1,3 +1,21 @@
+## 2026-10-24 — Issue368 cleanup reconciled through normal retirement
+
+Read-only installed public-command probe succeeds with26 apps and completes
+cleanup; no provider refresh. Prior aggregate failure does not reproduce. One
+historical request remains outcome-unknown. Normal expired-lease retirement
+moves its utility lease to lost/preserved, keeping unknown history and its tab;
+no manual fence clearance. Current probe effect is settled. The remaining #368
+gate is final catalog/preservation acceptance, not an active cleanup lease.
+No source change or speculative regression. Memory forbidden: no save request.
+
+## 2026-10-24 — Issue368 exact cleanup-effect reconciliation
+
+One settled backend record actually retains outcome-unknown;15 other failed
+requests prove no dispatch,74 succeed. Preserve the historical lease fence.
+One read-only app-list probe captures nested causes and progress stages, with
+passive backend metadata capture. No Refresh tools operation. Result pending.
+Plan0451 records the packet and evidence boundaries.
+
 ## 2026-10-24 — Grok #400 source acceptance and wave2
 
 175 focused tests pass after one bounded review/remediation;2 explicit public
