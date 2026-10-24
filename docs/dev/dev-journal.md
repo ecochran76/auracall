@@ -56084,3 +56084,10 @@ User authorized manual resource monitoring after Codex Wake319 filed. Existing B
 
 
 Final tracker readback: PR423 merged as4986f397110a07831dfa00d1dd16544ddea83ffe; issue407 CLOSED. Six of16 tickets are now merged/closed, ten remain. #403 is integrated/partial with the source-binding acceptance gate still open; #405 partial source remains isolated and backed up. Ready next wave: #403,#405,#408,#410,#412, with partial gates carried forward. No new wave dispatched near the fixed deadline.
+
+
+## 2026-10-24 Grok412 coverage packet
+
+User resumed AuraCall with manual resource monitoring and assigned Codex Wake319 to another agent. No Wake/controller/configuration changes. Base161c74397 was clean and matched origin/main. The expired two-hour allowance remains historical; no counters or deadlines reset.
+
+Fixed a false-completeness bug: bounded mirror conversation reads now preserve provider coverage, keep incomplete or unproven Grok history partial, and reject explicit failed coverage instead of accepting returned rows as success. One bounded independent review found no blockers. TDD reproduced three failures before implementation;93 focused tests across3 files and targeted Biome lint pass. See `docs/dev/notes/2026-10-24-grok412-index-coverage.md`. Ticket412 remains partial/open; no new ticket closure, installed/live proof or account-wide completeness claim. Manual memory readback:43,150MiB available,75,065MiB swap used. Memory disposition: forbidden; developer prohibits memory writes absent an explicit request.

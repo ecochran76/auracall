@@ -1087,14 +1087,17 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(client.listConversations).toHaveBeenNthCalledWith(1, "gem_1", {
 			historyLimit: 2,
 			includeHistory: true,
+			onHistoryInventory: expect.any(Function),
 		});
 		expect(client.listConversations).toHaveBeenNthCalledWith(2, "gem_2", {
 			historyLimit: 1,
 			includeHistory: true,
+			onHistoryInventory: expect.any(Function),
 		});
 		expect(client.listConversations).toHaveBeenNthCalledWith(3, "gem_3", {
 			historyLimit: 1,
 			includeHistory: true,
+			onHistoryInventory: expect.any(Function),
 		});
 		expect(result.items.map((item) => item.id)).toEqual([
 			"gem_1_conversation_1",
@@ -1133,10 +1136,12 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(client.listConversations).toHaveBeenNthCalledWith(1, "gem_1", {
 			historyLimit: 2,
 			includeHistory: true,
+			onHistoryInventory: expect.any(Function),
 		});
 		expect(client.listConversations).toHaveBeenNthCalledWith(2, "gem_2", {
 			historyLimit: 2,
 			includeHistory: true,
+			onHistoryInventory: expect.any(Function),
 		});
 		expect(first.cursor).toMatchObject({
 			nextProjectIndex: 2,
@@ -1154,10 +1159,12 @@ describe("ChatGPT account mirror metadata collector", () => {
 		expect(client.listConversations).toHaveBeenNthCalledWith(3, "gem_3", {
 			historyLimit: 4,
 			includeHistory: true,
+			onHistoryInventory: expect.any(Function),
 		});
 		expect(client.listConversations).toHaveBeenNthCalledWith(4, "gem_4", {
 			historyLimit: 4,
 			includeHistory: true,
+			onHistoryInventory: expect.any(Function),
 		});
 		expect(second.cursor.nextProjectIndex).toBe(0);
 		expect(second.truncated).toBe(false);
