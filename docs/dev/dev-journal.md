@@ -1,3 +1,11 @@
+## 2026-10-23 | Issue384 account-page diagnostics
+
+Plan0450: captured-tab replay reproduced misleading missing-model failure.
+Public model/mode regressions failed before classification and pass afterward.
+55 focused tests, typecheck and original real-detector capture replay pass.
+Source-only diagnostic repair; provider cause and installed acceptance remain
+open. No live prompt or source deployment occurred.
+
 
 ## 2026-10-23 — Stale endpoint history blocks a verified browser (#240)
 

@@ -1,6 +1,7 @@
 import { logDomFailure } from "../domDebug.js";
 import type { BrowserLogger, BrowserModelStrategy, ChromeClient } from "../types.js";
 import { buildClickDispatcher } from "./domEvents.js";
+import { assertNoChatgptAccountLoadError } from "./chatgptAccountError.js";
 
 export type ChatgptComposerMode = "chat" | "work";
 
@@ -46,6 +47,7 @@ export async function ensureChatgptComposerMode(
 	}
 	await logDomFailure(Runtime, logger, "chatgpt-composer-mode");
 	if (result?.status === "mode-not-found") {
+		await assertNoChatgptAccountLoadError(Runtime);
 		const available = result.availableModes.filter(Boolean);
 		const hint = available.length > 0 ? ` Available: ${available.join(", ")}.` : "";
 		throw new Error(`Unable to find the ChatGPT ${label} mode control.${hint}`);
