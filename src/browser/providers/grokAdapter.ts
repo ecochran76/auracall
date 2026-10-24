@@ -1,3 +1,5 @@
+import { collectGrokHistoryInventory, buildGrokHistoryPageExpression, buildGrokChatsOpenerExpression, type GrokHistoryPage } from "./grokHistoryInventory.js";
+import { recordGrokHistoryProgress } from "../grokHistoryProgress.js";
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -3258,22 +3260,24 @@ export function choosePreferredGrokConversation(
   if (!existing) {
     return candidate;
   }
+  if(existing.projectId && candidate.projectId && existing.projectId !== candidate.projectId)throw new Error('Conflicting Grok conversation project membership.');
+  const preserveEvidence = (preferred:Conversation):Conversation => ({...preferred,projectId:existing.projectId ?? candidate.projectId,metadata:{...existing.metadata,...candidate.metadata}});
   const existingQuality = grokConversationTitleQuality(existing.title, existing.id);
   const candidateQuality = grokConversationTitleQuality(candidate.title, candidate.id);
   if (candidateQuality !== existingQuality) {
-    return candidateQuality > existingQuality ? candidate : existing;
+    return preserveEvidence(candidateQuality > existingQuality ? candidate : existing);
   }
   const existingTimestamp = grokConversationTimestampValue(existing.updatedAt);
   const candidateTimestamp = grokConversationTimestampValue(candidate.updatedAt);
   if (candidateTimestamp !== existingTimestamp) {
-    return candidateTimestamp > existingTimestamp ? candidate : existing;
+    return preserveEvidence(candidateTimestamp > existingTimestamp ? candidate : existing);
   }
   const existingHasUrl = Boolean(existing.url);
   const candidateHasUrl = Boolean(candidate.url);
   if (candidateHasUrl !== existingHasUrl) {
-    return candidateHasUrl ? candidate : existing;
+    return preserveEvidence(candidateHasUrl ? candidate : existing);
   }
-  return candidate;
+  return preserveEvidence(candidate);
 }
 
 export async function ensureGrokTabVisible(
@@ -3782,6 +3786,10 @@ export function createGrokAdapter(): Pick<
       }
     },
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
+      let historyCoverage: import('./grokHistoryInventory.js').GrokHistoryCoverage | undefined;
+      const originalProgress=options?.onHistoryInventory;
+      options={...options,onHistoryInventory:async coverage=>{historyCoverage=coverage;await originalProgress?.(coverage);}};
+      const finish=(items:Conversation[])=>items.filter(item=>!options?.historySearch || item.title.toLowerCase().includes(options.historySearch.toLowerCase())).slice(0,options?.includeHistory ? options.historyLimit??2000 : items.length).map(item=>historyCoverage?({...item,metadata:{...item.metadata,grokInventory:historyCoverage}}):item);
       const resolvedProjectId = projectId?.trim() || undefined;
       const projectUrl = resolvedProjectId ? resolveGrokProjectUrl(resolvedProjectId) : undefined;
       const connection = projectUrl
@@ -3815,7 +3823,7 @@ export function createGrokAdapter(): Pick<
           for (const entry of openConversations) {
             mergeConversation(entry);
           }
-          return Array.from(merged.values());
+          return finish(Array.from(merged.values()));
         }
         const includeHistory = Boolean(options?.includeHistory);
         let history: Conversation[] = [];
@@ -4029,7 +4037,7 @@ export function createGrokAdapter(): Pick<
         for (const entry of openConversations) {
           mergeConversation(entry);
         }
-        return Array.from(merged.values());
+        return finish(Array.from(merged.values()));
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -8914,37 +8922,17 @@ export async function clickProjectSidebarToggle(
   }
 }
 
-export async function clickHistoryMenuItem(
-  client: ChromeClient,
-  options?: { logPrefix?: string },
-): Promise<boolean> {
-  const direct = await pressButton(client.Runtime, {
-    selector: '[aria-label="History"], [aria-label*="History" i]',
-    timeoutMs: 3000,
-  });
-  if (direct.ok) {
-    return true;
-  }
-  const result = await pressButton(client.Runtime, {
-    match: { includeAny: ['history'] },
-    timeoutMs: 3000,
-  });
-  if (result.ok) {
-    return true;
-  }
-  await ensureMainSidebarOpen(client, { logPrefix: options?.logPrefix ?? 'browser-history-item' });
-  const retryDirect = await pressButton(client.Runtime, {
-    selector: '[aria-label="History"], [aria-label*="History" i]',
-    timeoutMs: 3000,
-  });
-  if (retryDirect.ok) {
-    return true;
-  }
-  const retry = await pressButton(client.Runtime, {
-    match: { includeAny: ['history'] },
-    timeoutMs: 3000,
-  });
-  return Boolean(retry.ok);
+export async function clickHistoryMenuItem(client:ChromeClient,options?:{logPrefix?:string}):Promise<boolean> {
+ const click=()=>readGrokDiscoveryWithAdmission(client,'provider:grok:open-chats',async()=>{
+  const response=await client.Runtime.evaluate({expression:buildGrokChatsOpenerExpression(),returnByValue:true});
+  if(response.exceptionDetails)throw new Error('Grok Chats opener DOM evaluation failed.');
+  const result=response.result?.value as {ok?:boolean;reason?:string}|undefined;
+  if(result?.reason==='ambiguous-chats-opener')throw new Error('Grok Chats opener is ambiguous.');
+  return result?.ok===true;
+ });
+ if(await click())return true;
+ await ensureMainSidebarOpen(client,{logPrefix:options?.logPrefix??'browser-chats-opener'});
+ return click();
 }
 
 async function tagGrokConversationSidebarRow(
@@ -9239,27 +9227,8 @@ async function deleteConversationFromSidebarList(
   await waitForGrokConversationSidebarGone(client.Runtime, conversationId);
 }
 
-export async function clickHistorySeeAll(
-  client: ChromeClient,
-  options?: { logPrefix?: string },
-): Promise<void> {
-  const dialogSelectors = ['div[role="dialog"][data-state="open"]', '[role="dialog"][aria-modal="true"]', 'dialog[open]'];
-  const first = await pressButton(client.Runtime, {
-    match: { exact: ['see all', 'show all'] },
-    rootSelectors: dialogSelectors,
-    timeoutMs: 3000,
-  });
-  if (first.ok) {
-    return;
-  }
-  await clickMainSidebarToggle(client, { logPrefix: options?.logPrefix ?? 'browser-history-see-all' });
-  const retry = await pressButton(client.Runtime, {
-    match: { exact: ['see all', 'show all'] },
-    timeoutMs: 3000,
-  });
-  if (!retry.ok) {
-    throw new Error(retry.reason || first.reason || 'History see-all not found');
-  }
+export async function clickHistorySeeAll(client:ChromeClient,_options?:{logPrefix?:string}):Promise<void> {
+ await pressButton(client.Runtime,{match:{exact:['see all','show all']},rootSelectors:['[role="dialog"][data-state="open"]','[role="dialog"][aria-modal="true"]','dialog[open]'],timeoutMs:1000});
 }
 
 export async function clickChatArea(
@@ -10060,262 +10029,39 @@ async function deleteConversationInHistoryDialog(
 }
 
 async function listHistoryConversations(
-  client: ChromeClient,
-  projectId: string | undefined,
-  options?: BrowserProviderListOptions,
+ client: ChromeClient,
+ projectId: string | undefined,
+ options?: BrowserProviderListOptions,
 ): Promise<Conversation[]> {
-  let opened = await openHistoryDialog(client);
-  if (!opened) {
-    const fallbackUrl = options?.configuredUrl?.includes('/project/') ? GROK_HOME_URL : undefined;
-    if (fallbackUrl) {
-      await navigateToProject(client, fallbackUrl);
-    }
-    opened = await openHistoryDialog(client);
+ let published = false;
+ const publish = async (coverage: import('./grokHistoryInventory.js').GrokHistoryCoverage) => {
+  published = true;
+  const profile=resolveProviderTrafficGovernor(client)?.attribution.runtimeProfileId;
+  if(profile)await recordGrokHistoryProgress(profile,coverage);
+  await options?.onHistoryInventory?.(coverage);
+ };
+ try {
+  if (!(await openHistoryDialog(client))) throw new Error('Grok Chats dialog did not open.');
+  await expandHistoryDialog(client);
+  if(options?.historySearch) {
+   await readGrokDiscoveryWithAdmission(client,'provider:grok:history-search',async()=>{
+    const response=await client.Runtime.evaluate({expression:`(() => {const dialog=document.querySelector('[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]'); const inputs=dialog?Array.from(dialog.querySelectorAll('input[role="combobox"], input[placeholder*="Search" i]')).filter(node=>node.getBoundingClientRect().width>0):[];if(inputs.length!==1)return false;const input=inputs[0];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(options.historySearch)});input.dispatchEvent(new Event('input',{bubbles:true}));return true;})()`,returnByValue:true});
+    if(response.result?.value!==true)throw new Error('Grok Chats search composer is missing or ambiguous.');
+   },options.abortSignal);
   }
-  try {
-    if (!opened) return [];
-    await expandHistoryDialog(client);
-    const maxItems = Math.max(1, options?.historyLimit ?? 2000);
-    const cutoffMs = options?.historySince ? Date.parse(options.historySince) : NaN;
-    const entries = new Map<string, { id: string; title: string; url?: string; timestamp?: number | null }>();
-    let idleCount = 0;
-    let lastCount = 0;
-    let lastScrollTop = -1;
-    while (entries.size < maxItems && idleCount < 10) {
-      const expression = `(() => {
-          const projectId = ${JSON.stringify(projectId ?? null)};
-          const dialog =
-            document.querySelector('[role="dialog"]') ||
-            document.querySelector('dialog') ||
-            document.querySelector('[aria-modal="true"]');
-          if (!dialog) return { items: [], canScroll: false, atBottom: true, scrollTop: 0, scrollHeight: 0, oldest: null };
-          const now = Date.now();
-          const parseRelative = (value) => {
-            const text = String(value || '').toLowerCase().trim();
-            if (!text) return null;
-            if (text === 'just now' || text === 'moments ago') return now;
-            if (text === 'today') return now;
-            if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
-            const cleaned = text.replace(/[.,]/g, '');
-            const shortMatch = cleaned.match(/^(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)$/);
-            const agoMatch = cleaned.match(/(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)\\s*ago/);
-            const match = agoMatch || shortMatch;
-            if (match) {
-              const amount = Number.parseInt(match[1], 10);
-              if (!Number.isFinite(amount)) return null;
-              const unit = match[2];
-              const isMonth = unit.startsWith('mo');
-              const isMinute = unit.startsWith('m') && !isMonth;
-              const isHour = unit.startsWith('h');
-              const isDay = unit.startsWith('d');
-              const isWeek = unit.startsWith('w');
-              const isYear = unit.startsWith('y');
-              const ms =
-                isMinute
-                  ? amount * 60 * 1000
-                  : isHour
-                    ? amount * 60 * 60 * 1000
-                    : isDay
-                      ? amount * 24 * 60 * 60 * 1000
-                      : isWeek
-                        ? amount * 7 * 24 * 60 * 60 * 1000
-                        : isMonth
-                          ? amount * 30 * 24 * 60 * 60 * 1000
-                          : isYear
-                            ? amount * 365 * 24 * 60 * 60 * 1000
-                            : null;
-              return ms === null ? null : now - ms;
-            }
-            const parsed = Date.parse(text);
-            return Number.isFinite(parsed) ? parsed : null;
-          };
-            const readTimestamp = (node) => {
-              const timeEl = node.querySelector?.('time');
-              const candidates = [
-                timeEl?.getAttribute?.('datetime'),
-                timeEl?.getAttribute?.('title'),
-                timeEl?.getAttribute?.('aria-label'),
-                timeEl?.textContent,
-                node.getAttribute?.('title'),
-                node.getAttribute?.('aria-label'),
-              ];
-              for (const candidate of candidates) {
-                const parsed = parseRelative(candidate);
-                if (parsed !== null) return { ts: parsed, label: String(candidate || '').trim() };
-                const absolute = Date.parse(String(candidate || ''));
-                if (Number.isFinite(absolute)) return { ts: absolute, label: String(candidate || '').trim() };
-              }
-              const timeNode =
-                node.querySelector?.('.z-20') ||
-                node.querySelector?.(${JSON.stringify(GROK_TIME_SELECTOR)}) ||
-                node.querySelector?.(${JSON.stringify(GROK_TIMESTAMP_SELECTOR)});
-              if (timeNode) {
-                const text = (timeNode.textContent || '').trim();
-                const parsed = parseRelative(text);
-                if (parsed !== null) return { ts: parsed, label: text };
-                const absolute = Date.parse(text);
-                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
-              }
-              const descendants = Array.from(node.querySelectorAll?.('*') ?? []).reverse();
-              for (const el of descendants) {
-                const text = (el.textContent || '').trim();
-                if (!text || text.length > 40) continue;
-                const parsed = parseRelative(text);
-                if (parsed !== null) return { ts: parsed, label: text };
-                const absolute = Date.parse(text);
-                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
-              }
-              return { ts: null, label: '' };
-            };
-            const extractTitle = (node, timeLabel) => {
-              const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-                acceptNode: (textNode) => {
-                  const parent = textNode.parentElement;
-                  if (!parent) return NodeFilter.FILTER_REJECT;
-                  if (parent.closest('time')) return NodeFilter.FILTER_REJECT;
-                  return NodeFilter.FILTER_ACCEPT;
-                },
-              });
-              let text = '';
-              while (walker.nextNode()) {
-                text += ' ' + (walker.currentNode.nodeValue || '');
-              }
-              let title = text.replace(/\\s+/g, ' ').trim();
-              if (timeLabel) {
-                const escaped = timeLabel.replace(/[.*+?^$()|[\\]\\\\]/g, '\\$&');
-                title = title.replace(new RegExp(escaped, 'i'), '').trim();
-              }
-              const timeCleanRegex = /(^|\\s)\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago(\\s|$)/gi;
-              const dayCleanRegex = /(^|\\s)(yesterday|today)(\\s|$)/gi;
-              const dateCleanRegex = /(^|\\s)(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\s+[0-9]{1,2}(\\s|$)/gi;
-              title = title
-                  .replace(timeCleanRegex, '')
-                  .replace(dayCleanRegex, '')
-                  .replace(dateCleanRegex, '')
-                  .replace(/\\s+/g, ' ')
-                  .trim();
-              return title;
-            };
-            const items = Array.from(
-            dialog.querySelectorAll('[role="option"], a[href*="/c/"]')
-          );
-          const conversations = [];
-          let oldest = null;
-          for (const node of items) {
-            const href =
-              node.getAttribute('href') ||
-              node.getAttribute('data-href') ||
-              node.getAttribute('data-url') ||
-              node.dataset?.href ||
-              node.dataset?.url ||
-              '';
-            const dataValue = node.getAttribute('data-value') || node.dataset?.value || '';
-            
-            let url = '';
-            let chatId = '';
-            
-            if (dataValue.startsWith('conversation:')) {
-              chatId = dataValue.split(':')[1];
-              url = ${JSON.stringify(resolveGrokConversationUrl(''))} + chatId;
-            } else if (href) {
-              try {
-                url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-                const parsed = new URL(url);
-                chatId = parsed.searchParams.get('chat') || '';
-                if (!chatId) {
-                  const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
-                  chatId = match?.[1] || '';
-                }
-              } catch {
-                // ignore URL parse
-              }
-            }
-            
-            if (!chatId) continue;
-            if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
-              continue;
-            }
-            const row = node.closest('div,li') || node;
-            const { ts, label } = readTimestamp(row);
-            if (typeof ts === 'number') {
-              oldest = oldest === null ? ts : Math.min(oldest, ts);
-            }
-            const text = extractTitle(row, label) || (row.textContent || node.textContent || '').trim();
-            conversations.push({ id: chatId, title: text || chatId, url, timestamp: ts ?? null });
-          }
-          const scrollables = Array.from(dialog.querySelectorAll('*')).filter((el) => {
-            const element = el;
-            return element.scrollHeight > element.clientHeight + 24;
-          });
-          const scrollable =
-            scrollables.sort((a, b) => b.scrollHeight - a.scrollHeight)[0] || dialog;
-          const canScroll = scrollable.scrollHeight > scrollable.clientHeight + 24;
-          const scrollTop = scrollable.scrollTop;
-          const atBottom = scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 5;
-          if (canScroll && !atBottom) {
-            scrollable.scrollTop = scrollable.scrollHeight;
-          }
-          return {
-            items: conversations,
-            canScroll,
-            atBottom,
-            scrollTop,
-            scrollHeight: scrollable.scrollHeight,
-            oldest,
-          };
-        })()`;
-      const { result } = await client.Runtime.evaluate({
-        expression,
-        returnByValue: true,
-      });
-      const payload = (result?.value || {}) as {
-        items?: Array<{ id: string; title: string; url?: string; timestamp?: number | null }>;
-        canScroll?: boolean;
-        atBottom?: boolean;
-        scrollTop?: number;
-        scrollHeight?: number;
-        oldest?: number | null;
-        error?: string;
-      };
-      if (process.env.AURACALL_DEBUG_GROK === '1') {
-         if (!payload.items) console.log('[grok-history] RAW:', JSON.stringify(result));
-      }
-      for (const entry of payload.items ?? []) {
-        if (!entries.has(entry.id)) {
-          entries.set(entry.id, entry);
-        }
-      }
-      const oldestTimestamp = payload.oldest;
-      if (Number.isFinite(cutoffMs) && typeof oldestTimestamp === 'number' && oldestTimestamp <= cutoffMs) {
-        break;
-      }
-      if (!payload.canScroll || payload.atBottom) {
-        break;
-      }
-      if (entries.size === lastCount && payload.scrollTop === lastScrollTop) {
-        idleCount += 1;
-      } else {
-        idleCount = 0;
-      }
-      lastCount = entries.size;
-      if (typeof payload.scrollTop === 'number') {
-        lastScrollTop = payload.scrollTop;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-    return Array.from(entries.values())
-      .slice(0, maxItems)
-      .map((entry) => ({
-        id: entry.id,
-        title: entry.title,
-        provider: 'grok',
-        projectId,
-        url: entry.url,
-        updatedAt: typeof entry.timestamp === 'number' ? new Date(entry.timestamp).toISOString() : undefined,
-      }));
-  } finally {
-    await closeHistoryDialog(client);
-  }
+  const inventory=await collectGrokHistoryInventory({projectId,options,governor:resolveProviderTrafficGovernor(client),probeContext:client.Runtime,onProgress:publish,readPage:async()=>{
+const expression = buildGrokHistoryPageExpression(projectId,resolveGrokConversationUrl(''));
+   const response=await client.Runtime.evaluate({expression,returnByValue:true});
+   if(response.exceptionDetails)throw new Error('Grok history DOM extraction failed.');
+   const page=response.result?.value as GrokHistoryPage|undefined;
+   if(!page||!Array.isArray(page.items))throw new Error('Grok history DOM returned no inventory.');
+   return page;
+  }});
+  return inventory.items;
+ } catch(error) {
+  if(!published)await publish({state:'failed',source:'visible-chats',scope:projectId?'project':'root',reason:options?.abortSignal?.aborted?'cancelled':'history-failed',loadedCount:0,pages:0,nextCursor:null,observedAt:new Date().toISOString()});
+  throw error;
+ } finally { await closeHistoryDialog(client); }
 }
 
 async function readGrokSerializedIdentityScriptsForTarget(
@@ -10463,12 +10209,7 @@ async function ensureSidebarOpen(client: ChromeClient): Promise<void> {
 }
 
 async function expandHistoryDialog(client: ChromeClient): Promise<void> {
-  await clickHistorySeeAll(client, { logPrefix: 'browser-history-expand' });
-  await waitForSelector(
-    client.Runtime,
-    'div[role="dialog"] a[href*="/c/"], div[role="dialog"] [data-value^="conversation:"]',
-    5000,
-  );
+  await clickHistorySeeAll(client, {logPrefix:'browser-history-expand'});
 }
 
 export async function isHistoryDialogOpen(client: ChromeClient): Promise<boolean> {
@@ -10477,8 +10218,7 @@ export async function isHistoryDialogOpen(client: ChromeClient): Promise<boolean
       const dialog = document.querySelector('div[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]');
       if (!dialog) return false;
       const text = (dialog.textContent || '').toLowerCase();
-      if (text.includes('show all')) return true;
-      if (text.includes('history')) return true;
+      if (/\\b(chats|history)\\b/.test(text) && dialog.querySelector('input[role="combobox"], [role="tab"]')) return true;
       const hasConversationLink = Boolean(dialog.querySelector('a[href*="/c/"], [data-value^="conversation:"]'));
       return hasConversationLink;
     })()`,
@@ -10522,7 +10262,7 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
 
   // Try opening the main sidebar/menu
   await clickMainSidebarToggle(client, { logPrefix: 'browser-history-open' });
-  await waitForSelector(client.Runtime, '[aria-label="History"]', 3000);
+  await waitForSelector(client.Runtime, '[aria-label="Chats"], [aria-label="History"]', 3000);
 
   if (await findAndClickHistory()) {
     const opened = await waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
@@ -10880,11 +10620,12 @@ async function listOpenConversations(
   const entries: Conversation[] = [];
   for (const target of targets) {
     const url = target.url ?? '';
-    if (!url.includes('grok.com')) continue;
+    let parsed:URL;try{parsed=new URL(url);if(parsed.origin!=='https://grok.com')continue;}catch{continue;}
+    const actualProjectId=parsed.pathname.match(/\/project\/([^/?#]+)/)?.[1];
     const chatId = extractChatIdFromUrl(url) ?? '';
     if (!chatId) continue;
     if (projectId) {
-      if (!url.includes(`/project/${projectId}`)) {
+      if (actualProjectId !== projectId) {
         continue;
       }
     }
@@ -10892,7 +10633,7 @@ async function listOpenConversations(
       id: chatId,
       title: target.title ?? chatId,
       provider: 'grok',
-      projectId,
+      projectId:actualProjectId,
       url,
     });
   }

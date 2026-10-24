@@ -57,7 +57,7 @@ export class GrokService extends LlmService {
       () => this.provider.listConversations?.(projectId, listOptions) as Promise<Conversation[]>,
       { action: 'listConversations' },
     )) as Conversation[];
-    return this.overlayConversationListFromCache(items, listOptions, projectId);
+    return listOptions.includeHistory ? items : this.overlayConversationListFromCache(items, listOptions, projectId);
   }
 
   async renameConversation(

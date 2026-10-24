@@ -1,3 +1,4 @@
+import { readGrokHistoryProgress } from "./grokHistoryProgress.js";
 import { summarizeGrokTrafficControls, type GrokTrafficControlStatus } from "./grokTrafficStatus.js";
 import { createFileBackedTabLeaseRetirementAudit, type TabLeaseRetirementAuditSink } from "../../packages/browser-service/src/service/tabLeaseRetirementAudit.js";
 import path from "node:path";
@@ -178,7 +179,7 @@ export function createBrowserTabConcurrencyRuntime(
 						return counts;
 					}, {}),
 				},
-				providerControls: { grok: summarizeGrokTrafficControls({ config: userConfig as Record<string, unknown>, interactions, warnings: activeWarnings, now, managedScopes: leases.map(lease => lease.scope) }) },
+				providerControls: { grok: { ...summarizeGrokTrafficControls({ config: userConfig as Record<string, unknown>, interactions, warnings: activeWarnings, now, managedScopes: leases.map(lease => lease.scope) }), historyInventory: await readGrokHistoryProgress(userConfig.auracallProfile?.trim() || "default") } },
 				aggregateUsage,
 				leaseStates: {
 					active: leases.filter((lease) => lease.state === "active").length,

@@ -1,3 +1,11 @@
+## 2026-10-24 — Grok #401 core candidate and worker integration
+
+Bound Chats hydration and retain scope/cursor evidence;61 targeted tests and
+typecheck pass. Structured public history entrypoints remain. Both independent
+workers returned committed clean source slices for #402/#404; coordinator now
+owns serial integration, normal-caller wiring, review and post-completion TDD.
+No ticket closure is inferred from worker completion.
+
 ## 2026-10-24 — Grok #400 source acceptance and wave2
 
 175 focused tests pass after one bounded review/remediation;2 explicit public
