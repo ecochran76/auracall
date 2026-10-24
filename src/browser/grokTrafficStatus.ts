@@ -1,3 +1,4 @@
+import type { GrokConnectorProgress } from "./grokConnectorProgress.js";
 import type { GrokHistoryProgress } from "./grokHistoryProgress.js";
 import type { ProviderInteractionRecord } from "../../packages/browser-service/src/service/interactionLedger.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
@@ -10,6 +11,7 @@ import {
 
 export interface GrokTrafficControlStatus {
  historyInventory?: GrokHistoryProgress;
+ connectorInventory?: GrokConnectorProgress;
 	maxOperationsPerMinute: number | null;
 	maxBackendRequestsPerMinute: number | null;
 	backendRequestBudgetWaitMs: number;

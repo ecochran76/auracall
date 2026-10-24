@@ -155,3 +155,19 @@ that seam. Generated graph data is ignored and not part of this commit.
 
 Memory disposition: forbidden — the coordinator owns substantive closure and
 its memory/ledger disposition; this delegated worker performed no memory write.
+
+## Coordinator public wiring
+
+CLI `grok-connectors`, POST `/v1/grok/connectors/query`, and MCP `grok_connectors`
+resolve full configured Grok service options before discovery. The HTTP route
+uses existing operator authorization, foreground priority and disconnect
+cancellation. Invalid requests validate before browser resolution. Transport
+resolver failures emit the same bounded failed result without raw causes. Ops
+reads a whitelisted count/identity-presence projection; no endpoint/name/account
+or tool values are written there.23 tests across5files pass, including actual
+HTTP routing and MCP schema. Source CLI help registration also passes. Native
+provider and installed adoption remain unperformed.
+
+Post-completion TDD: the shared HTTP request/result contract fails with404 on
+pre-registration77ccd749d and passes on the wired route. Separate privacy checks
+prove resolver exception suppression and Ops field whitelisting.

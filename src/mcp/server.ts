@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { registerGrokConnectorsTool } from "./tools/grokConnectors.js";
+import { createConfiguredGrokConnectorsService } from "../browser/configuredGrokDiscovery.js";
 import 'dotenv/config';
 import process from 'node:process';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -148,6 +150,7 @@ export async function startMcpServer(): Promise<void> {
     },
   );
 
+  registerGrokConnectorsTool(server, request => createConfiguredGrokConnectorsService(services.resolvedUserConfig,request.runtimeProfile));
   registerConsultTool(server);
   registerResponseCreateTool(server, {
     responsesService: services.responsesService,

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createConfiguredGrokConnectorsService } from "../src/browser/configuredGrokDiscovery.js";
+import { runGrokConnectorsCommand, grokConnectorsFailureResult, GrokConnectorsRequestSchema } from "../src/cli/grokConnectorsCommand.js";
 import 'dotenv/config';
 import { resolveBrowserLoginLaunchOptions, type BrowserLoginLaunchOptions } from '../src/cli/browserLoginLaunch.js';
 import { spawn } from 'node:child_process';
@@ -3420,6 +3422,22 @@ filesCommand
       console.log(`Removed account file ${fileId}.`);
     }
   });
+
+
+program.command('grok-connectors').description('List or inspect Grok Connector inventory as JSON.')
+ .option('--action <list|inspect>','Read operation.','list').option('--query <text>','Search visible Connector inventory.')
+ .option('--id <id>','Exact observed Connector ID.').option('--name <name>','Exact name; ambiguity rejects.')
+ .option('--endpoint <url>','Exact endpoint identity.').option('--kind <installed|catalog>','Inventory kind.')
+ .option('--runtime-profile <id>','Select configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async (commandOptions,command)=>{
+  const userConfig=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+  const request=commandOptions.action==='inspect' ? {action:'inspect',runtimeProfile:commandOptions.runtimeProfile,selector:{id:commandOptions.id,name:commandOptions.name,endpoint:commandOptions.endpoint,kind:commandOptions.kind}} : {action:commandOptions.action,query:commandOptions.query,runtimeProfile:commandOptions.runtimeProfile};
+  if(commandOptions.action==='list' && [commandOptions.id,commandOptions.name,commandOptions.endpoint,commandOptions.kind].some(Boolean))throw new Error('Use --action inspect with Connector selectors.');
+  const validated=GrokConnectorsRequestSchema.parse(request);
+  let result;
+  try {result=await runGrokConnectorsCommand(validated,await createConfiguredGrokConnectorsService(userConfig,commandOptions.runtimeProfile));} catch {result=grokConnectorsFailureResult();}
+  console.log(JSON.stringify(result,null,2));if(result.status==='failed')process.exitCode=1;
+ });
 
 const conversationsCommand = program
   .command('conversations')

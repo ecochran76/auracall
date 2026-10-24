@@ -1243,3 +1243,16 @@ Requests under `https://grok.com/rest/` on the continuously owned target get one
 pre-dispatch permit per Fetch interception ID. Static assets, telemetry, other
 origins and other targets are excluded. Status separates request and operation
 usage, with bounded cancellation and conservative uncertain-effect fencing.
+
+Grok Connector discovery returns privacy-bounded JSON through
+`auracall grok-connectors --action list --query <text>`,
+`auracall grok-connectors --action inspect --endpoint <url>`,
+MCP `grok_connectors`, and operator-authorized POST
+`/v1/grok/connectors/query`. The HTTP/MCP body is `{ "action": "list" }` or
+`{ "action": "inspect", "selector": { "endpoint": "https://example.test/mcp" } }`;
+`runtimeProfile` selects a configured AuraCall runtime profile. Inventory status
+distinguishes visible incomplete coverage, account-gated and failed reads.
+Catalog entries are separate from installed connections. Discovery never installs,
+authenticates, invokes, or removes a Connector. Ops shows counts and bounded
+reason codes; exact endpoints are returned only when safe, with stable hashes
+available for identity. Source tests do not establish installed/live acceptance.
