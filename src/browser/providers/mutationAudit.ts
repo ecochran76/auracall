@@ -67,7 +67,7 @@ export async function annotateClientMutationContext(
 	}
 	const nextGovernor = options?.providerTrafficGovernor ?? authority?.governor;
 	if (
-		nextGovernor?.attribution.provider === "chatgpt" &&
+		(nextGovernor?.attribution.provider === "chatgpt" || nextGovernor?.attribution.provider === "grok") &&
 		nextGovernor.attribution.targetId &&
 		nextGovernor.attribution.targetId !== targetId
 	) {
@@ -221,6 +221,15 @@ export async function annotateClientMutationContext(
 					"Backend admission setup and cleanup failed.",
 				);
 			}
+			throw error;
+		}
+	}
+	if (governor?.attribution.provider === "grok") {
+		try {
+			await governor.checkWarning?.(client.Runtime);
+		} catch (error) {
+			try { await client.close(); }
+			catch (cleanupError) { throw new AggregateError([error, cleanupError], "Grok warning preflight and cleanup failed."); }
 			throw error;
 		}
 	}

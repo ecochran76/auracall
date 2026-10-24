@@ -1,3 +1,11 @@
+## 2026-10-24 — A generic authority does not establish provider governance
+
+Grok already acquired shared traffic authority, but its non-ChatGPT operation
+limit was null and visible-warning preflight absent. Test the real GrokService
+read and shared stores, not only the governor interface. Charge read discovery
+explicitly; keep operation/request units separate and expose effective controls.
+Same-account runtime overrides must tighten the account ceiling, never raise it.
+
 ## 2026-10-24 — Plugin-settings errors are terminal readiness outcomes
 
 “Couldn't load plugin settings” cannot settle into connected accounts through
@@ -13,6 +21,15 @@ wait deadline after governed activation completes. Admission/interaction latency
 can exceed20 seconds before the request exists; expiring observation during that
 wait discards a valid later catalog. The public-adapter regression varies only
 activation latency and retains one-click, exact-attribution and no-replay fences.
+
+## 2026-10-24 — Grok UX drift and plugin boundaries
+
+Survey finds History-only opener against live Chats, Build absent from the bundled
+model registry, and Plugins split into Connectors/Skills/Bots. Composer @ exposes
+Bots/Connectors and / exposes modes/Skills. Existing simple Grok guard is not proof
+of ChatGPT live-follow governance parity. Record observed labels separately from
+model IDs, installed state separately from catalog, and UI forms separately from
+accepted provider mutations. [Survey](dev/notes/2026-10-24-grok-ux-survey.md).
 
 ## 2026-10-24 — Preserve tool-refresh observation failure reasons
 

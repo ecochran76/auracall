@@ -12040,6 +12040,7 @@ function createOperatorBrowserDashboardHtml(
 
     function renderTabConcurrency(status) {
       const concurrency = status.tabConcurrency || {};
+      const grokControls = concurrency.providerControls && concurrency.providerControls.grok;
       const leaseStates = concurrency.leaseStates || {};
       const workloads = concurrency.workloads || {};
       const warnings = concurrency.providerWarnings || {};
@@ -12060,6 +12061,11 @@ function createOperatorBrowserDashboardHtml(
         ['Rollback', '<code>browser.tabConcurrencyMode = serialized</code>'],
         ['Leases', escapeHtml('active=' + Number(leaseStates.active || 0) + ' idle=' + Number(leaseStates.idle || 0) + ' retiring=' + Number(leaseStates.retiring || 0) + ' lost=' + Number(leaseStates.lost || 0))],
         ['Workloads', escapeHtml('conversation=' + Number(workloads.conversations || 0) + ' new=' + Number(workloads.newConversations || 0) + ' live-follow=' + Number(workloads.liveFollow || 0) + ' utility=' + Number(workloads.ephemeral || 0))],
+        ...(grokControls ? [
+          ['Grok operation limit', escapeHtml(grokControls.maxOperationsPerMinute == null ? 'Unconfigured' : String(grokControls.maxOperationsPerMinute) + '/minute')],
+          ['Grok operation capacity', escapeHtml('remaining=' + (grokControls.remainingOperations == null ? 'unlimited' : grokControls.remainingOperations) + ' wait limit=' + Number(grokControls.operationBudgetWaitMs || 0) + 'ms')],
+          ['Grok admission', escapeHtml((grokControls.blockedReason || 'clear') + ' next=' + (grokControls.nextEligibleAt || 'none'))],
+        ] : []),
         ['Aggregate Usage', escapeHtml('active chats=' + Number(usage.activeChats || 0) + ' chats/hour=' + Number(usage.chatsLastHour || 0) + ' chats/day=' + Number(usage.chatsLastDay || 0) + ' interactions/min=' + Number(usage.interactionsLastMinute || 0))],
         ['Provider Guards', renderStatusText(guardCount > 0 ? String(guardCount) + ' active' : 'clear', guardCount > 0 ? 'bad' : 'ok')],
         ['Admission Rejections', escapeHtml(String(Number(rejections.total || 0)) + (rejections.latestReason ? ' latest=' + rejections.latestReason : ''))],

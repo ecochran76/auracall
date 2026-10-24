@@ -1,3 +1,4 @@
+import { setTimeout as wait } from "node:timers/promises";
 import type {
 	ProviderInteractionClass,
 	ProviderInteractionLedger,
@@ -46,6 +47,8 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 	policy: ProviderInteractionPolicy;
 	baseGovernor: BrowserInteractionGovernor;
 	reservationTtlMs?: number;
+	admissionWaitTimeoutMs?: number;
+	assertAdmission?: () => Promise<void>;
 	now?: () => Date;
 }): LedgerBackedBrowserInteractionGovernor {
 	const now = input.now ?? (() => new Date());
@@ -133,7 +136,8 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 			await finish();
 			await pace(kind, abortSignal);
 			if (closed) throw new ProviderInteractionGovernorClosedError();
-			const admission = await input.ledger.reserve({
+			const waitDeadline = performance.now() + (input.admissionWaitTimeoutMs ?? 0);
+			const reserve = () => input.ledger.reserve({
 				scope: input.scope,
 				workloadId: input.workloadId,
 				operationId: input.operationId,
@@ -145,7 +149,19 @@ export function createLedgerBackedBrowserInteractionGovernor(input: {
 				reservationTtlMs: input.reservationTtlMs ?? 30_000,
 				policy: input.policy,
 			});
-			if (!admission.allowed) throw new ProviderInteractionAdmissionError(admission.reason);
+			let admission;
+			while (true) {
+				abortSignal?.throwIfAborted();
+				await input.assertAdmission?.();
+				await checkSharedWarning();
+				if (closed) throw new ProviderInteractionGovernorClosedError();
+				admission = await reserve();
+				if (admission.allowed) break;
+				const remaining = waitDeadline - performance.now();
+				if (admission.reason !== "minute-interaction-limit" || remaining <= 0)
+					throw new ProviderInteractionAdmissionError(admission.reason);
+				await wait(Math.min(250, remaining), undefined, { signal: abortSignal ?? undefined });
+			}
 			if (closed) {
 				const started = await input.ledger.start({
 					reservationId: admission.reservation.reservationId,

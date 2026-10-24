@@ -1197,3 +1197,36 @@ Developer-app submission defaults to preserving the model on its fresh composer.
 Developer-app inventory can reconcile safe retained leases on cold startup only
 when native process verification proves the managed browser absent. An unavailable
 CDP endpoint alone does not authorize lease deletion or browser replacement.
+
+
+### Grok shared-account operation controls
+
+`services.grok.liveFollow.maxBrowserInteractionsPerMinute` sets the shared
+browser-operation ceiling for governed Grok reads and physical UI actions, not
+just live-follow. Runtime bindings use the same field under
+`runtimeProfiles.<name>.services.grok`. The effective ceiling is the smallest
+configured value for the same configured Grok account, including the global
+ceiling. Recent ledger contributions also prevent a higher-cap caller in another
+process from bypassing an observed lower ceiling. No backend-request quota is
+inferred from this operation setting; Grok backend request admission is a separate
+implementation slice.
+
+`services.grok.operationBudgetWaitMs` (or the runtime binding field) sets a
+nonnegative safe-integer capacity-wait bound; zero/default yields immediately.
+Waiting rechecks shared warnings, exact lease ownership and cancellation. A
+provider warning is a hard stop, not ordinary capacity exhaustion. An unset
+operation ceiling remains unconfigured; no provider capacity is guessed.
+
+Grok identity and feature discovery now charge a `provider-read` operation before
+probing the selected page. Visible warning preflight excludes conversation prose
+and persists the warning in the existing shared account ledger. Configuration
+must still establish the expected provider account, and existing provider-session
+identity checks remain authoritative.
+
+`/status.tabConcurrency.providerControls.grok` reports effective operation limit,
+wait bound, used/remaining capacity, reason and next eligible time for the
+configured selected account, without exposing account/target identifiers.
+`auracall api ops-browser-status` and its MCP equivalent preserve that JSON;
+text output and Browser Ops display the same controls. Grok remains serialized;
+this does not enable tab-affinity execution or deploy the source to an installed
+runtime. Source fixture acceptance is separate from native/provider acceptance.

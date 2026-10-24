@@ -1,3 +1,9 @@
+- Grok account operation governance (#399, provider-free):
+  `pnpm vitest run tests/browser/grokTrafficGovernance.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser-service/ledgerInteractionGovernor.test.ts tests/browser/grokAdapter.test.ts tests/browser/chatgptProofSession.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers=2`.
+  Actual GrokService reads, configured authority, isolated durable stores and
+  separate OS processes cover shared caps, restrictive runtime settings, warnings,
+  cancellation and sanitized readback. No live provider request is implied.
+
 - Developer-app first-tab authority (#368, provider-free):
   `pnpm vitest run tests/cli/chatgptDeveloperAppsGovernor.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts --maxWorkers=1`.
   Real serialized utility dispatch and physical target admission reproduce the
