@@ -472,6 +472,54 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		);
 		const settingsReadTimeoutMs = 8_000 + budgetWaitMs;
 		const settingsUrl = `https://chatgpt.com/settings/plugins-settings/${encodeURIComponent(app.pluginId)}`;
+		let settingsRecoveryUsed = false;
+		const readSettings = async (stage: "before" | "after") => {
+			let settings = await readChatgptDeveloperAppRefreshSettings(
+				client,
+				stage,
+				settingsReadTimeoutMs,
+				this.abortSignal,
+			);
+			if (
+				!settings.settingsLoadError ||
+				settings.humanApproval ||
+				settingsRecoveryUsed ||
+				settings.url !== settingsUrl
+			)
+				return settings;
+			settingsRecoveryUsed = true;
+			const identity = await this.browser.getUserIdentity({
+				abortSignal: this.abortSignal,
+				preserveActiveTab: true,
+			});
+			if (!identity?.email?.trim()) return settings;
+			this.throwIfAborted();
+			const reloaded = await reloadAndSettle(client, {
+				ignoreCache: false,
+				timeoutMs: 10_000 + budgetWaitMs,
+				mutationSource: "chatgpt-developer-apps:settings-load-recovery",
+			});
+			if (!reloaded.ok) return settings;
+			const afterIdentity = await this.browser.getUserIdentity({
+				abortSignal: this.abortSignal,
+				preserveActiveTab: true,
+			});
+			this.throwIfAborted();
+			if (
+				!afterIdentity?.email?.trim() ||
+				identity.email.trim().toLowerCase() !== afterIdentity.email.trim().toLowerCase()
+			)
+				throw new Error(
+					"ChatGPT account changed or became unavailable during settings recovery; refresh stopped.",
+				);
+			settings = await readChatgptDeveloperAppRefreshSettings(
+				client,
+				stage,
+				settingsReadTimeoutMs,
+				this.abortSignal,
+			);
+			return settings;
+		};
 		const observation = observeChatgptToolRefresh(client, app, this.abortSignal);
 		try {
 			await observation.start();
@@ -482,12 +530,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				mutationSource: "chatgpt-developer-apps:refresh-tools-settings",
 			});
 			if (!navigation.ok) throw new Error("Exact app refresh settings navigation did not settle.");
-			const before = await readChatgptDeveloperAppRefreshSettings(
-				client,
-				"before",
-				settingsReadTimeoutMs,
-				this.abortSignal,
-			);
+			const before = await readSettings("before");
 			if (before.settingsLoadError)
 				throw new Error("Couldn't load plugin settings; Refresh tools was not activated.");
 			if (before.humanApproval)
@@ -517,12 +560,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				};
 			const catalog = await observation.result;
 			this.throwIfAborted();
-			const after = await readChatgptDeveloperAppRefreshSettings(
-				client,
-				"after",
-				settingsReadTimeoutMs,
-				this.abortSignal,
-			);
+			const after = await readSettings("after");
 			if (after.settingsLoadError)
 				return {
 					status: "unconfirmed",
