@@ -2,7 +2,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { BrowserAutomationError } from "../../oracle/errors.js";
-import type { ChromeClient } from "../types.js";
 import { delay } from "../utils.js";
 
 export interface GrokComposerFile {
@@ -24,11 +23,17 @@ export interface GrokFilesResult {
 	coverage: { scope: "composer" | "visible-recent"; complete: boolean };
 	limits: { accept: string | null; multiple: boolean | null; observedMessage: string | null };
 }
-export type GrokFileRuntime = Pick<ChromeClient["Runtime"], "evaluate">;
-export type GrokFileDom = Pick<
-	ChromeClient["DOM"],
-	"getDocument" | "querySelector" | "setFileInputFiles"
->;
+export interface GrokFileRuntime {
+	evaluate(input: {
+		expression: string;
+		returnByValue?: boolean;
+	}): Promise<{ result?: { value?: unknown }; exceptionDetails?: unknown }>;
+}
+export interface GrokFileDom {
+	getDocument(): Promise<{ root: { nodeId: number } }>;
+	querySelector(input: { nodeId: number; selector: string }): Promise<{ nodeId: number }>;
+	setFileInputFiles(input: { nodeId: number; files: string[] }): Promise<unknown>;
+}
 
 // Root is derived from the sole visible editable composer. A random marker binds
 // all later observations and the exact native file input to this same DOM node.
