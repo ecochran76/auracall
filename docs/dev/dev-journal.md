@@ -7,6 +7,9 @@ identity and generation-fenced dead-owner recovery now pass22 focused checks
 and a full build. Review rejects malformed generation IDs via a separate red/
 green case. Human claims, live owners and delayed contenders remain protected.
 No live locks/browsers, deployment or CI changes; legacy ambiguity is preserved.
+Source8e7b1c286 integrated through PR438/merge4270f8fd3. Plan0455 CLOSED
+with source-only acceptance; runtime adoption is separate. Memory forbidden:
+no explicit save request.
 
 ## 2026-10-25 — Grok native account proof restored
 
