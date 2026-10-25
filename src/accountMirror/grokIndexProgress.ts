@@ -5,6 +5,10 @@ export interface GrokIndexProgress {
 	totalScopes: number;
 	retainedRows: number;
 	omissions: string[];
+	observationCoverage?: "partial";
+	requiresFullSweep?: boolean;
+	changedRows?: number;
+	observedScopes?: number;
 }
 
 /** A whitelist for public projections; continuation tokens never cross this seam. */
@@ -26,6 +30,14 @@ export function normalizeGrokIndexProgress(value: unknown): GrokIndexProgress | 
 		completedScopes: count(input.completedScopes),
 		totalScopes: count(input.totalScopes),
 		retainedRows: count(input.retainedRows),
+		...(input.observationCoverage === "partial"
+			? {
+					observationCoverage: "partial" as const,
+					requiresFullSweep: input.requiresFullSweep === true,
+					changedRows: count(input.changedRows),
+					observedScopes: count(input.observedScopes),
+				}
+			: {}),
 		omissions: Array.isArray(input.omissions)
 			? input.omissions
 					.filter((x): x is string => typeof x === "string")

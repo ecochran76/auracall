@@ -578,17 +578,20 @@ export function createChatgptAccountMirrorMetadataCollector(
 					? await collectGrokMirrorIndex({
 							projects: projects.items,
 							projectsComplete: !projects.truncated,
+							fullSweep: input.sweepMode === "full_sweep",
 							maxRows: conversationBudget,
 							maxReads: input.limits.maxPageReadsPerCycle,
 							checkpoint: await grokIndexStore.read(),
 							commit: grokIndexStore.write,
 							abortSignal: input.abortSignal,
 							shouldYield: input.shouldYield,
-							read: (projectId, cursor, limit, maxPages) =>
+							read: (projectId, cursor, limit, maxPages, knownRows) =>
 								readBoundedConversations(client, projectId, limit, {
 									listOptions: {
 										...indexListOptions,
 										historyCursor: cursor,
+										historyKnownRows: knownRows,
+										historyStartAtHead: cursor === null,
 										historyShouldYield: input.shouldYield,
 										historyMaxPages: Math.max(1, Math.min(200, maxPages)),
 									},

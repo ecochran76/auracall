@@ -1,15 +1,20 @@
 import { expect, test } from "vitest";
+import { registerAccountMirrorCompletionTools } from "../src/mcp/tools/accountMirrorCompletion.js";
 import { z } from "zod";
 import { createAccountMirrorStatusRegistry } from "../src/accountMirror/statusRegistry.js";
 import { registerAccountMirrorRefreshTool } from "../src/mcp/tools/accountMirrorRefresh.js";
 import { registerAccountMirrorStatusTool } from "../src/mcp/tools/accountMirrorStatus.js";
 
 const progress = {
-	phase: "backfill" as const,
+	phase: "follow" as const,
 	state: "paused" as const,
 	completedScopes: 1,
 	totalScopes: 2,
 	retainedRows: 4,
+	observationCoverage: "partial" as const,
+	requiresFullSweep: true,
+	changedRows: 0,
+	observedScopes: 1,
 	omissions: ["Bot scopes not observed"],
 };
 const evidence = {
@@ -72,4 +77,42 @@ test("declared MCP refresh and status contracts retain sanitized Grok progress",
 		grokIndex: { ...progress, state: "failed" },
 	}) as { grokIndex: { state: string } };
 	expect(failedEvidence.grokIndex.state).toBe("failed");
+});
+
+test("public MCP completion start preserves an explicit bounded Grok full sweep", async () => {
+	const handlers = new Map<string, (input: unknown) => Promise<unknown>>();
+	let request: unknown;
+	registerAccountMirrorCompletionTools(
+		{
+			registerTool: (
+				name: string,
+				_config: unknown,
+				handler: (input: unknown) => Promise<unknown>,
+			) => handlers.set(name, handler),
+		} as never,
+		{
+			service: {
+				start: (input: unknown) => {
+					request = input;
+					return { object: "account_mirror_completion", id: "grok443-full-sweep" };
+				},
+			} as never,
+		},
+	);
+	const handler = handlers.get("account_mirror_completion_start");
+	if (!handler) throw new Error("Missing public completion tool");
+	await handler({
+		provider: "grok",
+		runtimeProfile: "default",
+		sweepMode: "full_sweep",
+		maxPasses: 1,
+		materializationPolicy: "metadata_only",
+	});
+	expect(request).toMatchObject({
+		provider: "grok",
+		runtimeProfileId: "default",
+		sweepMode: "full_sweep",
+		maxPasses: 1,
+		materializationPolicy: "metadata_only",
+	});
 });

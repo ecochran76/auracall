@@ -8,9 +8,29 @@ have separate checkpoint keys. Files use private permissions and atomic rename.
 
 A cancelled or failed in-flight scope does not advance its continuation. A later
 refresh replays that scope while retaining completed scope reads. After visible
-scopes finish, follow starts from their current heads on the next bounded cycle;
-retained rows survive incremental reads. Provider warning/failure is still a
+scopes finish, steady follow preserves that completed backfill and makes bounded
+fresh head observations. Stored row fingerprints identify new or changed rows
+in that observed window; unfinished head work resumes without resetting the
+archive checkpoint. Newly discovered projects receive bounded inventory work.
+Retained rows survive incremental reads. Provider warning/failure is still a
 failure, rather than permission to serve cached success.
+
+Visible Chats does not establish a global newest-first change feed. Reaching a
+known head fingerprint qualifies only the observed window; older changes outside
+it remain unobserved and require an explicit `full_sweep`. Follow reports this
+partial coverage rather than claiming the entire archive is unchanged. Explicit
+full sweeps use their own resumable bounded work and retain prior rows. Fresh
+cursor-null observations reset the owned history scroll surface to its head;
+cursor-bearing continuations keep their position. Public follow progress includes
+`observationCoverage: partial` and `requiresFullSweep: true`; row fingerprints and
+frontier identifiers remain private.
+
+Use the existing completion operation for an explicit sweep:
+`POST /v1/account-mirrors/completions` or MCP
+`account_mirror_completion_start`, selecting `provider: grok`,
+`sweepMode: full_sweep`, an explicit `maxPasses` bound and
+`materializationPolicy: metadata_only` for metadata work. The ordinary refresh
+MCP tool does not expose sweep mode.
 
 Foreground work can request cooperative yield before project discovery, between
 history pages/scopes and before account-file/detail inventory. A dispatched page
