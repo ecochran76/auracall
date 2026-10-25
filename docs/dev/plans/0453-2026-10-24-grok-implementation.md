@@ -10,31 +10,30 @@ Ledger: [execution ledger](0453-grok-execution-ledger.json)
 
 ## Current State
 
-Eight of16 children are closed; eight remain. #412 merged through PR430 as
-`ae21c97c907eb903360058c7b65c8bb267b70016`; #413 merged through PR432 as
-`fa06a1eecb40b749966663ab2acb37ac0e771796`. Both are freshly CLOSED.
-Primary independently qualified187 tests/10 files for413, plus exact custody
-assertions, typecheck/build and targeted lint. Workers resumed bounded diagnosis/preparation after the source checkpoint.
+Eight of16 children are closed; eight remain.412 merged through PR430 and413
+through PR432. Partial405/410 source and403/408 native packets merged through
+PR431. Source checkpoint556522f24 also integrates current main through6cece5883.
 
-#405/#410 partial source and #403/#408 native discovery packets merged through
-PR431/16dbd7218. Native source-binding, saved identity/grants, Bot editor and
-Build app/version/export evidence remain open;406/409/411/414 stay locked.
-The configured Grok account has stable email/handle evidence, and the managed
-browser registry identifies a live browser. Earlier process scanning missed
-a full command string stored in one process-argument element. A fresh parsed
-process readback confirms the managed directory matches. One bounded native owned-Bot read failed
-account verification; no-launch identity smoke failed with
-`provider_session_provenance_missing`, target unknown, observation null. Diagnose
-source provenance before treating this as a login failure. No browser launch or
-provider mutation was performed; proposed canary effects remain pending authority.
-One whole-program code-review and TDD findings pass remains pending completion
-of all tickets; implementation red/green checks did not consume that pass.
+Native account custody is now qualified: a freshly built no-launch identity smoke
+matches configured email/handle, and exact retained-target reads after the final
+repair match before and after. Fixed missing transport target binding, truncated
+Flight identity payloads, display-label short-circuiting and unscoped page handles
+being mistaken for account evidence.112 focused tests, full typecheck and fresh
+build pass. See [native proof packet](../notes/2026-10-25-grok-native-account-proof.md).
 
-User renewed the two-hour/2MM-token allowance on2026-10-24. Native readback at
-58minutes reported958,809 tokens; no counters or deadlines reset. The renewedRun
-ledger records current custody/gates; older run fields remain history. Manual
-monitoring continued with no Wake319/controller/shared-runtime changes. The
-whole goal remains active and incomplete; this checkpoint does not pause it.
+Native Bot inventory remains unknown with zero qualified IDs; no editor control
+or Bot ownership was invented.403 upload binding,405 saved Connector/grants,
+408 editor/create/edit and410 app/version/export gates remain open;406/409/411/414
+remain dependent. Exact account is resolved; prepared provider-effect packets
+still lack explicit effect authority. No browser launch, upload, Send, installation,
+Bot mutation, generation or publication was performed. Existing managed browser
+is retained; a task-staged unsent `@` and catalog dialog remain after conservative
+restoration refused ambiguous UI state. No other draft was cleared.
+
+Workers are terminal. The whole-program code-review and one TDD findings pass
+remain pending completion of all tickets. Implementation red/green checks did
+not consume that pass. Original renewed2h/2MM allowance and manual monitoring
+continue without reset; Wake319/shared runtime are untouched. Goal is incomplete.
 
 ## Execution contract
 

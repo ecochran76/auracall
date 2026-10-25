@@ -1,3 +1,15 @@
+## 2026-10-25 — Grok native account proof restored
+
+Plan0453: actual target binding, bounded structured Flight identity projection and
+exclusion of unscoped page handles restore exact configured account proof.
+Primary112 tests/6files, full typecheck and fresh build pass. Built no-launch
+identity smoke matches email/handle; retained reads match pre/post. Bot owned/
+catalog inventory remains unknown, zero qualified IDs. Eight of16 tickets closed;
+no new closure or provider mutation. Own unsent `@` and catalog dialog retained
+because conservative restoration declined ambiguous UI state. See
+[native proof packet](notes/2026-10-25-grok-native-account-proof.md).
+Memory forbidden: no explicit request to remember.
+
 ## 2026-10-24 — Grok native read provenance diagnosis
 
 Configured default Grok has stable account identifiers and a live managed-browser

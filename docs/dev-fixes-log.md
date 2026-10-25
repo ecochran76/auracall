@@ -6,7 +6,8 @@ PID. A display label cannot replace configured email/handle evidence or hide
 stronger serialized evidence. Grok bootstrap account data may occur far beyond
 the first16,000 characters: parse bounded Flight JSON and project whitelisted
 fields from `initialData.user`, without returning raw session data. Reject
-conflicting identities and traversal exhaustion. Keep source, built executable
+conflicting identities and traversal exhaustion. Globally scanned page handles
+are display context; Bot discovery text is not account authority. Keep source, built executable
 and native account-proof receipts distinct.
 
 ## 2026-10-24 — Preserve nested cleanup failures at the CLI boundary
