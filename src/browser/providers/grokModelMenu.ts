@@ -24,7 +24,7 @@ export interface GrokModelMenuEntry {
 }
 
 export const GROK_MODEL_MENU_ENTRIES_EXPRESSION = `(() => {
-  const visible = el => el instanceof HTMLElement && !el.closest('[aria-hidden="true"]') &&
+  const visible = el => el instanceof HTMLElement && !el.closest('[aria-hidden="true"], [data-state="closed"]') &&
     window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden' &&
     el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0;
   const menus = [...new Set(['[role="menu"]', '[role="listbox"]', '[data-radix-dropdown-menu-content]', '[data-radix-menu-content]', 'div[data-state="open"]']
