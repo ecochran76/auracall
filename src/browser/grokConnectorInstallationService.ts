@@ -245,6 +245,22 @@ export function createGrokConnectorInstallationService(
 				const client = createGrokConnectorInstallationClient(connection.client.Runtime, {
 					providerAccountRef: request.expectedProviderAccountRef,
 					abortSignal: options.abortSignal,
+					pressEscape: connection.client.Input
+						? async () => {
+								await activeConnection.client.Input?.dispatchKeyEvent({
+									type: "keyDown",
+									key: "Escape",
+									code: "Escape",
+									windowsVirtualKeyCode: 27,
+								});
+								await activeConnection.client.Input?.dispatchKeyEvent({
+									type: "keyUp",
+									key: "Escape",
+									code: "Escape",
+									windowsVirtualKeyCode: 27,
+								});
+							}
+						: undefined,
 					beforeCommit: async () => {
 						await governor.checkWarning?.(activeConnection.client.Runtime);
 						await verify();

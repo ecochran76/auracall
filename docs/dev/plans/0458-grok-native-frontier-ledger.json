@@ -78,14 +78,21 @@
       "blockedBy": [
         402
       ],
-      "state": "assigned-preparation",
+      "state": "native-partial",
       "scope": "original-program",
       "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
       "currentEvidence": {
         "sourceRepairPr": 459,
         "freshTargetLifecycle": "fixed and regression tested",
         "nativeUploadDispatched": true,
-        "outcome": "unconfirmed; exact target retained; no replay; readonly reconciliation underway"
+        "outcome": "unconfirmed; exact target retained; no replay; readonly reconciliation underway",
+        "effectOutcome": "accepted server asset; exact104-byte SHA verified",
+        "readiness": "unqualified; committed native state qualification pending",
+        "sourceCandidate": [
+          "f583f57d0",
+          "c6f578622"
+        ],
+        "operatorSettlement": "PR462 supported CAS and preserved-release; prior uncertainty audit retained"
       }
     },
     "404": {
@@ -143,9 +150,23 @@
       "blockedBy": [
         407
       ],
-      "state": "assigned-preparation",
+      "state": "native-partial",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "currentEvidence": {
+        "nativeCreate": "one confirmed; actual canonical Bot route/ID",
+        "editorFields": [
+          "name",
+          "title",
+          "description"
+        ],
+        "unavailableOriginalCriteria": [
+          "instructions",
+          "model"
+        ],
+        "sourceCandidate": "bee61db1f",
+        "nativeEdit": "not yet dispatched; supported-only request prepared; original criteria unchanged"
+      }
     },
     "409": {
       "title": "Grok: Configure Bot Connectors, Skills and knowledge",
@@ -172,7 +193,9 @@
       "currentEvidence": {
         "nativeInitialGeneration": "preflight failed before Send on improperly reused target",
         "effectDispatched": false,
-        "next": "one corrective generation on patched fresh root"
+        "next": "one corrective generation on patched fresh root",
+        "correctiveCommand": "active; clean3d837e9e9; fresh account match; genuine new-target policy in production",
+        "nativeGeneration": "accepted; exactnewconversation, approvedsyntheticprompt anddedicatedplane renderer; no main/legacyresponseIDs; running/unknown completion; artifactidentity unqualified"
       }
     },
     "411": {
@@ -360,11 +383,23 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "PR459 merged;55focusedtests/typecheck;403A real upload unconfirmed and retained; supported readonly reconcile next;408/410 queued;all8open.",
+  "lastCheckpoint": "Main71669fe5e;403serverbyteproof+CAS;sourcecurrent-tree/contextcandidate;408createdsupportededitoractualunsupportedInstrModel;410oneacceptedgenerationretainedunknown/completionreadpending;405noAdd;review/TDD0.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
     "scope": "four exact canaries in prepared effect packet",
     "publication": "not approved until concrete app/version"
+  },
+  "nativeEffects": {
+    "syntheticUploads": {
+      "A": "one dispatch; exact source/server bytes verified; no replay; readiness pending",
+      "B": "not dispatched"
+    },
+    "botCreate": "one confirmed; canonical native entity retained",
+    "botEditSave": "not dispatched",
+    "connectorAdd": "not dispatched",
+    "build": "one accepted native generation on retained target; overall resultunknown; no replay; dedicatedBuildUI stillrunning at boundedreadonlycapture",
+    "publication": "not dispatched",
+    "mailSend": "not dispatched"
   }
 }

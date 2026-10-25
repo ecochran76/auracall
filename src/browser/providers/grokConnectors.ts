@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { delay } from "../utils.js";
 import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
 
 /** Discovery only: none of these operations installs, invokes or authenticates. */
@@ -77,9 +78,14 @@ const digest = (value: string) => createHash("sha256").update(value).digest("hex
 // Reauthenticate/Disconnect, See more and Server URL. No invented provider IDs.
 // Row handles exist only for one read and are revalidated before activation.
 const DOM_HELPERS = `
- const visible = el => el && el.getAttribute('aria-hidden') !== 'true' &&
-   getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden' &&
-   el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0;
+ const visible = el => {
+   for (let node = el; node; node = node.parentElement) {
+     if (node.getAttribute('role') === 'dialog' && node.getAttribute('data-closed') !== null) return false;
+   }
+   return el && el.getAttribute('aria-hidden') !== 'true' &&
+     getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden' &&
+     el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0;
+ };
  const text = el => String(el?.innerText || el?.textContent || '').trim();
  const buttons = root => Array.from(root.querySelectorAll('button,[role="button"]')).filter(visible);
  const dialogs = () => Array.from(document.querySelectorAll('[role="dialog"]')).filter(visible);
@@ -98,6 +104,7 @@ const OPEN = expression(`
    if (tab?.getAttribute('aria-selected') !== 'true') tab?.click();
    return true;
  }
+ if (dialogs().length) return false;
  const matches = buttons(document).filter(b => b.getAttribute('aria-label') === 'Plugins' || text(b) === 'Plugins');
  if (matches.length !== 1) return false;
  matches[0].click(); return true;
@@ -151,7 +158,11 @@ const DETAIL = expression(`
 
 export function createGrokConnectorClient(
 	runtime: GrokConnectorRuntime,
-	options: { abortSignal?: AbortSignal; maxToolExpansions?: number } = {},
+	options: {
+		abortSignal?: AbortSignal;
+		maxToolExpansions?: number;
+		pressEscape?: () => Promise<void>;
+	} = {},
 ) {
 	async function evaluate<T>(source: string): Promise<T> {
 		options.abortSignal?.throwIfAborted();
@@ -202,14 +213,26 @@ export function createGrokConnectorClient(
 	async function observe(query?: string) {
 		if (!(await evaluate<boolean>(OPEN)))
 			return { state: "missing", rows: [], truncated: false } satisfies InventoryProbe;
-		if (query == null) return await evaluate<InventoryProbe>(INVENTORY);
-		const previous = await evaluate<string | null>(
-			expression(`
+		if (query == null) {
+			let probe = await evaluate<InventoryProbe>(INVENTORY);
+			const deadline = Date.now() + 1_500;
+			while (probe.state === "missing" && Date.now() < deadline) {
+				await delay(25);
+				probe = await evaluate<InventoryProbe>(INVENTORY);
+			}
+			return probe;
+		}
+		const searchValue = expression(`
       const root = plugins();
       const matches = Array.from(root?.querySelectorAll('input[placeholder="Search..."]') || []).filter(visible);
       return matches.length === 1 ? matches[0].value : null;
-    `),
-		);
+    `);
+		let previous = await evaluate<string | null>(searchValue);
+		const searchDeadline = Date.now() + 1_500;
+		while (previous === null && Date.now() < searchDeadline) {
+			await delay(25);
+			previous = await evaluate<string | null>(searchValue);
+		}
 		if (previous === null) throw new Error("grok_connector_search_not_observed");
 		let restored = false;
 		let result: InventoryProbe;
@@ -237,9 +260,7 @@ export function createGrokConnectorClient(
 					: cleanupFailure;
 			}
 		}
-		if (!restored)
-			// biome-ignore lint/correctness/noUnsafeFinally: Collected and combined with the work error below.
-			throw new Error("grok_connector_search_restore_failed");
+		if (!restored) throw new Error("grok_connector_search_restore_failed");
 		return result;
 	}
 	function summary(row: ObservedRow): GrokConnectorSummary {
@@ -296,6 +317,12 @@ export function createGrokConnectorClient(
 			);
 			if (!clicked) return detailFailure("grok_connector_row_changed");
 			let detail = await evaluate<DetailProbe>(DETAIL);
+			const mountDeadline = Date.now() + 1_500;
+			while (detail.state === "missing" && Date.now() < mountDeadline) {
+				await delay(25);
+				detail = await evaluate<DetailProbe>(DETAIL);
+			}
+
 			const maximum = Math.min(10, Math.max(0, options.maxToolExpansions ?? 3));
 			for (
 				let attempt = 0;
@@ -402,10 +429,10 @@ export function createGrokConnectorClient(
 		} finally {
 			try {
 				// Close only the detail opened by this call. Never activate lifecycle controls.
-				closed =
-					!activationAttempted ||
-					(await cleanupEvaluate<boolean>(
-						expression(`
+				const dismissal = !activationAttempted
+					? true
+					: await cleanupEvaluate<boolean | "native-escape">(
+							expression(`
             const root = dialogs().filter(d => d !== plugins()).at(-1);
             if (!root) return true;
             // Native nested dialogs make their parent aria-hidden/inert. Only read
@@ -419,10 +446,24 @@ export function createGrokConnectorClient(
             if (matches.length !== 0 || root.getAttribute('data-analytics-name') !== 'connector-detail-dialog') return false;
             // Native detail has no Close control. Dismiss only this proven-owned
             // dialog, then verify it disappeared rather than assuming Escape worked.
-            root.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', code:'Escape', bubbles:true, cancelable:true}));
+            if (${Boolean(options.pressEscape)}) return 'native-escape';
+            root.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', code:'Escape', keyCode:27, bubbles:true, cancelable:true}));
             return new Promise(resolve => setTimeout(() => resolve(!dialogs().includes(root)), 100));
           `),
-					));
+						);
+				if (dismissal === "native-escape") {
+					if (!options.pressEscape)
+						// biome-ignore lint/correctness/noUnsafeFinally: Combined with the work error by the cleanup catch below.
+						throw new Error("grok_connector_native_escape_required");
+					await options.pressEscape();
+					const deadline = Date.now() + 1_000;
+					do {
+						closed = await cleanupEvaluate<boolean>(
+							expression(`return Boolean(plugins()) && dialogs().every(d => d === plugins());`),
+						);
+						if (!closed) await delay(25);
+					} while (!closed && Date.now() < deadline);
+				} else closed = dismissal;
 				if (!closed)
 					// biome-ignore lint/correctness/noUnsafeFinally: Collected and combined with the work error below.
 					throw new Error("grok_connector_detail_cleanup_incomplete");

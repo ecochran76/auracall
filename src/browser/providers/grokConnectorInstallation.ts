@@ -91,11 +91,12 @@ export function validateGrokConnectorInstallationInput(
 	};
 }
 const HELPERS = `
- const visible=e=>e && e.getAttribute('aria-hidden')!=='true' && getComputedStyle(e).display!=='none' && getComputedStyle(e).visibility!=='hidden' && e.getBoundingClientRect().width>0 && e.getBoundingClientRect().height>0;
+ const visible=e=>{for(let n=e;n;n=n.parentElement)if(n.getAttribute('role')==='dialog' && n.getAttribute('data-closed')!==null)return false;return e && e.getAttribute('aria-hidden')!=='true' && getComputedStyle(e).display!=='none' && getComputedStyle(e).visibility!=='hidden' && e.getBoundingClientRect().width>0 && e.getBoundingClientRect().height>0;};
  const text=e=>String(e?.innerText||e?.textContent||'').trim();
  const dialogs=()=>Array.from(document.querySelectorAll('[role="dialog"]')).filter(visible);
  const buttons=r=>Array.from(r.querySelectorAll('button,[role="button"]')).filter(visible);
  const plugins=()=>dialogs().find(d=>Array.from(d.querySelectorAll('[role="tab"]')).some(t=>text(t)==='Connectors'));
+ const inventoryOwner=()=>{const roots=Array.from(document.querySelectorAll('[role="dialog"]')).filter(d=>d.getAttribute('data-closed')===null && d.getBoundingClientRect().width>0 && getComputedStyle(d).display!=='none' && Array.from(d.querySelectorAll('[role="tab"]')).some(t=>text(t)==='Connectors'));return roots.length===1?roots[0]:null;};
  const forms=()=>dialogs().filter(d=>d!==plugins() && Array.from(d.querySelectorAll('input')).some(i=>i.getAttribute('placeholder')==='My Connector'));
 `;
 const expr = (body: string) => `(()=>{${HELPERS}\n${body}})()`;
@@ -105,6 +106,7 @@ export function createGrokConnectorInstallationClient(
 		providerAccountRef: string;
 		abortSignal?: AbortSignal;
 		beforeCommit?: () => Promise<void>;
+		pressEscape?: () => Promise<void>;
 	},
 ) {
 	const preparedTokens = new Map<
@@ -121,7 +123,10 @@ export function createGrokConnectorInstallationClient(
 			input.endpoint ?? null,
 			input.accountRef ?? null,
 		]);
-	const discovery = createGrokConnectorClient(runtime, { abortSignal: options.abortSignal });
+	const discovery = createGrokConnectorClient(runtime, {
+		abortSignal: options.abortSignal,
+		pressEscape: options.pressEscape,
+	});
 	async function evaluate<T>(expression: string): Promise<T> {
 		options.abortSignal?.throwIfAborted();
 		const result = await runtime.evaluate({ expression, returnByValue: true, awaitPromise: true });
@@ -284,7 +289,7 @@ export function createGrokConnectorInstallationClient(
 					expr(`
      const matches=forms();if(matches.length!==1)return false;const root=matches[0];
      if(dialogs().some(d=>d!==root && d!==plugins()))return false;
-     if(root.getAttribute('data-auracall-install-owner')!==${JSON.stringify(prepared.token)} || text(plugins())!==${JSON.stringify(saved.inventory)})return false;
+     if(root.getAttribute('data-auracall-install-owner')!==${JSON.stringify(prepared.token)} || text(inventoryOwner())!==${JSON.stringify(saved.inventory)})return false;
      const inputs=Array.from(root.querySelectorAll('input')).filter(visible);
      if(inputs.find(i=>i.getAttribute('placeholder')==='My Connector')?.value!==${JSON.stringify(input.name)} || inputs.find(i=>i.getAttribute('placeholder')==='https://mcp.example.com/sse')?.value!==${JSON.stringify(input.endpoint)})return false;
      const add=buttons(root).filter(b=>text(b)==='Add Connector' && !b.disabled && b.getAttribute('aria-disabled')!=='true');

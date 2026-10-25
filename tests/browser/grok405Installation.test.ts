@@ -27,7 +27,7 @@ function requirePrepared(
 	if (!outcome.prepared) throw new Error(outcome.code);
 	return outcome.prepared;
 }
-function installFixture() {
+function installFixture(inertParent = false) {
 	const fixture = connectorDomFixture();
 	const name = new N("input", "", { placeholder: "My Connector" });
 	const endpoint = new N("input", "", { placeholder: "https://mcp.example.com/sse" });
@@ -38,6 +38,7 @@ function installFixture() {
 	const open = new N("button", "New Connector", { "aria-label": "New Connector" });
 	open.onClick = () => {
 		form.hidden = false;
+		if (inertParent) fixture.plugins.setAttribute("aria-hidden", "true");
 	};
 	fixture.plugins.children.push(open);
 	open.parentElement = fixture.plugins;
@@ -179,5 +180,18 @@ it("reserves a prepared token before asynchronous admission so concurrent commit
 		client.commit(requirePrepared(prepared)),
 		client.commit(requirePrepared(prepared)),
 	]);
+	expect(f.effects()).toBe(1);
+});
+
+it("keeps exact inventory ownership when the nested form makes its parent inert", async () => {
+	const f = installFixture(true);
+	const client = createGrokConnectorInstallationClient(f.runtime, {
+		providerAccountRef: "account-hash",
+	});
+	const prepared = requirePrepared(await client.prepare(input));
+	expect(await client.commit(prepared)).toMatchObject({
+		status: "awaiting-human",
+		effectDispatched: true,
+	});
 	expect(f.effects()).toBe(1);
 });

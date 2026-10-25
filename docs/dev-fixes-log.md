@@ -1,3 +1,13 @@
+## 2026-10-25 — Closed Grok overlays can retain layout geometry
+
+BaseUI dialog nodes may retain display, visibility, opacity and nonzero geometry
+after data-closed is present. Exclude only explicitly closed dialog ancestry;
+never mistake those cached nodes for active modal ownership. Wait boundedly for
+an activated catalog/detail to mount, without repeating clicks. Use the guarded
+native keyboard when owned Escape-only detail cleanup requires it, and verify
+restoration. Read a nested form's exact inventory owner even while its parent
+is inert; keep token/input/account/inventory guards before Add.
+
 ## 2026-10-25 — Reconcile completed effects without erasing uncertainty
 
 Use exact account scope, target and revision plus a validated immutable evidence

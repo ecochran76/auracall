@@ -354,3 +354,37 @@ it("allows one explicit confirmed continuation after a recorded unsupported no-e
 	await service.install(request);
 	expect(f.effects()).toBe(1);
 });
+it("uses the governed transport keyboard to restore an Escape-only native detail before Add", async () => {
+	const f = await fixture();
+	f.f.close.hidden = true;
+	f.f.detail.onKeyDown = () => {};
+	const connect = f.deps.connect;
+	const keys: string[] = [];
+	const deps = {
+		...f.deps,
+		connect: async () => {
+			const connection = await connect();
+			return {
+				...connection,
+				client: {
+					...connection.client,
+					Input: {
+						dispatchKeyEvent: async (event: { type: string }) => {
+							keys.push(event.type);
+							if (event.type === "keyUp") f.f.close.click();
+						},
+					},
+				},
+			};
+		},
+	};
+	expect(
+		await createGrokConnectorInstallationService(f.options, deps).install({
+			input,
+			expectedProviderAccountRef,
+			confirm: true,
+		}),
+	).toMatchObject({ status: "awaiting-human", effectDispatched: true });
+	expect(keys).toEqual(["keyDown", "keyUp"]);
+	expect(f.effects()).toBe(1);
+});
