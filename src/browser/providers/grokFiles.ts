@@ -1,13 +1,17 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and DOM wire names.
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { BrowserAutomationError } from "../../oracle/errors.js";
 import { delay } from "../utils.js";
+import { observeGrokNativeFileBinding } from "./grokNativeFileBinding.js";
 
 export interface GrokComposerFile {
 	id: string;
 	name: string;
 	state: "ready" | "progress" | "error" | "unknown";
+	sourceSha256?: string;
+	sourceBinding?: "native-file-object";
 }
 export interface GrokFilesResult {
 	status: "complete" | "incomplete" | "failed" | "unconfirmed";
@@ -27,6 +31,7 @@ export interface GrokFileRuntime {
 	evaluate(input: {
 		expression: string;
 		returnByValue?: boolean;
+		awaitPromise?: boolean;
 	}): Promise<{ result?: { value?: unknown }; exceptionDetails?: unknown }>;
 }
 export interface GrokFileDom {
@@ -71,7 +76,12 @@ export function grokFilesFailure(code = "grok_files_failed"): GrokFilesResult {
 
 export function createGrokFileClient(
 	runtime: GrokFileRuntime,
-	options: { abortSignal?: AbortSignal; timeoutMs?: number; pollMs?: number } = {},
+	options: {
+		abortSignal?: AbortSignal;
+		timeoutMs?: number;
+		pollMs?: number;
+		providerUserId?: string;
+	} = {},
 ) {
 	let composerId: string | null = null;
 	async function evaluate<T>(body: string): Promise<T> {
@@ -106,13 +116,15 @@ export function createGrokFileClient(
       if (!root || !visible(root)) return null;
       const inputs = Array.from(root.querySelectorAll('input[type="file"]'));
       const nodes = fileNodes(root); const files = nodes.map(file);
+      const nativeChipCount = Array.from(root.querySelectorAll('button[aria-label="Open attachment"]')).filter(visible).length;
+      const unboundNative = nativeChipCount > files.length;
       const ids = files.map(f => f.id);
       const duplicate = ids.some((id, index) => ids.indexOf(id) !== index);
       const alert = Array.from(root.querySelectorAll('[role="alert"], [data-limit-message]')).filter(visible).map(el => el.innerText || '').join(' ').trim();
       const path = location.href;
-      return { status: duplicate || files.some(f => f.state !== 'ready') || alert ? 'incomplete' : 'complete', code: duplicate ? 'grok_file_identity_ambiguous' : alert ? 'grok_file_composer_limit_or_error' : 'grok_file_context', providerAccountRef: null,
+      return { status: duplicate || unboundNative || files.some(f => f.state !== 'ready') || alert ? 'incomplete' : 'complete', code: duplicate ? 'grok_file_identity_ambiguous' : unboundNative ? 'grok_file_native_context_unconfirmed' : alert ? 'grok_file_composer_limit_or_error' : 'grok_file_context', providerAccountRef: null,
         provenance: { targetId: null, projectId: root.getAttribute('data-project-id') || path.match(/\\/project(?:s)?\\/([^/?#]+)/)?.[1] || null, conversationId: path.match(/\\/c\\/([^/?#]+)/)?.[1] || null, composerId: ${JSON.stringify(composerId)} }, files,
-        coverage: { scope: 'composer', complete: !duplicate }, limits: { accept: inputs.length === 1 ? inputs[0].getAttribute('accept') : null, multiple: inputs.length === 1 ? inputs[0].hasAttribute('multiple') : null, observedMessage: alert || null } };`);
+        coverage: { scope: 'composer', complete: !duplicate && !unboundNative }, limits: { accept: inputs.length === 1 ? inputs[0].getAttribute('accept') : null, multiple: inputs.length === 1 ? inputs[0].hasAttribute('multiple') : null, observedMessage: alert || null } };`);
 		if (!result) throw new Error("grok_files_composer_lost");
 		return result;
 	}
@@ -140,6 +152,21 @@ export function createGrokFileClient(
 		const baseline = await context();
 		if (baseline.status !== "complete")
 			return { ...baseline, status: "failed", code: "grok_file_composer_not_ready" };
+		let sources: { name: string; size: number; sha256: string }[];
+		try {
+			sources = await Promise.all(
+				paths.map(async (filePath) => {
+					const bytes = await readFile(filePath);
+					return {
+						name: path.basename(filePath),
+						size: bytes.length,
+						sha256: createHash("sha256").update(bytes).digest("hex"),
+					};
+				}),
+			);
+		} catch {
+			return { ...baseline, status: "failed", code: "grok_file_source_not_readable" };
+		}
 		const token = randomUUID();
 		const marked = await evaluate<boolean>(
 			`const root = ${rootExpression()}; const inputs = root ? Array.from(root.querySelectorAll('input[type="file"]')) : []; if (inputs.length !== 1 || inputs[0].disabled || (${paths.length} > 1 && !inputs[0].hasAttribute('multiple'))) return false; inputs[0].setAttribute('data-auracall-upload', ${JSON.stringify(token)}); return true;`,
@@ -182,6 +209,26 @@ export function createGrokFileClient(
 					return { ...current, status: "unconfirmed", code: "grok_file_context_changed" };
 				if (current.limits.observedMessage)
 					return { ...current, status: "failed", code: "grok_file_composer_limit_or_error" };
+				if (options.providerUserId && composerId) {
+					const native = await observeGrokNativeFileBinding(runtime, {
+						composerId,
+						uploadToken: token,
+						providerUserId: options.providerUserId,
+						sources,
+					});
+					if (native.status === "conflict")
+						return { ...current, status: "unconfirmed", code: "grok_file_source_binding_conflict" };
+					if (native.status === "verified") {
+						// Only processing/uploading/retrying are qualified native phases.
+						// Bound provider identity cannot promote an unobserved ready state.
+						return {
+							...current,
+							files: native.files,
+							status: "unconfirmed",
+							code: "grok_file_readiness_unconfirmed",
+						};
+					}
+				}
 				const added = current.files.filter((f) => !baseline.files.some((old) => old.id === f.id));
 				if (added.length > paths.length || current.code === "grok_file_identity_ambiguous")
 					return { ...current, status: "unconfirmed", code: "grok_file_identity_ambiguous" };

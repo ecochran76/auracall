@@ -1,3 +1,15 @@
+## 2026-10-25 — Bind native Grok upload source bytes without promoting readiness (#403)
+
+Private native discovery qualified same input File object and SHA256 alongside
+actual metadata.fileMetadataId/account URI; an exact Open attachment observation
+returned server200 and rendered matching104byte content. The source now hashes
+local bytes before upload and validates the observed same-object/metadata/digest
+relationship. Processing remains unconfirmed, and later unbound native contexts
+are incomplete. A native-shaped positive regression failed on the prior source;
+17focused file tests pass with wrong bytes/account/File and conflicting props
+rejected. Native fixtures prove the observed binding shape, not final installed
+or ready-to-Send acceptance. Original upload and uncertainty history retained.
+
 ## 2026-10-25 — Preserve and inspect uncertain Grok upload custody (#403)
 
 A synthetic native upload emitted a real request but omitted its body from CDP.

@@ -1,6 +1,21 @@
 // biome-ignore-all lint/style/useNamingConvention: DOM/CDP wire names retain platform spelling.
+
+import { createHash, webcrypto } from "node:crypto";
 import { runInNewContext } from "node:vm";
 import { expect, test, vi } from "vitest";
+
+vi.mock("node:fs/promises", async (loadOriginal) => {
+	const original = await loadOriginal<typeof import("node:fs/promises")>();
+	return {
+		...original,
+		readFile: async (...args: Parameters<typeof original.readFile>) => {
+			if (args[0] === "/tmp/same.txt" || args[0] === "/tmp/intended.txt")
+				return Buffer.from("same");
+			return original.readFile(...args);
+		},
+	};
+});
+
 import { uploadGrokAttachments } from "../../src/browser/actions/grok.js";
 
 class Node {
@@ -86,8 +101,9 @@ function fixture() {
 	const runtime = {
 		evaluate: vi.fn(async ({ expression }: { expression: string }) => ({
 			result: {
-				value: runInNewContext(expression, {
+				value: await runInNewContext(expression, {
 					document: Object.assign(document, { body, scripts: [], title: "Grok" }),
+					crypto: webcrypto,
 					HTMLElement: Node,
 					HTMLInputElement: Node,
 					getComputedStyle: () => ({ display: "block", visibility: "visible" }),
@@ -404,5 +420,88 @@ test("an unrelated new ready file cannot stand in for the selected native upload
 	expect(result).toMatchObject({
 		status: "unconfirmed",
 		code: "grok_file_source_binding_unavailable",
+	});
+});
+
+test.each([
+	"processing",
+	"wrong-bytes",
+	"foreign-account",
+	"foreign-native-file",
+	"conflicting-props",
+] as const)("native attachment metadata binds only exact source File bytes (%s)", async (scenario) => {
+	const f = fixture();
+	const native = {
+		name: "same.txt",
+		size: 4,
+		type: "text/plain",
+		arrayBuffer: async () =>
+			Uint8Array.from(Buffer.from(scenario === "wrong-bytes" ? "else" : "same")).buffer,
+	};
+	const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+	f.dom.setFileInputFiles.mockImplementation(async () => {
+		f.input.files = [native];
+		const button = new Node("BUTTON", { "aria-label": "Open attachment" }, "same.txt");
+		Object.assign(button, {
+			__reactFiberFixture: {
+				memoizedProps: {
+					localFile: scenario === "foreign-native-file" ? { ...native } : native,
+					metadata: {
+						fileMetadataId: id,
+						fileName: "same.txt",
+						fileMimeType: "text/plain",
+						fileSource: "SELF_UPLOAD_FILE_SOURCE",
+						fileUri: `users/${scenario === "foreign-account" ? "foreign" : "user-1"}/${id}/content`,
+					},
+					phase: "processing",
+				},
+				return: null,
+			},
+		});
+		if (scenario === "conflicting-props") {
+			const fiber = (
+				button as unknown as {
+					__reactFiberFixture: { memoizedProps: Record<string, unknown>; return: unknown };
+				}
+			).__reactFiberFixture;
+			fiber.return = {
+				memoizedProps: {
+					...fiber.memoizedProps,
+					metadata: {
+						...(fiber.memoizedProps.metadata as Record<string, unknown>),
+						fileMetadataId: "11111111-2222-3333-4444-555555555555",
+						fileUri: "users/user-1/11111111-2222-3333-4444-555555555555/content",
+					},
+				},
+				return: null,
+			};
+		}
+		f.composer.append(button);
+	});
+	const result = await createGrokFileClient(f.runtime as never, {
+		timeoutMs: 0,
+		providerUserId: "user-1",
+	}).upload(f.dom as never, ["/tmp/same.txt"]);
+	expect(result.status).toBe("unconfirmed");
+	if (scenario === "processing")
+		expect(result).toMatchObject({
+			code: "grok_file_readiness_unconfirmed",
+			files: [
+				{
+					id,
+					state: "progress",
+					sourceBinding: "native-file-object",
+					sourceSha256: createHash("sha256").update("same").digest("hex"),
+				},
+			],
+		});
+	else
+		expect(result.files).not.toEqual(
+			expect.arrayContaining([expect.objectContaining({ sourceBinding: "native-file-object" })]),
+		);
+	expect(f.dom.setFileInputFiles).toHaveBeenCalledOnce();
+	expect(await createGrokFileClient(f.runtime as never).context()).toMatchObject({
+		status: "incomplete",
+		code: "grok_file_native_context_unconfirmed",
 	});
 });

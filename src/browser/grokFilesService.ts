@@ -80,6 +80,7 @@ export function createGrokFilesService(
 				result = await read(
 					createGrokFileClient(connection.client.Runtime, {
 						abortSignal: options.abortSignal,
+						providerUserId: identity.actualIdentity?.id,
 					}),
 					connection.client.DOM,
 				);
