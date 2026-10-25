@@ -1,3 +1,37 @@
+## 2026-10-25 — Approved Grok repair graph and renewed execution
+
+Plan0456: published440–444 and verified exact actor/body/state/labels. Complete
+21-node graph retains original dependencies and corrective acceptance barriers
+for401/412. Primary440, workers441/442/444;443 waits for the three foundations.
+User reset2h/2MM allowance with manual monitoring; no Wake/controller changes.
+Review/desktop main histories preserved; no parent or provider effects.
+
+## 2026-10-25 — Grok review repair tickets drafted
+
+User invoked to-tickets for the accepted full-review findings. Five complete
+repair slices are prepared: cursor/row custody, project-scope completion,
+restart progress, incremental follow and compatible account-reference projection.
+First three and the maintenance slice have no blockers; incremental follow is
+blocked by the three history foundations. Full proposed bodies and idempotency
+markers are under `/tmp/auracall-grok-review-20261025/ticket-drafts`.
+Read-only GitHub preflight confirms canonical target, actor capability, existing
+bug/enhancement/ready-for-agent labels and no marker duplicates. Publication is
+pending the skill-required breakdown approval; no issue or parent was mutated.
+Memory forbidden: no explicit request to remember.
+
+## 2026-10-25 — User-requested full Grok code review
+
+Frozen c9beb45b...dabde7caf; independent Standards/Spec reviewers, primary
+adjudication. Three P1 Spec blockers accepted: cursor-covered rows dropped by
+adapter bounding, nonempty project scopes never completing, and bounded restart
+anchor replay stalling. P2 full-rescan follow and P3 duplicated account-reference
+projection retained as nonblocking backlog. Primary provider-free reproductions
+confirm the failures. No production fixes, browser/provider actions or tracker
+mutations. Closed401/412 tracker states do not prove the affected criteria after
+this review; the whole program remains incomplete. See
+[review and reproduction evidence](notes/2026-10-25-grok-full-code-review.md).
+Memory forbidden: no explicit request to remember.
+
 ## 2026-10-24 — Desktop transition crash diagnosis
 
 Plan0455 / issue437: real child-process death inside a transition reproduces
