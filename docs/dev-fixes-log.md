@@ -26226,3 +26226,10 @@ no new native installation was attempted to validate the repair.
 An observation failure before the selection expression now returns optional
 `selectionDispatch: "not-dispatched"`, including cleanup failure. This does not
 settle menu effects, release unknown leases, or authorize retry.
+
+
+2026-10-25 — Grok committed React readers share bounded deep-portal traversal.
+Actual Recent portals exceeded 256 ancestry; even a found composer host was
+rejected by a later branch reaching the topology cap. Raise both caps to 512,
+retain 20,000-node budget and all current-root/scope/unique-host checks, and reuse
+the same helper for File/Connector observation. Exhaustion remains unavailable.

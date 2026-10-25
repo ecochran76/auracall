@@ -56,8 +56,9 @@ observed as `{uploadId, fileMetadata}`; upload-operation ID and provider file ID
 remain distinct. Ordinary configured utility cleanup completed and no Grok lease
 remained unreleased after the canaries.
 
-Native Recent chooser/list/select was not exercised; that path has provider-free
-exact-ID selection coverage only. No real Send, installed-runtime adoption,
+Native Recent item selection remains unqualified; the first public attempt
+opened its owned chooser and failed before item dispatch. That path currently
+has provider-free exact-ID selection coverage only. No real Send, installed-runtime adoption,
 private-file upload, deletion or publication is claimed. The primary should
 resolve any additional native Recent acceptance requirement before closing403.
 Memory disposition: forbidden — no explicit request to write memory.
@@ -70,3 +71,13 @@ this is distinct from the two observed menu opener clicks. The additive public
 cleanup errors. Overall `unconfirmed` status, retained target and unknown-effect
 fence remain intact until supported evidence reconciliation. No retry is implied.
 Native Recent row metadata and successful selection remain unqualified.
+
+Passive guard-attribution read r20 proves the retained Recent subtree exceeds
+the prior 256-depth bound: form/Attach each found its unique host, but another
+current branch reached depth 256; Recent trigger/chooser/rows exhausted ancestry
+at 256. No failed-root props established metadata. The shared observer now permits
+512 ancestry/topology depth with the same 20,000-node budget, exact scope host,
+unique-host and stable-current checks. File and Connector readers use that same
+helper. A deep portal plus unrelated deep branch regression fails before this
+correction and passes after; ancestry, topology and node-budget exhaustion still
+return unavailable. This is source qualification, not native Recent acceptance.

@@ -56731,3 +56731,11 @@ regressions cover chooser transport failure with normal and failed cleanup.
 Preserve known zero item-selection dispatch separately from unknown menu/cleanup
 effects; public unconfirmed status and target custody remain. Corrected passive
 metadata probe uses shared committed-path helper per owned host; not yet run.
+
+
+2026-10-25 — Grok403 committed portal bound correction: r20 distinguishes
+256-depth exhaustion from ownership mismatch. Shared committed-path ancestry and
+topology now bound at 512; 20,000-node limit/current-root/unique-host/scope checks
+remain fail closed. File binding imports shared helper. Native-derived deep portal
+regression observed RED before correction; exhaustion coverage retained. No native
+Recent row DTO or selection acceptance claimed; next passive read requires slot.

@@ -1,3 +1,4 @@
+import { GROK_COMMITTED_REACT_PATH } from "./grokCommittedReact.js";
 import type { GrokComposerFile, GrokFileRuntime } from "./grokFiles.js";
 
 export interface GrokLocalFileSource {
@@ -53,29 +54,7 @@ export async function observeGrokNativeFileBinding(
       if (!buttons.length || buttons.length !== selected.length) return unavailable;
       // The DOM key may retain an inactive alternate. Locate the root from
       // it, then qualify the exact host through the committed child topology.
-      const committedPath = (seed, button) => {
-        let top = seed; const ascending = new Set();
-        for (let depth = 0; top?.return && depth < 256; depth++) {
-          if (ascending.has(top)) return null;
-          ascending.add(top); top = top.return;
-        }
-        if (!top || top.return || top.tag !== 3 || !top.stateNode) return null;
-        const owner = top.stateNode; const current = owner.current;
-        if (!current || current.tag !== 3 || current.stateNode !== owner || current.return) return null;
-        const stack = [{fiber:current,path:[]}]; const seen = new Set(); const matches = [];
-        let budget = 20000;
-        while (stack.length && budget-- > 0) {
-          const {fiber,path} = stack.pop();
-          if (!fiber || seen.has(fiber) || path.length >= 256) return null;
-          seen.add(fiber); const next = [...path,fiber];
-          if (fiber.stateNode === button) matches.push(next);
-          if (fiber.sibling) stack.push({fiber:fiber.sibling,path});
-          if (fiber.child) stack.push({fiber:fiber.child,path:next});
-        }
-        if (stack.length || matches.length !== 1 || owner.current !== current) return null;
-        if (!matches[0].some(fiber => fiber.stateNode === root)) return null;
-        return {owner,current,path:matches[0].reverse()};
-      };
+      ${GROK_COMMITTED_REACT_PATH}
       // Native submit's handler and aria-disabled are both gated by the
       // committed isQueryable prop. Attachment phase alone is presentation
       // state once a valid metadata object exists.
@@ -84,7 +63,7 @@ export async function observeGrokNativeFileBinding(
       if (submits.length === 1) {
         const submit = submits[0];
         const keys = Object.keys(submit).filter(key=>key.startsWith('__reactFiber'));
-        const committed = keys.length === 1 ? committedPath(submit[keys[0]],submit) : null;
+        const committed = keys.length === 1 ? committedPath(submit[keys[0]],submit,root) : null;
         if (committed) {
           const flags = committed.path.filter(fiber=>fiber.memoizedProps && Object.prototype.hasOwnProperty.call(fiber.memoizedProps,'isQueryable')).map(fiber=>fiber.memoizedProps.isQueryable);
           const disabled = committed.path.some(fiber=>fiber.memoizedProps?.disabled===true || fiber.memoizedProps?.isDisabled===true);
@@ -98,7 +77,7 @@ export async function observeGrokNativeFileBinding(
       for (const button of buttons) {
         const keys = Object.keys(button).filter(key => key.startsWith('__reactFiber'));
         if (keys.length !== 1) return unavailable;
-        const committed = committedPath(button[keys[0]],button);
+        const committed = committedPath(button[keys[0]],button,root);
         if (!committed) return unavailable;
         if (observedRoot && (observedRoot.owner !== committed.owner || observedRoot.current !== committed.current)) return unavailable;
         observedRoot = committed;
