@@ -89,3 +89,9 @@ even when an assertion fails; both affected tests pass afterward. Spec has no
 blocking source findings. The live source run proves complete30-app inventory,
 matching configured account, unchanged browser PID2122493 and responsive CDP
 metadata. It does not qualify the cause or speed of the long inventory read.
+
+Incoming main6a712f57d and85c32aa39 changed Grok and shared diagnostic tools.
+Journal/fix-log conflicts preserve both intents; issue427 notes were placed
+beside stable entries rather than competing for the first line. Separate
+integration selections passed26 then23 checks, with fresh typecheck/build and
+docs checks. These selections overlap and are not a cumulative test count.

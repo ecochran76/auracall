@@ -1,13 +1,3 @@
-## 2026-10-25 — Preserve app inventory progress in default mode
-
-The apps CLI discarded onProgress unless verbose was enabled, hiding identity,
-inventory and queue waits throughout a capacity-extended operation budget.
-Retain the observer and emit bounded stage/elapsed/budget diagnostics on stderr
-every30seconds for long default list calls. Keep stdout terminal JSON and stop
-the timer on completion. A real CLI/operation/adapter/file-queue fixture varies
-only verbosity and proves the silence red before repair. Do not infer the
-provider delay's cause or shorten configured admission windows from this fix.
-
 ## 2026-10-25 — Restore owned nested Connector details
 
 Grok marks the parent Plugins dialog inert while Connector details are open.
@@ -17,6 +7,14 @@ Escape only for the proven-owned observed detail and verify disappearance.
 Keep known no-effect preparation refusals distinct from uncertain effects. One
 explicit confirmed continuation of an exactly recorded endpoint-observation
 refusal uses an exclusive persistent claim; unknown outcomes never reopen Add.
+
+## 2026-10-25 — Keep unknown upload custody through cleanup and diagnosis
+
+A cleanup AggregateError cannot replace a started file mutation's unknown outcome
+with generic failure. Preserve its target and fail visibly. Diagnose a retained
+target by exact ID through the governed browser tool; broad Puppeteer page
+initialization can wait on unrelated renderers even when its transport is ready.
+Native FileList bytes and a visible chip still do not prove provider-file identity.
 
 ## 2026-10-25 — Honor Grok fresh-operation target lifecycles
 
@@ -34,6 +32,16 @@ loss. Relative date labels remain filtering estimates, not durable updatedAt or
 change identity; retain qualified absolute changes and normalize legacy estimates
 once within existing bounds. Keep exclusive-group admission policy centralized
 while callers preserve conflict precedence, scope, locking and process checks.
+
+## 2026-10-25 — Preserve app inventory progress in default mode
+
+The apps CLI discarded onProgress unless verbose was enabled, hiding identity,
+inventory and queue waits throughout a capacity-extended operation budget.
+Retain the observer and emit bounded stage/elapsed/budget diagnostics on stderr
+every30seconds for long default list calls. Keep stdout terminal JSON and stop
+the timer on completion. A real CLI/operation/adapter/file-queue fixture varies
+only verbosity and proves the silence red before repair. Do not infer the
+provider delay's cause or shorten configured admission windows from this fix.
 
 ## 2026-10-25 — An unchanged row cannot hide observed Grok changes
 
