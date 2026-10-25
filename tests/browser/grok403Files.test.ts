@@ -1,6 +1,21 @@
 // biome-ignore-all lint/style/useNamingConvention: DOM/CDP wire names retain platform spelling.
+
+import { createHash, webcrypto } from "node:crypto";
 import { runInNewContext } from "node:vm";
 import { expect, test, vi } from "vitest";
+
+vi.mock("node:fs/promises", async (loadOriginal) => {
+	const original = await loadOriginal<typeof import("node:fs/promises")>();
+	return {
+		...original,
+		readFile: async (...args: Parameters<typeof original.readFile>) => {
+			if (args[0] === "/tmp/same.txt" || args[0] === "/tmp/intended.txt")
+				return Buffer.from("same");
+			return original.readFile(...args);
+		},
+	};
+});
+
 import { uploadGrokAttachments } from "../../src/browser/actions/grok.js";
 
 class Node {
@@ -75,6 +90,7 @@ class Node {
 	}
 }
 function fixture() {
+	const identityUser = { id: "user-1", email: "operator@example.test" };
 	const document = new Node("DOCUMENT");
 	const body = new Node("BODY");
 	const composer = new Node("FORM", { "data-project-id": "project-1" });
@@ -86,14 +102,15 @@ function fixture() {
 	const runtime = {
 		evaluate: vi.fn(async ({ expression }: { expression: string }) => ({
 			result: {
-				value: runInNewContext(expression, {
+				value: await runInNewContext(expression, {
 					document: Object.assign(document, { body, scripts: [], title: "Grok" }),
+					crypto: webcrypto,
 					HTMLElement: Node,
 					HTMLInputElement: Node,
 					getComputedStyle: () => ({ display: "block", visibility: "visible" }),
 					window: {
 						__NEXT_DATA__: {
-							props: { pageProps: { user: { id: "user-1", email: "operator@example.test" } } },
+							props: { pageProps: { user: identityUser } },
 						},
 						getComputedStyle: () => ({ display: "block", visibility: "visible" }),
 					},
@@ -109,7 +126,7 @@ function fixture() {
 			input.files = [{ name: "same.txt", size: 4 }];
 		}),
 	};
-	return { document, body, composer, editor, input, runtime, dom };
+	return { document, body, composer, editor, input, runtime, dom, identityUser };
 }
 
 test("a basename elsewhere on the page never confirms the intended local upload", async () => {
@@ -406,3 +423,265 @@ test("an unrelated new ready file cannot stand in for the selected native upload
 		code: "grok_file_source_binding_unavailable",
 	});
 });
+
+test.each([
+	"processing",
+	"prompt-upload",
+	"prompt-account-drift",
+	"wrong-bytes",
+	"foreign-account",
+	"foreign-native-file",
+	"conflicting-props",
+	"inactive-fiber",
+	"committed-cycle",
+	"ambiguous-host",
+	"commit-during-digest",
+	"submit-false",
+	"submit-stale",
+	"submit-prose",
+	"submit-other-form",
+	"submit-disabled",
+	"private",
+	"deleted",
+] as const)("native attachment metadata binds only exact source File bytes (%s)", async (scenario) => {
+	const f = fixture();
+	let duringDigest = () => {};
+	const native = {
+		name: "same.txt",
+		size: 4,
+		type: "text/plain",
+		arrayBuffer: async () => {
+			duringDigest();
+			return Uint8Array.from(Buffer.from(scenario === "wrong-bytes" ? "else" : "same")).buffer;
+		},
+	};
+	const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+	f.dom.setFileInputFiles.mockImplementation(async () => {
+		f.input.files = [native];
+		const button = new Node("BUTTON", { "aria-label": "Open attachment" }, "same.txt");
+		Object.assign(button, {
+			__reactFiberFixture: {
+				memoizedProps: {
+					localFile: scenario === "foreign-native-file" ? { ...native } : native,
+					metadata: {
+						fileMetadataId: id,
+						fileName: "same.txt",
+						fileMimeType: "text/plain",
+						fileSource: "SELF_UPLOAD_FILE_SOURCE",
+						fileUri: `users/${scenario === "foreign-account" ? "foreign" : "user-1"}/${id}/content`,
+					},
+					phase: "processing",
+					isPrivate: scenario === "private",
+					isDeleted: scenario === "deleted",
+				},
+				return: null,
+			},
+		});
+		if (scenario === "conflicting-props") {
+			const fiber = (
+				button as unknown as {
+					__reactFiberFixture: { memoizedProps: Record<string, unknown>; return: unknown };
+				}
+			).__reactFiberFixture;
+			fiber.return = {
+				memoizedProps: {
+					...fiber.memoizedProps,
+					metadata: {
+						...(fiber.memoizedProps.metadata as Record<string, unknown>),
+						fileMetadataId: "11111111-2222-3333-4444-555555555555",
+						fileUri: "users/user-1/11111111-2222-3333-4444-555555555555/content",
+					},
+				},
+				return: null,
+			};
+		}
+		type Fiber = {
+			memoizedProps?: Record<string, unknown>;
+			return: Fiber | null;
+			child?: Fiber | null;
+			sibling?: Fiber | null;
+			stateNode?: unknown;
+			tag?: number;
+		};
+		const seeded = (button as unknown as { __reactFiberFixture: Fiber }).__reactFiberFixture;
+		seeded.stateNode = button;
+		const top = seeded.return ?? seeded;
+		if (top !== seeded) top.child = seeded;
+		const form: Fiber = { stateNode: f.composer, return: null, child: top };
+		const currentRoot: Fiber = { tag: 3, stateNode: null, return: null, child: form };
+		const owner = { current: currentRoot };
+		currentRoot.stateNode = owner;
+		form.return = currentRoot;
+		top.return = form;
+		if (scenario === "inactive-fiber") {
+			const staleRoot: Fiber = { tag: 3, stateNode: owner, return: null };
+			const staleForm: Fiber = { stateNode: f.composer, return: staleRoot, child: seeded };
+			seeded.return = staleForm;
+			const committed: Fiber = {
+				...seeded,
+				memoizedProps: {
+					...seeded.memoizedProps,
+					metadata: {
+						...(seeded.memoizedProps?.metadata as Record<string, unknown>),
+						fileMetadataId: "11111111-2222-3333-4444-555555555555",
+						fileUri: "users/user-1/11111111-2222-3333-4444-555555555555/content",
+					},
+					phase: undefined,
+				},
+			};
+			// Shared children may retain an old return pointer. The actual
+			// committed parent is determined by current child/sibling topology.
+			form.child = committed;
+		}
+		const submit = new Node(
+			"BUTTON",
+			{ "data-testid": "chat-submit", "aria-disabled": "false", type: "submit" },
+			"isQueryable=true",
+		);
+		submit.disabled = scenario === "submit-disabled";
+		const submitHost: Fiber = {
+			stateNode: submit,
+			memoizedProps: { type: "submit" },
+			return: null,
+		};
+		const submitComponent: Fiber = {
+			memoizedProps: {
+				isQueryable:
+					scenario === "submit-false" || scenario === "submit-stale"
+						? false
+						: scenario === "submit-prose"
+							? "true"
+							: true,
+			},
+			return: form,
+			child: submitHost,
+		};
+		submitHost.return = submitComponent;
+		Object.assign(submit, { __reactFiberFixture: submitHost });
+		if (scenario === "submit-stale") {
+			const staleRoot: Fiber = { tag: 3, stateNode: owner, return: null };
+			Object.assign(submit, {
+				__reactFiberFixture: {
+					...submitHost,
+					memoizedProps: { isQueryable: true },
+					return: staleRoot,
+				},
+			});
+		}
+		if (form.child) form.child.sibling = submitComponent;
+		(scenario === "submit-other-form" ? f.body : f.composer).append(submit);
+		if (scenario === "committed-cycle") seeded.sibling = seeded;
+		if (scenario === "ambiguous-host") seeded.sibling = { ...seeded };
+		if (scenario === "commit-during-digest")
+			duringDigest = () => {
+				owner.current = { tag: 3, stateNode: owner, return: null };
+			};
+		if (scenario === "prompt-account-drift")
+			duringDigest = () => {
+				f.identityUser.id = "other-user";
+			};
+		f.composer.append(button);
+	});
+	if (scenario === "prompt-account-drift") {
+		await expect(
+			uploadGrokAttachments(
+				f.dom as never,
+				f.runtime as never,
+				[{ path: "/tmp/same.txt", displayPath: "same.txt" }],
+				() => {},
+			),
+		).rejects.toMatchObject({ details: { effectState: "unknown" } });
+		expect(f.dom.setFileInputFiles).toHaveBeenCalledOnce();
+		return;
+	}
+	const client = createGrokFileClient(f.runtime as never, {
+		timeoutMs: 0,
+		providerUserId: "user-1",
+	});
+	let result: Awaited<ReturnType<typeof client.upload>>;
+	if (scenario === "prompt-upload") {
+		await uploadGrokAttachments(
+			f.dom as never,
+			f.runtime as never,
+			[{ path: "/tmp/same.txt", displayPath: "same.txt" }],
+			() => {},
+		);
+		result = await client.context();
+	} else result = await client.upload(f.dom as never, ["/tmp/same.txt"]);
+	const ready =
+		scenario === "processing" || scenario === "inactive-fiber" || scenario === "prompt-upload";
+	expect(result.status).toBe(ready ? "complete" : "unconfirmed");
+	if (scenario === "prompt-upload")
+		expect(result).toMatchObject({
+			status: "complete",
+			files: [{ id, state: "ready", sourceAgreement: "observed-native" }],
+		});
+	else if (scenario === "processing")
+		expect(result).toMatchObject({
+			code: "grok_files_ready",
+			files: [
+				{
+					id,
+					state: "ready",
+					sourceBinding: "native-file-object",
+					sourceAgreement: "local-manifest",
+					sourceSha256: createHash("sha256").update("same").digest("hex"),
+				},
+			],
+		});
+	else if (scenario === "inactive-fiber")
+		expect(result).toMatchObject({
+			files: [
+				{
+					id: "11111111-2222-3333-4444-555555555555",
+					state: "ready",
+					sourceBinding: "native-file-object",
+				},
+			],
+		});
+	else if (
+		[
+			"submit-false",
+			"submit-stale",
+			"submit-prose",
+			"submit-other-form",
+			"submit-disabled",
+			"private",
+			"deleted",
+		].includes(scenario)
+	)
+		expect(result).toMatchObject({
+			code: "grok_file_readiness_unconfirmed",
+			files: [{ id, state: "unknown", sourceAgreement: "local-manifest" }],
+		});
+	else
+		expect(result.files).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					sourceBinding: "native-file-object",
+					sourceAgreement: "local-manifest",
+				}),
+			]),
+		);
+	expect(f.dom.setFileInputFiles).toHaveBeenCalledOnce();
+	if (scenario === "processing") {
+		const restarted = createGrokFileClient(f.runtime as never, { providerUserId: "user-1" });
+		expect(await restarted.context()).toMatchObject({
+			status: "complete",
+			code: "grok_file_context",
+			files: [
+				{
+					id,
+					state: "ready",
+					sourceBinding: "native-file-object",
+					sourceAgreement: "observed-native",
+				},
+			],
+		});
+		expect(f.dom.setFileInputFiles).toHaveBeenCalledOnce();
+	}
+	expect(await createGrokFileClient(f.runtime as never).context()).toMatchObject({
+		status: "incomplete",
+		code: "grok_file_native_context_unconfirmed",
+	});
+}, 15000);

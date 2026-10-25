@@ -13,7 +13,11 @@ import type { BrowserProviderListOptions } from "./providers/types.js";
 import type { ChromeClient } from "./types.js";
 
 export interface GrokConnectorConnection {
-	client: { Runtime: GrokConnectorRuntime; close(): Promise<void> };
+	client: {
+		Runtime: GrokConnectorRuntime;
+		Input?: Pick<ChromeClient["Input"], "dispatchKeyEvent">;
+		close(): Promise<void>;
+	};
 	targetId?: string;
 	shouldClose: boolean;
 	host: string;
@@ -71,7 +75,24 @@ export function createGrokConnectorsService(
 				if (!identity.ok) throw new Error("grok_connector_account_not_verified");
 				result = await read(
 					createGrokConnectorClient(connection.client.Runtime, {
+						providerUserId: identity.actualIdentity?.id,
 						abortSignal: options.abortSignal,
+						pressEscape: connection.client.Input
+							? async () => {
+									await connection.client.Input?.dispatchKeyEvent({
+										type: "keyDown",
+										key: "Escape",
+										code: "Escape",
+										windowsVirtualKeyCode: 27,
+									});
+									await connection.client.Input?.dispatchKeyEvent({
+										type: "keyUp",
+										key: "Escape",
+										code: "Escape",
+										windowsVirtualKeyCode: 27,
+									});
+								}
+							: undefined,
 					}),
 				);
 				const finalIdentity = await checkGrokBrowserAuthPreflight(
@@ -80,7 +101,10 @@ export function createGrokConnectorsService(
 				);
 				if (!finalIdentity.ok || finalIdentity.actualIdentity?.id !== identity.actualIdentity?.id)
 					throw new Error("grok_connector_account_not_verified");
-				result.providerAccountRef = projectGrokAccountReference(identity.actualIdentity, "typed-v1");
+				result.providerAccountRef = projectGrokAccountReference(
+					identity.actualIdentity,
+					"typed-v1",
+				);
 			} catch (error) {
 				await action.settle({
 					outcome: "failed",

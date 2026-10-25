@@ -1,17 +1,19 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP wire fields use provider spelling.
+
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto";
-import { createResponsesHttpServer } from "../../src/http/responsesServer.js";
-import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { afterEach, expect, it } from "vitest";
+import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { createGrokConnectorInstallationService } from "../../src/browser/grokConnectorInstallationService.js";
+import { createResponsesHttpServer } from "../../src/http/responsesServer.js";
 import {
 	connectorDomFixture,
-	ConnectorFixtureNode as N,
 	fixtureConnectorServiceOptions,
+	ConnectorFixtureNode as N,
 } from "./grok404ConnectorDomFixture.js";
+
 const roots: string[] = [];
 afterEach(async () => {
 	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -352,5 +354,39 @@ it("allows one explicit confirmed continuation after a recorded unsupported no-e
 	expect(outcomes.some((r) => r.effectDispatched)).toBe(true);
 	expect(f.effects()).toBe(1);
 	await service.install(request);
+	expect(f.effects()).toBe(1);
+});
+it("uses the governed transport keyboard to restore an Escape-only native detail before Add", async () => {
+	const f = await fixture();
+	f.f.close.hidden = true;
+	f.f.detail.onKeyDown = () => {};
+	const connect = f.deps.connect;
+	const keys: string[] = [];
+	const deps = {
+		...f.deps,
+		connect: async () => {
+			const connection = await connect();
+			return {
+				...connection,
+				client: {
+					...connection.client,
+					Input: {
+						dispatchKeyEvent: async (event: { type: string }) => {
+							keys.push(event.type);
+							if (event.type === "keyUp") f.f.close.click();
+						},
+					},
+				},
+			};
+		},
+	};
+	expect(
+		await createGrokConnectorInstallationService(f.options, deps).install({
+			input,
+			expectedProviderAccountRef,
+			confirm: true,
+		}),
+	).toMatchObject({ status: "awaiting-human", effectDispatched: true });
+	expect(keys).toEqual(["keyDown", "keyUp"]);
 	expect(f.effects()).toBe(1);
 });

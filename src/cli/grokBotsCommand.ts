@@ -1,8 +1,9 @@
 // biome-ignore-all lint/style/useNamingConvention: Public Zod schemas follow the repository PascalCase convention.
-import { BrowserAutomationError } from "../oracle/errors.js";
+
 import { z } from "zod";
 import type { GrokBotsService } from "../browser/grokBotsService.js";
 import { grokBotUnknown } from "../browser/grokBotsService.js";
+import { BrowserAutomationError } from "../oracle/errors.js";
 
 export const GrokBotSelectorSchema = z
 	.object({
@@ -11,7 +12,58 @@ export const GrokBotSelectorSchema = z
 		author: z.string().trim().min(1).max(200).optional(),
 	})
 	.strict();
+export const GrokBotConfigurationPatchSchema = z
+	.object({
+		name: z.string().min(1).max(80).optional(),
+		title: z.string().max(10000).optional(),
+		description: z.string().max(10000).optional(),
+		instructions: z.string().max(10000).optional(),
+		model: z.string().max(200).optional(),
+	})
+	.strict();
+export const GrokBotSettingsSelectorSchema = z
+	.object({ id: z.string().uuid(), name: z.string().min(1).max(80) })
+	.strict();
+const accountRef = z.string().regex(/^[a-f0-9]{64}$/);
 export const GrokBotsRequestSchema = z.discriminatedUnion("action", [
+	z
+		.object({
+			action: z.literal("create"),
+			name: z.string().trim().min(1).max(80),
+			expectedProviderAccountRef: accountRef,
+			confirm: z.literal(true),
+			acceptTerms: z.literal(true),
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			action: z.literal("edit"),
+			selector: GrokBotSettingsSelectorSchema,
+			patch: GrokBotConfigurationPatchSchema,
+			targetId: z.string().min(1).max(512),
+			expectedProviderAccountRef: accountRef,
+			confirm: z.literal(true),
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			action: z.literal("inspect"),
+			selector: GrokBotSettingsSelectorSchema,
+			targetId: z.string().min(1).max(512),
+			expectedProviderAccountRef: accountRef,
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			action: z.literal("reconcile"),
+			operationId: z.string().regex(/^[a-f0-9]{64}$/),
+			expectedProviderAccountRef: accountRef,
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
 	z
 		.object({
 			action: z.literal("list"),
@@ -35,7 +87,8 @@ export const GrokBotsRequestSchema = z.discriminatedUnion("action", [
 export type GrokBotsRequest = z.infer<typeof GrokBotsRequestSchema>;
 export type GrokBotsResult =
 	| Awaited<ReturnType<GrokBotsService["list"]>>
-	| Awaited<ReturnType<GrokBotsService["invoke"]>>;
+	| Awaited<ReturnType<GrokBotsService["invoke"]>>
+	| import("../browser/providers/grokBotLifecycle.js").GrokBotLifecycleResult;
 export type GrokBotsServiceResolver = (
 	request: GrokBotsRequest,
 ) => GrokBotsService | Promise<GrokBotsService>;
@@ -50,6 +103,10 @@ export async function runGrokBotsCommand(
 	try {
 		const request = GrokBotsRequestSchema.parse(input);
 		invoked = request.action === "invoke";
+		if (request.action !== "list" && request.action !== "invoke")
+			return service.lifecycle
+				? await service.lifecycle(request)
+				: { ...grokBotUnknown("grok_bot_lifecycle_unavailable"), status: "blocked" };
 		return request.action === "list"
 			? await service.list(request.source)
 			: await service.invoke(request.selector, request.prompt);

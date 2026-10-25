@@ -78,14 +78,26 @@
       "blockedBy": [
         402
       ],
-      "state": "assigned-preparation",
+      "state": "native-partial",
       "scope": "original-program",
       "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
       "currentEvidence": {
         "sourceRepairPr": 459,
         "freshTargetLifecycle": "fixed and regression tested",
         "nativeUploadDispatched": true,
-        "outcome": "unconfirmed; exact target retained; no replay; readonly reconciliation underway"
+        "outcome": "A accepted, exact server bytes verified and public context now complete/ready; no replay/Send",
+        "effectOutcome": "accepted server asset; exact104-byte SHA verified",
+        "readiness": "qualified public context ready at53cbfbb7a; immutableproof83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca; primary validation passed",
+        "sourceCandidate": [
+          "f583f57d0",
+          "c6f578622",
+          "daafc133e"
+        ],
+        "operatorSettlement": "PR462 supported CAS and preserved-release; prior uncertainty audit retained",
+        "nativeB": "one public upload complete/ready/local-manifest; distinct native ID; actual server104bytes/hash verified; primary validation passed",
+        "nativeBCompositeSha256": "c01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1",
+        "recentSelection": "source fixture qualified; native exact-B recent selection packet being prepared; no additional upload or Send",
+        "acceptance": "two-upload native evidence qualified; Recent native gate retained before closure"
       }
     },
     "404": {
@@ -112,7 +124,11 @@
         "sourceRepairPr": 459,
         "sourceRepairMerge": "6a712f57d7000e4d49da650695b9814080dca4ed",
         "nativeInitialInstall": "unsupported before Add; endpoint unobserved",
-        "effectDispatched": false
+        "effectDispatched": true,
+        "nativePreparation": "current source a180c902f reached exact custom form; account match before/after; restored without Add",
+        "nativeContinuation": "one Add dispatched; provider Custom Connector reports Connection failed; exact target and original unsent @ preserved",
+        "custody": "terminal provider failure/account/target immutable proof validated; supportedCAS rev3\u2192settledrev4\u2192released/preservedrev5; uncertainty audit retained; no replay",
+        "acceptance": "original criteria unmet; no Connector ID, OAuth grant or tool catalog qualified"
       }
     },
     "406": {
@@ -143,9 +159,24 @@
       "blockedBy": [
         407
       ],
-      "state": "assigned-preparation",
+      "state": "native-partial",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "currentEvidence": {
+        "nativeCreate": "one confirmed; actual canonical Bot route/ID",
+        "editorFields": [
+          "name",
+          "title",
+          "description"
+        ],
+        "unavailableOriginalCriteria": [
+          "instructions",
+          "model"
+        ],
+        "sourceCandidate": "bee61db1f",
+        "nativeEdit": "one public same-ID Name/Description Save and independent fresh readback verified",
+        "acceptanceDecision": "explicit native-field split proposed; awaiting user response; original Instructions/Model criteria unchanged"
+      }
     },
     "409": {
       "title": "Grok: Configure Bot Connectors, Skills and knowledge",
@@ -171,8 +202,12 @@
       "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
       "currentEvidence": {
         "nativeInitialGeneration": "preflight failed before Send on improperly reused target",
-        "effectDispatched": false,
-        "next": "one corrective generation on patched fresh root"
+        "effectDispatched": true,
+        "next": "bounded retained public inspect and actual Code/files/export discovery; no regeneration",
+        "correctiveCommand": "active; clean3d837e9e9; fresh account match; genuine new-target policy in production",
+        "nativeGeneration": "one accepted generation completed; native Worked for terminal marker and exact conversation/assistant response validated",
+        "operatorSettlement": "immutable completion proof validated; supported CAS settled and released preserved target; prior uncertainty audit retained",
+        "artifactIdentity": "app/version/export unqualified; no publication"
       }
     },
     "411": {
@@ -360,11 +395,23 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "PR459 merged;55focusedtests/typecheck;403A real upload unconfirmed and retained; supported readonly reconcile next;408/410 queued;all8open.",
+  "lastCheckpoint": "Merged main ce91367d1 through244871611; 324focused/20files andtypecheckpass;53importregressionspass;bothuploads2/2verified;403Recentnativepending;405terminalfailureCASreleased/noRetry;408scopeDecisionPending;410completed/appVersionExportPending;all8open;reviewTDD0.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
     "scope": "four exact canaries in prepared effect packet",
     "publication": "not approved until concrete app/version"
+  },
+  "nativeEffects": {
+    "syntheticUploads": {
+      "A": "one dispatch; exact source/server bytes verified; public context ready; no replay/Send",
+      "B": "one dispatch; complete/ready/local-manifest; distinct ID; exact server bytes verified; no Send/replay"
+    },
+    "botCreate": "one confirmed; canonical native entity retained",
+    "botEditSave": "one public same-ID Save; independent fresh readback verified",
+    "connectorAdd": "one continuation dispatch; provider Connection failed; no retry",
+    "build": "one generation accepted and completed; immutable proof/CAS retained; artifact provenance still unqualified",
+    "publication": "not dispatched",
+    "mailSend": "not dispatched"
   }
 }

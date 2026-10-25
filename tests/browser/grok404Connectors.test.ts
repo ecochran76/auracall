@@ -105,6 +105,85 @@ describe("Grok Connector public inventory", () => {
 		);
 		expect((await client.list()).installed).toHaveLength(1);
 	});
+	it("waits for its activated native detail to mount before reading and restoring it", async () => {
+		const fixture = connectorDomFixture({
+			inertParent: true,
+			escapeOnly: true,
+			detailMountDelayMs: 25,
+		});
+		const client = createGrokConnectorClient(fixture.runtime);
+		expect((await client.inspect({ name: "Example", kind: "installed" })).endpoint).toBe(
+			"https://mcp.example.test/mcp",
+		);
+		expect((await client.list()).installed).toHaveLength(1);
+	});
+	it("uses owned native Escape control when synthetic keyboard events are ignored", async () => {
+		const fixture = connectorDomFixture({ inertParent: true, escapeOnly: true });
+		fixture.detail.onKeyDown = () => {};
+		let escapes = 0;
+		const client = createGrokConnectorClient(fixture.runtime, {
+			pressEscape: async () => {
+				escapes++;
+				fixture.close.click();
+			},
+		});
+		expect((await client.inspect({ name: "Example", kind: "installed" })).endpoint).toBe(
+			"https://mcp.example.test/mcp",
+		);
+		expect(escapes).toBe(1);
+		expect((await client.list()).installed).toHaveLength(1);
+	});
+	it("ignores explicitly closed dialog nodes that retain native geometry", async () => {
+		const fixture = connectorDomFixture({
+			inertParent: true,
+			escapeOnly: true,
+			keepClosedMounted: true,
+		});
+		const client = createGrokConnectorClient(fixture.runtime);
+		expect((await client.inspect({ name: "Example", kind: "installed" })).endpoint).toBe(
+			"https://mcp.example.test/mcp",
+		);
+		expect(fixture.detail.getBoundingClientRect().width).toBeGreaterThan(0);
+		expect(fixture.detail.getAttribute("data-closed")).toBe("");
+		expect((await client.list()).installed).toHaveLength(1);
+	});
+	it.each([
+		undefined,
+		"example",
+	])("waits for a newly opened catalog to mount without clicking again (%s)", async (query) => {
+		const fixture = connectorDomFixture();
+		fixture.plugins.hidden = true;
+		let opens = 0;
+		const open = new ConnectorFixtureNode("button", "Plugins", { "aria-label": "Plugins" });
+		open.onClick = () => {
+			opens++;
+			setTimeout(() => {
+				fixture.plugins.hidden = false;
+			}, 25);
+		};
+		open.parentElement = fixture.document;
+		fixture.document.children.push(open);
+		expect((await createGrokConnectorClient(fixture.runtime).list(query)).installed).toHaveLength(
+			1,
+		);
+		expect(opens).toBe(1);
+	});
+	it("refuses to open a catalog through an unrelated active dialog", async () => {
+		const fixture = connectorDomFixture();
+		fixture.plugins.hidden = true;
+		const foreign = new ConnectorFixtureNode("div", "Foreign settings", { role: "dialog" });
+		foreign.parentElement = fixture.document;
+		fixture.document.children.push(foreign);
+		let opens = 0;
+		const open = new ConnectorFixtureNode("button", "Plugins", { "aria-label": "Plugins" });
+		open.onClick = () => {
+			opens++;
+		};
+		open.parentElement = fixture.document;
+		fixture.document.children.push(open);
+		expect((await createGrokConnectorClient(fixture.runtime).list()).status).toBe("failed");
+		expect(opens).toBe(0);
+	});
 	it("selects an observed exact endpoint and refuses to infer absence from visible rows", async () => {
 		const client = createGrokConnectorClient(connectorDomFixture().runtime);
 		const result = await client.inspect({

@@ -158,3 +158,13 @@ claim fences concurrent callers and repeated attempts. All other existing
 intents remain observation-only; no journal reset/removal is provided.
 Source tests establish this behavior, including concurrent one-Add continuation;
 this does not establish OAuth/entity/catalog/grants acceptance.
+
+
+Native preparation additionally established that closed BaseUI dialogs remain
+mounted with data-closed, visible styles and geometry. Catalog/detail discovery
+must exclude that explicit closed ancestry and wait for React mounting without
+repeating activation. An exact native-keyboard dismissal callback is wired from
+the governed transport; fallback synthetic-event tests cannot prove live cleanup.
+The form commit reads the same underlying inventory owner while its parent is
+inert and preserves all exact input/token/account guards. These repairs remain
+before Add/OAuth; source tests do not constitute Connector acceptance.

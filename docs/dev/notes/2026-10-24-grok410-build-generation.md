@@ -126,3 +126,165 @@ app/version inference occurred. Coordinator retains native authority and timing.
 
 Continuation memory disposition: forbidden; non-write receipt
 `/tmp/grok410-continuation-memory-disposition.json`, zero writes.
+
+
+## Plan0458 native continuation — fresh target affinity
+
+The first approved native attempt reached a configured-account match, then
+stopped before Send with `grok_build_preflight_failed`. An exact retained-target
+read proved the model selector was behind an existing Connector detail dialog.
+The generic Grok adapter had ignored `retain-new`; issue403 owns that repair.
+Build generation also now forces `preserveActiveTab=false` and clears inherited
+`tabTargetId`/`tabUrl`, so a configured retained target cannot defeat fresh-root
+acquisition. Existing user targets are preserved.
+
+Focused regression `generation clears inherited target affinity` first failed
+with inherited `preserveActiveTab=true`; after the source change all16 Build
+tests pass. Command: `pnpm vitest run tests/browser/grok410Build.test.ts --maxWorkers=1`.
+Private raw/source/helper-hash receipts are under the user-scoped
+`~/.auracall/private/grok/implementation-native/410-20261025` directory.
+A subsequent identity probe was refused by a live shared interaction-ledger lock
+held by an unrelated ChatGPT app-list process. No lock was removed and no Build
+Send occurred. Native generation/app/version/export acceptance remains pending.
+
+
+## Plan0458 native continuation — modal model-picker ordering
+
+After the unrelated lock owner exited naturally, a fresh public identity probe
+matched and the patched public source CLI acquired a genuinely new target. Build
+was available, but generation was refused with `grok_build_empty_root_required`;
+no prompt or Send occurred. Exact-target readback confirmed the root editor's
+actual ProseMirror/combobox surface and the open Radix model menu. The menu marks
+its background editor `aria-hidden`, so checking that editor between menu
+discovery and selection incorrectly classified a clean root as unavailable.
+
+A controlled-CDP fixture now models the observed modal hiding. Before the fix,
+its public service result reproduced the same unavailable/no-Send failure.
+Generation checks the root before disclosure, selects observed Build, verifies
+that selection using the existing model verifier (which closes the menu), and
+checks the root again before inserting text. Separate draft/native-FileList races
+during selection remain unavailable and preserve the incoming state without Send.
+The fixture models observed structural semantics; raw provider HTML and account
+proofs remain private. No app/version/export schema has been inferred from it.
+
+
+### Explicitly closed picker roots
+
+Primary native discovery additionally proved that closed provider overlays may
+remain mounted with nonzero geometry. The model-menu reader now excludes exact
+Radix `data-state="closed"` ancestors rather than treating their labels as live
+controls. A public Build fixture with a retained closed picker reproduced an
+unavailable result before the one-line filter; afterward it discovers the active
+picker and completes the controlled generation. Active-dialog and empty-root
+guards remain strict. Build/model selections pass24 focused checks across2files.
+
+
+## Plan0458 bounded Build canary — retained unknown outcome
+
+The clean source CLI at `669023e34` ran the approved exact timer prompt after
+a fresh no-launch configured-account match. The earlier preflight/no-Send
+receipts remain intact. This invocation progressed beyond Build discovery but
+returned `grok_build_cleanup_unknown`: generation/effect unknown, cleanup unknown
+and `retrySafe=false`, with an exact retained target and no qualified
+conversation/response/app/version identifiers. No publication was requested.
+
+Read-only registry inspection found the exact target's utility lease idle with
+`effectState=outcome-unknown`, no active process owner and no final disposition.
+The native window was released to the coordinator for supported same-lease
+read-only reconciliation. No lease, target or lock was removed, no browser
+navigation/cleanup was attempted, and no generation was replayed. The one-Send
+canary authority is consumed or uncertain until that exact target is reconciled.
+Raw result, source/dirty/helper hashes and lease snapshot are private files
+`modal-fixed-generation.json`, `modal-fixed-dispatch-source.json` and
+`modal-fixed-terminal-leases.json` beneath the user-scoped directory above.
+Issue410 stays open; app/version/preview/export evidence and installed-runtime
+acceptance remain unproved.
+
+
+### Supported retained-target readback
+
+The coordinator granted one independent operator diagnostic through merged
+`browser-tools eval --target-id`, bound to configured default/grok and the
+retained exact target. The browser process/profile/port remained live-bound;
+source identity probes before/after the read both matched the current configured
+account. No normal utility lease was acquired or mutated. The actual route is an
+owned conversation containing the approved synthetic timer prompt and an active
+Build interface: generation/design progress plus `Stop model response`. The
+preview control was still disabled. This proves native acceptance and ongoing
+generation, not a completed app or available bytes.
+
+This Build surface has no `main` element or generic `response-*` nodes. Its
+transcript exposes `data-transcript-renderer="plane"` and `data-plane-row`
+attributes. The generic text observer therefore cannot establish this operation's
+completion. No observed row ID has been promoted to app/version authority. Raw
+HTML was bounded/truncated; no app/version/export schema was inferred.
+The read closed successfully and the native slot was released. The unknown-effect
+lease remains preserved pending supported reconciliation; no new generation,
+publication or arbitrary download was performed. Private read/proof/source
+metadata files use the `supported-read-*` prefix in the directory above.
+
+
+## Plan0458 public retained-plane inspection
+
+The native terminal capture supplies the actual plane/assistant/gateway/response
+hierarchy and the native `thinking-container > canvas-trigger` completed-work
+marker. The public service now offers bounded exact-target inspection through
+the shared request schema, configured service, MCP and HTTP command boundary;
+the coordinator owns the CLI registration hunk at
+`/tmp/grok410-inspect-registration.patch`. No model menu or Send is used.
+
+The first public command tracer rejected `inspect` as invalid (RED). After the
+implementation, the same controlled-CDP fixture reads the native-shaped completed
+assistant response with preview presence and no input/selection/Send (GREEN).
+The provider-free fixture is based on observed structure, not copied raw account
+HTML. Wrong user response IDs, route/account drift, active Stop, a completed-work
+marker inside prose and a closed stale Stop control have focused coverage. The
+authenticated preview bearer is deliberately absent from all public data.
+
+Configured Build creation is lazy. Inspection resolves session options with
+`ensurePort=false`, refuses a missing endpoint before target acquisition, and
+requires the exact existing target with navigation disabled. Other callers retain
+the existing default launch behavior. Inspection never resolves an unknown-effect
+lease itself. App/version/export data remain unavailable and issue410 stays open.
+
+
+Inspection validation: `pnpm vitest run tests/browser/grok410Build.test.ts
+tests/http.grokBuild.test.ts tests/browser/grok444AccountReferences.test.ts
+--maxWorkers=1` passes42 focused checks across3files. The HTTP contract now checks
+strict inspect routing without generation dispatch; the native-shaped service
+tracer enters through the MCP handler. `pnpm typecheck` passes for the same source
+state. No new native inspection or installation is claimed from these checks.
+
+
+## Plan0458 native plane generation observer
+
+The causal generation tracer emits the observed plane hierarchy after one Send.
+The old main-only observer timed out and returned unknown (RED). A scoped native
+plane assistant branch now preserves the real provider response ID, native
+completed-work UI, baseline/current-response detection and retained conversation
+identity (GREEN). Existing main-based candidates keep priority and their legacy
+terminal rules. Active Stop overrides a previous Worked marker; quoted prose and
+ambiguous plane roots do not qualify. A shared native completion predicate keeps
+the retained inspector and generation observer aligned. Auth preview URLs remain
+private; public preview presence has no app/version/export authority.
+
+The controlled DOM initially lacked the platform Node constant and childNodes
+needed by the existing markdown serializer. Those intermediate harness failures
+were corrected separately and are not additional product defect reproductions.
+No second native generation, publication or download was performed.
+
+
+Final native-plane followup validation:100 focused checks pass across8files
+(Build, text, UI operation, model menu, HTTP, actions, Bots and account references).
+`pnpm typecheck` passes for the same frozen source. Targeted lint passes with the
+existing unused Input parameter warning in unchanged submit code; diff checks
+pass. A separate public regression showed that a preview auth URL quoted in
+response prose also needed redaction. Build text and markdown now remove that
+authenticated URL as well; the regression passes without exposing its bearer.
+
+The coordinator independently validated the immutable completed-effect proof and
+its raw receipt hashes, then used supported CAS plus preserved release. A
+subsequent worker control-plane read confirms the exact lease is released, effect
+settled, target preserved and no process owner. Prior unknown receipts remain
+private and attributable. This settles accepted/completed generation custody,
+not app/version/export/publication qualification. No generation was replayed.

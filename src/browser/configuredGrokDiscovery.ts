@@ -1,27 +1,29 @@
-import { createGrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
-import { createGrokFilesService } from "./grokFilesService.js";
-import { createGrokBotsService } from "./grokBotsService.js";
-import { grokFilesFailure } from "./providers/grokFiles.js";
 import { grokBotsFailureResult, summarizeGrokBotDiagnostics } from "../cli/grokBotsCommand.js";
-import { summarizeGrokFilesDiagnostics } from "../cli/grokFilesCommand.js";
-import { recordGrokEcosystemProgress } from "./grokEcosystemProgress.js";
-import { createGrokConversationsService } from "./grokConversationsService.js";
-import { recordGrokHistoryProgress } from "./grokHistoryProgress.js";
 import {
-	summarizeGrokConnectorDiagnostics,
 	grokConnectorsFailureResult,
+	summarizeGrokConnectorDiagnostics,
 } from "../cli/grokConnectorsCommand.js";
-import { recordGrokConnectorProgress } from "./grokConnectorProgress.js";
-import type { ResolvedUserConfig } from "../config.js";
+import { summarizeGrokFilesDiagnostics } from "../cli/grokFilesCommand.js";
 import { getCurrentRuntimeProfiles } from "../config/model.js";
-import { resolveRuntimeProfileUserConfig } from "./service/profileConfig.js";
-import { GrokService } from "./llmService/providers/grokService.js";
+import type { ResolvedUserConfig } from "../config.js";
+import { createGrokBotLifecycleService } from "./grokBotLifecycleService.js";
+import { createGrokBotsService } from "./grokBotsService.js";
+import { createGrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
+import { recordGrokConnectorProgress } from "./grokConnectorProgress.js";
 import { createGrokConnectorsService } from "./grokConnectorsService.js";
+import { createGrokConversationsService } from "./grokConversationsService.js";
+import { recordGrokEcosystemProgress } from "./grokEcosystemProgress.js";
+import { createGrokFilesService } from "./grokFilesService.js";
+import { recordGrokHistoryProgress } from "./grokHistoryProgress.js";
+import { GrokService } from "./llmService/providers/grokService.js";
+import { grokFilesFailure } from "./providers/grokFiles.js";
+import { resolveRuntimeProfileUserConfig } from "./service/profileConfig.js";
 
 export async function resolveGrokReadSessionOptions(
 	config: ResolvedUserConfig,
 	runtimeProfile?: string,
 	abortSignal?: AbortSignal,
+	sessionOptions: { ensurePort?: boolean } = {},
 ) {
 	const selectedId = runtimeProfile ?? config.auracallProfile;
 	if (
@@ -34,7 +36,10 @@ export async function resolveGrokReadSessionOptions(
 		runtimeProfileId: selectedId,
 		provider: "grok",
 	}) as ResolvedUserConfig;
-	return GrokService.create(selected).buildListOptions({ abortSignal }, { ensurePort: true });
+	return GrokService.create(selected).buildListOptions(
+		{ abortSignal },
+		{ ensurePort: sessionOptions.ensurePort !== false },
+	);
 }
 export async function createConfiguredGrokConnectorsService(
 	config: ResolvedUserConfig,
@@ -65,8 +70,13 @@ export async function createConfiguredGrokConnectorsService(
 			return result;
 		} catch (error) {
 			try {
-				await recordGrokConnectorProgress(profile, summarizeGrokConnectorDiagnostics(grokConnectorsFailureResult()));
-			} catch { /* Preserve original provider outcome and target custody. */ }
+				await recordGrokConnectorProgress(
+					profile,
+					summarizeGrokConnectorDiagnostics(grokConnectorsFailureResult()),
+				);
+			} catch {
+				/* Preserve original provider outcome and target custody. */
+			}
 			throw error;
 		}
 	}
@@ -74,8 +84,10 @@ export async function createConfiguredGrokConnectorsService(
 		list: (query?: string) => read(() => service.list(query)),
 		inspect: (selector: Parameters<typeof service.inspect>[0]) =>
 			read(() => service.inspect(selector)),
-		install: (request: Parameters<typeof installation.install>[0]) => read(() => installation.install(request)),
-		reconcile: (request: Parameters<typeof installation.reconcile>[0]) => read(() => installation.reconcile(request)),
+		install: (request: Parameters<typeof installation.install>[0]) =>
+			read(() => installation.install(request)),
+		reconcile: (request: Parameters<typeof installation.reconcile>[0]) =>
+			read(() => installation.reconcile(request)),
 	};
 }
 
@@ -148,13 +160,17 @@ export async function createConfiguredGrokBotsService(
 ) {
 	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
 	const service = createGrokBotsService(options);
+	const lifecycle = createGrokBotLifecycleService(options);
 	const profile =
 		options.providerSessionAuthorization?.context.auracallRuntimeProfile ??
 		runtimeProfile ??
 		config.auracallProfile ??
 		"default";
 	async function run<
-		T extends Awaited<ReturnType<typeof service.list>> | Awaited<ReturnType<typeof service.invoke>>,
+		T extends
+			| Awaited<ReturnType<typeof service.list>>
+			| Awaited<ReturnType<typeof service.invoke>>
+			| Awaited<ReturnType<typeof lifecycle.run>>,
 	>(action: () => Promise<T>) {
 		try {
 			const result = await action();
@@ -178,6 +194,7 @@ export async function createConfiguredGrokBotsService(
 		}
 	}
 	return {
+		lifecycle: (request: Parameters<typeof lifecycle.run>[0]) => run(() => lifecycle.run(request)),
 		list: (source?: Parameters<typeof service.list>[0]) => run(() => service.list(source)),
 		invoke: (selector: Parameters<typeof service.invoke>[0], prompt: string) =>
 			run(() => service.invoke(selector, prompt)),

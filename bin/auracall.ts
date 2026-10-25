@@ -3446,7 +3446,8 @@ program.command('grok-files').description('Inspect exact Grok composer files, li
   }catch{result=grokFilesFailure();}
   console.log(JSON.stringify(result,null,2));if(result.status==='failed'||result.status==='unconfirmed')process.exitCode=1;
  });
-program.command('grok-bots').description('List owned/catalog Grok Bots or invoke an exact existing Bot without installing it.')
+program.command('grok-bots').description('Discover/invoke Grok Bots and operate confirmed native Bot lifecycle settings.')
+ .option('--request-json <json>','Exact shared Grok Bots request, including confirmed create/edit/inspect/reconcile.')
  .option('--action <list|invoke>','Operation.','list').option('--source <owned|catalog>','Bot inventory source.','owned')
  .option('--id <id>','Stable observed Bot ID.').option('--author <author>','Exact observed catalog author.').option('--prompt <text>','Exact prompt text.')
  .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
@@ -3454,7 +3455,7 @@ program.command('grok-bots').description('List owned/catalog Grok Bots or invoke
   let result;
   try {
    if(options.action==='list'&&(options.id||options.author||options.prompt))throw new Error('Use invoke with a Bot selector.');
-   const request=GrokBotsRequestSchema.parse(options.action==='list'?{action:'list',source:options.source,runtimeProfile:options.runtimeProfile}:{action:options.action,selector:{id:options.id,source:options.source,author:options.author},prompt:options.prompt,runtimeProfile:options.runtimeProfile});
+   const request=GrokBotsRequestSchema.parse(options.requestJson?JSON.parse(options.requestJson):options.action==='list'?{action:'list',source:options.source,runtimeProfile:options.runtimeProfile}:{action:options.action,selector:{id:options.id,source:options.source,author:options.author},prompt:options.prompt,runtimeProfile:options.runtimeProfile});
    const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
    result=await runGrokBotsCommand(request,await createConfiguredGrokBotsService(config,request.runtimeProfile));
   }catch{result=grokBotsFailureResult();}
@@ -3462,14 +3463,16 @@ program.command('grok-bots').description('List owned/catalog Grok Bots or invoke
  });
 
 program.command('grok-build').description('Discover Grok Build mode or request one confirmed generation; app/version artifacts remain separately qualified.')
- .option('--action <discover|generate>','Operation.','discover').option('--prompt <text>','Exact generation prompt.')
+ .option('--action <discover|generate|inspect>','Operation.','discover').option('--prompt <text>','Exact generation prompt.')
+ .option('--target-id <id>','Exact retained target for read-only inspection.').option('--conversation-id <id>','Exact conversation for inspection.').option('--response-id <id>','Optional exact assistant response for inspection.')
  .option('--yes','Confirm one generation.').option('--timeout-ms <milliseconds>','Response observation deadline (default 120000).',Number)
  .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
  .action(async(options,command)=>{
   let result: import('../src/browser/grokBuildService.js').GrokBuildResult={...grokBuildUnknown('grok_build_request_invalid'),status:'invalid' as const};
   try {
-   if(options.action==='discover'&&(options.prompt!==undefined||options.yes||options.timeoutMs!==undefined))throw new Error('Generation inputs require --action generate.');
-   const request=GrokBuildRequestSchema.parse(options.action==='discover'?{action:'discover',runtimeProfile:options.runtimeProfile}:{action:options.action,prompt:options.prompt,confirmed:options.yes===true,timeoutMs:options.timeoutMs,runtimeProfile:options.runtimeProfile});
+   if(options.action!=='generate'&&(options.prompt!==undefined||options.yes||options.timeoutMs!==undefined))throw new Error('Generation inputs require --action generate.');
+   if(options.action!=='inspect'&&(options.targetId!==undefined||options.conversationId!==undefined||options.responseId!==undefined))throw new Error('Retained target inputs require --action inspect.');
+   const request=GrokBuildRequestSchema.parse(options.action==='discover'?{action:'discover',runtimeProfile:options.runtimeProfile}:options.action==='inspect'?{action:'inspect',targetId:options.targetId,conversationId:options.conversationId,responseId:options.responseId,runtimeProfile:options.runtimeProfile}:{action:options.action,prompt:options.prompt,confirmed:options.yes===true,timeoutMs:options.timeoutMs,runtimeProfile:options.runtimeProfile});
    result=grokBuildUnknown('grok_build_configuration_failed');
    const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
    result=await runGrokBuildCommand(request,await createConfiguredGrokBuildService(config,request.runtimeProfile));

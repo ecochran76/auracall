@@ -1,18 +1,19 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and provider identity wire names are case-sensitive.
-import { projectGrokAccountReference } from "./grokAccountReference.js";
+
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getAuracallHomeDir } from "../auracallHome.js";
+import { projectGrokAccountReference } from "./grokAccountReference.js";
 import type {
 	GrokConnectorConnection,
 	GrokConnectorServiceDependencies,
 } from "./grokConnectorsService.js";
 import {
 	createGrokConnectorInstallationClient,
-	validateGrokConnectorInstallationInput,
 	type GrokConnectorInstallationInput,
 	type GrokConnectorInstallationOutcome,
+	validateGrokConnectorInstallationInput,
 } from "./providers/grokConnectorInstallation.js";
 import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
@@ -239,12 +240,30 @@ export function createGrokConnectorInstallationService(
 							request.expectedProviderAccountRef
 					)
 						throw new Error("grok_connector_install_account_not_verified");
+					return proof.actualIdentity?.id;
 				};
-				await verify();
+				const providerUserId = await verify();
 				record.targetId = connection.targetId;
 				const client = createGrokConnectorInstallationClient(connection.client.Runtime, {
 					providerAccountRef: request.expectedProviderAccountRef,
+					providerUserId,
 					abortSignal: options.abortSignal,
+					pressEscape: connection.client.Input
+						? async () => {
+								await activeConnection.client.Input?.dispatchKeyEvent({
+									type: "keyDown",
+									key: "Escape",
+									code: "Escape",
+									windowsVirtualKeyCode: 27,
+								});
+								await activeConnection.client.Input?.dispatchKeyEvent({
+									type: "keyUp",
+									key: "Escape",
+									code: "Escape",
+									windowsVirtualKeyCode: 27,
+								});
+							}
+						: undefined,
 					beforeCommit: async () => {
 						await governor.checkWarning?.(activeConnection.client.Runtime);
 						await verify();

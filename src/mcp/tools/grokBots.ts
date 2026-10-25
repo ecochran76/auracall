@@ -1,10 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+	GrokBotConfigurationPatchSchema,
 	GrokBotSelectorSchema,
+	GrokBotSettingsSelectorSchema,
 	GrokBotsRequestSchema,
-	type GrokBotsServiceResolver,
 	type GrokBotsResult,
+	type GrokBotsServiceResolver,
 	grokBotsFailureResult,
 	runGrokBotsCommand,
 } from "../../cli/grokBotsCommand.js";
@@ -33,11 +35,24 @@ export function registerGrokBotsTool(
 		{
 			title: "Discover and invoke Grok Bots",
 			description:
-				"List visible owned or catalog Bots, or invoke one existing owned Bot by exact stable identity. Catalog listing does not install. No installation, removal or scheduling. Unknown outcomes must not be automatically resubmitted.",
+				"List visible owned or catalog Bots, or invoke one existing owned Bot by exact stable identity. Catalog listing does not install. Create requires explicit Terms confirmation. Native settings expose Name/Title/Description; Instructions and Model defaults are unavailable. Reconcile ambiguous lifecycle outcomes instead of replaying. No installation, removal or scheduling. Unknown outcomes must not be automatically resubmitted.",
 			inputSchema: {
-				action: z.enum(["list", "invoke"]),
+				action: z.enum(["list", "invoke", "create", "edit", "inspect", "reconcile"]),
+				name: z.string().min(1).max(80).optional(),
+				patch: GrokBotConfigurationPatchSchema.optional(),
+				targetId: z.string().min(1).max(512).optional(),
+				expectedProviderAccountRef: z
+					.string()
+					.regex(/^[a-f0-9]{64}$/)
+					.optional(),
+				confirm: z.boolean().optional(),
+				acceptTerms: z.boolean().optional(),
+				operationId: z
+					.string()
+					.regex(/^[a-f0-9]{64}$/)
+					.optional(),
 				source: z.enum(["owned", "catalog"]).optional(),
-				selector: GrokBotSelectorSchema.optional(),
+				selector: z.union([GrokBotSelectorSchema, GrokBotSettingsSelectorSchema]).optional(),
 				prompt: z.string().min(1).max(100000).optional(),
 				runtimeProfile: z.string().min(1).max(200).optional(),
 			},

@@ -1,8 +1,9 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and DOM platform names are case-sensitive.
 import { createContext, runInContext } from "node:vm";
 import { expect, test } from "vitest";
-import { ConnectorFixtureNode } from "./grok404ConnectorDomFixture.js";
+import { readGrokAssistantSnapshotForRuntime } from "../../src/browser/actions/grok.js";
 import { createGrokBuildService } from "../../src/browser/grokBuildService.js";
+import { ConnectorFixtureNode } from "./grok404ConnectorDomFixture.js";
 
 class Node extends ConnectorFixtureNode {
 	disabled = false;
@@ -21,6 +22,12 @@ class Node extends ConnectorFixtureNode {
 	remove() {
 		if (this.parentElement)
 			this.parentElement.children = this.parentElement.children.filter((child) => child !== this);
+	}
+	get childNodes() {
+		return [
+			...(this.ownText ? [{ nodeType: 3, textContent: this.ownText, parentElement: this }] : []),
+			...this.children,
+		];
 	}
 	nodeType = 1;
 	get tagName() {
@@ -100,6 +107,12 @@ function buildFixture({
 	closeFailure = false,
 	drift = false,
 	noAdmission = false,
+	modalMenu = false,
+	draftAfterSelection = false,
+	fileAfterSelection = false,
+	retainedClosedMenu = false,
+	driftOnInspect = false,
+	planeAfterSend = false,
 } = {}) {
 	const fast = new Button("Fast", { role: "menuitemradio", "aria-checked": "true" });
 	const build = new Button(gated ? "Build Requires subscription" : "Build", {
@@ -112,16 +125,95 @@ function buildFixture({
 	editor.value = draft;
 	const submit = new Button("Submit", { type: "submit", "aria-label": "Submit" });
 	const form = new Node("form", "", {}, [editor, submit]);
-	const main = new Node("main", "", {}, [form]);
-	const document = Object.assign(new Node("document", "", {}, [main, menu]), { body: main });
+	const trigger = new Button("Fast", { id: "model-select-trigger", "aria-label": "Model: Fast" });
+	const main = new Node("main", "", {}, [form, ...(modalMenu ? [trigger] : [])]);
+	const closeMenu = () => {
+		if (!modalMenu) return;
+		menu.hidden = fast.hidden = build.hidden = true;
+		delete main.attributes["aria-hidden"];
+	};
+	trigger.onClick = () => {
+		selections++;
+		menu.hidden = fast.hidden = build.hidden = false;
+		main.setAttribute("aria-hidden", "true");
+	};
+	closeMenu();
+	const stale = new Node("div", "", { role: "menu", "data-state": "closed" }, [
+		new Button("Expert", { role: "menuitemradio", "aria-checked": "true" }),
+	]);
+	const document = Object.assign(
+		new Node("document", "", {}, [main, menu, ...(retainedClosedMenu ? [stale] : [])]),
+		{ body: main },
+	);
 	const location = { href: "https://grok.com/" };
 	let submissions = 0;
+	let inputs = 0;
+	let selections = 0;
+	let verifications = 0;
 	build.onClick = () => {
+		selections++;
 		fast.setAttribute("aria-checked", "false");
 		build.setAttribute("aria-checked", "true");
+		if (draftAfterSelection) editor.value = "A draft arrived while selecting Build";
+		if (fileAfterSelection) {
+			const input = Object.assign(new Node("input", "", { type: "file" }), {
+				files: [{ name: "arrived.txt" }],
+			});
+			input.parentElement = form;
+			form.children.push(input);
+		}
+		closeMenu();
+	};
+	const seedPlane = ({
+		running = false,
+		fakeProseTerminal = false,
+		closedStop = false,
+		duplicatePlane = false,
+		previewBearerInProse = false,
+	} = {}) => {
+		location.href = "https://grok.com/c/conversation-generated";
+		const userMessage = new Node("div", "Synthetic timer request", {
+			"data-testid": "user-message",
+		});
+		const userRoot = new Node("div", "", { id: "response-user" }, [userMessage]);
+		const userRow = new Node("div", "", { "data-plane-row": "gateway:user" }, [userRoot]);
+		const marker = new Button("Worked for 10m 6s", { "data-testid": "canvas-trigger" });
+		const thinking = new Node("div", "", { class: "thinking-container" }, [marker]);
+		const prose = new Node(
+			"div",
+			previewBearerInProse
+				? "Generated timer source https://sample.grok-sandbox.com/__grok-preview/auth?token=SECRET_PREVIEW_BEARER"
+				: "Generated timer source",
+			{ class: "response-content-markdown" },
+			fakeProseTerminal ? [thinking] : [],
+		);
+		const message = new Node("div", "", { "data-testid": "assistant-message" }, [
+			...(!fakeProseTerminal ? [thinking] : []),
+			prose,
+		]);
+		const response = new Node("div", "", { id: "response-created" }, [message]);
+		const row = new Node("div", "", { "data-plane-row": "gateway:assistant" }, [response]);
+		const plane = new Node("div", "", { "data-transcript-renderer": "plane" }, [userRow, row]);
+		const frame = new Node("iframe", "", {
+			src: "https://sample.grok-sandbox.com/__grok-preview/auth?token=SECRET_PREVIEW_BEARER",
+			title: "Preview",
+		});
+		const stop = new Button("Stop model response", { "aria-label": "Stop model response" });
+		const closed = new Node("div", "", { "data-state": "closed" }, [stop]);
+		document.children = [
+			plane,
+			...(duplicatePlane ? [plane.cloneNode(true)] : []),
+			frame,
+			...(running ? [stop] : closedStop ? [closed] : []),
+		];
+		for (const child of document.children) child.parentElement = document;
 	};
 	submit.onClick = () => {
 		submissions++;
+		if (planeAfterSend) {
+			seedPlane();
+			return;
+		}
 		location.href = "https://grok.com/c/conversation-generated";
 		const response = new Node("div", "Generated timer source", {
 			id: "response-created",
@@ -134,6 +226,7 @@ function buildFixture({
 	};
 	const context = createContext({
 		document,
+		Node: Object.assign(Node, { TEXT_NODE: 3, ELEMENT_NODE: 1 }),
 		HTMLElement: Node,
 		HTMLButtonElement: Button,
 		HTMLTextAreaElement: Textarea,
@@ -159,9 +252,12 @@ function buildFixture({
 		Runtime: runtime,
 		Input: {
 			insertText: async ({ text }: { text: string }) => {
+				inputs++;
 				editor.value = text;
 			},
-			dispatchKeyEvent: async () => {},
+			dispatchKeyEvent: async ({ key }: { key: string }) => {
+				if (key === "Escape") closeMenu();
+			},
 		},
 		close: async () => {
 			if (closeFailure) throw new Error("cleanup private details");
@@ -176,8 +272,9 @@ function buildFixture({
 		},
 	};
 	return {
+		runtime,
 		service: createGrokBuildService(
-			{},
+			{ host: "localhost", port: 1 },
 			{
 				connect: async () => ({
 					client: client as never,
@@ -186,11 +283,18 @@ function buildFixture({
 					host: "localhost",
 					port: 1,
 				}),
-				verifyAccount: async () =>
-					drift && submissions > 0 ? "different-account" : "account-reference",
+				verifyAccount: async () => {
+					verifications++;
+					return (drift && submissions > 0) || (driftOnInspect && verifications > 1)
+						? "different-account"
+						: "account-reference";
+				},
 			},
 		),
 		submissions: () => submissions,
+		inputs: () => inputs,
+		selections: () => selections,
+		seedPlane,
 		addNativeFile: () => {
 			const input = Object.assign(new Node("input", "", { type: "file" }), {
 				files: [{ name: "existing.txt" }],
@@ -428,4 +532,250 @@ test("a selected native file without a provider chip prevents Build submission",
 		effectState: "none",
 	});
 	expect(fixture.submissions()).toBe(0);
+});
+
+// A configured retained target must never redirect a new Build into an existing draft.
+test("generation clears inherited target affinity before fresh root acquisition", async () => {
+	let acquisition: Record<string, unknown> | undefined;
+	const stopped = new Error("observed acquisition boundary");
+	const service = createGrokBuildService(
+		{
+			preserveActiveTab: true,
+			tabTargetId: "unrelated-retained-target",
+			tabUrl: "https://grok.com/c/existing",
+		},
+		{
+			connect: async (options) => {
+				acquisition = options as Record<string, unknown>;
+				throw stopped;
+			},
+		},
+	);
+	await expect(service.generate({ prompt: "Make a local timer", confirmed: true })).rejects.toBe(
+		stopped,
+	);
+	expect(acquisition).toMatchObject({
+		tabLifecycle: "retain-new",
+		preserveActiveTab: false,
+		configuredUrl: "https://grok.com/",
+	});
+	expect(acquisition?.tabTargetId).toBeUndefined();
+	expect(acquisition?.tabUrl).toBeUndefined();
+});
+
+test("generation checks the root outside the observed modal model menu", async () => {
+	const fixture = buildFixture({ modalMenu: true });
+	expect(
+		await fixture.service.generate({ prompt: "Make a local timer", confirmed: true }),
+	).toMatchObject({ status: "partial", generation: { status: "response_completed" } });
+	expect(fixture.submissions()).toBe(1);
+});
+
+test.each([
+	"draft",
+	"file",
+])("a %s arriving during Build selection is preserved without Send", async (kind) => {
+	const fixture = buildFixture({
+		modalMenu: true,
+		draftAfterSelection: kind === "draft",
+		fileAfterSelection: kind === "file",
+	});
+	expect(
+		await fixture.service.generate({ prompt: "Make a local timer", confirmed: true }),
+	).toMatchObject({
+		status: "unavailable",
+		code: "grok_build_empty_root_required",
+		effectState: "none",
+	});
+	expect(fixture.submissions()).toBe(0);
+	expect(fixture.draft()).toBe(kind === "draft" ? "A draft arrived while selecting Build" : "");
+});
+
+test("a retained explicitly closed model menu cannot supply Build discovery", async () => {
+	const fixture = buildFixture({ modalMenu: true, retainedClosedMenu: true });
+	expect(
+		await fixture.service.generate({ prompt: "Make a local timer", confirmed: true }),
+	).toMatchObject({ status: "partial", generation: { status: "response_completed" } });
+	expect(fixture.submissions()).toBe(1);
+});
+
+test("public inspection reads completed plane Build without Send or exposing its preview bearer", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane({ closedStop: true });
+	const handler = createGrokBuildToolHandler(async () => fixture.service);
+	const reply = await handler({
+		action: "inspect",
+		targetId: "build-target",
+		conversationId: "conversation-generated",
+		responseId: "response-created",
+	});
+	const result = reply.structuredContent;
+	expect(result).toMatchObject({
+		status: "partial",
+		code: "grok_build_app_identity_unobserved",
+		generation: {
+			status: "response_completed",
+			responseId: "response-created",
+			text: "Generated timer source",
+		},
+		conversationId: "conversation-generated",
+		preview: { status: "available", url: null },
+		app: { id: null, version: null },
+		effectState: "none",
+		retrySafe: true,
+	});
+	expect(JSON.stringify(result)).not.toContain("SECRET_PREVIEW_BEARER");
+	expect(fixture.submissions()).toBe(0);
+	expect(fixture.inputs()).toBe(0);
+	expect(fixture.selections()).toBe(0);
+});
+
+test.each([
+	"response-user",
+	"response-missing",
+])("inspection refuses a user or missing selected response %s", async (responseId) => {
+	const fixture = buildFixture();
+	fixture.seedPlane();
+	const result = await runGrokBuildCommand(
+		{
+			action: "inspect",
+			targetId: "build-target",
+			conversationId: "conversation-generated",
+			responseId,
+		},
+		fixture.service,
+	);
+	expect(result).toMatchObject({
+		status: "unknown",
+		code: "grok_build_response_not_observed",
+		generation: { text: null, responseId: null },
+		effectState: "none",
+	});
+	expect(fixture.submissions()).toBe(0);
+});
+
+test.each([
+	"active-stop",
+	"prose-marker",
+])("inspection does not claim completion from %s", async (kind) => {
+	const fixture = buildFixture();
+	fixture.seedPlane({
+		running: kind === "active-stop",
+		fakeProseTerminal: kind === "prose-marker",
+	});
+	const result = await runGrokBuildCommand(
+		{ action: "inspect", targetId: "build-target", conversationId: "conversation-generated" },
+		fixture.service,
+	);
+	expect(result.generation.status).toBe("unknown");
+	expect(result.generation.uiState).toBe(kind === "active-stop" ? "running" : "unknown");
+	expect(fixture.submissions()).toBe(0);
+	expect(fixture.inputs()).toBe(0);
+	expect(fixture.selections()).toBe(0);
+});
+
+test("inspection rejects route drift and discards data after fresh account drift", async () => {
+	const wrongRoute = buildFixture();
+	wrongRoute.seedPlane();
+	expect(
+		await runGrokBuildCommand(
+			{ action: "inspect", targetId: "build-target", conversationId: "other-conversation" },
+			wrongRoute.service,
+		),
+	).toMatchObject({
+		status: "unknown",
+		code: "grok_build_conversation_not_verified",
+		generation: { text: null },
+	});
+	const account = buildFixture({ driftOnInspect: true });
+	account.seedPlane();
+	const result = await runGrokBuildCommand(
+		{ action: "inspect", targetId: "build-target", conversationId: "conversation-generated" },
+		account.service,
+	);
+	expect(result).toMatchObject({
+		status: "unknown",
+		code: "grok_build_inspection_failed",
+		generation: { text: null },
+		preview: { status: "unknown", url: null },
+	});
+	expect(JSON.stringify(result)).not.toContain("SECRET_PREVIEW_BEARER");
+});
+
+test("inspection requires an existing browser endpoint before acquiring any target", async () => {
+	const service = createGrokBuildService(
+		{},
+		{
+			connect: async () => {
+				throw new Error("must not acquire or launch");
+			},
+		},
+	);
+	expect(
+		await service.inspect({ targetId: "build-target", conversationId: "conversation-generated" }),
+	).toMatchObject({
+		status: "unavailable",
+		code: "grok_build_existing_browser_required",
+		effectState: "none",
+		cleanupState: "completed",
+	});
+});
+
+test("generation observes the native plane assistant outside main and retains exact response identity", async () => {
+	const fixture = buildFixture({ planeAfterSend: true });
+	const result = await runGrokBuildCommand(
+		{ action: "generate", prompt: "Make a local timer", confirmed: true, timeoutMs: 2500 },
+		fixture.service,
+	);
+	expect(result).toMatchObject({
+		status: "partial",
+		generation: {
+			status: "response_completed",
+			responseId: "response-created",
+			text: "Generated timer source",
+		},
+		conversationId: "conversation-generated",
+		effectState: "completed",
+		preview: { status: "available", url: null },
+		retrySafe: false,
+	});
+	expect(fixture.submissions()).toBe(1);
+	expect(JSON.stringify(result)).not.toContain("SECRET_PREVIEW_BEARER");
+});
+
+test("native plane snapshot binds assistant response rather than the user row", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane();
+	expect(await readGrokAssistantSnapshotForRuntime(fixture.runtime as never)).toMatchObject({
+		responseId: "response-created",
+		terminal: true,
+		terminalEvidence: "plane-canvas-work-complete",
+	});
+});
+
+test.each([
+	"active-stop",
+	"prose-marker",
+	"ambiguous-plane",
+])("native generation snapshot rejects %s as completed", async (kind) => {
+	const fixture = buildFixture();
+	fixture.seedPlane({
+		running: kind === "active-stop",
+		fakeProseTerminal: kind === "prose-marker",
+		duplicatePlane: kind === "ambiguous-plane",
+	});
+	const snapshot = await readGrokAssistantSnapshotForRuntime(fixture.runtime as never);
+	expect(snapshot.terminal).toBe(false);
+	if (kind === "active-stop") expect(snapshot.streaming).toBe(true);
+});
+
+test("Build inspection redacts an authenticated preview URL quoted in generated prose", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane({ previewBearerInProse: true });
+	const result = await runGrokBuildCommand(
+		{ action: "inspect", targetId: "build-target", conversationId: "conversation-generated" },
+		fixture.service,
+	);
+	expect(result.generation.status).toBe("response_completed");
+	expect(JSON.stringify(result)).not.toContain("SECRET_PREVIEW_BEARER");
 });

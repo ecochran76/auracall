@@ -1304,9 +1304,22 @@ operator-authorized POST `/v1/grok/files/query`. Bodies use `action`, optional
 `runtimeProfile`, and either `id` for selection or `paths` for explicit local
 uploads. Recent selections require an exact unique provider file ID and explicit
 readiness in the same composer/project context. A duplicate basename is not an
-identity selector. The local upload path currently returns `unconfirmed` when
-provider evidence cannot bind the selected native File to its observed provider
-ID; it does not permit a prompt to proceed on that evidence. Reconcile the
+identity selector. Local upload hashes readable source bytes before dispatch.
+The native attachment component can bind the same selected File object and digest
+to its observed provider metadata ID, with matching account/source URI. These
+files report `sourceBinding: native-file-object`, `sourceSha256`, and
+`sourceAgreement: local-manifest`. Context reads can recover the retained native
+File/metadata relationship after a process restart without another upload; they
+report `sourceAgreement: observed-native`, which does not assert agreement with
+a caller's local path. Metadata and phases come only from the proven committed
+React tree, with root consistency checked across digest observation. Ready
+requires the same form's committed `isQueryable` gate plus an explicitly enabled
+native Submit control and valid metadata without error/private/disabled/deleted
+flags. A phase label alone does not establish loading or readiness. Missing,
+false or unknown gates stay non-ready, and unbound native chips make context
+reads incomplete. Normal prompt attachment preparation applies the same source
+binding and checks stable account identity again before permitting submission. The local upload path returns `unconfirmed` when provider
+evidence cannot bind the selected native File to its observed provider ID; it does not permit a prompt to proceed on that evidence. Reconcile the
 retained target instead of retrying an uncertain upload. Limits, observed file
 states and provenance accompany results. Diagnostics contain counts and codes.
 
@@ -1325,3 +1338,37 @@ Ops exposes whitelisted file/Bot progress. If diagnostic persistence fails, the
 original operation outcome is preserved; a returned outcome may include
 `progressPersistence: "failed"`. These source contracts do not establish installed
 or live Grok UI acceptance. Connector installation remains a separate open slice.
+
+Grok Bot lifecycle requests share `auracall grok-bots --request-json '<request>'`,
+MCP `grok_bots`, and POST `/v1/grok/bots/query`. Native discovery qualified the
+singular `/bot/<uuid>` route and the Settings fields Name, optional Title, and
+Description. Instructions and Model defaults are unavailable on the observed
+editor: requesting either returns an explicit unavailable code before input or
+Save. Description is not treated as Instructions.
+
+`create` requires `name`, `expectedProviderAccountRef`, `confirm: true`, and
+`acceptTerms: true`; the latter explicitly covers the displayed Grok Bot Terms.
+Creation uses a fresh empty owned root and one Create Bot action. `inspect` uses
+`selector: {id,name}`, `targetId`, and `expectedProviderAccountRef`. `edit` adds
+`patch: {name?,title?,description?}` and `confirm: true`; omitted fields are
+preserved. The exact retained target must already display the selected Bot.
+Saved readback reopens that same Bot's Settings after Save. No Bot invocation,
+Connector grant, deletion, or publication is included in lifecycle configuration.
+
+Mutations return an `operationId` and keep a private account-bound intent journal.
+Repeat calls observe the original target instead of dispatching again, including
+across process or runtime-profile changes. For an uncertain outcome use
+`{action:"reconcile",operationId,expectedProviderAccountRef}`; do not create a
+replacement. Missing identity, changed account, absent controls, or unavailable
+saved readback remains explicit. Source/fixture success and native canary evidence
+remain distinct from installed-runtime and full ticket acceptance.
+
+If the retained unknown-effect utility lease blocks ordinary reconciliation,
+AuraCall returns `grok_bot_operator_reconciliation_required` with the original
+operation and target. It does not bypass admission. An operator must first gather
+qualified immutable proof through the supported read-only exact-target diagnostic,
+then use the custody registry's qualified effect compare-and-set settlement, and
+only then repeat the public same-ID reconciliation. Queue/lease settlement is
+separate from native saved-state proof. An already-open Settings buffer can hold
+unsaved input and never establishes persisted reconciliation; it remains unknown
+until the original target can be safely reopened and inspected.

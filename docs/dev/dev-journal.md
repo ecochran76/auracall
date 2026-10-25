@@ -1,3 +1,52 @@
+## 2026-10-25 — Grok #403 two-file native acceptance packet
+
+Both approved same-basename104byte synthetic uploads are retained with distinct
+provider IDs and exact server-byte hashes. A recovered through replay-free public
+context; B completed one public source upload with local-manifest agreement.
+Current committed native submit eligibility qualifies ready without Send. The
+packet maps original criteria and preserves source/installed/native distinctions;
+Recent selection remains provider-free tested, not native-qualified by this run.
+See [acceptance packet](notes/2026-10-25-grok403-native-acceptance.md). Primary owns
+intended-main validation and tracker closure. No additional upload allowance remains.
+
+## 2026-10-25 — Qualify Grok file readiness from the actual committed submit gate (#403)
+
+Read-only native evidence showed the sole source-bound file and empty text already
+had committed isQueryable=true, native Submit enabled and aria-disabled=false.
+Actual renderer code gates Submit on isQueryable; phase-based loading labels
+apply only while metadata is absent. Readiness now requires that committed gate,
+exact same-form native control and valid metadata without private/disabled/deleted
+or error flags. False, stale, prose-like and other-form gates stay non-ready.
+Normal prompt attachment preparation now passes stable account identity into the
+same binding client and rejects drift before permitting a later Send. Source
+regressions observed the prior missing ready result and missing prompt binding;
+a mutation reproduced account drift incorrectly resolving before the guard.
+No native upload, Send, typing, navigation or modal changes were performed.
+
+## 2026-10-25 — Resolve committed Grok attachment state before interpreting props (#403)
+
+A DOM React pointer can name an inactive alternate. Previous raw phase snapshots
+remain discovery evidence; they do not establish current readiness. Source now
+locates HostRoot.current and proves the exact host through committed child/sibling
+topology, preserving the path even when shared children have stale return links.
+Cycle, duplicate-host, traversal bounds and concurrent commits fail unavailable.
+Four prior-source regressions failed before the correction. A new client can
+recover the retained selected File/metadata through context without uploading;
+its observed-native digest is explicitly distinct from local-manifest agreement.
+Native inspection waits for the next serialized slot; no provider effects here.
+
+## 2026-10-25 — Bind native Grok upload source bytes without promoting readiness (#403)
+
+Private native discovery qualified same input File object and SHA256 alongside
+actual metadata.fileMetadataId/account URI; an exact Open attachment observation
+returned server200 and rendered matching104byte content. The source now hashes
+local bytes before upload and validates the observed same-object/metadata/digest
+relationship. Processing remains unconfirmed, and later unbound native contexts
+are incomplete. A native-shaped positive regression failed on the prior source;
+17focused file tests pass with wrong bytes/account/File and conflicting props
+rejected. Native fixtures prove the observed binding shape, not final installed
+or ready-to-Send acceptance. Original upload and uncertainty history retained.
+
 ## 2026-10-25 — Preserve and inspect uncertain Grok upload custody (#403)
 
 A synthetic native upload emitted a real request but omitted its body from CDP.
@@ -56461,6 +56510,85 @@ Plan0458 native checkpoint: PR459 merged at6a712f57d (55 focused tests/full type
 
 Plan0458 file-effect reconciliation: primary independently validated the composite and all linked raw receipt hashes: same configured account/target, exact selected native File digest to provider metadata ID/URI, actual selected Openattachment server response200, and rendered104-byte content SHA matching A. Processing remains incomplete; no Send/replay/B. A new registry reconcileEffect CAS seam records a qualified completed effect with immutable evidence reference/hash and appends prior uncertainty, without closing/releasing/acquiring the target. Generic acquire/release guards remain.26 registry tests and full typecheck pass; no live CAS has occurred yet. PR460 merged at85c32aa39 with74 focused tests/typecheck for exact-target diagnostics and unknown-cleanup preservation.
 
+
+Plan0458 current native frontier: one synthetic upload A is byte-verified against the actual server asset and its exact lease effect was settled/preserved through PR462, with prior uncertainty retained. No replay/B/Send. One approved Bot exists with canonical native ID; its actual settings expose Name/Title/Description and lack original Instructions/Model fields. Supported public lifecycle source is prepared without silently narrowing408. Build corrective public command is active after the unrelated live ChatGPT ledger owner exited naturally; fresh account MATCH and production fresh-target override. Connector remains before Add: native preparation exposed asynchronous detail mount and synthetic Escape cleanup weaknesses, now covered by causal source regressions and native keyboard wiring. No Connector install/OAuth or publication claimed. All eight tickets remain open; broad review/TDD counters zero.
+
+### 2026-10-25 — Plan0458 / #408 actual Bot editor
+
+Created one approved retained synthetic Bot; exact native route and Settings
+Name/Title/Description controls are now qualified. Instructions/Model controls
+are absent, so original #408 remains open and #409 stays blocked. Implementing
+public create/edit/inspect/reconcile against observed controls with account-bound
+durable intent, no duplicate dispatch and same-ID saved readback. One native
+Name/Description edit awaits serialized slot; Title/model default remain preserved.
+See `docs/dev/notes/2026-10-25-grok408-native-lifecycle.md` for private evidence
+boundaries and the corrected probe's reused-target history.
+
+### 2026-10-25 — #408 closed Settings overlay gate
+
+Before public Save, applied the independently observed BaseUI data-closed dialog
+contract to Bot visibility. Causal red/green excludes a still-mounted closed
+Settings tree and verifies saved readback actually reopens it. Unrelated field
+attributes remain active. No native #408 interaction; supported-field edit still
+awaits serialized slot and original Instructions/Model criteria remain open.
+
+### 2026-10-25 — #408 public supported-field native edit accepted
+
+Clean69e443393 public CLI made the approved one Name/Description Save on the same
+created Bot ID and returned completed. Independent account-bound Close/reopen
+reread proves saved Name/Description and preserved empty Title; target remains
+saved Settings open with no unsaved input. Failed preliminary Close-ledger flush
+is preserved and its lease was independently released/settled, not force-cleared.
+Original #408 remains open for absent separate Instructions/Model controls;
+`docs/dev/notes/2026-10-25-grok408-acceptance-decision.md` provides the concrete
+original-vs-native decision and proposed amendment, with no tracker changes.
+
+### 2026-10-25 — Plan0458 native Connector transport binding
+
+#405 preparation now reads stable Connector IDs and transport from the actual
+committed card DTO, bound to the verified Grok account and current React root.
+Native `live` integrations legitimately have no MCP URL; only positively bound
+nonmatching rows may be excluded from MCP duplicate checks. Name collisions,
+foreign metadata and unobserved transports retain the refusal. Owned detail
+cleanup focuses the exact owned dialog before native Escape. No Add or OAuth
+has been dispatched in this slice. Focused installer/service/account tests:
+40 passed; earlier discovery selection: 36 passed; typecheck and changed-file
+Biome pass. All eight ticket gates remain open; reserved final review/TDD 0/0.
+
+### 2026-10-25 — Plan0458 Connector continuation and retained completion checkpoint
+
+The source a180c902f preparation-only native run reached the exact custom form,
+matched the configured account before/after and restored it with no Add. The
+already approved public install continuation then dispatched one Add; Grok's
+Custom Connector surface reports "Connection failed" / "Sorry, there was a
+problem connecting to this MCP server." No Connector ID, OAuth grant or tool
+catalog is qualified. The journal continuation is consumed and target retained;
+cleanup was unknown. Independent guarded exact-target readonly diagnosis saved
+privately; original unsent @ remains intact. Do not replay installation.
+
+Integrated403 source f716e2a6c as daafc133e and410 source93933f99f as53cbfbb7a.
+403 is assigned only a replay-free exact-A context read. 408's one public Save
+and independent same-ID readback are verified for Name/Description; Instructions
+and Model remain unavailable and the explicit acceptance split awaits user reply.
+410's single generation completion was validated and settled through supported
+CAS with prior uncertainty retained; app/version/export remain unqualified.
+All eight original issues remain open; final review/TDD counters remain0/0.
+
+### 2026-10-25 — Plan0458 failed Connector settlement and public File readiness
+
+Primary validated the immutable native terminal Connector failure/account/target
+proof (943d53a9f10a014d572dbe447f3a09b584b2956189ec71d05fad8bfc122fb63f).
+Supported CAS settled only that failed effect and released its preserved lease
+at revision5; prior uncertainty remains audited, installation is not accepted,
+OAuth is not granted and replay remains unauthorized. Anonymous initialize
+returns401 with Bearer resource metadata; protected-resource and authorization
+metadata return200. This is endpoint diagnostic evidence, not Grok acceptance.
+
+#403's configured public context read at53cbfbb7a confirms A ready/complete with
+observed-native source hash, no replay or Send and no unreleased utility lease.
+Primary verified composite83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca
+and linked source receipts. Worker granted only the remaining single approved B
+upload on a genuinely new empty composer; B had not dispatched at this checkpoint.
 ## 2026-10-25 — Issue464 live Apps comparison
 
 Plan0460 starts the performance follow-up to427. Five retained Apps tabs include
@@ -56539,3 +56667,19 @@ Plan0460 is CLOSED. API PID4185922/MCP wrapper and browser PID2122493/startTicks
 capacity/deadline change, app mutation, prompt or browser restart; CI excluded.
 Runtime/trace/catalog evidence remains private. API/MCP process upgrades are not
 part of this CLI delivery. Final Graphiti capture follows qualified closeout.
+
+### 2026-10-25 — Plan0458 integrated source validation
+
+Merged current main ce91367d1 as244871611, preserving unrelated ledger/inventory
+changes and both independent documentation histories. Primary ran324focused
+checks/20files (105.25s) and full typecheck successfully; import/format hygiene
+then passed53affected checks/3files. Scoped lint has no errors and retains one
+pre-existing unused Input parameter warning. Actual source CLI invalid inspect
+returns invalid/grok_build_request_invalid with exit1 before provider work.
+
+Primary independently validated B compositec01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1
+including linked raw metadata ID, distinct A/B identity, exact server104-byte B
+hash and consumed2/2uploads. No Send/replay. #403's recent-file behavior has source
+fixtures but native chooser selection remains a distinct gate; worker preparing
+one exact-known-B selection packet. #410 gets the next native slot after source
+integration. All eight issues remain open; reserved review/TDD counters0/0.

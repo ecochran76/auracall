@@ -87,6 +87,8 @@ export function connectorDomFixture({
 	toolExpansion = true,
 	inertParent = false,
 	escapeOnly = false,
+	detailMountDelayMs = 0,
+	keepClosedMounted = false,
 	userEmail = "operator@example.test",
 	accountLabel = "Account label excluded",
 } = {}) {
@@ -154,8 +156,13 @@ export function connectorDomFixture({
 	);
 	detail.hidden = true;
 	installed.onClick = () => {
-		detail.hidden = false;
-		if (inertParent) plugins.setAttribute("aria-hidden", "true");
+		const mount = () => {
+			detail.hidden = false;
+			delete detail.attributes["data-closed"];
+			if (inertParent) plugins.setAttribute("aria-hidden", "true");
+		};
+		if (detailMountDelayMs > 0) setTimeout(mount, detailMountDelayMs);
+		else mount();
 	};
 	more.onClick = () => {
 		if (!toolExpansion) return;
@@ -165,7 +172,8 @@ export function connectorDomFixture({
 		detail.children = detail.children.filter((child) => child !== more);
 	};
 	close.onClick = () => {
-		detail.hidden = true;
+		detail.hidden = !keepClosedMounted;
+		if (keepClosedMounted) detail.setAttribute("data-closed", "");
 		if (inertParent) delete plugins.attributes["aria-hidden"];
 	};
 	detail.onKeyDown = close.onClick;

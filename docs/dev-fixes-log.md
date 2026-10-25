@@ -1,3 +1,13 @@
+## 2026-10-25 — Closed Grok overlays can retain layout geometry
+
+BaseUI dialog nodes may retain display, visibility, opacity and nonzero geometry
+after data-closed is present. Exclude only explicitly closed dialog ancestry;
+never mistake those cached nodes for active modal ownership. Wait boundedly for
+an activated catalog/detail to mount, without repeating clicks. Use the guarded
+native keyboard when owned Escape-only detail cleanup requires it, and verify
+restoration. Read a nested form's exact inventory owner even while its parent
+is inert; keep token/input/account/inventory guards before Add.
+
 ## 2026-10-25 — Reconcile completed effects without erasing uncertainty
 
 Use exact account scope, target and revision plus a validated immutable evidence
@@ -15,6 +25,31 @@ Escape only for the proven-owned observed detail and verify disappearance.
 Keep known no-effect preparation refusals distinct from uncertain effects. One
 explicit confirmed continuation of an exactly recorded endpoint-observation
 refusal uses an exclusive persistent claim; unknown outcomes never reopen Add.
+## 2026-10-25 — Read native composer eligibility, not an isolated phase label
+
+A committed attachment phase may remain processing after valid metadata arrives.
+Its renderer suppresses loading then, while the actual submit component gates
+on isQueryable. Require the committed same-form eligibility and enabled native
+control, valid source-bound metadata, and no private/disabled/deleted/error flags.
+Preserve unknown gates as non-ready and recheck the stable account in ordinary
+prompt attachment preparation before any later submission.
+
+## 2026-10-25 — A DOM React pointer does not establish current provider state
+
+Resolve the committed HostRoot.current topology before consuming attachment
+metadata or phase. Follow the actual child/sibling path to the exact DOM host,
+not stale alternate return links. Reject topology ambiguity, traversal exhaustion
+and commits during digest observation. Retained File context can be recovered
+without replay; label observed-native digests separately from local-path proof.
+
+## 2026-10-25 — Qualify native File object identity before Grok upload acceptance
+
+Grok attachment metadata can live in the chip component's props without DOM file
+ID attributes. Bind only the identical selected File object, its SHA256/length,
+and observed metadata ID/account/source URI. Reject conflicting associations;
+never substitute filenames. Preserve processing as progress and unknown phases
+as unknown. Source identity and server materialization do not silently authorize
+Send, replay, or clearing an uncertainty fence.
 
 ## 2026-10-25 — Keep unknown upload custody through cleanup and diagnosis
 
@@ -26104,6 +26139,31 @@ positive dispatched-effect claim, or let diagnostic persistence erase an unknown
 outcome. Public CLI/API/MCP fixtures cover the production path; saved provider
 identity, granted scopes and native built-in behavior remain separate open gates.
 
+### 2026-10-25 — Grok Bot lifecycle must follow actual native editor controls
+
+New Bot's animated text contains hidden labels for Connector/Skill/Bot; use its
+observed exact aria-label. The actual Settings editor offers Name, optional Title
+and Description, not separate Instructions/Model defaults. Preserve these missing
+capabilities explicitly instead of guessing fields or relabeling Description.
+Require a genuinely new empty target for creation and retain durable account-bound
+intent plus same-ID saved readback for ambiguous create/Save reconciliation.
+
+### 2026-10-25 — Exclude explicitly closed mounted Bot Settings overlays
+
+Grok BaseUI can retain a closed role=dialog with data-closed present while its
+styles and rectangle remain visible. Check that explicit dialog ancestry before
+reading Settings or declaring Save closure. Do not globally hide unrelated
+controls carrying data-closed. Native-shaped fixtures protect closed inspection
+and a real same-ID Settings reopen after Save; no native Save was replayed.
+
+### 2026-10-25 — Native Grok integrations are not missing MCP endpoints
+
+Grok's installed Connector cards include account-bound `live` integrations with
+no server URL. Classify those only through their current committed card DTO,
+matching stable Connector ID, card key and verified account; never infer type
+from display name or absent URL. Preserve name conflicts and fail closed on
+foreign/unqualified metadata. Native Escape needs focus on the owned detail
+before the guarded key dispatch when Grok leaves a mounted background surface.
 ## 2026-10-25 — Stop inventory after visible Plugins load failure
 
 Live Apps inspection found a main panel saying Failed to load plugins / signal

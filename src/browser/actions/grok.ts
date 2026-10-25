@@ -1,19 +1,20 @@
 import { randomUUID } from 'node:crypto';
-import { createGrokFileClient } from '../providers/grokFiles.js';
 import { BrowserAutomationError } from '../../oracle/errors.js';
-import type { ChromeClient, BrowserLogger, BrowserAttachment } from '../types.js';
-import { delay } from '../utils.js';
-import { GROK_PROVIDER } from '../providers/grok.js';
-import { detectGrokSignedInIdentity } from '../providers/grokIdentity.js';
 import { ensureServicesRegistry, normalizeServiceModelToken } from '../../services/registry.js';
-import { buildFindAllSelectorsExpression, buildSelectorArrayLiteral } from '../providers/shared.js';
+import { GROK_PROVIDER } from '../providers/grok.js';
+import { GROK_BUILD_PLANE_COMPLETION_EXPRESSION } from '../providers/grokBuild.js';
+import { type GrokAssistantSnapshot, isGrokRateLimitToastText } from '../providers/grokEvidence.js';
+import { createGrokFileClient } from '../providers/grokFiles.js';
+import { detectGrokSignedInIdentity } from '../providers/grokIdentity.js';
 import {
   GROK_MODEL_MENU_ENTRIES_EXPRESSION,
   type GrokModelMenuEntry,
   normalizeGrokModelLabel,
 } from '../providers/grokModelMenu.js';
-import { isGrokRateLimitToastText, type GrokAssistantSnapshot } from '../providers/grokEvidence.js';
-import { navigateAndSettle, type NavigateAndSettleOptions } from '../service/ui.js';
+import { buildFindAllSelectorsExpression, buildSelectorArrayLiteral } from '../providers/shared.js';
+import { type NavigateAndSettleOptions, navigateAndSettle } from '../service/ui.js';
+import type { BrowserAttachment, BrowserLogger, ChromeClient } from '../types.js';
+import { delay } from '../utils.js';
 
 const GROK_SELECTORS = GROK_PROVIDER.selectors;
 const GROK_INPUT_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.input);
@@ -734,11 +735,20 @@ export async function uploadGrokAttachments(
   logger: BrowserLogger,
 ): Promise<void> {
   if (!attachments.length) return;
-  const result = await createGrokFileClient(runtime).upload(dom, attachments.map(attachment => attachment.path));
+  const account = await detectGrokSignedInIdentity(runtime);
+  const providerUserId = account.identity?.id?.trim();
+  if (!providerUserId || account.guestAuthCta) {
+    throw new BrowserAutomationError('Grok attachment account identity is unavailable.', { stage: 'grok-file-upload', effectState: 'none' });
+  }
+  const result = await createGrokFileClient(runtime, { providerUserId }).upload(dom, attachments.map(attachment => attachment.path));
   if (result.status !== 'complete') {
     throw new BrowserAutomationError(`Grok attachments not ready: ${result.code}. Reconcile the exact composer before retrying.`, {
       stage: 'grok-file-upload', effectState: result.status === 'unconfirmed' ? 'unknown' : 'effect_observed',
     });
+  }
+  const finalAccount = await detectGrokSignedInIdentity(runtime);
+  if (finalAccount.guestAuthCta || finalAccount.identity?.id?.trim() !== providerUserId) {
+    throw new BrowserAutomationError('Grok attachment account changed; reconcile before submitting.', { stage: 'grok-file-upload', effectState: 'unknown' });
   }
   logger(`Verified ${attachments.length} Grok composer attachment(s) ready by stable file identity.`);
 }
@@ -755,18 +765,20 @@ export async function readGrokAssistantSnapshotForRuntime(
 
 function buildGrokAssistantSnapshotExpression(): string {
   return `(() => {
-      const bubbles = ${buildFindAllSelectorsExpression(GROK_ASSISTANT_BUBBLE_SELECTORS)};
-      const assistant = ${buildFindAllSelectorsExpression(GROK_ASSISTANT_ROLE_SELECTORS)};
-      const candidates = assistant.length > 0
-        ? assistant
-        : bubbles.filter((b) => !b.className.includes('bg-surface-l1'));
-      const last = candidates[candidates.length - 1];
       const isVisible = (el) => {
         if (!(el instanceof HTMLElement)) return false;
         const style = window.getComputedStyle(el);
         const rect = el.getBoundingClientRect();
-        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+        return !el.closest('[aria-hidden="true"], [data-state="closed"], [data-closed=""], [data-closed="true"]') && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
       };
+      const planes=Array.from(document.querySelectorAll('[data-transcript-renderer="plane"]')).filter(isVisible);
+      const planeAssistant=planes.length===1?Array.from(planes[0].querySelectorAll('[data-testid="assistant-message"]')).filter(isVisible):[];
+      const bubbles = ${buildFindAllSelectorsExpression(GROK_ASSISTANT_BUBBLE_SELECTORS)};
+      const assistant = ${buildFindAllSelectorsExpression(GROK_ASSISTANT_ROLE_SELECTORS)};
+      const legacyCandidates=assistant.length > 0 ? assistant : bubbles.filter((b) => !b.className.includes('bg-surface-l1'));
+      const usePlane=legacyCandidates.length===0&&planes.length>0;
+      const candidates = usePlane ? (planes.length===1&&planeAssistant.length<=40?planeAssistant:[]) : legacyCandidates;
+      const last = candidates[candidates.length - 1];
       const readToastText = () => {
         const selectors = [
           '[role="alert"]',
@@ -800,7 +812,8 @@ function buildGrokAssistantSnapshotExpression(): string {
       const actionGroup = responseRoot.querySelector('.action-buttons');
       const terminalActions = actionGroup && isVisible(actionGroup) &&
         Array.from(actionGroup.querySelectorAll('button[aria-label*="Copy"], button[title*="Copy"], button[aria-label*="Regenerate"]')).some(isVisible);
-      const terminalEvidence = !streaming && explicitComplete ? 'response-complete-state' : !streaming && terminalActions ? 'response-terminal-actions' : '';
+      const nativePlaneComplete=usePlane&&planes.length===1&&planeAssistant.includes(last)&&(${GROK_BUILD_PLANE_COMPLETION_EXPRESSION})(last,isVisible);
+      const terminalEvidence = usePlane ? (!streaming&&nativePlaneComplete?'plane-canvas-work-complete':'') : !streaming && explicitComplete ? 'response-complete-state' : !streaming && terminalActions ? 'response-terminal-actions' : '';
       const completion = { responseId, streaming, terminal: Boolean(terminalEvidence), terminalEvidence };
       const normalizeInlineWhitespace = (value) => String(value || '').replace(/\\s+/g, ' ');
       const collapseInline = (value) => normalizeText(normalizeInlineWhitespace(value));

@@ -1,13 +1,23 @@
 // biome-ignore-all lint/style/useNamingConvention: Public Zod schemas follow repository naming.
 import { z } from "zod";
-import { BrowserAutomationError } from "../oracle/errors.js";
 import {
-	grokBuildUnknown,
 	type GrokBuildResult,
 	type GrokBuildService,
+	grokBuildUnknown,
 } from "../browser/grokBuildService.js";
+import { BrowserAutomationError } from "../oracle/errors.js";
 
+const retainedId = z.string().regex(/^[A-Za-z0-9:_-]{1,200}$/);
 export const GrokBuildRequestSchema = z.discriminatedUnion("action", [
+	z
+		.object({
+			action: z.literal("inspect"),
+			targetId: retainedId,
+			conversationId: retainedId,
+			responseId: retainedId.optional(),
+			runtimeProfile: z.string().trim().min(1).max(200).optional(),
+		})
+		.strict(),
 	z
 		.object({
 			action: z.literal("discover"),
@@ -41,11 +51,16 @@ export async function runGrokBuildCommand(
 		return { ...grokBuildUnknown("grok_build_request_invalid"), status: "invalid" };
 	const request = parsed.data;
 	try {
+		if (request.action === "inspect") return await service.inspect(request);
 		return request.action === "discover"
 			? await service.discover()
 			: await service.generate(request);
 	} catch (error) {
 		const result = grokBuildUnknown("grok_build_request_failed");
+		if (request.action === "inspect") {
+			result.operation = "inspect";
+			result.targetId = request.targetId;
+		}
 		if (request.action === "generate") {
 			const noSend =
 				error instanceof BrowserAutomationError && error.details?.effectState === "pre_effect";
