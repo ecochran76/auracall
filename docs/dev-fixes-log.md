@@ -26076,3 +26076,11 @@ and Description, not separate Instructions/Model defaults. Preserve these missin
 capabilities explicitly instead of guessing fields or relabeling Description.
 Require a genuinely new empty target for creation and retain durable account-bound
 intent plus same-ID saved readback for ambiguous create/Save reconciliation.
+
+### 2026-10-25 — Exclude explicitly closed mounted Bot Settings overlays
+
+Grok BaseUI can retain a closed role=dialog with data-closed present while its
+styles and rectangle remain visible. Check that explicit dialog ancestry before
+reading Settings or declaring Save closure. Do not globally hide unrelated
+controls carrying data-closed. Native-shaped fixtures protect closed inspection
+and a real same-ID Settings reopen after Save; no native Save was replayed.

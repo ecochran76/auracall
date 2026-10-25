@@ -56434,3 +56434,11 @@ durable intent, no duplicate dispatch and same-ID saved readback. One native
 Name/Description edit awaits serialized slot; Title/model default remain preserved.
 See `docs/dev/notes/2026-10-25-grok408-native-lifecycle.md` for private evidence
 boundaries and the corrected probe's reused-target history.
+
+### 2026-10-25 — #408 closed Settings overlay gate
+
+Before public Save, applied the independently observed BaseUI data-closed dialog
+contract to Bot visibility. Causal red/green excludes a still-mounted closed
+Settings tree and verifies saved readback actually reopens it. Unrelated field
+attributes remain active. No native #408 interaction; supported-field edit still
+awaits serialized slot and original Instructions/Model criteria remain open.
