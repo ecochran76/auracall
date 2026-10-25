@@ -3,14 +3,41 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-const wire = vi.hoisted(() => ({ client: undefined as unknown, projectId: "p" }));
+const wire = vi.hoisted(() => ({
+	client: undefined as unknown,
+	projectId: "p",
+	targets: new Map<string, { id: string; type: string; url: string }>(),
+	nextTarget: 0,
+	connected: [] as string[],
+	closed: [] as string[],
+}));
 vi.mock("chrome-remote-interface", () => ({
 	default: Object.assign(async () => wire.client, {
-		List: async () => [],
-		Close: async () => undefined,
+		List: async () => [...wire.targets.values()],
+		Close: async ({ id }: { id: string }) => {
+			wire.closed.push(id);
+			wire.targets.delete(id);
+		},
 	}),
+}));
+vi.mock("../../packages/browser-service/src/chromeLifecycle.js", async (original) => ({
+	...(await original<typeof import("../../packages/browser-service/src/chromeLifecycle.js")>()),
+	openChromeTarget: async (_port: number, url: string) => {
+		expect(url).toBe("about:blank");
+		const id = `owned-history-${++wire.nextTarget}`;
+		wire.targets.set(id, { id, type: "page", url: `https://grok.com/project/${wire.projectId}` });
+		return { id };
+	},
+	connectToChromeTarget: async ({ target }: { target: string }) => {
+		expect(wire.targets.has(target)).toBe(true);
+		wire.connected.push(target);
+		(
+			wire.client as { __auracallProviderTrafficGovernor: { attribution: { targetId: string } } }
+		).__auracallProviderTrafficGovernor.attribution.targetId = target;
+		return wire.client;
+	},
 }));
 import { createGrokAdapter } from "../../src/browser/providers/grokAdapter.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
@@ -22,7 +49,19 @@ import {
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { historyTransportFixture } from "./grok401ConversationTransportFixture.js";
 
-afterEach(() => setAuracallHomeDirOverrideForTest(null));
+let fixtureHome: string;
+beforeEach(async () => {
+	fixtureHome = await mkdtemp(path.join(os.tmpdir(), "grok441-owned-"));
+	setAuracallHomeDirOverrideForTest(fixtureHome);
+	wire.targets.clear();
+	wire.nextTarget = 0;
+	wire.connected = [];
+	wire.closed = [];
+});
+afterEach(async () => {
+	setAuracallHomeDirOverrideForTest(null);
+	await rm(fixtureHome, { recursive: true, force: true });
+});
 
 async function fixture({ empty = false, failed = false } = {}) {
 	const base = historyTransportFixture({ empty });
@@ -213,19 +252,6 @@ test("collector disk restart resumes project p to its qualified boundary before 
 				expect(paused.progress.state).toBe("paused");
 				expect(paused.checkpoint.scopes).toEqual(saved?.scopes);
 				expect(paused.checkpoint.nextScope).toBe(1);
-				const beforeFailedRead = await store.read();
-				await expect(
-					collectGrokMirrorIndex({
-						projects,
-						maxRows: 2,
-						maxReads: 4,
-						checkpoint: beforeFailedRead,
-						commit: store.write,
-						read: async (projectId, historyCursor) =>
-							(await fixture({ failed: true })).read(projectId ?? "", { historyCursor }),
-					}),
-				).rejects.toThrow("fixture project history failure");
-				expect(await store.read()).toEqual(beforeFailedRead);
 				expect(
 					await createGrokIndexCheckpointStore(root, {
 						...custody,
@@ -242,6 +268,15 @@ test("collector disk restart resumes project p to its qualified boundary before 
 			}
 		}
 		expect(visits).toEqual(["p", "p", "q", "q"]);
+		expect(wire.nextTarget).toBe(2);
+		expect(wire.connected).toEqual([
+			"owned-history-1",
+			"owned-history-1",
+			"owned-history-1",
+			"owned-history-2",
+			"owned-history-2",
+		]);
+		expect(wire.closed).toEqual(["owned-history-1", "owned-history-2"]);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}
@@ -296,12 +331,39 @@ test("project empty, yielded and failed reads preserve explicit public coverage 
 			state: "incomplete",
 			reason: "foreground-yield",
 		});
+		// A failed owned history target remains fenced; verify its durable cursor
+		// without automatically reusing that target for another project cycle.
+		const store = createGrokIndexCheckpointStore(root, {
+			runtimeProfileId: "fixture",
+			identityKey: "operator@example.test",
+		});
+		const checkpoint = {
+			version: 1 as const,
+			phase: "backfill" as const,
+			nextScope: 1,
+			scopes: [
+				{ projectId: null, complete: true, cursor: null },
+				{ projectId: "p", complete: false, cursor: cursor ?? null },
+			],
+			items: partial.items,
+			updatedAt: "2026-10-25T00:00:00Z",
+		};
+		await store.write(checkpoint);
 		await expect(
-			(await fixture({ failed: true })).read("p", {
-				historyCursor: cursor,
-				onHistoryInventory: progress,
+			collectGrokMirrorIndex({
+				projects: [{ id: "p", name: "p", provider: "grok" }],
+				checkpoint: await store.read(),
+				maxRows: 2,
+				maxReads: 4,
+				commit: store.write,
+				read: async (projectId, historyCursor) =>
+					(await fixture({ failed: true })).read(projectId ?? "", {
+						historyCursor,
+						onHistoryInventory: progress,
+					}),
 			}),
 		).rejects.toThrow("fixture project history failure");
+		expect(await store.read()).toEqual(checkpoint);
 		const failedStatus = (await status()).providerControls?.grok.historyInventory;
 		expect(failedStatus).toMatchObject({ state: "failed", scope: "project" });
 		expect(JSON.stringify(failedStatus)).not.toContain(String(cursor));
