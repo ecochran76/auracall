@@ -734,11 +734,20 @@ export async function uploadGrokAttachments(
   logger: BrowserLogger,
 ): Promise<void> {
   if (!attachments.length) return;
-  const result = await createGrokFileClient(runtime).upload(dom, attachments.map(attachment => attachment.path));
+  const account = await detectGrokSignedInIdentity(runtime);
+  const providerUserId = account.identity?.id?.trim();
+  if (!providerUserId || account.guestAuthCta) {
+    throw new BrowserAutomationError('Grok attachment account identity is unavailable.', { stage: 'grok-file-upload', effectState: 'none' });
+  }
+  const result = await createGrokFileClient(runtime, { providerUserId }).upload(dom, attachments.map(attachment => attachment.path));
   if (result.status !== 'complete') {
     throw new BrowserAutomationError(`Grok attachments not ready: ${result.code}. Reconcile the exact composer before retrying.`, {
       stage: 'grok-file-upload', effectState: result.status === 'unconfirmed' ? 'unknown' : 'effect_observed',
     });
+  }
+  const finalAccount = await detectGrokSignedInIdentity(runtime);
+  if (finalAccount.guestAuthCta || finalAccount.identity?.id?.trim() !== providerUserId) {
+    throw new BrowserAutomationError('Grok attachment account changed; reconcile before submitting.', { stage: 'grok-file-upload', effectState: 'unknown' });
   }
   logger(`Verified ${attachments.length} Grok composer attachment(s) ready by stable file identity.`);
 }

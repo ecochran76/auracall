@@ -1,3 +1,17 @@
+## 2026-10-25 — Qualify Grok file readiness from the actual committed submit gate (#403)
+
+Read-only native evidence showed the sole source-bound file and empty text already
+had committed isQueryable=true, native Submit enabled and aria-disabled=false.
+Actual renderer code gates Submit on isQueryable; phase-based loading labels
+apply only while metadata is absent. Readiness now requires that committed gate,
+exact same-form native control and valid metadata without private/disabled/deleted
+or error flags. False, stale, prose-like and other-form gates stay non-ready.
+Normal prompt attachment preparation now passes stable account identity into the
+same binding client and rejects drift before permitting a later Send. Source
+regressions observed the prior missing ready result and missing prompt binding;
+a mutation reproduced account drift incorrectly resolving before the guard.
+No native upload, Send, typing, navigation or modal changes were performed.
+
 ## 2026-10-25 — Resolve committed Grok attachment state before interpreting props (#403)
 
 A DOM React pointer can name an inactive alternate. Previous raw phase snapshots

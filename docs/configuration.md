@@ -1312,9 +1312,13 @@ files report `sourceBinding: native-file-object`, `sourceSha256`, and
 File/metadata relationship after a process restart without another upload; they
 report `sourceAgreement: observed-native`, which does not assert agreement with
 a caller's local path. Metadata and phases come only from the proven committed
-React tree, with root consistency checked across digest observation. Processing
-remains unconfirmed and unobserved phases remain unknown. Unbound native chips
-make context reads incomplete. The local upload path returns `unconfirmed` when provider
+React tree, with root consistency checked across digest observation. Ready
+requires the same form's committed `isQueryable` gate plus an explicitly enabled
+native Submit control and valid metadata without error/private/disabled/deleted
+flags. A phase label alone does not establish loading or readiness. Missing,
+false or unknown gates stay non-ready, and unbound native chips make context
+reads incomplete. Normal prompt attachment preparation applies the same source
+binding and checks stable account identity again before permitting submission. The local upload path returns `unconfirmed` when provider
 evidence cannot bind the selected native File to its observed provider ID; it does not permit a prompt to proceed on that evidence. Reconcile the
 retained target instead of retrying an uncertain upload. Limits, observed file
 states and provenance accompany results. Diagnostics contain counts and codes.

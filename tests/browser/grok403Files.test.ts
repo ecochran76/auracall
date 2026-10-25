@@ -90,6 +90,7 @@ class Node {
 	}
 }
 function fixture() {
+	const identityUser = { id: "user-1", email: "operator@example.test" };
 	const document = new Node("DOCUMENT");
 	const body = new Node("BODY");
 	const composer = new Node("FORM", { "data-project-id": "project-1" });
@@ -109,7 +110,7 @@ function fixture() {
 					getComputedStyle: () => ({ display: "block", visibility: "visible" }),
 					window: {
 						__NEXT_DATA__: {
-							props: { pageProps: { user: { id: "user-1", email: "operator@example.test" } } },
+							props: { pageProps: { user: identityUser } },
 						},
 						getComputedStyle: () => ({ display: "block", visibility: "visible" }),
 					},
@@ -125,7 +126,7 @@ function fixture() {
 			input.files = [{ name: "same.txt", size: 4 }];
 		}),
 	};
-	return { document, body, composer, editor, input, runtime, dom };
+	return { document, body, composer, editor, input, runtime, dom, identityUser };
 }
 
 test("a basename elsewhere on the page never confirms the intended local upload", async () => {
@@ -425,6 +426,8 @@ test("an unrelated new ready file cannot stand in for the selected native upload
 
 test.each([
 	"processing",
+	"prompt-upload",
+	"prompt-account-drift",
 	"wrong-bytes",
 	"foreign-account",
 	"foreign-native-file",
@@ -433,6 +436,13 @@ test.each([
 	"committed-cycle",
 	"ambiguous-host",
 	"commit-during-digest",
+	"submit-false",
+	"submit-stale",
+	"submit-prose",
+	"submit-other-form",
+	"submit-disabled",
+	"private",
+	"deleted",
 ] as const)("native attachment metadata binds only exact source File bytes (%s)", async (scenario) => {
 	const f = fixture();
 	let duringDigest = () => {};
@@ -461,6 +471,8 @@ test.each([
 						fileUri: `users/${scenario === "foreign-account" ? "foreign" : "user-1"}/${id}/content`,
 					},
 					phase: "processing",
+					isPrivate: scenario === "private",
+					isDeleted: scenario === "deleted",
 				},
 				return: null,
 			},
@@ -521,26 +533,96 @@ test.each([
 			// committed parent is determined by current child/sibling topology.
 			form.child = committed;
 		}
+		const submit = new Node(
+			"BUTTON",
+			{ "data-testid": "chat-submit", "aria-disabled": "false", type: "submit" },
+			"isQueryable=true",
+		);
+		submit.disabled = scenario === "submit-disabled";
+		const submitHost: Fiber = {
+			stateNode: submit,
+			memoizedProps: { type: "submit" },
+			return: null,
+		};
+		const submitComponent: Fiber = {
+			memoizedProps: {
+				isQueryable:
+					scenario === "submit-false" || scenario === "submit-stale"
+						? false
+						: scenario === "submit-prose"
+							? "true"
+							: true,
+			},
+			return: form,
+			child: submitHost,
+		};
+		submitHost.return = submitComponent;
+		Object.assign(submit, { __reactFiberFixture: submitHost });
+		if (scenario === "submit-stale") {
+			const staleRoot: Fiber = { tag: 3, stateNode: owner, return: null };
+			Object.assign(submit, {
+				__reactFiberFixture: {
+					...submitHost,
+					memoizedProps: { isQueryable: true },
+					return: staleRoot,
+				},
+			});
+		}
+		if (form.child) form.child.sibling = submitComponent;
+		(scenario === "submit-other-form" ? f.body : f.composer).append(submit);
 		if (scenario === "committed-cycle") seeded.sibling = seeded;
 		if (scenario === "ambiguous-host") seeded.sibling = { ...seeded };
 		if (scenario === "commit-during-digest")
 			duringDigest = () => {
 				owner.current = { tag: 3, stateNode: owner, return: null };
 			};
+		if (scenario === "prompt-account-drift")
+			duringDigest = () => {
+				f.identityUser.id = "other-user";
+			};
 		f.composer.append(button);
 	});
-	const result = await createGrokFileClient(f.runtime as never, {
+	if (scenario === "prompt-account-drift") {
+		await expect(
+			uploadGrokAttachments(
+				f.dom as never,
+				f.runtime as never,
+				[{ path: "/tmp/same.txt", displayPath: "same.txt" }],
+				() => {},
+			),
+		).rejects.toMatchObject({ details: { effectState: "unknown" } });
+		expect(f.dom.setFileInputFiles).toHaveBeenCalledOnce();
+		return;
+	}
+	const client = createGrokFileClient(f.runtime as never, {
 		timeoutMs: 0,
 		providerUserId: "user-1",
-	}).upload(f.dom as never, ["/tmp/same.txt"]);
-	expect(result.status).toBe("unconfirmed");
-	if (scenario === "processing")
+	});
+	let result: Awaited<ReturnType<typeof client.upload>>;
+	if (scenario === "prompt-upload") {
+		await uploadGrokAttachments(
+			f.dom as never,
+			f.runtime as never,
+			[{ path: "/tmp/same.txt", displayPath: "same.txt" }],
+			() => {},
+		);
+		result = await client.context();
+	} else result = await client.upload(f.dom as never, ["/tmp/same.txt"]);
+	const ready =
+		scenario === "processing" || scenario === "inactive-fiber" || scenario === "prompt-upload";
+	expect(result.status).toBe(ready ? "complete" : "unconfirmed");
+	if (scenario === "prompt-upload")
 		expect(result).toMatchObject({
-			code: "grok_file_readiness_unconfirmed",
+			status: "complete",
+			files: [{ id, state: "ready", sourceAgreement: "observed-native" }],
+		});
+	else if (scenario === "processing")
+		expect(result).toMatchObject({
+			code: "grok_files_ready",
 			files: [
 				{
 					id,
-					state: "progress",
+					state: "ready",
 					sourceBinding: "native-file-object",
 					sourceAgreement: "local-manifest",
 					sourceSha256: createHash("sha256").update("same").digest("hex"),
@@ -552,10 +634,25 @@ test.each([
 			files: [
 				{
 					id: "11111111-2222-3333-4444-555555555555",
-					state: "unknown",
+					state: "ready",
 					sourceBinding: "native-file-object",
 				},
 			],
+		});
+	else if (
+		[
+			"submit-false",
+			"submit-stale",
+			"submit-prose",
+			"submit-other-form",
+			"submit-disabled",
+			"private",
+			"deleted",
+		].includes(scenario)
+	)
+		expect(result).toMatchObject({
+			code: "grok_file_readiness_unconfirmed",
+			files: [{ id, state: "unknown", sourceAgreement: "local-manifest" }],
 		});
 	else
 		expect(result.files).not.toEqual(
@@ -570,12 +667,12 @@ test.each([
 	if (scenario === "processing") {
 		const restarted = createGrokFileClient(f.runtime as never, { providerUserId: "user-1" });
 		expect(await restarted.context()).toMatchObject({
-			status: "incomplete",
+			status: "complete",
 			code: "grok_file_context",
 			files: [
 				{
 					id,
-					state: "progress",
+					state: "ready",
 					sourceBinding: "native-file-object",
 					sourceAgreement: "observed-native",
 				},
@@ -587,4 +684,4 @@ test.each([
 		status: "incomplete",
 		code: "grok_file_native_context_unconfirmed",
 	});
-});
+}, 15000);
