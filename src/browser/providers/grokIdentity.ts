@@ -330,6 +330,11 @@ export async function detectGrokSignedInIdentity(
 }> {
   const initialProbe = await evaluateGrokIdentityProbe(Runtime);
   let identity = normalizeGrokIdentityProbe(initialProbe);
+  // These probes scan global page labels/handles (including open Bot pickers).
+  // They provide display context only, never stable provider-account evidence.
+  if (identity && ['dom-label', 'dom-handle', 'dom-avatar'].includes(identity.source ?? '')) {
+    identity = identity.name ? { name: identity.name, source: identity.source } : null;
+  }
   // Display labels cannot hide existing serialized stable account evidence.
   if (identity && (identity.id || identity.email || identity.handle)) {
     return {

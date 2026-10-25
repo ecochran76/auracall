@@ -105,10 +105,10 @@ function identityRuntime(probe: Record<string, unknown>, scripts: string[] = sta
  return {runtime,scriptReads:()=>scriptReads};
 }
 
-function authorization() {
+function authorization(identity: {email?:string;handle?:string} = {email:"operator@example.test",handle:"@fixture_user"}) {
 	const authority = createProviderSessionAuthority({
 		auracallProfile: "default",
-		services: { grok: { identity: { email: "operator@example.test", handle: "@fixture_user" } } },
+		services: { grok: { identity } },
 	});
 	const context = {
 		providerId: "grok" as const,
@@ -227,4 +227,17 @@ test('refuses a prior valid user when traversal depth hides conflicting account 
  for(let depth=0;depth<60;depth++)nested={child:nested};
  const raw=JSON.stringify({initialData:{user:{userId:'fixture-user',email:'operator@example.test'}},deep:nested});
  expect(extractGrokIdentityFromSerializedScripts([raw])).toBeNull();
+});
+
+test.each(["dom-label","dom-handle","dom-avatar"])("trusted bootstrap outranks an unscoped %s handle from picker content",async source=>{
+ const f=identityRuntime({name:"Account controls",handle:"@owned_bot",source,guestAuthCta:false});
+ const result=await checkGrokBrowserAuthPreflight(f.runtime,{providerSessionAuthorization:authorization()});
+ expect(result).toMatchObject({ok:true,actualIdentity:{email:"operator@example.test",handle:"@fixture_user",source:"next-flight"}});
+ expect(f.scriptReads()).toBe(1);
+});
+test("a coincidentally matching unscoped DOM handle cannot authorize a configured account",async()=>{
+ const f=identityRuntime({name:"Account controls",handle:"@fixture_user",source:"dom-handle",guestAuthCta:false},["non-identity bootstrap"]);
+ const result=await checkGrokBrowserAuthPreflight(f.runtime,{providerSessionAuthorization:authorization({handle:"@fixture_user"})});
+ expect(result).toMatchObject({ok:false,reason:"provider_session_observation_missing"});
+ expect(result.actualIdentity?.handle).toBeUndefined();
 });

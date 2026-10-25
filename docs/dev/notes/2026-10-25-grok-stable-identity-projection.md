@@ -65,3 +65,20 @@ fails closed for both depth and node budgets. Native post-fix identity and
 owned-inventory reads remain coordinator-owned; this source/offline qualification
 does not close #405 or establish Connector installation/grants. Memory disposition:
 forbidden, because no explicit user request authorizes a memory write.
+
+## Unscoped DOM labels and picker handles
+
+The coordinator subsequently reported a built-CLI identity match followed by a
+post-inventory conflict when an open Bot picker supplied an unrelated DOM handle.
+The global label/handle/avatar probes do not bind their text to the signed-in
+account. Those three explicit source classes now retain display name/source only
+before stable evidence selection. Trusted bootstrap can therefore outrank picker
+text; a coincidentally matching DOM handle alone cannot authorize even a
+handle-only configured account. Direct stable `next-data` conflicts still fail,
+and guest/no-bootstrap behavior retains its existing boundary. No settings-click
+heuristic, guessed selector or UI cleanup was added.
+
+Four causal reds covered the three unscoped source classes and the false
+handle-only authorization. The focused Auth/binding selection now passes 82 tests
+across four files. Native continuation remains coordinator-owned; no worker native
+read or new Connector acceptance is claimed.
