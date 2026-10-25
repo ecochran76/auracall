@@ -44,6 +44,15 @@ export async function readGrokBuildResponseIdentity(
 
 /** Build's plane transcript is distinct from the legacy main-based text surface.
  * The auth preview URL is deliberately never returned: it contains a bearer. */
+/** Native completion UI is a direct assistant child, never text inside its prose. */
+export const GROK_BUILD_PLANE_COMPLETION_EXPRESSION = `(message, visible) => {
+  const prose=message.querySelector('.response-content-markdown');
+  if(!prose||!visible(prose)||!String(prose.innerText||prose.textContent||'').trim())return false;
+  const thinking=Array.from(message.children).filter(el=>String(el.getAttribute('class')||'').split(/\\s+/).includes('thinking-container'));
+  const markers=thinking.flatMap(el=>Array.from(el.querySelectorAll('[data-testid="canvas-trigger"]')))
+    .filter(el=>visible(el)&&!el.closest('.response-content-markdown')&&/^Worked for\\s+\\d+[hms](?:\\s+\\d+[hms])*$/i.test(String(el.innerText||el.textContent||'').trim()));
+  return markers.length===1;
+}`;
 export interface GrokBuildPlaneSnapshot {
 	state: "completed" | "running" | "unknown";
 	code: string;
@@ -80,13 +89,12 @@ export async function readGrokBuildPlaneSnapshot(
       const prose=message.querySelector('.response-content-markdown');
       const text=prose&&visible(prose)?String(prose.innerText||prose.textContent||'').replace(/\\u200b/g,'').trim():'';
       if(text.length>128000)return empty('grok_build_plane_limit_exceeded');
-      const thinking=Array.from(message.children).filter(el=>String(el.getAttribute('class')||'').split(/\\s+/).includes('thinking-container'));
-      const worked=thinking.flatMap(el=>Array.from(el.querySelectorAll('[data-testid="canvas-trigger"]'))).filter(el=>visible(el)&&!el.closest('.response-content-markdown')&&/^Worked for\\s+\\d+[hms](?:\\s+\\d+[hms])*$/i.test(String(el.innerText||el.textContent||'').trim()));
+      const nativeComplete=(${GROK_BUILD_PLANE_COMPLETION_EXPRESSION})(message,visible);
       const stop=Array.from(document.querySelectorAll('button')).some(el=>visible(el)&&!el.disabled&&el.getAttribute('aria-disabled')!=='true'&&String(el.getAttribute('aria-label')||el.innerText||'').trim()==='Stop model response');
       const previewAvailable=Array.from(document.querySelectorAll('iframe')).filter(visible).some(el=>{
         try{const src=new URL(el.getAttribute('src')||'');return src.protocol==='https:'&&src.hostname.endsWith('.grok-sandbox.com')&&src.pathname==='/__grok-preview/auth'&&src.searchParams.has('token');}catch{return false;}
       });
-      const state=stop?'running':worked.length===1&&text?'completed':'unknown';
+      const state=stop?'running':nativeComplete&&text?'completed':'unknown';
       return {state,code:state==='completed'?'grok_build_plane_completed':state==='running'?'grok_build_generation_running':'grok_build_completion_unobserved',conversationId:id,conversationUrl:url.origin+url.pathname,responseId,gatewayRowId,text:text||null,previewAvailable};
     })()`,
 	});
@@ -94,5 +102,23 @@ export async function readGrokBuildPlaneSnapshot(
 	const value = reply.result?.value as GrokBuildPlaneSnapshot | undefined;
 	if (!value || !["completed", "running", "unknown"].includes(value.state))
 		throw new Error("grok_build_plane_read_failed");
-	return value;
+	return { ...value, text: value.text === null ? null : redactGrokBuildPreviewBearers(value.text) };
+}
+
+/** Preview authentication is browser custody, including URLs quoted in prose. */
+export function redactGrokBuildPreviewBearers(value: string): string {
+	return value.replace(/https:\/\/[^\s<>"')\]]+/g, (candidate) => {
+		try {
+			const url = new URL(candidate);
+			if (
+				url.hostname.endsWith(".grok-sandbox.com") &&
+				url.pathname === "/__grok-preview/auth" &&
+				url.searchParams.has("token")
+			)
+				return "[authenticated Grok preview in retained tab]";
+		} catch {
+			/* Non-URL response text is retained. */
+		}
+		return candidate;
+	});
 }

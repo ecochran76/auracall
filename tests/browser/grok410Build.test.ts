@@ -1,5 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and DOM platform names are case-sensitive.
 import { createContext, runInContext } from "node:vm";
+import { readGrokAssistantSnapshotForRuntime } from "../../src/browser/actions/grok.js";
 import { expect, test } from "vitest";
 import { ConnectorFixtureNode } from "./grok404ConnectorDomFixture.js";
 import { createGrokBuildService } from "../../src/browser/grokBuildService.js";
@@ -21,6 +22,12 @@ class Node extends ConnectorFixtureNode {
 	remove() {
 		if (this.parentElement)
 			this.parentElement.children = this.parentElement.children.filter((child) => child !== this);
+	}
+	get childNodes() {
+		return [
+			...(this.ownText ? [{ nodeType: 3, textContent: this.ownText, parentElement: this }] : []),
+			...this.children,
+		];
 	}
 	nodeType = 1;
 	get tagName() {
@@ -105,6 +112,7 @@ function buildFixture({
 	fileAfterSelection = false,
 	retainedClosedMenu = false,
 	driftOnInspect = false,
+	planeAfterSend = false,
 } = {}) {
 	const fast = new Button("Fast", { role: "menuitemradio", "aria-checked": "true" });
 	const build = new Button(gated ? "Build Requires subscription" : "Build", {
@@ -156,8 +164,56 @@ function buildFixture({
 		}
 		closeMenu();
 	};
+	const seedPlane = ({
+		running = false,
+		fakeProseTerminal = false,
+		closedStop = false,
+		duplicatePlane = false,
+		previewBearerInProse = false,
+	} = {}) => {
+		location.href = "https://grok.com/c/conversation-generated";
+		const userMessage = new Node("div", "Synthetic timer request", {
+			"data-testid": "user-message",
+		});
+		const userRoot = new Node("div", "", { id: "response-user" }, [userMessage]);
+		const userRow = new Node("div", "", { "data-plane-row": "gateway:user" }, [userRoot]);
+		const marker = new Button("Worked for 10m 6s", { "data-testid": "canvas-trigger" });
+		const thinking = new Node("div", "", { class: "thinking-container" }, [marker]);
+		const prose = new Node(
+			"div",
+			previewBearerInProse
+				? "Generated timer source https://sample.grok-sandbox.com/__grok-preview/auth?token=SECRET_PREVIEW_BEARER"
+				: "Generated timer source",
+			{ class: "response-content-markdown" },
+			fakeProseTerminal ? [thinking] : [],
+		);
+		const message = new Node("div", "", { "data-testid": "assistant-message" }, [
+			...(!fakeProseTerminal ? [thinking] : []),
+			prose,
+		]);
+		const response = new Node("div", "", { id: "response-created" }, [message]);
+		const row = new Node("div", "", { "data-plane-row": "gateway:assistant" }, [response]);
+		const plane = new Node("div", "", { "data-transcript-renderer": "plane" }, [userRow, row]);
+		const frame = new Node("iframe", "", {
+			src: "https://sample.grok-sandbox.com/__grok-preview/auth?token=SECRET_PREVIEW_BEARER",
+			title: "Preview",
+		});
+		const stop = new Button("Stop model response", { "aria-label": "Stop model response" });
+		const closed = new Node("div", "", { "data-state": "closed" }, [stop]);
+		document.children = [
+			plane,
+			...(duplicatePlane ? [plane.cloneNode(true)] : []),
+			frame,
+			...(running ? [stop] : closedStop ? [closed] : []),
+		];
+		for (const child of document.children) child.parentElement = document;
+	};
 	submit.onClick = () => {
 		submissions++;
+		if (planeAfterSend) {
+			seedPlane();
+			return;
+		}
 		location.href = "https://grok.com/c/conversation-generated";
 		const response = new Node("div", "Generated timer source", {
 			id: "response-created",
@@ -170,6 +226,7 @@ function buildFixture({
 	};
 	const context = createContext({
 		document,
+		Node: Object.assign(Node, { TEXT_NODE: 3, ELEMENT_NODE: 1 }),
 		HTMLElement: Node,
 		HTMLButtonElement: Button,
 		HTMLTextAreaElement: Textarea,
@@ -215,6 +272,7 @@ function buildFixture({
 		},
 	};
 	return {
+		runtime,
 		service: createGrokBuildService(
 			{ host: "localhost", port: 1 },
 			{
@@ -236,37 +294,7 @@ function buildFixture({
 		submissions: () => submissions,
 		inputs: () => inputs,
 		selections: () => selections,
-		seedPlane: ({ running = false, fakeProseTerminal = false, closedStop = false } = {}) => {
-			location.href = "https://grok.com/c/conversation-generated";
-			const userMessage = new Node("div", "Synthetic timer request", {
-				"data-testid": "user-message",
-			});
-			const userRoot = new Node("div", "", { id: "response-user" }, [userMessage]);
-			const userRow = new Node("div", "", { "data-plane-row": "gateway:user" }, [userRoot]);
-			const marker = new Button("Worked for 10m 6s", { "data-testid": "canvas-trigger" });
-			const thinking = new Node("div", "", { class: "thinking-container" }, [marker]);
-			const prose = new Node(
-				"div",
-				"Generated timer source",
-				{ class: "response-content-markdown" },
-				fakeProseTerminal ? [thinking] : [],
-			);
-			const message = new Node("div", "", { "data-testid": "assistant-message" }, [
-				...(!fakeProseTerminal ? [thinking] : []),
-				prose,
-			]);
-			const response = new Node("div", "", { id: "response-created" }, [message]);
-			const row = new Node("div", "", { "data-plane-row": "gateway:assistant" }, [response]);
-			const plane = new Node("div", "", { "data-transcript-renderer": "plane" }, [userRow, row]);
-			const frame = new Node("iframe", "", {
-				src: "https://sample.grok-sandbox.com/__grok-preview/auth?token=SECRET_PREVIEW_BEARER",
-				title: "Preview",
-			});
-			const stop = new Button("Stop model response", { "aria-label": "Stop model response" });
-			const closed = new Node("div", "", { "data-state": "closed" }, [stop]);
-			document.children = [plane, frame, ...(running ? [stop] : closedStop ? [closed] : [])];
-			for (const child of document.children) child.parentElement = document;
-		},
+		seedPlane,
 		addNativeFile: () => {
 			const input = Object.assign(new Node("input", "", { type: "file" }), {
 				files: [{ name: "existing.txt" }],
@@ -691,4 +719,63 @@ test("inspection requires an existing browser endpoint before acquiring any targ
 		effectState: "none",
 		cleanupState: "completed",
 	});
+});
+
+test("generation observes the native plane assistant outside main and retains exact response identity", async () => {
+	const fixture = buildFixture({ planeAfterSend: true });
+	const result = await runGrokBuildCommand(
+		{ action: "generate", prompt: "Make a local timer", confirmed: true, timeoutMs: 2500 },
+		fixture.service,
+	);
+	expect(result).toMatchObject({
+		status: "partial",
+		generation: {
+			status: "response_completed",
+			responseId: "response-created",
+			text: "Generated timer source",
+		},
+		conversationId: "conversation-generated",
+		effectState: "completed",
+		preview: { status: "available", url: null },
+		retrySafe: false,
+	});
+	expect(fixture.submissions()).toBe(1);
+	expect(JSON.stringify(result)).not.toContain("SECRET_PREVIEW_BEARER");
+});
+
+test("native plane snapshot binds assistant response rather than the user row", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane();
+	expect(await readGrokAssistantSnapshotForRuntime(fixture.runtime as never)).toMatchObject({
+		responseId: "response-created",
+		terminal: true,
+		terminalEvidence: "plane-canvas-work-complete",
+	});
+});
+
+test.each([
+	"active-stop",
+	"prose-marker",
+	"ambiguous-plane",
+])("native generation snapshot rejects %s as completed", async (kind) => {
+	const fixture = buildFixture();
+	fixture.seedPlane({
+		running: kind === "active-stop",
+		fakeProseTerminal: kind === "prose-marker",
+		duplicatePlane: kind === "ambiguous-plane",
+	});
+	const snapshot = await readGrokAssistantSnapshotForRuntime(fixture.runtime as never);
+	expect(snapshot.terminal).toBe(false);
+	if (kind === "active-stop") expect(snapshot.streaming).toBe(true);
+});
+
+test("Build inspection redacts an authenticated preview URL quoted in generated prose", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane({ previewBearerInProse: true });
+	const result = await runGrokBuildCommand(
+		{ action: "inspect", targetId: "build-target", conversationId: "conversation-generated" },
+		fixture.service,
+	);
+	expect(result.generation.status).toBe("response_completed");
+	expect(JSON.stringify(result)).not.toContain("SECRET_PREVIEW_BEARER");
 });
