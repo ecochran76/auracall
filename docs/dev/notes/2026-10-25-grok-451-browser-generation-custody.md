@@ -30,7 +30,10 @@ Primary affected run:41tests/4files passed in29.07s:
 `pnpm vitest run tests/browser/grok442RestartProgress.test.ts tests/accountMirror/grokIndexBackfill.test.ts tests/accountMirror/grokIndexCoverage.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts --maxWorkers=1`.
 Focused Biome check passes. Initial typecheck found two fixture accesses to an
 undeclared top-level port; these now use its actual devtoolsPort context field.
-Combined integration typecheck/build remain required before main/closure.
+Combined primary integration now passes125tests/15files, typecheck and build.
+Scoped formatting/import-order corrections affect two tests only; those test
+files passed34tests and the final seven-file scoped check. Main/closure
+remain coordinator steps.
 
 No native/provider effect, global installation, controller modification or
 tracker closure follows from this source packet. Memory disposition:forbidden.

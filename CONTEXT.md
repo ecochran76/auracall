@@ -222,6 +222,8 @@ Bounded fresh observations of visible Chats heads that retain completed backfill
 and merge observed new or changed rows. A known row fingerprint bounds the
 observed window; it does not establish global provider ordering or prove older
 rows unchanged. An explicit full sweep covers that separate observation gap.
+Relative-time labels supply filtering estimates, not stable update identity;
+qualified absolute timestamps can establish observable date changes.
 
 **Grok Bot**:
 A named Grok agent with its own configuration that an operator can select for a

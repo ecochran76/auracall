@@ -1,3 +1,25 @@
+## 2026-10-25 — Plan0457 combined acceptance ready for main
+
+Primary combined sourcec842ee577:125tests/15files pass, typecheck/build pass.
+Scoped check caught two test formatting/import-order findings; corrected without
+production changes,34affected tests pass and final seven-file check is clean.
+All451/452/453 validated on integration, not yet tracker-closed. Evidence453 moved
+to notes; operator/CONTEXT docs qualify relative estimates and generation refusal.
+One post-closure broad review and one bounded TDD pass remain unconsumed.
+
+## 2026-10-25 — Plan0457 source integrated
+
+RegistrationPR454/mainb509d45fa preceded worker dispatch. Primary451 c3089b363
+moves generation validation before target observation;3causalred/green cases plus
+mirror-store failure/recovery pass in41-test affected selection. Fixture port
+typing was corrected to context.devtoolsPort; combined typecheck pending. Worker
+453 da730224 integrated50e0c7ddc (49focusedtests);452 f38fbecda integratedc842ee577
+(41focused+3paritytests). Primary15-file combined check, then serialized compiler/
+build/lint, is running. Moved453 evidence from plan tree into notes to preserve
+canonical planning headers. Explicit package lint retains unchanged baseline
+3errors/1warning outside configured lint surface; no new diagnostics or suppression.
+No closures, post-closure review, native/provider effects or runtime changes yet.
+
 ## 2026-10-25 — Plan0457 approved and published
 
 User cleared the completed goal, approved three final-range review tickets and

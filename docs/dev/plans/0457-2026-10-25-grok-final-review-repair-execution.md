@@ -13,7 +13,10 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 User approved the three-ticket breakdown, publication, current implementation-graph
 integration and implementation. Tickets451/452/453 are freshly published with exact actor/body/state/label
 readbacks. All are independent and ready; primary owns451, workers own452/453, one each.
-Register this lane on main before dispatch. Original21nodes plus three repairs
+RegistrationPR454 mergedb509d45fa before dispatch. All three source packets are
+integrated and primary-validated:125tests/15files, typecheck/build/scopedcheck
+pass, plus34tests after test-only formatting. Main merge/closures remain.
+Original21nodes plus three repairs
 remain acyclic. Historical442/443 closures now require new corrective source
 validation; no parent or historical issue was modified. Original eight tickets
 403/405/406/408/409/410/411/414 stay open at their existing native gates.

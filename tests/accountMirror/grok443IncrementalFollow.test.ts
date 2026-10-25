@@ -6,9 +6,9 @@ import { createChatgptAccountMirrorMetadataCollector } from "../../src/accountMi
 import { createGrokIndexCheckpointStore } from "../../src/accountMirror/grokIndexBackfill.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { collectGrokHistoryInventory } from "../../src/browser/providers/grokHistoryInventory.js";
-import { readGrokTimestampDom } from "../browser/grok452DomFixture.js";
 import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
+import { readGrokTimestampDom } from "../browser/grok452DomFixture.js";
 
 let root: string;
 beforeEach(async () => {
