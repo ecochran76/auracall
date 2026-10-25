@@ -429,14 +429,21 @@ test.each([
 	"foreign-account",
 	"foreign-native-file",
 	"conflicting-props",
+	"inactive-fiber",
+	"committed-cycle",
+	"ambiguous-host",
+	"commit-during-digest",
 ] as const)("native attachment metadata binds only exact source File bytes (%s)", async (scenario) => {
 	const f = fixture();
+	let duringDigest = () => {};
 	const native = {
 		name: "same.txt",
 		size: 4,
 		type: "text/plain",
-		arrayBuffer: async () =>
-			Uint8Array.from(Buffer.from(scenario === "wrong-bytes" ? "else" : "same")).buffer,
+		arrayBuffer: async () => {
+			duringDigest();
+			return Uint8Array.from(Buffer.from(scenario === "wrong-bytes" ? "else" : "same")).buffer;
+		},
 	};
 	const id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 	f.dom.setFileInputFiles.mockImplementation(async () => {
@@ -476,6 +483,50 @@ test.each([
 				return: null,
 			};
 		}
+		type Fiber = {
+			memoizedProps?: Record<string, unknown>;
+			return: Fiber | null;
+			child?: Fiber | null;
+			sibling?: Fiber | null;
+			stateNode?: unknown;
+			tag?: number;
+		};
+		const seeded = (button as unknown as { __reactFiberFixture: Fiber }).__reactFiberFixture;
+		seeded.stateNode = button;
+		const top = seeded.return ?? seeded;
+		if (top !== seeded) top.child = seeded;
+		const form: Fiber = { stateNode: f.composer, return: null, child: top };
+		const currentRoot: Fiber = { tag: 3, stateNode: null, return: null, child: form };
+		const owner = { current: currentRoot };
+		currentRoot.stateNode = owner;
+		form.return = currentRoot;
+		top.return = form;
+		if (scenario === "inactive-fiber") {
+			const staleRoot: Fiber = { tag: 3, stateNode: owner, return: null };
+			const staleForm: Fiber = { stateNode: f.composer, return: staleRoot, child: seeded };
+			seeded.return = staleForm;
+			const committed: Fiber = {
+				...seeded,
+				memoizedProps: {
+					...seeded.memoizedProps,
+					metadata: {
+						...(seeded.memoizedProps?.metadata as Record<string, unknown>),
+						fileMetadataId: "11111111-2222-3333-4444-555555555555",
+						fileUri: "users/user-1/11111111-2222-3333-4444-555555555555/content",
+					},
+					phase: undefined,
+				},
+			};
+			// Shared children may retain an old return pointer. The actual
+			// committed parent is determined by current child/sibling topology.
+			form.child = committed;
+		}
+		if (scenario === "committed-cycle") seeded.sibling = seeded;
+		if (scenario === "ambiguous-host") seeded.sibling = { ...seeded };
+		if (scenario === "commit-during-digest")
+			duringDigest = () => {
+				owner.current = { tag: 3, stateNode: owner, return: null };
+			};
 		f.composer.append(button);
 	});
 	const result = await createGrokFileClient(f.runtime as never, {
@@ -491,15 +542,47 @@ test.each([
 					id,
 					state: "progress",
 					sourceBinding: "native-file-object",
+					sourceAgreement: "local-manifest",
 					sourceSha256: createHash("sha256").update("same").digest("hex"),
+				},
+			],
+		});
+	else if (scenario === "inactive-fiber")
+		expect(result).toMatchObject({
+			files: [
+				{
+					id: "11111111-2222-3333-4444-555555555555",
+					state: "unknown",
+					sourceBinding: "native-file-object",
 				},
 			],
 		});
 	else
 		expect(result.files).not.toEqual(
-			expect.arrayContaining([expect.objectContaining({ sourceBinding: "native-file-object" })]),
+			expect.arrayContaining([
+				expect.objectContaining({
+					sourceBinding: "native-file-object",
+					sourceAgreement: "local-manifest",
+				}),
+			]),
 		);
 	expect(f.dom.setFileInputFiles).toHaveBeenCalledOnce();
+	if (scenario === "processing") {
+		const restarted = createGrokFileClient(f.runtime as never, { providerUserId: "user-1" });
+		expect(await restarted.context()).toMatchObject({
+			status: "incomplete",
+			code: "grok_file_context",
+			files: [
+				{
+					id,
+					state: "progress",
+					sourceBinding: "native-file-object",
+					sourceAgreement: "observed-native",
+				},
+			],
+		});
+		expect(f.dom.setFileInputFiles).toHaveBeenCalledOnce();
+	}
 	expect(await createGrokFileClient(f.runtime as never).context()).toMatchObject({
 		status: "incomplete",
 		code: "grok_file_native_context_unconfirmed",

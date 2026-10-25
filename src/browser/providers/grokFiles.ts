@@ -12,6 +12,7 @@ export interface GrokComposerFile {
 	state: "ready" | "progress" | "error" | "unknown";
 	sourceSha256?: string;
 	sourceBinding?: "native-file-object";
+	sourceAgreement?: "local-manifest" | "observed-native";
 }
 export interface GrokFilesResult {
 	status: "complete" | "incomplete" | "failed" | "unconfirmed";
@@ -126,6 +127,31 @@ export function createGrokFileClient(
         provenance: { targetId: null, projectId: root.getAttribute('data-project-id') || path.match(/\\/project(?:s)?\\/([^/?#]+)/)?.[1] || null, conversationId: path.match(/\\/c\\/([^/?#]+)/)?.[1] || null, composerId: ${JSON.stringify(composerId)} }, files,
         coverage: { scope: 'composer', complete: !duplicate && !unboundNative }, limits: { accept: inputs.length === 1 ? inputs[0].getAttribute('accept') : null, multiple: inputs.length === 1 ? inputs[0].hasAttribute('multiple') : null, observedMessage: alert || null } };`);
 		if (!result) throw new Error("grok_files_composer_lost");
+		if (
+			options.providerUserId &&
+			composerId &&
+			!result.limits.observedMessage &&
+			result.code === "grok_file_native_context_unconfirmed"
+		) {
+			const native = await observeGrokNativeFileBinding(runtime, {
+				composerId,
+				uploadToken: null,
+				providerUserId: options.providerUserId,
+				sources: null,
+			});
+			if (native.status === "verified") {
+				const files = [
+					...new Map([...result.files, ...native.files].map((file) => [file.id, file])).values(),
+				];
+				return {
+					...result,
+					files,
+					status: "incomplete",
+					code: "grok_file_context",
+					coverage: { scope: "composer", complete: true },
+				};
+			}
+		}
 		return result;
 	}
 	async function waitReady(ids: string[], expected: GrokFilesResult): Promise<GrokFilesResult> {

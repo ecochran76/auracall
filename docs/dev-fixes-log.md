@@ -16,6 +16,14 @@ Keep known no-effect preparation refusals distinct from uncertain effects. One
 explicit confirmed continuation of an exactly recorded endpoint-observation
 refusal uses an exclusive persistent claim; unknown outcomes never reopen Add.
 
+## 2026-10-25 — A DOM React pointer does not establish current provider state
+
+Resolve the committed HostRoot.current topology before consuming attachment
+metadata or phase. Follow the actual child/sibling path to the exact DOM host,
+not stale alternate return links. Reject topology ambiguity, traversal exhaustion
+and commits during digest observation. Retained File context can be recovered
+without replay; label observed-native digests separately from local-path proof.
+
 ## 2026-10-25 — Qualify native File object identity before Grok upload acceptance
 
 Grok attachment metadata can live in the chip component's props without DOM file
