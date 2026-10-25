@@ -201,7 +201,8 @@ export function createGrokConversationsService(
 						}
 						await continuation?.finish(
 							result.coverage.state !== "incomplete" ||
-								result.coverage.reason === "cursor-restart-required",
+								result.coverage.reason === "cursor-restart-required" ||
+								result.coverage.reason === "incremental-frontier",
 							result.coverage.state !== "failed",
 						);
 					} catch {

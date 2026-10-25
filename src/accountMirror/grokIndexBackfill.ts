@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Conversation, Project } from "../browser/providers/domain.js";
+import { grokHistoryFingerprint } from "../browser/providers/grokHistoryInventory.js";
 import type { GrokHistoryCoverage } from "../browser/providers/grokHistoryInventory.js";
 import type { GrokIndexProgress } from "./grokIndexProgress.js";
 
@@ -10,7 +11,13 @@ export interface GrokIndexCheckpoint {
 	version: 1;
 	phase: "backfill" | "follow";
 	nextScope: number;
-	scopes: { projectId: string | null; cursor: string | null; complete: boolean }[];
+	scopes: {
+		projectId: string | null;
+		cursor: string | null;
+		complete: boolean;
+		followCursor?: string | null;
+	}[];
+	sweepMode?: "steady_follow" | "full_sweep";
 	items: Conversation[];
 	updatedAt: string;
 }
@@ -61,6 +68,7 @@ export function createGrokIndexCheckpointStore(
 export async function collectGrokMirrorIndex(input: {
 	projects: readonly Project[];
 	projectsComplete?: boolean;
+	fullSweep?: boolean;
 	maxRows: number;
 	maxReads: number;
 	checkpoint?: GrokIndexCheckpoint | null;
@@ -72,6 +80,7 @@ export async function collectGrokMirrorIndex(input: {
 		cursor: string | null,
 		limit: number,
 		maxPages: number,
+		knownRows?: readonly { id: string; fingerprint: string }[],
 	) => Promise<{ items: Conversation[]; historyCoverage?: GrokHistoryCoverage }>;
 }): Promise<{
 	items: Conversation[];
@@ -89,15 +98,25 @@ export async function collectGrokMirrorIndex(input: {
 				: []),
 		]),
 	];
-	const continuing = prior?.phase === "backfill";
+	const resetSweep =
+		input.fullSweep === true && !(prior?.phase === "backfill" && prior.sweepMode === "full_sweep");
+	const following = prior?.phase === "follow" && !resetSweep;
+	const continuing = !!prior && !resetSweep;
 	const scopes = scopeIds.map((projectId) => {
 		const old = continuing ? prior.scopes.find((x) => x.projectId === projectId) : null;
-		return { projectId, cursor: old?.cursor ?? null, complete: old?.complete ?? false };
+		return {
+			projectId,
+			cursor: old?.cursor ?? null,
+			complete: old?.complete ?? false,
+			...(old?.followCursor !== undefined ? { followCursor: old.followCursor } : {}),
+		};
 	});
 	const rows = new Map((prior?.items ?? []).map((x) => [x.id, x]));
 	let state: GrokIndexProgress["state"] = "partial";
 	let remaining = Math.max(0, Math.floor(input.maxRows));
 	let reads = 0;
+	let changedRows = 0;
+	let observedScopes = 0;
 	let nextScope = continuing ? Math.min(prior.nextScope, scopes.length - 1) : 0;
 	// Resume the interrupted scope first; scope IDs, rather than old positions,
 	// carry cursors when project inventory changes between cycles.
@@ -109,7 +128,10 @@ export async function collectGrokMirrorIndex(input: {
 	const makeCheckpoint = (): GrokIndexCheckpoint => ({
 		version: 1,
 		phase:
-			scopes.every((x) => x.complete) && input.projectsComplete !== false ? "follow" : "backfill",
+			following || (scopes.every((x) => x.complete) && input.projectsComplete !== false)
+				? "follow"
+				: "backfill",
+		sweepMode: input.fullSweep ? "full_sweep" : "steady_follow",
 		nextScope,
 		scopes: scopes.map((x) => ({ ...x })),
 		items: [...rows.values()],
@@ -119,24 +141,34 @@ export async function collectGrokMirrorIndex(input: {
 	for (let visited = 0; visited < scopes.length; visited++) {
 		const index = (startScope + visited) % scopes.length;
 		const scope = scopes[index];
-		if (scope.complete) continue;
+		if (scope.complete && !following) continue;
 		input.abortSignal?.throwIfAborted();
 		if (await input.shouldYield?.()) {
 			state = "paused";
 			break;
 		}
 		if (remaining <= 0 || reads >= Math.max(0, input.maxReads)) break;
+		const headObservation = following && scope.complete;
+		const knownRows = headObservation
+			? [...rows.values()]
+					.filter((row) => !scope.projectId || row.projectId === scope.projectId)
+					.map((row) => ({ id: row.id, fingerprint: grokHistoryFingerprint(row) }))
+			: undefined;
 		const result = await input.read(
 			scope.projectId,
-			scope.cursor,
+			headObservation ? (scope.followCursor ?? null) : scope.cursor,
 			remaining,
 			Math.max(1, input.maxReads - reads),
+			knownRows,
 		);
 		// Aborted or failed reads never publish an advanced cursor. Earlier commits survive.
 		input.abortSignal?.throwIfAborted();
 		if (result.historyCoverage?.state === "failed")
 			throw new Error(`Grok index read failed: ${result.historyCoverage.reason}`);
+		observedScopes++;
 		for (const row of result.items) {
+			const old = rows.get(row.id);
+			if (!old || grokHistoryFingerprint(old) !== grokHistoryFingerprint(row)) changedRows++;
 			const metadata = { ...row.metadata };
 			if (metadata.grokInventory && typeof metadata.grokInventory === "object") {
 				const { nextCursor: _privateCursor, ...publicCoverage } = metadata.grokInventory as Record<
@@ -150,24 +182,26 @@ export async function collectGrokMirrorIndex(input: {
 		if (result.historyCoverage?.reason === "foreground-yield") state = "paused";
 		remaining -= result.items.length;
 		reads += Math.max(1, result.historyCoverage?.pages ?? 1);
-		scope.cursor = result.historyCoverage ? result.historyCoverage.nextCursor : scope.cursor;
-		scope.complete =
-			result.historyCoverage?.state === "complete" || result.historyCoverage?.state === "empty";
-		// Incomplete scope must be resumed before moving to the next project.
-		const resumeIndex = scope.complete ? (index + 1) % scopes.length : index;
-		nextScope = resumeIndex;
+		if (headObservation) scope.followCursor = result.historyCoverage?.nextCursor ?? null;
+		else {
+			scope.cursor = result.historyCoverage ? result.historyCoverage.nextCursor : scope.cursor;
+			scope.complete =
+				result.historyCoverage?.state === "complete" || result.historyCoverage?.state === "empty";
+		}
+		// Follow rotates bounded observations fairly, including newly discovered scopes.
+		nextScope = following || scope.complete ? (index + 1) % scopes.length : index;
 		const checkpoint = makeCheckpoint();
 		await input.commit?.(checkpoint);
-		if (!scope.complete) {
+		if (!scope.complete && !following) {
 			nextScope = index;
 			break;
 		}
 	}
 	const checkpoint = makeCheckpoint();
-	if (checkpoint.phase === "follow") checkpoint.nextScope = 0;
+	if (checkpoint.phase === "follow" && !following) checkpoint.nextScope = 0;
 	return {
 		items: [...rows.values()],
-		truncated: checkpoint.phase !== "follow",
+		truncated: checkpoint.phase !== "follow" || following,
 		checkpoint,
 		progress: {
 			phase: checkpoint.phase,
@@ -175,7 +209,22 @@ export async function collectGrokMirrorIndex(input: {
 			completedScopes: scopes.filter((x) => x.complete).length,
 			totalScopes: scopes.length,
 			retainedRows: rows.size,
-			omissions: ["Visible Chats coverage does not prove hidden or undiscovered Bot scopes."],
+			omissions: [
+				"Visible Chats coverage does not prove hidden or undiscovered Bot scopes.",
+				...(following
+					? [
+							"Incremental head observation does not prove provider-wide ordering; older changes require an explicit full sweep.",
+						]
+					: []),
+			],
+			...(following
+				? {
+						observationCoverage: "partial" as const,
+						requiresFullSweep: true,
+						changedRows,
+						observedScopes,
+					}
+				: {}),
 		},
 	};
 }
