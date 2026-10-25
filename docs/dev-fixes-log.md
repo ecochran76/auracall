@@ -1,3 +1,14 @@
+## 2026-10-25 — Bind Grok transport and project stable identity
+
+Bind the attached target and actual DevTools endpoint into provider-session
+context before account proof. A changed endpoint cannot inherit the old browser
+PID. A display label cannot replace configured email/handle evidence or hide
+stronger serialized evidence. Grok bootstrap account data may occur far beyond
+the first16,000 characters: parse bounded Flight JSON and project whitelisted
+fields from `initialData.user`, without returning raw session data. Reject
+conflicting identities and traversal exhaustion. Keep source, built executable
+and native account-proof receipts distinct.
+
 ## 2026-10-24 — Keep bounded Grok detail aligned and attributable
 
 Slice content and referenced files against the same mounted-card inventory.

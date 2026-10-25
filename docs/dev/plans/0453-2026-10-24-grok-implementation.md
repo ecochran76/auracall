@@ -21,7 +21,8 @@ PR431/16dbd7218. Native source-binding, saved identity/grants, Bot editor and
 Build app/version/export evidence remain open;406/409/411/414 stay locked.
 The configured Grok account has stable email/handle evidence, and the managed
 browser registry identifies a live browser. Earlier process scanning missed
-split-form user-data-dir arguments. One bounded native owned-Bot read failed
+a full command string stored in one process-argument element. A fresh parsed
+process readback confirms the managed directory matches. One bounded native owned-Bot read failed
 account verification; no-launch identity smoke failed with
 `provider_session_provenance_missing`, target unknown, observation null. Diagnose
 source provenance before treating this as a login failure. No browser launch or
