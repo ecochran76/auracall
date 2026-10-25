@@ -41,3 +41,58 @@ export async function readGrokBuildResponseIdentity(
 	if (result.exceptionDetails) throw new Error("grok_build_response_read_failed");
 	return result.result?.value ?? null;
 }
+
+/** Build's plane transcript is distinct from the legacy main-based text surface.
+ * The auth preview URL is deliberately never returned: it contains a bearer. */
+export interface GrokBuildPlaneSnapshot {
+	state: "completed" | "running" | "unknown";
+	code: string;
+	conversationId: string | null;
+	conversationUrl: string | null;
+	responseId: string | null;
+	gatewayRowId: string | null;
+	text: string | null;
+	previewAvailable: boolean;
+}
+export async function readGrokBuildPlaneSnapshot(
+	runtime: ChromeClient["Runtime"],
+	request: { conversationId: string; responseId?: string },
+): Promise<GrokBuildPlaneSnapshot> {
+	const reply = await runtime.evaluate({
+		returnByValue: true,
+		expression: `(() => {
+      const expected = ${JSON.stringify(request)};
+      const empty = code => ({state:'unknown',code,conversationId:null,conversationUrl:null,responseId:null,gatewayRowId:null,text:null,previewAvailable:false});
+      const url = new URL(location.href);
+      const id = /^\\/c\\/([^/?#]+)\\/?$/.exec(url.pathname)?.[1];
+      if(url.origin!=='https://grok.com'||id!==expected.conversationId)return empty('grok_build_conversation_not_verified');
+      const visible = el => el instanceof HTMLElement && !el.closest('[aria-hidden="true"], [data-state="closed"], [data-closed=""], [data-closed="true"]') &&
+        window.getComputedStyle(el).display!=='none'&&window.getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().width>0&&el.getBoundingClientRect().height>0;
+      const planes = Array.from(document.querySelectorAll('[data-transcript-renderer="plane"]')).filter(visible);
+      if(planes.length!==1)return empty('grok_build_plane_not_verified');
+      let messages = Array.from(planes[0].querySelectorAll('[data-testid="assistant-message"]')).filter(visible);
+      if(messages.length>40)return empty('grok_build_plane_limit_exceeded');
+      if(expected.responseId)messages=messages.filter(node=>node.closest('[id^="response-"]')?.getAttribute('id')===expected.responseId);
+      if(messages.length!==1)return empty('grok_build_response_not_observed');
+      const message=messages[0], response=message.closest('[id^="response-"]'), row=message.closest('[data-plane-row]');
+      const responseId=response?.getAttribute('id'), gatewayRowId=row?.getAttribute('data-plane-row');
+      if(!responseId||!gatewayRowId?.startsWith('gateway:')||!planes[0].contains(row)||Array.from(document.querySelectorAll('[id]')).filter(el=>el.getAttribute('id')===responseId).length!==1)return empty('grok_build_response_not_verified');
+      const prose=message.querySelector('.response-content-markdown');
+      const text=prose&&visible(prose)?String(prose.innerText||prose.textContent||'').replace(/\\u200b/g,'').trim():'';
+      if(text.length>128000)return empty('grok_build_plane_limit_exceeded');
+      const thinking=Array.from(message.children).filter(el=>String(el.getAttribute('class')||'').split(/\\s+/).includes('thinking-container'));
+      const worked=thinking.flatMap(el=>Array.from(el.querySelectorAll('[data-testid="canvas-trigger"]'))).filter(el=>visible(el)&&!el.closest('.response-content-markdown')&&/^Worked for\\s+\\d+[hms](?:\\s+\\d+[hms])*$/i.test(String(el.innerText||el.textContent||'').trim()));
+      const stop=Array.from(document.querySelectorAll('button')).some(el=>visible(el)&&!el.disabled&&el.getAttribute('aria-disabled')!=='true'&&String(el.getAttribute('aria-label')||el.innerText||'').trim()==='Stop model response');
+      const previewAvailable=Array.from(document.querySelectorAll('iframe')).filter(visible).some(el=>{
+        try{const src=new URL(el.getAttribute('src')||'');return src.protocol==='https:'&&src.hostname.endsWith('.grok-sandbox.com')&&src.pathname==='/__grok-preview/auth'&&src.searchParams.has('token');}catch{return false;}
+      });
+      const state=stop?'running':worked.length===1&&text?'completed':'unknown';
+      return {state,code:state==='completed'?'grok_build_plane_completed':state==='running'?'grok_build_generation_running':'grok_build_completion_unobserved',conversationId:id,conversationUrl:url.origin+url.pathname,responseId,gatewayRowId,text:text||null,previewAvailable};
+    })()`,
+	});
+	if (reply.exceptionDetails) throw new Error("grok_build_plane_read_failed");
+	const value = reply.result?.value as GrokBuildPlaneSnapshot | undefined;
+	if (!value || !["completed", "running", "unknown"].includes(value.state))
+		throw new Error("grok_build_plane_read_failed");
+	return value;
+}
