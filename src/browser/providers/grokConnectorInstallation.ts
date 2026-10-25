@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { delay } from "../utils.js";
 import { createGrokConnectorClient, type GrokConnectorRuntime } from "./grokConnectors.js";
 export interface GrokConnectorInstallationInput {
 	kind: "custom" | "catalog";
@@ -307,6 +308,24 @@ export function createGrokConnectorInstallationClient(
 				if (!clicked) {
 					uncertainInputs.delete(inputKey(input));
 					return outcome(input, "failed", "grok_connector_install_form_changed", false);
+				}
+				// The native modal can replace its inputs with a terminal result after
+				// Add. Observe only this prepared owner; never reopen or repeat Add.
+				const deadline = Date.now() + 1_500;
+				for (let attempt = 0; attempt < 61; attempt++) {
+					const transition = await evaluate<string>(
+						expr(`
+      const owned=dialogs().filter(d=>d.getAttribute('data-auracall-install-owner')===${JSON.stringify(prepared.token)});
+      if(owned.length!==1)return 'unobserved';
+      const root=owned[0];
+      if(root.getAttribute('data-analytics-name')==='add-connector-modal' && text(root).includes('Custom Connector') && text(root).includes('Connection failed') && text(root).includes('Sorry, there was a problem connecting to this MCP server.') && buttons(root).some(b=>text(b)==='Go Back'))return 'connection-failed';
+      if(/authentication required|authorization required|complete authentication|continue in your browser|sign in to connect/i.test(text(root)))return 'human';
+      return 'pending';`),
+					);
+					if (transition === "connection-failed")
+						return outcome(input, "failed", "grok_connector_install_connection_failed", true);
+					if (transition !== "pending" || Date.now() >= deadline) break;
+					await delay(25);
 				}
 				return { ...(await reconcile(input)), effectDispatched: true };
 			} catch {

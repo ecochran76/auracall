@@ -56683,3 +56683,46 @@ hash and consumed2/2uploads. No Send/replay. #403's recent-file behavior has sou
 fixtures but native chooser selection remains a distinct gate; worker preparing
 one exact-known-B selection packet. #410 gets the next native slot after source
 integration. All eight issues remain open; reserved review/TDD counters0/0.
+
+### 2026-10-25 — Plan0458 main integration and remaining native discoveries
+
+PR471 merged as a74cb9b0f8ca2835cd73037b042b3bcba44cd744; integration worktree
+fast-forwarded cleanly. Actual source CLI retained Build inspect returns partial /
+grok_build_app_identity_unobserved while qualifying response_completed and
+cleanup complete. A broader exact-target passive census found no currently
+visible iframe across all paths; actual native controls are disabled Reload app
+preview / Mobile preview and enabled Restart preview. No restart, Code toggle,
+publication or new generation occurred; app/version/export remain unqualified.
+
+#403's subsequent known-B recent selection request stopped unconfirmed before
+chooser qualification and retained its exact target/unknown lease. No extra
+upload or Send occurred. Source-path/recorded-expression diagnosis distinguishes
+Attach/Recent opener clicks from an item selection; primary reconciliation is
+pending immutable no-selection proof. One independent operator read is granted
+only to qualify current empty composer/owned-menu/current-root row metadata.
+
+#405 read-only runtime inspection found only ChatGPT in the active external
+OAuth redirect allowlist. No Grok callback, configuration edit, grant change or
+service restart is qualified. Bounded request-time journal has no request entries;
+this prerequisite does not establish the cause of the generic Grok failure.
+Original #408 scope decision remains pending. All eight tickets stay open;
+requested final review/TDD counters remain0/0.
+
+### 2026-10-25 — Plan0458 owned Connector terminal-outcome correction
+
+Observed native failure reproduced as RED at the client public seam: expected
+connection-failed, got inventory-incomplete. Client now waits boundedly on its
+exact owned modal transition, reports only the observed native terminal failure,
+and never repeats Add. Service RED separately demonstrated that a known failed
+outcome was still marked unknown; it now settles that exact qualified failure
+while preserving target, journal and retrySafe=false. Foreign ownership stays
+unconfirmed; delayed-result and repeated-install checks pass. Primary focused
+selection24/2files and typecheck pass; changed-file Biome passes. New source has
+not been reinstalled or exercised by another native Add; #405 remains open for
+actual connection/OAuth. Reserved final review/TDD counters remain0/0.
+
+Primary also validated #403 immutable no-item-dispatch proof302af77b0a26314cff25580ae4737d22bcc3a846b32a1c87889f507c81b5e1b5
+against exact source/expression hashes and the native owner ARIA chain. Supported
+CAS settled its uncertainty and separately released the preserved lease atrev5;
+Attach/Recent menu effects/history remain, no item selection or replay authority
+is inferred. Native row metadata still awaits the corrected shared-tree probe.
