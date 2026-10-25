@@ -9,6 +9,10 @@ export const grokIndexProgressSchema = z
 		totalScopes: z.number().int().nonnegative(),
 		retainedRows: z.number().int().nonnegative(),
 		omissions: z.array(z.string()),
+		observationCoverage: z.literal("partial").optional(),
+		requiresFullSweep: z.boolean().optional(),
+		changedRows: z.number().int().nonnegative().optional(),
+		observedScopes: z.number().int().nonnegative().optional(),
 	})
 	.nullable()
 	.optional();

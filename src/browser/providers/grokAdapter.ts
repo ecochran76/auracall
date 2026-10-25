@@ -4073,7 +4073,7 @@ export function createGrokAdapter(): Pick<
       } finally {
         let cleanupConfirmed=false;
         try {await client.close();cleanupConfirmed=true;}
-        finally {await historyContinuation?.finish(historyCoverage?.state!== 'incomplete' || historyCoverage?.reason==='cursor-restart-required',cleanupConfirmed && historyCoverage?.state!=='failed' && historyCoverage!==undefined);}
+        finally {await historyContinuation?.finish(historyCoverage?.state!== 'incomplete' || historyCoverage?.reason==='cursor-restart-required' || historyCoverage?.reason==='incremental-frontier',cleanupConfirmed && historyCoverage?.state!=='failed' && historyCoverage!==undefined);}
         if (!historyContinuation && shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -10146,6 +10146,14 @@ export async function listHistoryConversations(
     if(response.result?.value!==true)throw new Error('Grok Chats search composer is missing or ambiguous.');
    },options.abortSignal);
   }
+  if(options?.historyStartAtHead && !options.historyCursor) {
+   await readGrokDiscoveryWithAdmission(client,'provider:grok:history-head-reset',async()=>{
+    const {buildGrokHistoryHeadResetExpression}=await import('./grokHistoryInventory.js');
+    options.abortSignal?.throwIfAborted();
+    const response=await withCdpCommandAbortSignal(options.abortSignal,()=>client.Runtime.evaluate({expression:buildGrokHistoryHeadResetExpression(),returnByValue:true,awaitPromise:true}));
+    if(response.exceptionDetails || response.result?.value!==true)throw new Error('Grok history head reset was not confirmed.');
+   },options.abortSignal);
+  }
   const inventory=await collectGrokHistoryInventory({projectId,options,governor:resolveProviderTrafficGovernor(client),probeContext:client.Runtime,onProgress:publish,readPage:async(signal)=>{
 const expression = buildGrokHistoryPageExpression(projectId,resolveGrokConversationUrl(''));
    const response=await withCdpCommandAbortSignal(signal,()=>client.Runtime.evaluate({expression,returnByValue:true}));
@@ -10159,7 +10167,7 @@ const expression = buildGrokHistoryPageExpression(projectId,resolveGrokConversat
   if(!published)await publish({state:'failed',source:'visible-chats',scope:projectId?'project':'root',reason:options?.abortSignal?.aborted?'cancelled':'history-failed',loadedCount:0,pages:0,nextCursor:null,observedAt:new Date().toISOString()});
   throw error;
  } finally {
-  if(!options?.historyRetainDialog || lastCoverage?.state!=='incomplete' || lastCoverage?.reason==='cursor-restart-required')await closeHistoryDialog(client);
+  if(!options?.historyRetainDialog || lastCoverage?.state!=='incomplete' || lastCoverage?.reason==='cursor-restart-required' || lastCoverage?.reason==='incremental-frontier')await closeHistoryDialog(client);
  }
 }
 

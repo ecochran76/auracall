@@ -4,7 +4,27 @@ import type { ProviderTrafficGovernor } from "../../../packages/browser-service/
 import { cssClassContains } from "../service/selectors.js";
 import type { Conversation } from "./domain.js";
 
+/** Stable provider row evidence, excluding observation/transport metadata. */
+export function grokHistoryFingerprint(
+	row: Pick<Conversation, "id" | "title" | "projectId" | "updatedAt">,
+): string {
+	return createHash("sha256")
+		.update(
+			JSON.stringify([
+				row.id,
+				row.title,
+				row.projectId ?? null,
+				row.updatedAt && Number.isFinite(Date.parse(row.updatedAt))
+					? new Date(row.updatedAt).toISOString()
+					: (row.updatedAt ?? null),
+			]),
+		)
+		.digest("hex");
+}
+
 export interface GrokHistoryOptions {
+	historyKnownRows?: readonly { id: string; fingerprint: string }[];
+	historyStartAtHead?: boolean;
 	/** Internal custody bound by the owned history transport. */
 	historyAccountScope?: string;
 	historySessionId?: string;
@@ -143,6 +163,8 @@ export async function collectGrokHistoryInventory(input: {
 		? { evaluate: (value: unknown) => bounded(() => evaluate(value)) }
 		: input.probeContext;
 	let state: GrokHistoryCoverage["state"] = "incomplete";
+	let frontierReached = false;
+	const knownRows = new Map(options.historyKnownRows?.map((row) => [row.id, row.fingerprint]));
 	let restartRequired = false;
 	const coverage = (): GrokHistoryCoverage => ({
 		state,
@@ -152,7 +174,7 @@ export async function collectGrokHistoryInventory(input: {
 		loadedCount: entries.size,
 		pages,
 		nextCursor:
-			state === "incomplete" && !restartRequired
+			state === "incomplete" && !restartRequired && !frontierReached
 				? entries.size
 					? Buffer.from(
 							JSON.stringify({
@@ -255,6 +277,22 @@ export async function collectGrokHistoryInventory(input: {
 					if (typeof row.timestamp !== "number") unknownTime = true;
 					else if (row.timestamp < cutoff) continue;
 				}
+				if (
+					knownRows.get(row.id) ===
+					grokHistoryFingerprint({
+						id: row.id,
+						title: row.title,
+						projectId: rowProject,
+						updatedAt:
+							typeof row.timestamp === "number" && Number.isFinite(row.timestamp)
+								? new Date(row.timestamp).toISOString()
+								: undefined,
+					})
+				) {
+					frontierReached = true;
+					reason = "incremental-frontier";
+					break;
+				}
 				if (!entries.has(row.id))
 					entries.set(row.id, {
 						id: row.id,
@@ -279,7 +317,7 @@ export async function collectGrokHistoryInventory(input: {
 					break;
 				}
 			}
-			if (entries.size >= limit) break;
+			if (entries.size >= limit || frontierReached) break;
 			if (page.emptyEvidence && entries.size === 0 && anchorFound && !unknownScope) {
 				state = "empty";
 				reason = "explicit-empty";
@@ -545,5 +583,24 @@ export function buildGrokChatsOpenerExpression(): string {
  const matches=chats.length ? chats : nodes.filter(node=>label(node)==='history');
  if(matches.length!==1)return {ok:false,reason:matches.length?'ambiguous-chats-opener':'chats-opener-missing'};
  matches[0].click();return {ok:true};
+ })()`;
+}
+
+/** Rewind only fresh observations; continuation reads retain their qualified position. */
+export function buildGrokHistoryHeadResetExpression(): string {
+	return `(async () => {
+ // grok-history-head-reset
+ const dialog = document.querySelector('[role="dialog"]') || document.querySelector('dialog') || document.querySelector('[aria-modal="true"]');
+ if (!dialog) return false;
+ const scrollables = Array.from(dialog.querySelectorAll('*')).filter(el => el.scrollHeight > el.clientHeight + 24);
+ const scroller = scrollables.sort((a,b) => b.scrollHeight - a.scrollHeight)[0] || dialog;
+ scroller.scrollTop = 0;
+ let timer;
+ const rendered = await Promise.race([
+   new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))),
+   new Promise(resolve => { timer = setTimeout(() => resolve(false), 1000); }),
+ ]);
+ clearTimeout(timer);
+ return rendered && scroller.isConnected !== false && scroller.scrollTop <= 1;
  })()`;
 }
