@@ -12,7 +12,9 @@ export class ConnectorFixtureNode {
 	hidden = false;
 	value = "";
 	onInput: (() => void) | null = null;
-	dispatchEvent() {
+	onKeyDown: (() => void) | null = null;
+	dispatchEvent(event?: { key?: string }) {
+		if (event?.key === "Escape") this.onKeyDown?.();
 		this.onInput?.();
 		return true;
 	}
@@ -83,6 +85,8 @@ export function connectorDomFixture({
 	gated = false,
 	broken = false,
 	toolExpansion = true,
+	inertParent = false,
+	escapeOnly = false,
 	userEmail = "operator@example.test",
 	accountLabel = "Account label excluded",
 } = {}) {
@@ -135,17 +139,23 @@ export function connectorDomFixture({
 	const tools = new N("div", "All tools enabled\nsearch");
 	const more = new N("button", "See more");
 	const close = new N("button", "", { "aria-label": "Close" });
-	const detail = new N("div", "Example", { role: "dialog" }, [
-		reauthenticate,
-		disconnect,
-		tools,
-		more,
-		new N("div", "Server URL\nhttps://mcp.example.test/mcp"),
-		close,
-	]);
+	const detail = new N(
+		"div",
+		"Example",
+		{ role: "dialog", "data-analytics-name": "connector-detail-dialog" },
+		[
+			reauthenticate,
+			disconnect,
+			tools,
+			more,
+			new N("div", "Server URL\nhttps://mcp.example.test/mcp"),
+			...(escapeOnly ? [] : [close]),
+		],
+	);
 	detail.hidden = true;
 	installed.onClick = () => {
 		detail.hidden = false;
+		if (inertParent) plugins.setAttribute("aria-hidden", "true");
 	};
 	more.onClick = () => {
 		if (!toolExpansion) return;
@@ -156,7 +166,9 @@ export function connectorDomFixture({
 	};
 	close.onClick = () => {
 		detail.hidden = true;
+		if (inertParent) delete plugins.attributes["aria-hidden"];
 	};
+	detail.onKeyDown = close.onClick;
 	const document = new N("document", "", {}, [plugins, detail]);
 	return {
 		runtime: {
@@ -165,6 +177,13 @@ export function connectorDomFixture({
 					value: runInNewContext(expression, {
 						document: Object.assign(document, { body: document, title: "Grok" }),
 						location: { href: "https://grok.com/" },
+						setTimeout,
+						KeyboardEvent: class {
+							key: string;
+							constructor(_type: string, options: { key: string }) {
+								this.key = options.key;
+							}
+						},
 						HTMLElement: ConnectorFixtureNode,
 						HTMLInputElement: ConnectorFixtureNode,
 						Event: class {

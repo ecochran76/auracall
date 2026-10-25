@@ -51,3 +51,8 @@ qualified.411 public publication is a later approval of an actual concrete app/
 version; no placeholder approval here.414 materializes only selected qualified
 assets with attributable byte/checksum evidence. No unrelated mailbox content,
 mail sending, provider deletion, scheduler enablement or destructive cleanup.
+
+
+## Execution authority and first native evidence
+
+The user approved this exact four-canary packet on2026-10-25 and directed continued ticket work. The fixed review baseline d107e13ce is confirmed. Publication remains excluded until an actual generated app/version is prepared. Fresh built public account smoke matched default/grok without browser launch. Initial public405 install returned unsupported / grok_connector_install_existing_endpoint_unobserved with effectDispatched=false; no Add or OAuth was dispatched. An owned same-target read then observed a real nested Connector detail and its inert parent Plugins dialog. The parent is marked aria-hidden while detail is open; source cleanup previously lost its own activation marker. A sanitized inert-parent regression failed (endpoint null), then passed after resolving only its own activation marker through the inert parent without interacting with that parent. Focused404/405 tests pass34/34. This is source defect repair and native discovery, not Connector acceptance or ticket closure. Raw captures remain private.
