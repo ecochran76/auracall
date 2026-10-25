@@ -685,3 +685,48 @@ test.each([
 		code: "grok_file_native_context_unconfirmed",
 	});
 }, 15000);
+
+test.each([
+	false,
+	true,
+])("chooser observation fails before item selection even if cleanup fails (%s)", async (cleanupFails) => {
+	const f = fixture();
+	const attach = new Node("BUTTON", { "aria-label": "Attach" }, "Attach");
+	attach.onClick = () => {
+		throw new Error("chooser observation transport unavailable");
+	};
+	f.composer.append(attach);
+	const closeTarget = vi.fn(async () => {});
+	const settle = vi.fn(async () => {});
+	const close = vi.fn(async () => {
+		if (cleanupFails) throw new AggregateError([new Error("cleanup unavailable")]);
+	});
+	const service = createGrokFilesService(fixtureConnectorServiceOptions(), {
+		connect: async () => ({
+			client: {
+				Runtime: f.runtime,
+				DOM: f.dom,
+				close,
+				__auracallProviderTrafficGovernor: {
+					attribution: { provider: "grok", targetId: "fixture-target" },
+					admitBackendRequest: async () => {},
+					begin: async () => ({ settle }),
+				},
+			},
+			targetId: "fixture-target",
+			shouldClose: true,
+			host: "localhost",
+			port: 1,
+		}),
+		closeTarget,
+	});
+	const result = await runGrokFilesCommand({ action: "select", id: "known-b" }, service);
+	expect(result).toMatchObject({
+		status: "unconfirmed",
+		selectionDispatch: "not-dispatched",
+		provenance: { targetId: "fixture-target" },
+	});
+	expect(f.dom.setFileInputFiles).not.toHaveBeenCalled();
+	expect(closeTarget).not.toHaveBeenCalled();
+	expect(close).toHaveBeenCalledOnce();
+});

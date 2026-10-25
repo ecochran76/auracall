@@ -56482,3 +56482,10 @@ Actual public collector restart plus controlled-CDP service regressions pass;
 explicit partial/full-sweep work; no global-order claim. Optional predicate
 extraction deferred. Frozen review artifact records adjudication and all causal
 receipts. Main integration/443 reclosure/final closeout remain, no broad rerun.
+
+
+2026-10-25 — Grok403 chooser-before-selection attribution: causal public-service
+regressions cover chooser transport failure with normal and failed cleanup.
+Preserve known zero item-selection dispatch separately from unknown menu/cleanup
+effects; public unconfirmed status and target custody remain. Corrected passive
+metadata probe uses shared committed-path helper per owned host; not yet run.

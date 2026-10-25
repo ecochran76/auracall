@@ -26101,3 +26101,9 @@ read-only reconciliation. Do not convert a rejected final DOM guard into a
 positive dispatched-effect claim, or let diagnostic persistence erase an unknown
 outcome. Public CLI/API/MCP fixtures cover the production path; saved provider
 identity, granted scopes and native built-in behavior remain separate open gates.
+
+
+2026-10-25 — Grok Recent chooser failures retain item-dispatch attribution.
+An observation failure before the selection expression now returns optional
+`selectionDispatch: "not-dispatched"`, including cleanup failure. This does not
+settle menu effects, release unknown leases, or authorize retry.

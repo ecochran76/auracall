@@ -15,6 +15,7 @@ export interface GrokComposerFile {
 	sourceAgreement?: "local-manifest" | "observed-native";
 }
 export interface GrokFilesResult {
+	selectionDispatch?: "not-dispatched" | "dispatched" | "unknown";
 	status: "complete" | "incomplete" | "failed" | "unconfirmed";
 	code: string;
 	providerAccountRef: string | null;
@@ -323,7 +324,16 @@ export function createGrokFileClient(
 		throw new Error("grok_files_observation_budget_exhausted");
 	}
 	async function select(id: string): Promise<GrokFilesResult> {
-		const inventory = await recent();
+		let inventory: GrokFilesResult;
+		try {
+			inventory = await recent();
+		} catch (error) {
+			throw new BrowserAutomationError(
+				"Grok chooser observation failed before file item selection.",
+				{ stage: "grok-file-chooser", effectState: "unknown", selectionDispatch: "not-dispatched" },
+				error,
+			);
+		}
 		if (!id.trim() || inventory.files.filter((f) => f.id === id).length !== 1)
 			return { ...inventory, status: "failed", code: "grok_recent_identity_not_unique" };
 		try {

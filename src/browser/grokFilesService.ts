@@ -53,6 +53,7 @@ export function createGrokFilesService(
 		const connection = await connect({ ...options, providerTrafficRequired: true });
 		let retainTarget = false;
 		let operationStarted = false;
+		let selectionDispatch: GrokFilesResult["selectionDispatch"];
 		try {
 			const governor = resolveProviderTrafficGovernor(connection.client);
 			if (!governor || governor.attribution.provider !== "grok" || !governor.admitBackendRequest) {
@@ -99,6 +100,11 @@ export function createGrokFilesService(
 				);
 			} catch (caught) {
 				let error = caught;
+				if (
+					caught instanceof BrowserAutomationError &&
+					caught.details?.selectionDispatch === "not-dispatched"
+				)
+					selectionDispatch = "not-dispatched";
 				if (operationStarted && kind !== "provider-read") {
 					retainTarget = true;
 					if (!(error instanceof BrowserAutomationError))
@@ -120,7 +126,12 @@ export function createGrokFilesService(
 				if (error instanceof BrowserAutomationError && error.details?.effectState === "unknown") {
 					throw new BrowserAutomationError(
 						"Grok file operation unconfirmed; reconcile the retained target before retrying.",
-						{ stage: "grok-files", effectState: "unknown", targetId: connection.targetId },
+						{
+							stage: "grok-files",
+							effectState: "unknown",
+							targetId: connection.targetId,
+							selectionDispatch,
+						},
 						error,
 					);
 				}
@@ -146,7 +157,12 @@ export function createGrokFilesService(
 				if (retainTarget || (operationStarted && kind !== "provider-read")) {
 					throw new BrowserAutomationError(
 						"Grok file cleanup unconfirmed; reconcile the retained target before retrying.",
-						{ stage: "grok-files-cleanup", effectState: "unknown", targetId: connection.targetId },
+						{
+							stage: "grok-files-cleanup",
+							effectState: "unknown",
+							targetId: connection.targetId,
+							selectionDispatch,
+						},
 						error,
 					);
 				}
