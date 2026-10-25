@@ -58,7 +58,8 @@ export interface GrokBotLifecycleClientOptions {
 	) => Promise<T>;
 }
 const helpers = String.raw`
- const visible=e=>e&&!e.closest?.('[aria-hidden="true"]')&&getComputedStyle(e).display!=='none'&&getComputedStyle(e).visibility!=='hidden'&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0;
+ const closedDialog=e=>{for(let n=e;n;n=n.parentElement)if(n.getAttribute?.('role')==='dialog'&&n.getAttribute('data-closed')!==null)return true;return false;};
+ const visible=e=>e&&!closedDialog(e)&&!e.closest?.('[aria-hidden="true"]')&&getComputedStyle(e).display!=='none'&&getComputedStyle(e).visibility!=='hidden'&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0;
  const all=(root,selector)=>Array.from(root.querySelectorAll(selector)).filter(visible);
  const text=e=>(e.innerText||e.textContent||'').trim();
  const route=()=>{const u=new URL(location.href);const m=/^\/bot\/([a-f0-9-]{36})\/?$/.exec(u.pathname);return u.origin==='https://grok.com'&&m?m[1]:null;};

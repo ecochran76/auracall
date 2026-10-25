@@ -327,3 +327,44 @@ test("reconciliation never labels an already-open unsaved Settings buffer as per
 	expect(result.code).toBe("grok_bot_reconciliation_open_editor_unsaved");
 	expect(f.saves()).toBe(0);
 });
+
+test("explicitly closed BaseUI Settings remains mounted with visible geometry and is excluded only through dialog ancestry", async () => {
+	const f = fixture();
+	f.dialog.setAttribute("data-closed", "");
+	const closed = await createGrokBotLifecycleClient(f.runtime).inspect({ id, name: "Canary" });
+	expect(closed.status).toBe("unknown");
+	delete f.dialog.attributes["data-closed"];
+	f.name.setAttribute("data-closed", "");
+	const unrelated = await createGrokBotLifecycleClient(f.runtime).inspect({ id, name: "Canary" });
+	expect(unrelated.status).toBe("supported");
+});
+
+test("saved readback reopens explicitly closed mounted Settings rather than consuming stale buffer", async () => {
+	const f = fixture();
+	const save = f.dialog.children.find((c) => c.ownText === "Save");
+	if (!save?.onClick || !f.button.onClick) throw Error("Settings fixture controls absent");
+	const originalSave = save.onClick;
+	const originalOpen = f.button.onClick;
+	let reopens = 0;
+	save.onClick = () => {
+		originalSave();
+		f.dialog.hidden = false;
+		f.dialog.setAttribute("data-closed", "");
+	};
+	f.button.onClick = () => {
+		reopens++;
+		delete f.dialog.attributes["data-closed"];
+		originalOpen();
+	};
+	const result = await createGrokBotLifecycleClient(f.runtime).edit(
+		{ id, name: "Canary" },
+		{ name: "After", description: "Saved description" },
+	);
+	expect(result).toMatchObject({
+		status: "supported",
+		effectState: "completed",
+		bot: { id, name: "After", title: "Existing title", description: "Saved description" },
+	});
+	expect(f.saves()).toBe(1);
+	expect(reopens).toBe(1);
+});

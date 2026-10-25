@@ -59,3 +59,15 @@ Operator immutable proof, supported exact custody settlement, and public same-ID
 reconciliation remain separate steps. No generic gate is bypassed. Full source
 typecheck passed after correcting one test-only union assertion; seven-file lint
 and whitespace checks pass. No global installed runtime change is claimed.
+
+## Explicitly closed mounted overlay repair
+
+The subsequent native Connector diagnostic established BaseUI's actual closed
+contract: `data-closed` is present with an empty value, `data-open` is absent,
+and the dialog still reports visible styles and nonzero geometry. Bot lifecycle
+visibility now rejects any element inside a role=dialog ancestor carrying
+`data-closed`; unrelated fields with that attribute remain eligible. A native-
+shaped fixture reproduced a closed Settings dialog being misclassified as active
+before the predicate repair. A saved-readback fixture keeps the closed dialog
+mounted and verifies one actual reopen before returning persisted values. No
+native interaction accompanied this source repair.
