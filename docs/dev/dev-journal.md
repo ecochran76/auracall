@@ -56251,3 +56251,14 @@ new isolated worktree from0b8eda9af. The follow design preserves completed scope
 state, observes bounded fresh heads and distinguishes unobserved older changes
 that require explicit full sweeps. Primary99tests/12files and local build pass.
 PR447 remains draft; current-main journal merge preserves both histories.
+
+## 2026-10-25 — Four repair tickets closed on main
+
+PR447 merged7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4; exact remote main
+and tracker readbacks confirm440/441/442/444 CLOSED. Primary40-test final
+retirement fence selection passes.443 remains the sole active repair; original
+eight native-gated program tickets remain open. Post-closure review comparison
+will use4ffe87be2 (main immediately before repair source landed), excluding the
+independently merged desktop deployment docs. The one review and bounded TDD
+pass remain unconsumed until443 closes. Manual allowance at54min/~1.00MM
+against2h/2MM; no reset or runtime/provider effects.

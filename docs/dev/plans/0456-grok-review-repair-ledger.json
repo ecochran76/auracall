@@ -17,7 +17,8 @@
     "manualMonitoring": true,
     "wake319Excluded": true,
     "broadPostClosureReviews": 0,
-    "postReviewTddPasses": 0
+    "postReviewTddPasses": 0,
+    "postClosureReviewBase": "4ffe87be2"
   },
   "repairTicketSet": [
     440,
@@ -259,32 +260,38 @@
     "440": {
       "title": "Grok: Preserve cursor-covered Grok rows through public discovery and mirror checkpoints",
       "url": "https://github.com/ecochran76/auracall/issues/440",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [],
-      "state": "validated-on-integration",
+      "state": "complete",
       "scope": "review-repair",
       "finding": "SPEC1",
-      "body": "docs/dev/plans/0456-grok-review-repair-tickets/440.md"
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/440.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447
     },
     "441": {
       "title": "Grok: Complete bounded Grok project inventories without starving later scopes",
       "url": "https://github.com/ecochran76/auracall/issues/441",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [],
-      "state": "validated-on-integration",
+      "state": "complete",
       "scope": "review-repair",
       "finding": "SPEC2",
-      "body": "docs/dev/plans/0456-grok-review-repair-tickets/441.md"
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/441.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447
     },
     "442": {
       "title": "Grok: Make bounded Grok history continuation progress after restart",
       "url": "https://github.com/ecochran76/auracall/issues/442",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [],
-      "state": "validated-on-integration",
+      "state": "complete",
       "scope": "review-repair",
       "finding": "SPEC3",
-      "body": "docs/dev/plans/0456-grok-review-repair-tickets/442.md"
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/442.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447
     },
     "443": {
       "title": "Grok: Follow Grok index changes incrementally after completed backfill",
@@ -303,12 +310,14 @@
     "444": {
       "title": "Grok: Centralize Grok account-reference projection with compatibility safeguards",
       "url": "https://github.com/ecochran76/auracall/issues/444",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [],
-      "state": "validated-on-integration",
+      "state": "complete",
       "scope": "review-repair",
       "finding": "STD1",
-      "body": "docs/dev/plans/0456-grok-review-repair-tickets/444.md"
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/444.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447
     }
   },
   "publication": [
@@ -374,7 +383,7 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "442 target-close uncertainty red/green repair integrated asf543e8dcb; primary40-test followup running.443 owns bounded incremental follow; other repairs validated awaiting main. Primary build and99regression tests pass.",
+  "lastCheckpoint": "Four foundations merged inPR447/main7586dfdf2 and trackerCLOSED440/441/442/444. Primary40-test final fence selection passed;443 sole remaining repair, original8open unchanged.",
   "registrationMerge": {
     "pr": 445,
     "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"
@@ -385,8 +394,8 @@
     "note": "docs/dev/notes/2026-10-25-grok-440-cursor-row-custody.md"
   },
   "lastManualObservation": {
-    "tokensUsed": 824127,
-    "timeUsedSeconds": 2779,
+    "tokensUsed": 1004150,
+    "timeUsedSeconds": 3237,
     "availableMemoryMiB": 41026,
     "swapUsedMiB": 91483
   },
