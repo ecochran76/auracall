@@ -41,6 +41,16 @@ change identity; retain qualified absolute changes and normalize legacy estimate
 once within existing bounds. Keep exclusive-group admission policy centralized
 while callers preserve conflict precedence, scope, locking and process checks.
 
+## 2026-10-25 — Preserve app inventory progress in default mode
+
+The apps CLI discarded onProgress unless verbose was enabled, hiding identity,
+inventory and queue waits throughout a capacity-extended operation budget.
+Retain the observer and emit bounded stage/elapsed/budget diagnostics on stderr
+every30seconds for long default list calls. Keep stdout terminal JSON and stop
+the timer on completion. A real CLI/operation/adapter/file-queue fixture varies
+only verbosity and proves the silence red before repair. Do not infer the
+provider delay's cause or shorten configured admission windows from this fix.
+
 ## 2026-10-25 — An unchanged row cannot hide observed Grok changes
 
 Without qualified provider ordering, process all available rows in the bounded

@@ -1,3 +1,10 @@
+- Default app-list waiting diagnostics (provider-free, issue427):
+  `pnpm vitest run tests/cli/developerAppWaitingDiagnostics.test.ts tests/cli/developerAppTerminalExit.test.ts tests/cli/developerAppFailureDiagnostics.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/cli/chatgptDeveloperAppsGovernor.test.ts --maxWorkers=1`.
+  Real CLI action/public operation/adapter/file dispatch with a stalled SDK read
+  proves default stderr progress, verbose continuity, terminal-only JSON and
+  timer disposal using virtual time. Source fixtures do not establish provider
+  response readiness or resolve a native inventory delay.
+
 - Desktop transition crash recovery (provider-free, issue437):
   `pnpm vitest run tests/browser/desktopTransitionRecovery.test.ts tests/browser/desktopControlGate.test.ts tests/browser/nativeDesktopCdp.test.ts tests/browser/desktopCdpTransport.test.ts --maxWorkers=1`.
   Real child-process death covers acquisition/release; live-owner, human-token,

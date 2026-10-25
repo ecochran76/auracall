@@ -8,6 +8,7 @@ now supports exact target selection without broad page initialization; URL/focus
 fallback cannot inspect another retained composer. Source tests pass; private
 native observation proves the selected File bytes, not their provider-ID binding.
 
+
 ## 2026-10-25 — Grok fresh-operation target isolation (#403)
 
 Native preparation found `retain-new` could reuse an existing root tab containing
@@ -38,6 +39,18 @@ keepalive/kill-signal protections already address that lesson. CI and runtime
 changes excluded. See [report](notes/2026-10-25-plan0455-retrospective.md).
 Memory disposition: queued under standing capture authority; processing and
 retrieval remain separate.
+
+## 2026-10-25 — Issue427 inventory silence
+
+Plan0459: default CLI omitted the progress observer; verbose-only control and
+real CLI/operation/adapter/file-queue fixture isolate silence in under1s. Add
+30s stderr stage/elapsed/budget reports without changing capacity/deadline rules
+or terminal-only JSON.65 focused tests, typecheck/build and scoped test lint pass.
+An uninterrupted source-native command completes30-app inventory in347.649s
+with ten progress messages and exit0. Delay cause remains unqualified; no
+performance claim or live browser/fence reset. Wake registration was rejected
+for missing host permission policy; the source probe finished during validation.
+Review/integration and installed qualification remain.
 
 ## 2026-10-25 — Plan0457 complete after one post-closure gate
 
