@@ -69,6 +69,8 @@ export interface BrowserTabLease {
   scope: TabLeaseScope;
   targetId: string;
   workload: TabLeaseWorkload;
+  /** Atomic exclusion for active owners; idle retained targets can coexist. */
+  exclusiveGroup?: string;
   state: TabLeaseState;
   ownerOperationId: string | null;
   ownerProcessId?: number | null;
@@ -140,6 +142,7 @@ export interface ReserveTabLeaseInput {
   idleTtlMs: number;
   absoluteTtlMs: number;
   targetFingerprint?: string | null;
+  exclusiveGroup?: string;
   processBound?: boolean;
 }
 
@@ -452,6 +455,13 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
       sameWorkload(candidate.workload, workload));
     if (other) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(other) } };
+    if (existing.exclusiveGroup) {
+      const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
+        FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
+        candidate.exclusiveGroup === existing.exclusiveGroup &&
+        (candidate.state === 'active' || candidate.effectState === 'outcome-unknown'));
+      if (conflict) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(conflict) } };
+    }
     const operationId = requireNonEmpty(input.operationId, 'operationId');
     const lease: BrowserTabLease = {
       ...existing, workload, revision: existing.revision + 1, state: 'active',
@@ -480,6 +490,11 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     for (const existing of this.leases.values()) {
       if (!FENCED_STATES.has(existing.state)) continue;
+      if (normalized.exclusiveGroup && existing.exclusiveGroup === normalized.exclusiveGroup &&
+        sameOwnershipScope(existing.scope, normalized.scope) &&
+        (existing.state === 'active' || existing.effectState === 'outcome-unknown')) {
+        return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(existing) } };
+      }
       if (normalized.processBound && sameOwnershipScope(existing.scope, normalized.scope) &&
         existing.processBinding?.processId === this.ownerIdentity.processId) {
         return { ok: false, conflict: { kind: 'process-owned', lease: cloneLease(existing) } };
@@ -508,6 +523,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       scope: normalized.scope,
       targetId: normalized.targetId,
       workload: normalized.workload,
+      ...(normalized.exclusiveGroup ? { exclusiveGroup: normalized.exclusiveGroup } : {}),
       state: 'active',
       ownerOperationId: normalized.operationId,
       ownerProcessId: this.ownerIdentity.processId,
@@ -776,6 +792,13 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
         nowMs >= parseTimestamp(existing.absoluteExpiresAt, 'absoluteExpiresAt')))
     ) {
       return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    }
+    if (existing.exclusiveGroup) {
+      const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
+        FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
+        candidate.exclusiveGroup === existing.exclusiveGroup &&
+        (candidate.state === 'active' || candidate.effectState === 'outcome-unknown'));
+      if (conflict) return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(conflict) } };
     }
     if (input.processBound) {
       if (existing.processBinding && !this.canAdoptProcessBinding(existing)) {
@@ -1251,6 +1274,7 @@ function normalizeReserveInput(input: ReserveTabLeaseInput): ReserveTabLeaseInpu
     idleTtlMs,
     absoluteTtlMs,
     targetFingerprint: normalizeOptional(input.targetFingerprint),
+    ...(input.exclusiveGroup === undefined ? {} : { exclusiveGroup: requireNonEmpty(input.exclusiveGroup, 'exclusiveGroup') }),
   };
 }
 
