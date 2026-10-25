@@ -199,3 +199,26 @@ Raw result, source/dirty/helper hashes and lease snapshot are private files
 `modal-fixed-terminal-leases.json` beneath the user-scoped directory above.
 Issue410 stays open; app/version/preview/export evidence and installed-runtime
 acceptance remain unproved.
+
+
+### Supported retained-target readback
+
+The coordinator granted one independent operator diagnostic through merged
+`browser-tools eval --target-id`, bound to configured default/grok and the
+retained exact target. The browser process/profile/port remained live-bound;
+source identity probes before/after the read both matched the current configured
+account. No normal utility lease was acquired or mutated. The actual route is an
+owned conversation containing the approved synthetic timer prompt and an active
+Build interface: generation/design progress plus `Stop model response`. The
+preview control was still disabled. This proves native acceptance and ongoing
+generation, not a completed app or available bytes.
+
+This Build surface has no `main` element or generic `response-*` nodes. Its
+transcript exposes `data-transcript-renderer="plane"` and `data-plane-row`
+attributes. The generic text observer therefore cannot establish this operation's
+completion. No observed row ID has been promoted to app/version authority. Raw
+HTML was bounded/truncated; no app/version/export schema was inferred.
+The read closed successfully and the native slot was released. The unknown-effect
+lease remains preserved pending supported reconciliation; no new generation,
+publication or arbitrary download was performed. Private read/proof/source
+metadata files use the `supported-read-*` prefix in the directory above.
