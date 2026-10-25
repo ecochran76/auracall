@@ -40,7 +40,7 @@
       "worktree": "auracall-grok-repair-452",
       "branch": "feat/grok-repair-452-20261025",
       "base": "b509d45fa52a605d0ba647554decf6d2344dad73",
-      "state": "integrated",
+      "state": "running-acceptance-followup",
       "result": "f38fbecdac3a2d6c21df3ec1492ea0818d5a9e2f",
       "integratedCommit": "c842ee577",
       "evidence": "41focused+3paritytests,tsc/lint/diffpass;primarycombinedpending"
@@ -320,7 +320,7 @@
       "title": "Grok: Keep Grok incremental fingerprints stable for relative timestamps",
       "url": "https://github.com/ecochran76/auracall/issues/452",
       "trackerState": "OPEN",
-      "state": "validated-on-integration",
+      "state": "running-acceptance-gap",
       "blockedBy": [],
       "scope": "final-review-repair",
       "finding": "P2TIME",
@@ -401,7 +401,7 @@
     }
   ],
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "Combined125tests/15files,typecheck/buildpass;2testformat/importissuesfixed,affected34testsrepassand7filescopedcheckpass. All3readyformain/closure;postclosurereview/TDDunconsumed.",
+  "lastCheckpoint": "125combinedtests/typecheck/build/scopedcheckpass,but452actuallegacyadaptermergecanreintroduceunqualifiedtimestamps. PR455draft;452workerboundedactualadapterfollowup. No closures/reviewconsumed.",
   "scopeNote": "Close three approved final-range review tickets, then one post-closure two-axis review and one bounded TDD findings pass. Preserve original eight native gates and parent398.",
   "registrationMerge": {
     "pr": 454,

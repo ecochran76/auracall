@@ -1,3 +1,15 @@
+## 2026-10-25 — Hold452 for actual adapter merge acceptance
+
+Primary inspection of the real root adapter found raw/sidebar/open merging can
+reintroduce relative timestamp estimates after the qualified history reader.
+Earlier125checks remain valid for covered seams but did not prove this public
+merge path. PR455 converted to draft;452 worker continues the same frozen ticket
+fromd3629f491 with a real adapter/collector regression. Qualified includeHistory
+window authority will match the existing project mode; non-history mounted reads
+retain their merge path.451/453 remain validated,452 running; no tickets closed
+or post-closure review consumed. This closes an evidence gap instead of narrowing
+or declaring acceptance from the easier core-reader fixture.
+
 ## 2026-10-25 — Plan0457 combined acceptance ready for main
 
 Primary combined sourcec842ee577:125tests/15files pass, typecheck/build pass.

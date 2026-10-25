@@ -13,9 +13,13 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 User approved the three-ticket breakdown, publication, current implementation-graph
 integration and implementation. Tickets451/452/453 are freshly published with exact actor/body/state/label
 readbacks. All are independent and ready; primary owns451, workers own452/453, one each.
-RegistrationPR454 mergedb509d45fa before dispatch. All three source packets are
-integrated and primary-validated:125tests/15files, typecheck/build/scopedcheck
-pass, plus34tests after test-only formatting. Main merge/closures remain.
+RegistrationPR454 mergedb509d45fa before dispatch. Three source packets are
+integrated:125tests/15files, typecheck/build/scopedcheck pass, plus34tests after
+formatting. A final452 path inspection found supplemental legacy-adapter rows can
+reintroduce unqualified timestamps; PR455 is draft while the same worker adds
+actual public-adapter/collector coverage and repairs qualified-window authority.
+451/453 remain validated;452 is not acceptance-complete. No closures or broad
+post-closure review have run.
 Original21nodes plus three repairs
 remain acyclic. Historical442/443 closures now require new corrective source
 validation; no parent or historical issue was modified. Original eight tickets
