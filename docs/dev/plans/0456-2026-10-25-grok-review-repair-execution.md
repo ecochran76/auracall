@@ -1,6 +1,6 @@
 # Plan0456 — Grok review repair execution
 
-State: OPEN
+State: CLOSED
 Branch: feat/grok-review-repairs-20261025
 Target: main
 Owner: ecochran76
@@ -10,33 +10,25 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## Current State
 
-User approved the five proposed review repairs, current-graph integration and
-implementation with reset2h/2MM allowance and manual monitoring. Issues440–444
-are freshly published/read back with ready-for-agent and bug/enhancement labels.
-No parent issue was modified. Current main's desktop transition fixes and both
-journal histories were preserved while integrating the review report.
+All five repair tickets440–444 are CLOSED on intended main. PR447 merged the
+four foundations as7586dfdf2; PR448 merged443 as99e877d8a. The single frozen
+Standards/Spec review then accepted one Spec finding: later changed/new rows
+already observed after an unchanged row were discarded.443 was reopened, one
+bounded TDD pass repaired it, and PR449 merged69f953d77. Independent closed-world
+verification and final tracker readback confirm443 reclosed and all five CLOSED.
 
-All five repairs are merged:440/441/442/444 through PR447/main7586dfdf2 and
-443 through PR448/main99e877d8a. All five first closed before review;443 is now reopened for its accepted
-post-closure finding, with source remediation verified and main integration pending.
-Primary112test combined serial selection, typecheck/build/scoped lint pass.
-All original399–414 nodes remain visible.401/412 historical closures now have
-corrective repair evidence. Original403/405/406/408/
-409/410/411/414 remain open at existing native contract/effect gates.
+Primary evidence:112tests/15files across the integrated repairs, then44tests/
+8files after review remediation; typecheck/build/scoped lint pass. The first
+concurrent112-case run's timing failure remains recorded with serial scheduling
+mitigation, not erased. Standards found0hard breaches and1nonblocking duplicated
+predicate concern; no optional refactor or second broad discovery was added.
+See [single review and TDD record](../notes/2026-10-25-grok-repair-postclosure-review.md).
 
-443 follows bounded freshly observed heads using private stable row fingerprints,
-preserving completed backfill and independent unfinished follow continuations.
-No global provider ordering is inferred: public partial coverage explicitly
-requires full sweep for older/unobserved changes. Existing bounded completion
-operations expose full_sweep; new project scopes receive fair bounded work.
-This records the evidence limits of the incremental frontier, not a provider-wide
-change-feed guarantee. One post-closure two-axis review will compare4ffe87be2
-(main before repair source) through the final repair head; the one review completed
-with independent Standards and Spec axes at frozen head99e877d8a. Standards
-found no hard breach and one nonblocking duplication concern. One accepted Spec
-finding discarded changed/new rows after an unchanged row in the same observed
-page. The single bounded TDD pass repairs that loss and bounded restart:
-44tests/8files, typecheck/build/scoped lint pass.443 reclosure awaits main.
+The original403/405/406/408/409/410/411/414 remain OPEN at existing native gates;
+parent398 is OPEN and unmodified. The five repair wave is complete, not the
+original program. Bounded follow reports partial observation/full-sweep limits;
+no global provider ordering, runtime installation or native effect is claimed.
+Memory disposition is forbidden under the developer's no-write boundary.
 
 ## Frozen scope and acceptance
 

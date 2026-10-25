@@ -20,8 +20,9 @@
     "postReviewTddPasses": 1,
     "postClosureReviewBase": "4ffe87be2",
     "postClosureReviewHead": "99e877d8acce80f59b06880f4f44df09cb131e78",
-    "postClosureReviewState": "adjudicated",
-    "postReviewTddState": "source-verified-awaiting-main"
+    "postClosureReviewState": "complete",
+    "postReviewTddState": "complete",
+    "postReviewTddMerge": "69f953d77741694c45ccd8f01ea9e5d6daf389ce"
   },
   "repairTicketSet": [
     440,
@@ -43,7 +44,7 @@
       "worktree": "auracall-grok-repair-441",
       "branch": "feat/grok-repair-441-20261025",
       "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
-      "state": "implemented",
+      "state": "complete",
       "result": "b8959d2d91082a2fd75104ecbbc09a697e317b37",
       "evidence": "3 new public/project tests and78 affected tests; typecheck/lint pass; primary integration pending",
       "integratedCommit": "8d0dda06d"
@@ -53,7 +54,7 @@
       "worktree": "auracall-grok-repair-442",
       "branch": "feat/grok-repair-442-20261025",
       "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
-      "state": "integrated",
+      "state": "complete",
       "scopeExpansion": "Existing lease registry exclusive-group and borrowed-claim factory contract needed for bounded retained-view progress; no new coordinator/provider authority",
       "result": "0858f1e5341884e4243d9f3299560a7f46f16528",
       "integratedCommit": "600b4465d",
@@ -64,7 +65,7 @@
       "worktree": "auracall-grok-repair-444",
       "branch": "feat/grok-repair-444-20261025",
       "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
-      "state": "implemented",
+      "state": "complete",
       "results": [
         "07bfbc3ddafe51cbd0f697a70db79fd586df1542",
         "2d9d8c40e7c6ad9851233cb1fc5ac8db7304a3dc"
@@ -80,7 +81,7 @@
       "worktree": "auracall-grok-repair-443",
       "branch": "feat/grok-repair-443-20261025",
       "base": "0b8eda9af",
-      "state": "integrated",
+      "state": "complete",
       "result": "281cf2d27d5e0d60e201af29b9ca4eb47f59731e",
       "integratedCommit": "90f36eccc"
     }
@@ -111,7 +112,7 @@
       "blockedBy": [
         400
       ],
-      "state": "historically-closed-corrective-validation-required",
+      "state": "corrective-source-revalidated",
       "scope": "original-program",
       "acceptanceRepairDependencies": [
         440,
@@ -232,7 +233,7 @@
       "blockedBy": [
         401
       ],
-      "state": "historically-closed-corrective-validation-required",
+      "state": "corrective-source-revalidated",
       "scope": "original-program",
       "acceptanceRepairDependencies": [
         440,
@@ -301,18 +302,18 @@
     "443": {
       "title": "Grok: Follow Grok index changes incrementally after completed backfill",
       "url": "https://github.com/ecochran76/auracall/issues/443",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [
         440,
         441,
         442
       ],
-      "state": "review-remediation-validated-on-integration",
+      "state": "complete",
       "scope": "review-repair",
       "finding": "SPEC4",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md",
-      "mergeCommit": "99e877d8acce80f59b06880f4f44df09cb131e78",
-      "pr": 448
+      "mergeCommit": "69f953d77741694c45ccd8f01ea9e5d6daf389ce",
+      "pr": 449
     },
     "444": {
       "title": "Grok: Centralize Grok account-reference projection with compatibility safeguards",
@@ -390,7 +391,7 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "Single reviewadjudicated:Standards0hardbreaches/1backlog;Spec1blocking.443reopened; oneTDDpasscausalred then44testgreen/typecheck/build/lint. Sourcefixawaitsmainandreclosure.",
+  "lastCheckpoint": "All5repairsCLOSED, sourceonmain69f953d77. SingleStandards/Specreviewcomplete,oneTDDpasscompleteandclosed-worldverified. Original8nativegatesandparentremainOPEN.",
   "registrationMerge": {
     "pr": 445,
     "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"
@@ -401,16 +402,16 @@
     "note": "docs/dev/notes/2026-10-25-grok-440-cursor-row-custody.md"
   },
   "lastManualObservation": {
-    "tokensUsed": 1204283,
-    "timeUsedSeconds": 3897,
+    "tokensUsed": 1389253,
+    "timeUsedSeconds": 4483,
     "availableMemoryMiB": 41026,
     "swapUsedMiB": 91483
   },
   "integratedCheckpoint": {
-    "tip": "82ef14bf7",
+    "tip": "69f953d77741694c45ccd8f01ea9e5d6daf389ce",
     "primary440": "2673ca0c6",
-    "validation": "100 tests/13files passed across custody, projects, references and existing public-service/HTTP surfaces",
-    "remaining": "442 integration and full joint typing/build;443 stillblocked"
+    "validation": "112 integratedtests before review;44 affectedtests after remediation;typecheck/build/scopedlint pass",
+    "remaining": "No required work for five-repair goal. Original8nativegatedtickets outside this goal remain open."
   },
   "reviewFindings": {
     "Standards": {
@@ -422,7 +423,39 @@
       "acceptedBlocking": 1,
       "highestPriority": "P1",
       "finding": "POST-SPEC1: later observed changed/new rows discarded after first unchanged row",
-      "state": "source-remediated"
+      "state": "remediated-main-closed-world-verified"
     }
+  },
+  "state": "CLOSED",
+  "finalReadback": {
+    "repairClosed": [
+      440,
+      441,
+      442,
+      443,
+      444
+    ],
+    "originalOpen": [
+      403,
+      405,
+      406,
+      408,
+      409,
+      410,
+      411,
+      414
+    ],
+    "parentState": "OPEN",
+    "sourceMain": "69f953d77741694c45ccd8f01ea9e5d6daf389ce",
+    "reviewCount": 1,
+    "tddFindingsPassCount": 1
+  },
+  "planningAudit": {
+    "plan0456Findings": 0,
+    "remainingRepositoryFindings": 67,
+    "unchangedLegacyFiles": 19,
+    "comparedAgainst": "69b6e889d4a8c8494a3f2351faf42790ee2682cf",
+    "fullAuditExit": 1,
+    "newTicketStateHeaders": "CLOSED"
   }
 }

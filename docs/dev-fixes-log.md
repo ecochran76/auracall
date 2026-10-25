@@ -1,3 +1,11 @@
+## 2026-10-25 — An unchanged row cannot hide observed Grok changes
+
+Without qualified provider ordering, process all available rows in the bounded
+observed page after an unchanged fingerprint. Retain later changed/new rows,
+and keep an actionable continuation when the item limit leaves work unfinished.
+An unobserved older window remains explicit partial/full-sweep work. Public
+collector restart and controlled-CDP service regressions prove the difference.
+
 ## 2026-10-25 — Retain bounded Grok history custody
 
 Keep cursor continuation attached to an exact account/query owned history view,
