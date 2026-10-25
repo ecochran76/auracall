@@ -69,7 +69,7 @@ export interface BrowserTabLease {
   scope: TabLeaseScope;
   targetId: string;
   workload: TabLeaseWorkload;
-  /** Atomic exclusion for active owners; idle retained targets can coexist. */
+  /** Active/retiring owners and uncertain effects exclude work; settled idle targets coexist. */
   exclusiveGroup?: string;
   state: TabLeaseState;
   ownerOperationId: string | null;
@@ -459,7 +459,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
         FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
         candidate.exclusiveGroup === existing.exclusiveGroup &&
-        (candidate.state === 'active' || candidate.effectState === 'outcome-unknown'));
+        (candidate.state === 'active' || candidate.state === 'retiring' || candidate.effectState === 'outcome-unknown'));
       if (conflict) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(conflict) } };
     }
     const operationId = requireNonEmpty(input.operationId, 'operationId');
@@ -492,7 +492,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       if (!FENCED_STATES.has(existing.state)) continue;
       if (normalized.exclusiveGroup && existing.exclusiveGroup === normalized.exclusiveGroup &&
         sameOwnershipScope(existing.scope, normalized.scope) &&
-        (existing.state === 'active' || existing.effectState === 'outcome-unknown')) {
+        (existing.state === 'active' || existing.state === 'retiring' || existing.effectState === 'outcome-unknown')) {
         return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(existing) } };
       }
       if (normalized.processBound && sameOwnershipScope(existing.scope, normalized.scope) &&
@@ -797,7 +797,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
         FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
         candidate.exclusiveGroup === existing.exclusiveGroup &&
-        (candidate.state === 'active' || candidate.effectState === 'outcome-unknown'));
+        (candidate.state === 'active' || candidate.state === 'retiring' || candidate.effectState === 'outcome-unknown'));
       if (conflict) return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(conflict) } };
     }
     if (input.processBound) {

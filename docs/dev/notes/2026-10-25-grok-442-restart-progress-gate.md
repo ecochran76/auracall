@@ -67,3 +67,13 @@ on this combined source; all19 pass. Joint TypeScript check passes. Root440
 uses the real configured authority/registry and guarded CDP over controlled raw
 transport; physical navigation/settlement remains a modeled fixture boundary.
 No native browser, provider-effect or installed-runtime acceptance is claimed.
+
+## Narrow integration correction: unconfirmed target retirement
+
+After integration, primary accepted one introduced lifecycle safety defect as blocking 442 completion: `finish(true, true)` moved its lease to `retiring` with settled request effects before closing the target. If target closure failed, that retirement stayed unresolved, while the exclusive-group predicates allowed another target because they covered only active owners or uncertain request effects. The one-shot finish correctly prevented a second cleanup attempt, so calling it again could not restore exclusion.
+
+A new real public-service/configured-authority regression makes owned target closure fail after a–d/e–f traversal, verifies the failed cleanup envelope, then requires foreground and other-query admission to remain refused. Red on base `0b8eda9af`: `pnpm vitest run tests/browser/grok442RestartProgress.test.ts -t 'unconfirmed owned target retirement'` failed because foreground admission resolved. One test failed, twelve explicitly excluded; 9.50 seconds total.
+
+The generic registry now includes a retiring owner in its optional group's atomic reserve, acquire and acquireProcess exclusion. Settled idle histories still coexist; successful retirement releases the fence only after its recorded final disposition. No provider-specific rule, retry, new public type or cap change was added.
+
+Green correction receipt: `pnpm vitest run tests/browser/grok442RestartProgress.test.ts tests/browser-service/tabLeaseRegistry.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts` — 3 files, 40 tests passed, 22.17 seconds total. `pnpm typecheck`, focused lint and `git diff --check` passed. This correction remains source-only; memory disposition remains `forbidden` under the delegated boundary.
