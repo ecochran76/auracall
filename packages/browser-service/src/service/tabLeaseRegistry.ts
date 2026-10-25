@@ -457,9 +457,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     if (other) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(other) } };
     if (existing.exclusiveGroup) {
       const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
-        FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
-        candidate.exclusiveGroup === existing.exclusiveGroup &&
-        (candidate.state === 'active' || candidate.state === 'retiring' || candidate.effectState === 'outcome-unknown'));
+        blocksExclusiveGroupAdmission(candidate, scope, existing.exclusiveGroup));
       if (conflict) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(conflict) } };
     }
     const operationId = requireNonEmpty(input.operationId, 'operationId');
@@ -490,9 +488,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     for (const existing of this.leases.values()) {
       if (!FENCED_STATES.has(existing.state)) continue;
-      if (normalized.exclusiveGroup && existing.exclusiveGroup === normalized.exclusiveGroup &&
-        sameOwnershipScope(existing.scope, normalized.scope) &&
-        (existing.state === 'active' || existing.state === 'retiring' || existing.effectState === 'outcome-unknown')) {
+      if (blocksExclusiveGroupAdmission(existing, normalized.scope, normalized.exclusiveGroup)) {
         return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(existing) } };
       }
       if (normalized.processBound && sameOwnershipScope(existing.scope, normalized.scope) &&
@@ -795,9 +791,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     if (existing.exclusiveGroup) {
       const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
-        FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
-        candidate.exclusiveGroup === existing.exclusiveGroup &&
-        (candidate.state === 'active' || candidate.state === 'retiring' || candidate.effectState === 'outcome-unknown'));
+        blocksExclusiveGroupAdmission(candidate, scope, existing.exclusiveGroup));
       if (conflict) return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(conflict) } };
     }
     if (input.processBound) {
@@ -1305,6 +1299,17 @@ function normalizeWorkload(workload: TabLeaseWorkload): TabLeaseWorkload {
     case 'ephemeral':
       return { kind: workload.kind, operationId: requireNonEmpty(workload.operationId, 'workload.operationId') };
   }
+}
+
+/** Shared custody policy; callers retain their own conflict ordering and self-exclusion. */
+function blocksExclusiveGroupAdmission(
+  lease: BrowserTabLease,
+  scope: TabLeaseScope,
+  exclusiveGroup: string | undefined,
+): boolean {
+  return Boolean(exclusiveGroup) && lease.exclusiveGroup === exclusiveGroup &&
+    FENCED_STATES.has(lease.state) && sameOwnershipScope(lease.scope, scope) &&
+    (lease.state === 'active' || lease.state === 'retiring' || lease.effectState === 'outcome-unknown');
 }
 
 function sameOwnershipScope(left: TabLeaseScope, right: TabLeaseScope): boolean {

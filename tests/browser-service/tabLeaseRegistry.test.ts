@@ -17,6 +17,55 @@ const scope: TabLeaseScope = {
 };
 
 describe("tabLeaseRegistry (package)", () => {
+	test.each(["reserve", "acquire", "acquireProcess"] as const)(
+		"exclusive admission preserves custody, group and account boundaries through %s",
+		async (admission) => {
+			for (const scenario of ["active", "retiring", "unknown", "settled", "other-group", "other-account", "runtime-alias"] as const) {
+				const registry = createInMemoryBrowserTabLeaseRegistry();
+				const now = "2026-10-25T04:30:00.000Z";
+				const input = {
+					scope, targetId: "candidate", workload: { kind: "ephemeral" as const, operationId: "candidate" },
+					operationId: "candidate", now, idleTtlMs: 60_000, absoluteTtlMs: 120_000,
+					exclusiveGroup: "utility", processBound: admission === "acquireProcess",
+				};
+				let candidateLeaseId = "";
+				const retained = admission === "reserve" ? null : await registry.reserve(input);
+				if (retained && !retained.ok) throw new Error("Expected candidate reservation");
+				if (retained?.ok) {
+					candidateLeaseId = retained.value.lease.leaseId;
+					const idle = await registry.idle({ claim: retained.value.claim, now, effectState: "settled" });
+					if (!idle.ok) throw new Error("Expected idle candidate");
+				}
+				const blocker = await registry.reserve({
+					...input, targetId: "blocker", workload: { kind: "ephemeral", operationId: "blocker" },
+					operationId: "blocker", processBound: false,
+					exclusiveGroup: scenario === "other-group" ? "other" : "utility",
+					scope: scenario === "other-account" ? { ...scope, tenantKey: "tenant-b" }
+						: scenario === "runtime-alias" ? { ...scope, runtimeProfileId: "alias" } : scope,
+				});
+				if (!blocker.ok) throw new Error("Expected blocker reservation");
+				if (scenario === "unknown" || scenario === "settled" || scenario === "retiring") {
+					const idle = await registry.idle({ claim: blocker.value.claim, now,
+						effectState: scenario === "unknown" ? "outcome-unknown" : "settled" });
+					if (!idle.ok) throw new Error("Expected idle blocker");
+					if (scenario === "retiring") {
+						const retirement = await registry.beginRetirement({ leaseId: idle.value.leaseId,
+							expectedRevision: idle.value.revision, now, reason: "operator" });
+						if (!retirement.ok) throw new Error("Expected retiring blocker");
+					}
+				}
+				const result = admission === "reserve" ? await registry.reserve(input)
+					: admission === "acquire" ? await registry.acquire(input)
+						: await registry.acquireProcess({ ...input, leaseId: candidateLeaseId,
+							expectedRevision: 2 });
+				if (["settled", "other-group", "other-account"].includes(scenario)) {
+					expect(result, scenario).toMatchObject({ ok: true, value: { lease: { targetId: "candidate", state: "active" } } });
+				} else {
+					expect(result, scenario).toMatchObject({ ok: false, conflict: { kind: "workload-owned", lease: { targetId: "blocker" } } });
+				}
+			}
+		},
+	);
 	test.each([
 		"memory",
 		"file",
