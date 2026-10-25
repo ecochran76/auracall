@@ -30,9 +30,12 @@ Bot mutation, generation or publication was performed. Existing managed browser
 is retained; a task-staged unsent `@` and catalog dialog remain after conservative
 restoration refused ambiguous UI state. No other draft was cleared.
 
-Workers are terminal. The whole-program code-review and one TDD findings pass
-remain pending completion of all tickets. Implementation red/green checks did
-not consume that pass. Original renewed2h/2MM allowance and manual monitoring
+Workers are terminal. The user explicitly requested the full-program code-review
+before all tickets were complete. The frozen c9beb45b...dabde7caf review accepts
+three P1 Spec blockers affecting401/412; see
+[review](../notes/2026-10-25-grok-full-code-review.md). Tracker states were not
+changed and do not prove those affected acceptance criteria. One TDD findings
+remediation pass remains unrun; this request authorized review only. Original renewed2h/2MM allowance and manual monitoring
 continue without reset; Wake319/shared runtime are untouched. Goal is incomplete.
 
 ## Execution contract
