@@ -5,17 +5,18 @@ lanes:
     objective: Preserve bounded sanitized app cleanup failure causes
     work_items: [Plan0454]
     plan: docs/dev/plans/0454-2026-10-24-app-cleanup-diagnostics.md
-    plan_ref: refs/heads/fix/app-cleanup-diagnostics
+    plan_ref: refs/remotes/origin/main
     branch: fix/app-cleanup-diagnostics
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 2d82d97d097681ab697782f1cef2b990f3882c07
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 4c9b4985c0e9036b6cf51c64519c91bbc929d82a
     remote_ref: refs/remotes/origin/fix/app-cleanup-diagnostics
     integration: merge
     dependencies: []
     overlaps: [issue368]
-    validation_status: source-and-compiled-fixture-qualified
+    validation_status: installed-cli-qualified
+    integration_receipt: 569f4b907dcaeadef2e25c157f27be6aaefa3138
     updated_at: 2026-10-24
   - id: issue368
     objective: Govern first-tab developer-app utility acquisition

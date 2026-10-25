@@ -1,6 +1,6 @@
 # Plan0454 — App cleanup failure diagnostics
 
-State: OPEN
+State: CLOSED
 Branch: fix/app-cleanup-diagnostics
 Target: main
 Owner: ecochran76
@@ -9,8 +9,12 @@ Work item: Plan0454 (operator-approved diagnostic slice)
 
 ## Current State
 
-Nested cause projection and actual CLI routing pass 60 focused tests. Build and
-compiled qualification remain. The historical intermittent cleanup cause is unknown.
+PR434 merged569f4b907. Source4c9b4985c passes60 focused CLI tests, full
+typecheck/build, scoped lint and compiled fixture. A fresh user CLI runtime
+passes the actual compiled CLI catch/formatter fixture with zero provider calls;
+its adopted wrapper and installed module bytes are verified. MCP/API adoption
+was outside this CLI slice. Historical intermittent transport causality remains
+unconfirmed; no live browser loop was run.
 
 ## Scope and acceptance
 

@@ -7,7 +7,10 @@ nonzero exit, unknown cleanup and retrySafe=false; sanitize URLs, credentials,
 email and opaque values; bound cycles, depth, children, expanded nodes and text.
 Red/green: 60 focused CLI tests, typecheck/build, scoped lint, docs listing and
 compiled nested-cause/redaction fixture pass. Primary Standards/Spec review
-against2d82d97d0 has no blocking findings. Integration/adoption remain. No browser inventory or prompt was run for this slice.
+against2d82d97d0 has no blocking findings. PR434 merged569f4b907. Fresh
+CLI-only adoption passes the actual installed catch/formatter fixture with zero
+provider calls and byte-verified modules; existing MCP wrapper is preserved.
+Plan0454 CLOSED. Private installation/qualification receipts stay user-scoped. No browser inventory or prompt was run for this slice.
 Historical intermittent cleanup causality remains unconfirmed.
 
 ## 2026-10-24 — Issue368 retrospective
