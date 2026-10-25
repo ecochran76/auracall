@@ -43,7 +43,7 @@ same account/target/result before transport cleanup. A subsequent independent
 operator probe verified the same approved account, explicitly closed the unchanged
 saved editor, freshly reopened the exact same Bot ID, and reread edited Name,
 Description, and preserved empty Title. No Instructions/Model control was invented,
-no default model was changed, and no invocation/tool grant/deletion occurred.
+no model-change action was requested, and no invocation/tool grant/deletion occurred.
 
 Private qualification is under the user-scoped implementation-native receipt
 `20261025-plan0458-408-native-qualification.json`; raw identities, actual IDs and

@@ -79,7 +79,7 @@ The one approved public `grok-bots --request-json` edit ran from clean source
 effect. The returned exact original Bot ID has the name suffix-edited, approved
 synthetic Description, and preserved empty Title. The durable account-bound result
 journal was persisted before transport close. No Instructions/Model change was
-requested, no model default was altered, and no second Save was dispatched.
+requested, no model-change action was requested, and no second Save was dispatched.
 
 An independent operator diagnostic using the same guarded exact-target transport
 and profile dispatcher as browser-tools verified account before/after, explicitly
