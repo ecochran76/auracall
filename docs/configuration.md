@@ -1324,7 +1324,9 @@ selected native File can report `sourceBinding: native-metadata` and
 `sourceAgreement: observed-native`; in this case the agreement describes only
 native metadata association. Interpret it with `sourceBinding`: this branch
 provides identity/readiness only, has no `sourceSha256`, and establishes neither
-local-manifest agreement nor server-byte qualification. Metadata and phases come only from the proven committed
+local-manifest agreement nor server-byte qualification. A sole unmarked input
+is eligible only with an empty FileList; a nonempty input still requires the
+retained owned marker before byte observation. Metadata and phases come only from the proven committed
 React tree, with root consistency checked across digest observation. Ready
 requires the same form's committed `isQueryable` gate plus an explicitly enabled
 native Submit control and valid metadata without error/private/disabled/deleted

@@ -739,6 +739,7 @@ test.each([
 	"foreign-context",
 	"private-context",
 	"changed-row",
+	"foreign-input",
 ] as const)("native Recent joins duplicate labels by committed asset key (%s)", async (scenario) => {
 	const f = fixture();
 	Object.assign(f.document, {
@@ -802,6 +803,7 @@ test.each([
 	rootFor(attach);
 	rootFor(recent);
 	const selected = vi.fn();
+	const readUnknownBytes = vi.fn(async () => Uint8Array.of(1).buffer);
 	let previous: Fiber | undefined;
 	const list: Fiber = { memoizedProps: { assets }, return: null };
 	const chooserTree = rootFor(chooser, list);
@@ -820,6 +822,10 @@ test.each([
 		Object.assign(row, { __reactFiberFixture: host });
 		row.onClick = () => {
 			selected(asset.assetId);
+			if (scenario === "foreign-input")
+				f.input.files = [
+					Object.assign({ name: "unknown.txt", size: 1 }, { arrayBuffer: readUnknownBytes }),
+				];
 			parent.hidden = true;
 			chooser.hidden = true;
 			const button = new Node("BUTTON", { "aria-label": "Open attachment" }, "same.txt");
@@ -890,7 +896,7 @@ test.each([
 	expect(selected).toHaveBeenCalledExactlyOnceWith(ids[1]);
 	expect(result.status).toBe(scenario === "ready" ? "complete" : "unconfirmed");
 	expect(result.files).toEqual(
-		scenario === "foreign-context"
+		scenario === "foreign-context" || scenario === "foreign-input"
 			? []
 			: [
 					{
@@ -902,5 +908,6 @@ test.each([
 					},
 				],
 	);
+	expect(readUnknownBytes).not.toHaveBeenCalled();
 	expect(f.dom.setFileInputFiles).not.toHaveBeenCalled();
 });

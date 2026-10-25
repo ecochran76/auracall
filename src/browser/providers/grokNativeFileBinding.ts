@@ -38,7 +38,7 @@ export async function observeGrokNativeFileBinding(
         const token = input.getAttribute('data-auracall-upload');
         return expected.uploadToken ? token === expected.uploadToken : typeof token === 'string' && /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(token);
       });
-      const nativeInput=inputs.length===1?inputs[0]:expected.sources===null&&!expected.uploadToken&&allInputs.length===1?allInputs[0]:null;
+      const nativeInput=inputs.length===1?inputs[0]:expected.sources===null&&!expected.uploadToken&&allInputs.length===1&&allInputs[0].files?.length===0?allInputs[0]:null;
       if(!nativeInput)return unavailable;
       const selected = Array.from(nativeInput.files || []);
       const metadataOnly=expected.sources===null&&!expected.uploadToken&&selected.length===0;

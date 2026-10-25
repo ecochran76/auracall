@@ -56748,3 +56748,8 @@ Metadata-only composer context carries no source digest or local-manifest proof;
 readiness retains the actual Submit gate. Public duplicate-name fixture selects
 the exact ID without upload; foreign/stale/reused rows and non-ready metadata
 remain refused/incomplete. No native selection repeated during source work.
+
+Grok403 input-scope correction: metadata-only recovery may inspect an unmarked
+sole native input only when its FileList is empty. A causal foreign-input fixture
+observed an unintended byte read before this guard; now it refuses without
+reading bytes, retaining unknown context. Owned marker/digest semantics remain.
