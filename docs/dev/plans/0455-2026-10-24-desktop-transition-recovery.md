@@ -1,6 +1,6 @@
 # Plan0455 — Desktop transition crash recovery
 
-State: OPEN
+State: CLOSED
 Branch: fix/desktop-transition-recovery
 Target: main
 Owner: ecochran76
@@ -9,9 +9,11 @@ Base: dabde7cafe3ae9b0c64757b9a0f27c3e96a56a10
 
 ## Current State
 
-Implementation is source-qualified:22 focused tests/4files, full typecheck/build,
-scoped lint, docs listing and whitespace checks pass. Integration remains open. No live
-browser or lock was touched; runtime installation and CI are excluded.
+Source8e7b1c28692a51d1970347d5aac3db54b65311b3 is integrated through PR438,
+merge4270f8fd3c0a4993cecff2e2f2e2abd23a61ed27. All22 focused tests/4files,
+full typecheck/build, scoped lint, docs listing and whitespace checks pass.
+Source-only acceptance is complete. No live browser or lock was touched;
+runtime installation and CI are excluded. No installed/live recovery is claimed.
 
 ## Scope and acceptance
 
@@ -60,3 +62,5 @@ identity. Accepted as blocking; `-t 'invalid-generation'` reproduces the unsafe
 acceptance before the parser fix, then the full22-test selection passes with
 strict UUID validation. This is the one bounded remediation pass. Legacy empty
 locks and crashes during recovery itself remain explicitly unqualified.
+
+Memory disposition: forbidden; no explicit request to save memory.
