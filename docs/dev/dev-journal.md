@@ -1,3 +1,13 @@
+## 2026-10-25 — Preserve and inspect uncertain Grok upload custody (#403)
+
+A synthetic native upload emitted a real request but omitted its body from CDP.
+It remains unqualified for exact provider-file identity; no replay or Send.
+Cleanup failure must preserve the public unknown outcome and retained target.
+The focused regression failed before that repair. Existing governed browser-tools
+now supports exact target selection without broad page initialization; URL/focus
+fallback cannot inspect another retained composer. Source tests pass; private
+native observation proves the selected File bytes, not their provider-ID binding.
+
 ## 2026-10-25 — Grok fresh-operation target isolation (#403)
 
 Native preparation found `retain-new` could reuse an existing root tab containing

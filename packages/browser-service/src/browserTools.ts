@@ -8,6 +8,7 @@ import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import type { Browser, Frame, Page } from 'puppeteer-core';
 import { connectGuardedPuppeteer } from './guardedPuppeteer.js';
+import { connectToChromeTarget } from './chromeLifecycle.js';
 import {
   buildBrowserDomSearchExpression,
   type BrowserDomSearchMatch,
@@ -32,6 +33,7 @@ export interface BrowserToolsPortResolverOptions {
 }
 
 export interface BrowserToolsCliOptions {
+  onStage?: (stage: string) => void;
   resolvePortOrLaunch: (options: BrowserToolsPortResolverOptions) => Promise<number>;
   operationLockRoot?: string;
   resolveOperationProfile?: (options: BrowserToolsPortResolverOptions) => Promise<{
@@ -2089,6 +2091,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     if (!options.operationLockRoot) {
       return callback();
     }
+    options.onStage?.('operation:profile');
     const profile = options.resolveOperationProfile
       ? await options.resolveOperationProfile(resolverOptions)
       : null;
@@ -2101,6 +2104,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     const dispatcher = createFileBackedBrowserOperationDispatcher({
       lockRoot: options.operationLockRoot,
     });
+    options.onStage?.('operation:acquire');
     const acquired = await dispatcher.acquire({
       managedProfileDir: profile?.managedProfileDir,
       serviceTarget: profile?.browserTarget,
@@ -2113,6 +2117,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     if (!acquired.acquired) {
       throw new Error(formatBrowserOperationBusyResult(acquired));
     }
+    options.onStage?.('operation:acquired');
     try {
       return await callback();
     } finally {
@@ -2380,37 +2385,45 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .description('Evaluate JavaScript in the active page context.')
     .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
     .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
+    .option('--target-id <id>', 'Require this exact existing target; never fall back to another tab.')
     .action(async (code: string[], commandOptions) => {
       const snippet = code.join(' ');
       const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
       await withManagedBrowserToolsOperation(resolverOptions, async () => {
         const port = await options.resolvePortOrLaunch(resolverOptions);
-        const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
-        try {
-          const result = await page.evaluate((body) => {
-            const ASYNC_FN = Object.getPrototypeOf(async () => {}).constructor as AsyncFunctionCtor;
-            return new ASYNC_FN(`return (${body})`)();
-          }, snippet);
-
-          if (Array.isArray(result)) {
-            result.forEach((entry, index) => {
-              if (index > 0) {
-                console.log('');
-              }
-              Object.entries(entry).forEach(([key, value]) => {
-                console.log(`${key}: ${value}`);
-              });
-            });
-          } else if (typeof result === 'object' && result !== null) {
-            Object.entries(result).forEach(([key, value]) => {
-              console.log(`${key}: ${value}`);
-            });
-          } else {
-            console.log(result);
-          }
-        } finally {
-          await browser.disconnect();
+        let result: unknown;
+        if (commandOptions.targetId !== undefined) {
+          const targetId = String(commandOptions.targetId).trim();
+          if (!targetId) throw new Error('Exact browser target is unavailable');
+          options.onStage?.('target:connect');
+          const client = await connectToChromeTarget({ host: '127.0.0.1', port, target: targetId, timeoutMs: 15000 });
+          try {
+            const info = await client.Target.getTargetInfo();
+            if (info.targetInfo.targetId !== targetId) throw new Error('Exact browser target is unavailable');
+            options.onStage?.('target:identified');
+            await client.Runtime.enable();
+            const response = await client.Runtime.evaluate({ expression: `(async () => (${snippet}))()`, returnByValue: true, awaitPromise: true });
+            if (response.exceptionDetails) throw new Error('Exact browser target evaluation failed');
+            result = response.result?.value;
+            options.onStage?.('target:observed');
+          } finally { await client.close(); }
+        } else {
+          const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+          try {
+            result = await page.evaluate((body) => {
+              const ASYNC_FN = Object.getPrototypeOf(async () => {}).constructor as AsyncFunctionCtor;
+              return new ASYNC_FN(`return (${body})`)();
+            }, snippet);
+          } finally { await browser.disconnect(); }
         }
+        if (Array.isArray(result)) {
+          result.forEach((entry, index) => {
+            if (index > 0) console.log('');
+            Object.entries(entry).forEach(([key, value]) => console.log(`${key}: ${value}`));
+          });
+        } else if (typeof result === 'object' && result !== null) {
+          Object.entries(result).forEach(([key, value]) => console.log(`${key}: ${value}`));
+        } else console.log(result);
       });
     });
 
