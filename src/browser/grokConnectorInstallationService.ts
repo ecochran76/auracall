@@ -305,7 +305,12 @@ export function createGrokConnectorInstallationService(
 				await action.settle({
 					outcome: ["failed", "unconfirmed"].includes(result.status) ? "failed" : "succeeded",
 					effectState:
-						record.effectDispatched && result.status !== "completed"
+						record.effectDispatched &&
+						result.status !== "completed" &&
+						!(
+							result.status === "failed" &&
+							result.code === "grok_connector_install_connection_failed"
+						)
 							? "outcome-unknown"
 							: "settled",
 					probeContext: connection.client.Runtime,

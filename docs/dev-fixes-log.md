@@ -26210,3 +26210,14 @@ Generic UI retry is not account authority for this API read; actual session/API
 errors, provider limits and human verification retain their stops. UI mutation
 preflights remain unchanged. Source-native result is39.866s/34apps, preserving all
 26prior entries and adding8linked entries. Installed proof is tracked in Plan0460.
+
+### 2026-10-25 — Observe the owned Connector result before inventory reconciliation
+
+Grok replaces the custom form inputs with a terminal Connection failed / Go Back
+surface after Add. An immediate inventory read misses this owned outcome and
+reports an unrelated inventory-incomplete error. Observe the exact prepared
+modal token for a bounded transition, recognize only its actual native terminal
+failure, and settle that known failed effect while retaining target/journal and
+retrySafe=false. Foreign owners and uncertain transport/cleanup remain fenced.
+Causal client/service regressions failed before the correction and now pass;
+no new native installation was attempted to validate the repair.

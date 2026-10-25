@@ -44,3 +44,24 @@ followed and no clients registered by this diagnosis.
 Next bounded packet: qualify the actual Grok-side connection failure against
 server-side transport/OAuth evidence before preparing any new install authority.
 #406 remains blocked by #405. Reserved final code-review/TDD counters remain0/0.
+
+## Read-only external-runtime boundary check
+
+The active Mail Receipts external OAuth service is running with the expected
+issuer. Its current exact redirect allowlist contains only the ChatGPT Connector
+callback, with no Grok callback. This is a concrete prerequisite for any future
+Grok OAuth continuation; it is not proof of which internal stage produced the
+observed generic Grok error. The bounded journal window around Add contains no
+request entries, so no callback or rejection detail can be reconstructed from it.
+No private configuration, client record, grant, service process or ingress route
+was changed. The endpoint resolves to a global address on this host; that is not
+proof of reachability from Grok's servers.
+
+The existing Mail Receipts external OAuth guide requires exact callback
+allowlisting and a controlled restart for runtime configuration changes. The
+actual Grok callback must first be observed, then a minimal separate-service
+activation packet prepared; no guessed callback or wildcard allowlist is suitable.
+Official [Grok Connector documentation](https://docs.x.ai/grok/connectors) confirms
+custom MCP authentication follows entering the server URL, but did not supply the
+exact callback in this bounded discovery. Existing ChatGPT access stays outside
+this AuraCall source slice.

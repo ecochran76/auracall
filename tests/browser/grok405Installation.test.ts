@@ -268,3 +268,52 @@ it("cannot use native transport metadata to bypass a name collision or foreign a
 		expect(f.form.hidden).toBe(true);
 	}
 });
+
+it("reports the owned native terminal connection failure without replaying Add", async () => {
+	const f = installFixture(true);
+	f.form.setAttribute("data-analytics-name", "add-connector-modal");
+	const originalAdd = f.add.onClick;
+	f.add.onClick = () => {
+		originalAdd?.();
+		f.form.ownText = "Connecting";
+		setTimeout(() => {
+			f.form.ownText =
+				"Custom Connector\n\nConnection failed\n\nSorry, there was a problem connecting to this MCP server.";
+			f.form.children = [new N("button", "Go Back")];
+			f.form.children[0].parentElement = f.form;
+		}, 20);
+	};
+	const client = createGrokConnectorInstallationClient(f.runtime, {
+		providerAccountRef: "account-hash",
+	});
+	const prepared = requirePrepared(await client.prepare(input));
+	expect(await client.commit(prepared)).toMatchObject({
+		status: "failed",
+		code: "grok_connector_install_connection_failed",
+		effectDispatched: true,
+	});
+	expect(f.effects()).toBe(1);
+	expect((await client.commit(prepared)).code).toBe("grok_connector_install_reconcile_required");
+	expect(f.effects()).toBe(1);
+});
+
+it("does not settle a terminal message after the prepared modal owner changes", async () => {
+	const f = installFixture(true);
+	f.form.setAttribute("data-analytics-name", "add-connector-modal");
+	const originalAdd = f.add.onClick;
+	f.add.onClick = () => {
+		originalAdd?.();
+		f.form.setAttribute("data-auracall-install-owner", "foreign-owner");
+		f.form.ownText =
+			"Custom Connector\n\nConnection failed\n\nSorry, there was a problem connecting to this MCP server.";
+		f.form.children = [new N("button", "Go Back")];
+		f.form.children[0].parentElement = f.form;
+	};
+	const client = createGrokConnectorInstallationClient(f.runtime, {
+		providerAccountRef: "account-hash",
+	});
+	const result = await client.commit(requirePrepared(await client.prepare(input)));
+	expect(result.status).toBe("unconfirmed");
+	expect(result.code).not.toBe("grok_connector_install_connection_failed");
+	expect(f.effects()).toBe(1);
+});

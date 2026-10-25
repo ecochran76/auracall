@@ -1269,6 +1269,12 @@ service account is a separate identity. The equivalent HTTP/MCP request is
 same input/account and `action: "reconcile"` (CLI omits `--yes`). Repeated install
 calls also reconcile; they never submit Add again for a recorded account/endpoint.
 
+An observed terminal `Connection failed` result on the exact owned installation
+modal returns `failed / grok_connector_install_connection_failed`. Its target
+and installation journal are retained, and `retrySafe=false` still prevents
+another Add. This confirms a failed connection, not installation or OAuth grants.
+Transport, ownership and cleanup uncertainty remain separate fenced outcomes.
+
 Awaiting-human and unconfirmed results retain their exact target and return
 `retrySafe=false`. Incomplete installation returns a nonzero CLI exit and MCP
 `isError=true`; HTTP retains the structured status in its response. Complete

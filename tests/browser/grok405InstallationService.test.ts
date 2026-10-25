@@ -390,3 +390,58 @@ it("uses the governed transport keyboard to restore an Escape-only native detail
 	expect(keys).toEqual(["keyDown", "keyUp"]);
 	expect(f.effects()).toBe(1);
 });
+
+it("settles an owned terminal connection failure while retaining target and replay fence", async () => {
+	const f = await fixture();
+	f.form.setAttribute("data-analytics-name", "add-connector-modal");
+	const originalAdd = f.add.onClick;
+	f.add.onClick = () => {
+		originalAdd?.();
+		f.form.ownText =
+			"Custom Connector\n\nConnection failed\n\nSorry, there was a problem connecting to this MCP server.";
+		f.form.children = [new N("button", "Go Back")];
+		f.form.children[0].parentElement = f.form;
+	};
+	const settlements: unknown[] = [];
+	const deps = {
+		...f.deps,
+		connect: async () => {
+			const c = await f.deps.connect();
+			return {
+				...c,
+				client: {
+					...c.client,
+					__auracallProviderTrafficGovernor: {
+						...c.client.__auracallProviderTrafficGovernor,
+						begin: async () => ({
+							settle: async (details: unknown) => {
+								settlements.push(details);
+							},
+						}),
+					},
+				},
+			};
+		},
+	};
+	const result = await createGrokConnectorInstallationService(f.options, deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(result).toMatchObject({
+		status: "failed",
+		code: "grok_connector_install_connection_failed",
+		effectDispatched: true,
+		retrySafe: false,
+	});
+	expect(settlements).toContainEqual(
+		expect.objectContaining({ outcome: "failed", effectState: "settled" }),
+	);
+	expect(f.targetCloses()).toBe(0);
+	await createGrokConnectorInstallationService(f.options, deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(f.effects()).toBe(1);
+});
