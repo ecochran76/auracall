@@ -739,3 +739,158 @@ test("442: unconfirmed owned target retirement fences foreground and other query
 		await rm(home, { recursive: true, force: true });
 	}
 });
+
+test.each([
+	{ kind: "endpoint drift", portDelta: 1, pidDelta: 0 },
+	{ kind: "process drift", portDelta: 0, pidDelta: 1 },
+	{ kind: "endpoint and process drift", portDelta: 1, pidDelta: 1 },
+])("451: $kind refuses before target observation and preserves resumable custody", async ({
+	portDelta,
+	pidDelta,
+}) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "grok-451-generation-"));
+	setAuracallHomeDirOverrideForTest(home);
+	try {
+		const fixture = ownedHistoryFixture(
+			["a", "b", "c", "d", "e", "f"].map((id) => ({ id, title: `Chat ${id}` })),
+		);
+		const first = await createGrokConversationsService(fixture.options, fixture.dependencies).list({
+			maxPages: 2,
+		});
+		expect(first.coverage.nextCursor).toBeTruthy();
+		const { createFileBackedBrowserTabLeaseRegistry } = await import(
+			"../../packages/browser-service/src/service/tabLeaseRegistry.js"
+		);
+		const registry = createFileBackedBrowserTabLeaseRegistry({
+			registryRoot: path.join(home, "browser-coordination", "tab-leases"),
+		});
+		const before = await registry.list({});
+		expect(before).toHaveLength(1);
+		const originalList = fixture.dependencies.continuationTransport.list;
+		const originalOpen = fixture.dependencies.continuationTransport.open;
+		const originalClose = fixture.dependencies.continuationTransport.close;
+		let targetObservations = 0;
+		let targetOpens = 0;
+		let targetCloses = 0;
+		fixture.dependencies.continuationTransport.list = async () => {
+			targetObservations++;
+			return [];
+		};
+		fixture.dependencies.continuationTransport.open = async () => {
+			targetOpens++;
+			return originalOpen();
+		};
+		fixture.dependencies.continuationTransport.close = async (host, port, id) => {
+			targetCloses++;
+			return originalClose(host, port, id);
+		};
+		const originalAuth = fixture.options.providerSessionAuthorization;
+		const changed = {
+			...fixture.options,
+			port: (originalAuth.context.devtoolsPort ?? 1) + portDelta,
+			providerSessionAuthorization: {
+				...originalAuth,
+				context: {
+					...originalAuth.context,
+					browserProcessId: (originalAuth.context.browserProcessId ?? 0) + pidDelta,
+				},
+			},
+		};
+		const result = await createGrokConversationsService(changed, fixture.dependencies).list({
+			maxPages: 2,
+			cursor: first.coverage.nextCursor ?? undefined,
+		});
+		expect(result).toMatchObject({ items: [], coverage: { state: "failed", nextCursor: null } });
+		expect(targetObservations).toBe(0);
+		expect(targetOpens).toBe(0);
+		expect(targetCloses).toBe(0);
+		expect(await registry.list({})).toEqual(before);
+		fixture.dependencies.continuationTransport.list = originalList;
+		fixture.dependencies.continuationTransport.open = originalOpen;
+		fixture.dependencies.continuationTransport.close = originalClose;
+		const resumed = await createGrokConversationsService(
+			fixture.options,
+			fixture.dependencies,
+		).list({ maxPages: 2, cursor: first.coverage.nextCursor ?? undefined });
+		expect(resumed.items.map((row) => row.id)).toEqual(["e", "f"]);
+	} finally {
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
+test("451: a failed fresh mirror read preserves its checkpoint and original generation resumes", async () => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "grok-451-mirror-"));
+	setAuracallHomeDirOverrideForTest(home);
+	try {
+		const { collectGrokMirrorIndex, createGrokIndexCheckpointStore } = await import(
+			"../../src/accountMirror/grokIndexBackfill.js"
+		);
+		const fixture = ownedHistoryFixture(
+			["a", "b", "c", "d", "e", "f"].map((id) => ({ id, title: `Chat ${id}` })),
+		);
+		const store = createGrokIndexCheckpointStore(home, {
+			runtimeProfileId: "default",
+			identityKey: "operator@example.test",
+		});
+		let drifted = false;
+		const originalList = fixture.dependencies.continuationTransport.list;
+		fixture.dependencies.continuationTransport.list = async () => (drifted ? [] : originalList());
+		const auth = fixture.options.providerSessionAuthorization;
+		const changed = {
+			...fixture.options,
+			port: (auth.context.devtoolsPort ?? 1) + 1,
+			providerSessionAuthorization: {
+				...auth,
+				context: { ...auth.context, browserProcessId: (auth.context.browserProcessId ?? 0) + 1 },
+			},
+		};
+		const read = async (
+			projectId: string | null,
+			cursor: string | null,
+			limit: number,
+			maxPages: number,
+		) => {
+			const result = await createGrokConversationsService(
+				drifted ? changed : fixture.options,
+				fixture.dependencies,
+			).list({ projectId: projectId ?? undefined, cursor: cursor ?? undefined, limit, maxPages });
+			return { items: result.items, historyCoverage: result.coverage };
+		};
+		await collectGrokMirrorIndex({
+			projects: [],
+			maxRows: 10,
+			maxReads: 2,
+			read,
+			commit: store.write,
+		});
+		const saved = await store.read();
+		expect(saved?.items.map((row) => row.id)).toEqual(["a", "b", "c", "d"]);
+		drifted = true;
+		await expect(
+			collectGrokMirrorIndex({
+				projects: [],
+				maxRows: 10,
+				maxReads: 2,
+				read,
+				checkpoint: saved,
+				commit: store.write,
+			}),
+		).rejects.toThrow("Grok index read failed");
+		expect(await store.read()).toEqual(saved);
+		drifted = false;
+		const resumed = await collectGrokMirrorIndex({
+			projects: [],
+			maxRows: 10,
+			maxReads: 2,
+			read,
+			checkpoint: await store.read(),
+			commit: store.write,
+		});
+		expect(resumed.items.map((row) => row.id)).toEqual(["a", "b", "c", "d", "e", "f"]);
+		expect(resumed.checkpoint.phase).toBe("follow");
+	} finally {
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
