@@ -38,7 +38,8 @@ repair covers every available row in the bounded observed page. Changes outside
 that page still require the existing explicit bounded full sweep. No provider
 contract was invented or acceptance criterion silently rewritten.
 
-443 was reopened after review and remains open until remediation reaches main.
+443 was reopened after review, remediated through PR449/main69f953d77741694c45ccd8f01ea9e5d6daf389ce,
+and reclosed after exact tracker/main readback.
 Other four repairs remain closed; parent398 and original eight native-gated
 tickets remain untouched.
 
@@ -61,12 +62,12 @@ old first-fingerprint truncation. Intermediate failing old expectations are
 preserved in local logs; they were corrected to match the accepted criterion.
 
 Final closed-world selection:44tests/8files pass in32.08s. Typecheck, local
-build and focused three-file Biome check pass. Source remediation is verified;
-intended-main integration and443 reclosure remain.
+build and focused three-file Biome check pass. Source remediation is verified; PR449/main integration and443 reclosure are verified.
 No optional structural extraction was included.
 
 Memory disposition:`forbidden`; developer prohibits memory writes without an
 explicit request to remember. The canonical review source is this artifact; no
-memory service write is authorized.
+memory service write is authorized. Non-write receipt:
+`/tmp/auracall-grok-review-repairs-final-memory-disposition.json`.
 
-Standards:0blocking,1nonblocking(P3); Spec:1accepted blocking(P1), source remediation verified, intended-main integration pending.
+Standards:0blocking,1nonblocking(P3); Spec:1accepted blocking(P1), remediated on main and closed-world verified.

@@ -1990,12 +1990,16 @@ lanes:
     plan_ref: refs/heads/feat/grok-review-repairs-20261025
     branch: feat/grok-review-repairs-20261025
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 69b6e889d4a8c8494a3f2351faf42790ee2682cf
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 69f953d77741694c45ccd8f01ea9e5d6daf389ce
     remote_ref: refs/remotes/origin/feat/grok-review-repairs-20261025
     integration: merge
     dependencies: []
     overlaps: [grok398]
-    validation_status: approved-published-graph-acyclic-ready-for-dispatch
+    validation_status: five-repairs-closed-one-review-one-tdd-verified
+    validation_ref: docs/dev/notes/2026-10-25-grok-repair-postclosure-review.md
+    integration_receipt: 69f953d77741694c45ccd8f01ea9e5d6daf389ce
+    reconciled_overlaps: [grok398]
+    disposition: Five repair tickets closed on main; original eight native-gated program tickets and parent398 remain open.
     updated_at: 2026-10-25
