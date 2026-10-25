@@ -56478,3 +56478,11 @@ in321.643s. A10s CPU sample during inventory measured roughly25percent ledger
 load/persist,16percent GC and34percent idle. This qualifies a performance lead,
 not the whole delay. Typecheck/build and test lint pass; the successful-read
 latency remains open. Only the owned CLI process was sampled; no browser restart.
+
+PR465 merged at46e1306c2 and CLI-only activation completed. Installed adapter/bin
+bytes match source; compiled guard detects actual failed panel in16ms, while old
+guard misses it. This is direct guard/DOM proof, not a full failed transaction.
+Version/help pass, API PID4185922 and MCP wrapper unchanged, browser PID2122493
+survives. Plan0460/issue464 remain OPEN for successful-read latency; next bounded
+measurement is provider-free representative-ledger replay with durable effects
+preserved. Deployment and raw runtime evidence remain in private user state.

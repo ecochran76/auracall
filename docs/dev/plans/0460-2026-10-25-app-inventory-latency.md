@@ -80,3 +80,20 @@ and CLI failure diagnostics pass. Typecheck, build, scoped test lint, docs:list
 and diff checks pass. Standards review: no blocking findings; shared probe name
 updated for its scope. Spec review: qualified failed-page termination; successful
 latency criterion remains open. No CI run was requested or performed.
+
+## Failed-page deployment checkpoint
+
+PR465 merged at46e1306c29fb1ba50f5126b10e054f7aed14d8ab. Installed CLI and
+adapter bytes match the built source. The installed compiled guard was evaluated
+read-only against the retained failed panel: old guard missed it in18ms; new guard
+raised developer_app_inventory_load_error in16ms. This checks the guard against
+the actual DOM, not a full installed failed-inventory transaction. Version/help
+smokes pass. Only the CLI wrapper changed; API PID4185922 and MCP wrapper remain
+unchanged. Browser PID2122493 survives, peer tabs were preserved, and the baseline
+CLI exited normally. Private deployment/hash receipts stay in user state.
+
+Plan remains OPEN for successful-read latency. Next bounded measurement should
+replay ledger processing off-provider with a representative history, count
+reads/commits, and preserve expiration, cross-process ordering and full history.
+A change requires its own red/green evidence and controlled timing; do not treat
+this profile as permission to prune history or to omit durable state effects.
