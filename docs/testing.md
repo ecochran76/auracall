@@ -3832,3 +3832,9 @@ or artifact byte materialization is implied by these fixtures.
 Run `pnpm vitest run tests/accountMirror/grokIndexCoverage.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/browser/grokHistoryInventory.test.ts`.
 
 Incomplete provider coverage keeps the mirror pending even when rows fit within its limit. A Grok read without coverage evidence also stays partial; explicit failed coverage fails the read instead of turning retained rows into fresh success. These fixtures establish source behavior only. They do not prove account-wide discovery, persisted row/cursor restart recovery, project/Bot scope coverage, installed behavior or a live crawl.
+
+App inventory latency: `tests/browser/chatgptDeveloperAppReadiness.test.ts` drives
+the real adapter with visible Plugins failure text observed on the live page.
+Immediate and delayed main failures terminate, while hidden/sidebar-only failures
+remain nonblocking. This proves prompt failure detection, not faster successful
+inventory or attribution of the historical347.649s read (issue464/Plan0460).
