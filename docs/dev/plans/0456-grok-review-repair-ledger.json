@@ -52,7 +52,8 @@
       "state": "integrated",
       "scopeExpansion": "Existing lease registry exclusive-group and borrowed-claim factory contract needed for bounded retained-view progress; no new coordinator/provider authority",
       "result": "0858f1e5341884e4243d9f3299560a7f46f16528",
-      "integratedCommit": "600b4465d"
+      "integratedCommit": "600b4465d",
+      "followupCommit": "f543e8dcb"
     },
     "444": {
       "handle": "/root/repair444",
@@ -69,6 +70,13 @@
         "ed66059ba",
         "82ef14bf7"
       ]
+    },
+    "443": {
+      "handle": "/root/repair441",
+      "worktree": "auracall-grok-repair-443",
+      "branch": "feat/grok-repair-443-20261025",
+      "base": "0b8eda9af",
+      "state": "running"
     }
   },
   "nodes": {
@@ -287,7 +295,7 @@
         441,
         442
       ],
-      "state": "ready",
+      "state": "running",
       "scope": "review-repair",
       "finding": "SPEC4",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md"
@@ -366,7 +374,7 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "440/441/442 jointly validated:19 dedicated tests pass across public adapter/service/collector; joint typecheck pass.443 unblocked.444 prior100test checkpoint retained. Tracker closures await main integration.",
+  "lastCheckpoint": "442 target-close uncertainty red/green repair integrated asf543e8dcb; primary40-test followup running.443 owns bounded incremental follow; other repairs validated awaiting main. Primary build and99regression tests pass.",
   "registrationMerge": {
     "pr": 445,
     "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"

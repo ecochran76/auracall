@@ -56240,3 +56240,14 @@ transport; navigation settlement is modeled, not native proof.443 is ready after
 these three prerequisites;444 retains its prior combined100-test checkpoint.
 No issue closures yet; intended-main integration and the single post-closure
 review/TDD gate remain. Original eight native-gated tickets remain open.
+
+## 2026-10-25 — Retiring target fence and final ready ticket
+
+Worker442 reproduced foreground admission after an unconfirmed target close.
+Integrated813113f1 asf543e8dcb: retiring utility leases remain exclusive fences;
+worker40-test registry/factory/public-service selection and typecheck/lint pass,
+primary joint rerun in progress.443 delegated to the completed441 worker in a
+new isolated worktree from0b8eda9af. The follow design preserves completed scope
+state, observes bounded fresh heads and distinguishes unobserved older changes
+that require explicit full sweeps. Primary99tests/12files and local build pass.
+PR447 remains draft; current-main journal merge preserves both histories.
