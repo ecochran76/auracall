@@ -80,7 +80,13 @@
       ],
       "state": "assigned-preparation",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "currentEvidence": {
+        "sourceRepairPr": 459,
+        "freshTargetLifecycle": "fixed and regression tested",
+        "nativeUploadDispatched": true,
+        "outcome": "unconfirmed; exact target retained; no replay; readonly reconciliation underway"
+      }
     },
     "404": {
       "title": "Grok: Inspect Grok Connector catalog and installed state",
@@ -101,7 +107,13 @@
       ],
       "state": "assigned-preparation",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "currentEvidence": {
+        "sourceRepairPr": 459,
+        "sourceRepairMerge": "6a712f57d7000e4d49da650695b9814080dca4ed",
+        "nativeInitialInstall": "unsupported before Add; endpoint unobserved",
+        "effectDispatched": false
+      }
     },
     "406": {
       "title": "Grok: Invoke Connectors and qualify Mail Receipts through Grok",
@@ -156,7 +168,12 @@
       ],
       "state": "assigned-preparation",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "currentEvidence": {
+        "nativeInitialGeneration": "preflight failed before Send on improperly reused target",
+        "effectDispatched": false,
+        "next": "one corrective generation on patched fresh root"
+      }
     },
     "411": {
       "title": "Grok: Publish an explicitly selected Build app through Grok",
@@ -343,7 +360,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "Registration merged d468ee7a6; workers403/408/410 prepared; fresh built account match;405 native install in progress.",
+  "lastCheckpoint": "PR459 merged;55focusedtests/typecheck;403A real upload unconfirmed and retained; supported readonly reconcile next;408/410 queued;all8open.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
