@@ -37,9 +37,13 @@ browser fixtures do not claim accountId-only provider observation.
 
 ## Validation receipt
 
-All commands run in the isolated issue444 worktree, with test `AURACALL_HOME`
-pointing at a fresh `/tmp/auracall444.*` directory. Writable installation journals
-are separately created under temporary directories and removed after each test.
+All commands run in the isolated issue444 worktree. The repository test setup
+(`tests/setup-env.ts`) sets each worker's `AURACALL_HOME_DIR` to a disposable
+`/tmp/auracall-vitest-*` directory and removes it after the tests. The shell
+commands also supplied `AURACALL_HOME=/tmp/auracall444.*`; that variable is not
+read by AuraCall and is not the isolation mechanism. Writable installation
+journals are separately created under temporary directories and removed after
+each test.
 No live provider/browser, native probe or installation was performed.
 
 - Initial characterization: `pnpm vitest run tests/browser/grok444AccountReferences.test.ts --maxWorkers=1` — 8/8 pass on original projections.
@@ -50,7 +54,7 @@ No live provider/browser, native probe or installation was performed.
 - Green after central ownership: same command — 8/8 pass, then persisted-journal
   coverage — 9/9 pass.
 - Final affected lane: `pnpm vitest run tests/browser/grok444AccountReferences.test.ts tests/browser/grok403Files.test.ts tests/browser/grok404ConnectorsService.test.ts tests/browser/grok405InstallationService.test.ts tests/browser/grok407Bots.test.ts tests/browser/grok410Build.test.ts tests/http.grokFilesBots.test.ts tests/http.grokBuild.test.ts --maxWorkers=2` — 8 files, 71 tests pass, 19.12 seconds. Includes the final 13 new tests.
-- `pnpm typecheck` — pass (the repository `check` script aliases this same check).
+- `pnpm typecheck` — pass; `pnpm check` — pass on the final committed implementation (the repository `check` script aliases typecheck).
 - `pnpm exec biome lint src/browser/grokAccountReference.ts src/browser/grokBotsService.ts src/browser/grokBuildService.ts src/browser/grokFilesService.ts src/browser/grokConnectorsService.ts src/browser/grokConnectorInstallationService.ts tests/browser/grok444AccountReferences.test.ts` — 7 files, zero warnings/errors.
 - `git diff --check` — pass.
 
