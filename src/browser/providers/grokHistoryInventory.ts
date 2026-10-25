@@ -5,6 +5,11 @@ import { cssClassContains } from "../service/selectors.js";
 import type { Conversation } from "./domain.js";
 
 export interface GrokHistoryOptions {
+	/** Internal custody bound by the owned history transport. */
+	historyAccountScope?: string;
+	historySessionId?: string;
+	historyRetainDialog?: boolean;
+	historyFreshDialog?: boolean;
 	historyLimit?: number;
 	historySince?: string;
 	historyCursor?: string | null;
@@ -67,7 +72,12 @@ export async function collectGrokHistoryInventory(input: {
 	const query = options.historySearch?.trim() ?? "";
 	const scope = createHash("sha256")
 		.update(
-			JSON.stringify([input.projectId ?? null, query.toLowerCase(), options.historySince ?? null]),
+			JSON.stringify([
+				input.projectId ?? null,
+				query.toLowerCase(),
+				options.historySince ?? null,
+				...(options.historyAccountScope ? [options.historyAccountScope] : []),
+			]),
 		)
 		.digest("hex");
 	let anchor: string | null = null;
@@ -76,7 +86,7 @@ export async function collectGrokHistoryInventory(input: {
 			if (options.historyCursor.length > 4096) throw new Error("long cursor");
 			const cursor = JSON.parse(Buffer.from(options.historyCursor, "base64url").toString("utf8"));
 			if (
-				cursor.v !== 1 ||
+				cursor.v !== (options.historyAccountScope ? 2 : 1) ||
 				cursor.scope !== scope ||
 				typeof cursor.after !== "string" ||
 				cursor.after.length > 200
@@ -133,6 +143,7 @@ export async function collectGrokHistoryInventory(input: {
 		? { evaluate: (value: unknown) => bounded(() => evaluate(value)) }
 		: input.probeContext;
 	let state: GrokHistoryCoverage["state"] = "incomplete";
+	let restartRequired = false;
 	const coverage = (): GrokHistoryCoverage => ({
 		state,
 		source: "visible-chats",
@@ -141,12 +152,24 @@ export async function collectGrokHistoryInventory(input: {
 		loadedCount: entries.size,
 		pages,
 		nextCursor:
-			state === "incomplete"
+			state === "incomplete" && !restartRequired
 				? entries.size
 					? Buffer.from(
-							JSON.stringify({ v: 1, scope, after: Array.from(entries.keys()).at(-1) }),
+							JSON.stringify({
+								v: options.historyAccountScope ? 2 : 1,
+								scope,
+								after: Array.from(entries.keys()).at(-1),
+								session: options.historySessionId,
+							}),
 						).toString("base64url")
-					: (options.historyCursor ?? null)
+					: options.historyCursor && options.historySessionId
+						? Buffer.from(
+								JSON.stringify({
+									...JSON.parse(Buffer.from(options.historyCursor, "base64url").toString("utf8")),
+									session: options.historySessionId,
+								}),
+							).toString("base64url")
+						: (options.historyCursor ?? null)
 				: null,
 		observedAt: new Date().toISOString(),
 	});
@@ -158,8 +181,8 @@ export async function collectGrokHistoryInventory(input: {
 				break;
 			}
 			if (performance.now() >= deadline) {
-				reason = "time-limit";
-				break;
+				deadlineController.abort(deadlineError);
+				throw deadlineError;
 			}
 			const admission = input.governor?.begin({
 				kind: "provider-read",
@@ -263,6 +286,11 @@ export async function collectGrokHistoryInventory(input: {
 				break;
 			}
 			const terminal = page.atBottom === true && !page.loading;
+			if (terminal && !anchorFound) {
+				reason = "cursor-restart-required";
+				restartRequired = true;
+				break;
+			}
 			stableBottom = terminal && entries.size === before ? stableBottom + 1 : 0;
 			if (
 				stableBottom >= 1 &&
@@ -276,7 +304,9 @@ export async function collectGrokHistoryInventory(input: {
 				break;
 			}
 			reason = !anchorFound
-				? "cursor-anchor-not-found"
+				? options.historyFreshDialog && anchor !== null
+					? "cursor-rebuilding"
+					: "cursor-anchor-not-found"
 				: unknownScope
 					? "unattributed-project-rows"
 					: unknownTime

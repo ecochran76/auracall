@@ -1,4 +1,3 @@
-import type { GrokHistoryOptions, GrokHistoryCoverage } from "./grokHistoryInventory.js";
 import type { BrowserInteractionGovernor } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type {
@@ -12,6 +11,7 @@ import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptCompose
 import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from "../libraryFiles.js";
 import type { LibraryInventoryLifecycle } from "../libraryInventoryDiagnostics.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
+import type { GrokHistoryCoverage, GrokHistoryOptions } from "./grokHistoryInventory.js";
 import type {
 	ProviderSessionAuthorization,
 	ProviderSessionProof,
@@ -47,7 +47,12 @@ export interface BrowserProviderCapabilities {
 }
 
 export interface BrowserProviderListOptions extends GrokHistoryOptions {
-    onHistoryInventory?: (coverage: GrokHistoryCoverage) => Promise<void> | void;
+	onHistoryInventory?: (coverage: GrokHistoryCoverage) => Promise<void> | void;
+	/** Owned history custody lent to the configured traffic authority for one socket. */
+	historyOwnedLease?: {
+		claim: import("../../../packages/browser-service/src/service/tabLeaseRegistry.js").TabLeaseClaim;
+		scope: import("../../../packages/browser-service/src/service/tabLeaseRegistry.js").TabLeaseScope;
+	};
 	host?: string;
 	port?: number;
 	configuredUrl?: string | null;

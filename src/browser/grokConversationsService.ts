@@ -1,4 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP wire names are case-sensitive.
+import { GrokHistoryCursorRestartRequiredError } from "./grokHistoryContinuation.js";
 import type { Conversation } from "./providers/domain.js";
 import type { GrokHistoryCoverage } from "./providers/grokHistoryInventory.js";
 import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
@@ -30,6 +31,7 @@ export interface GrokConversationConnection {
 	port: number;
 }
 export interface GrokConversationsServiceDependencies {
+	continuationTransport?: import("./grokHistoryContinuation.js").GrokHistoryTransport;
 	connect?: (options: BrowserProviderListOptions) => Promise<GrokConversationConnection>;
 	closeTarget?: (connection: GrokConversationConnection) => Promise<void>;
 }
@@ -73,6 +75,12 @@ export function createGrokConversationsService(
 		async list(request = {}) {
 			const projectId = request.projectId ?? options.projectId ?? undefined;
 			let connection: GrokConversationConnection | undefined;
+			let continuation:
+				| Awaited<
+						ReturnType<typeof import("./grokHistoryContinuation.js").acquireGrokHistoryContinuation>
+				  >
+				| undefined;
+			let callOptions = options;
 			let result = grokConversationsFailureResult(projectId);
 			let reason = "history-read-failed";
 			try {
@@ -83,7 +91,20 @@ export function createGrokConversationsService(
 						const { connectToGrokTab } = await import("./providers/grokAdapter.js");
 						return connectToGrokTab(input);
 					});
-				connection = await connect({ ...options, providerTrafficRequired: true });
+				if (!dependencies.connect || dependencies.continuationTransport) {
+					const { acquireGrokHistoryContinuation } = await import("./grokHistoryContinuation.js");
+					continuation = await acquireGrokHistoryContinuation(
+						{ ...options, historyCursor: request.cursor ?? options.historyCursor },
+						{
+							projectId,
+							query: request.query ?? options.historySearch,
+							since: request.since ?? options.historySince,
+						},
+						dependencies.continuationTransport,
+					);
+					callOptions = continuation.options;
+				}
+				connection = await connect({ ...callOptions, providerTrafficRequired: true });
 				const governor = resolveProviderTrafficGovernor(connection.client);
 				reason = "history-authority-unavailable";
 				if (
@@ -109,7 +130,7 @@ export function createGrokConversationsService(
 					reason = "history-account-not-verified";
 					const initial = await checkGrokBrowserAuthPreflight(
 						connection.client.Runtime as ChromeClient["Runtime"],
-						options,
+						callOptions,
 					);
 					if (!initial.ok) throw new Error(reason);
 					let coverage: GrokHistoryCoverage | undefined;
@@ -118,7 +139,7 @@ export function createGrokConversationsService(
 						connection.client as ChromeClient,
 						projectId,
 						{
-							...options,
+							...callOptions,
 							historySearch: request.query ?? options.historySearch,
 							historyCursor: request.cursor ?? options.historyCursor,
 							historyLimit: request.limit ?? options.historyLimit,
@@ -133,7 +154,7 @@ export function createGrokConversationsService(
 					reason = "history-account-not-verified";
 					const final = await checkGrokBrowserAuthPreflight(
 						connection.client.Runtime as ChromeClient["Runtime"],
-						options,
+						callOptions,
 					);
 					if (!final.ok || final.actualIdentity?.id !== initial.actualIdentity?.id)
 						throw new Error(reason);
@@ -153,17 +174,21 @@ export function createGrokConversationsService(
 					});
 					throw error;
 				}
-			} catch {
-				result = grokConversationsFailureResult(
-					projectId,
-					options.abortSignal?.aborted ? "cancelled" : reason,
-				);
+			} catch (error) {
+				result =
+					error instanceof GrokHistoryCursorRestartRequiredError
+						? { object: "grok_conversation_inventory", items: [], coverage: error.coverage }
+						: grokConversationsFailureResult(
+								projectId,
+								options.abortSignal?.aborted ? "cancelled" : reason,
+							);
 			} finally {
+				if (!connection && continuation) await continuation.finish(false, false);
 				if (connection) {
 					try {
 						// Retain the owned target if socket/request-authority cleanup is unknown.
 						await connection.client.close();
-						if (connection.shouldClose && connection.targetId) {
+						if (!continuation && connection.shouldClose && connection.targetId) {
 							if (dependencies.closeTarget) await dependencies.closeTarget(connection);
 							else {
 								const { default: CDP } = await import("./cdp.js");
@@ -174,7 +199,13 @@ export function createGrokConversationsService(
 								});
 							}
 						}
+						await continuation?.finish(
+							result.coverage.state !== "incomplete" ||
+								result.coverage.reason === "cursor-restart-required",
+							result.coverage.state !== "failed",
+						);
 					} catch {
+						await continuation?.finish(false, false);
 						result = grokConversationsFailureResult(projectId, "history-cleanup-unconfirmed");
 					}
 				}
