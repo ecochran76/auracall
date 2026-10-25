@@ -1,3 +1,14 @@
+## 2026-10-25 — Plan0457 approved and published
+
+User cleared the completed goal, approved three final-range review tickets and
+requested a renewed2h/2MM allocation with one primary/two worker tickets. New
+manual budget is anchored to native goal1792902357; Wake enrollment held for
+unqualified original history/stale controller, without altering shared runtime.
+Tickets451/452/453 independent and published/read back; primary451, workers452/453.
+Graph extends21to24nodes and preserves parent398/eight native gates. New integration
+worktree from92170f6d1 is clean before registration docs; CodeGraph1182files/
+31872nodes/95862edges. Registration must land on main before worker dispatch.
+
 ## 2026-10-25 — Plan0456 closed: five repairs and bounded review complete
 
 All440–444 are CLOSED. PR447/448 integrated foundations/follow; single frozen
