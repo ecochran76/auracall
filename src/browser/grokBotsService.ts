@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP protocol and provider identity wire names are case-sensitive.
+import { projectGrokAccountReference } from "./grokAccountReference.js";
 import { BrowserAutomationError } from "../oracle/errors.js";
-import { createHash } from "node:crypto";
 import {
 	createGrokBotClient,
 	type GrokBotIdentity,
@@ -131,9 +131,7 @@ export function createGrokBotsService(
 				(async (runtime: ChromeClient["Runtime"], input: BrowserProviderListOptions) => {
 					const { checkGrokBrowserAuthPreflight } = await import("./providers/grokAdapter.js");
 					const result = await checkGrokBrowserAuthPreflight(runtime, input);
-					const identity = result.actualIdentity;
-					const key = identity?.id || identity?.accountId || identity?.email || identity?.handle;
-					return result.ok && key ? createHash("sha256").update(`grok:${key}`).digest("hex") : null;
+					return result.ok ? projectGrokAccountReference(result.actualIdentity, "legacy-untagged") : null;
 				});
 			await governor.checkWarning?.(client.Runtime);
 			const action = await governor.begin({

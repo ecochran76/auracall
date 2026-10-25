@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { projectGrokAccountReference } from "./grokAccountReference.js";
 import type { ChromeClient } from "./types.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
 import type { GrokConnectorConnection } from "./grokConnectorsService.js";
@@ -132,9 +132,7 @@ export function createGrokBuildService(
 				(async (runtime: ChromeClient["Runtime"], input: BrowserProviderListOptions) => {
 					const { checkGrokBrowserAuthPreflight } = await import("./providers/grokAdapter.js");
 					const proof = await checkGrokBrowserAuthPreflight(runtime, input);
-					const identity = proof.actualIdentity;
-					const key = identity?.id || identity?.accountId || identity?.email || identity?.handle;
-					return proof.ok && key ? createHash("sha256").update(`grok:${key}`).digest("hex") : null;
+					return proof.ok ? projectGrokAccountReference(proof.actualIdentity, "legacy-untagged") : null;
 				});
 			await governor.checkWarning?.(client.Runtime);
 			const admission = await governor.begin({
