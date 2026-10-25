@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
-import fs from "node:fs/promises";
+import fs, { type FileHandle } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { getAuracallHomeDir } from "../../auracallHome.js";
@@ -13,6 +13,97 @@ interface GateOwner {
 	binding: string;
 	ownerPid: number;
 	acquiredAt: string;
+}
+
+interface TransitionOwner {
+	version: 1;
+	id: string;
+	ownerPid: number;
+	bootId: string | null;
+}
+
+interface TransitionSnapshot {
+	owner: TransitionOwner;
+	dev: bigint;
+	ino: bigint;
+}
+
+async function linuxBootId(): Promise<string | null> {
+	if (process.platform !== "linux") return null;
+	try {
+		return (await fs.readFile("/proc/sys/kernel/random/boot_id", "utf8")).trim();
+	} catch {
+		// Ordinary locking still works when process-death qualification is unavailable.
+		return null;
+	}
+}
+
+async function transitionSnapshot(file: string): Promise<TransitionSnapshot | undefined> {
+	let handle: FileHandle | undefined;
+	try {
+		handle = await fs.open(file, "r");
+		const stat = await handle.stat({ bigint: true });
+		if (!stat.isFile() || stat.size > 1024n) return undefined;
+		const value: unknown = JSON.parse(await handle.readFile("utf8"));
+		if (!value || typeof value !== "object") return undefined;
+		const owner = value as Partial<TransitionOwner>;
+		if (
+			owner.version !== 1 ||
+			typeof owner.id !== "string" ||
+			!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(owner.id) ||
+			typeof owner.ownerPid !== "number" || !Number.isSafeInteger(owner.ownerPid) || owner.ownerPid <= 0 ||
+			(owner.bootId !== null && typeof owner.bootId !== "string")
+		) return undefined;
+		return { owner: owner as TransitionOwner, dev: stat.dev, ino: stat.ino };
+	} catch (error) {
+		if (error instanceof SyntaxError || (error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+		throw error;
+	} finally {
+		await handle?.close();
+	}
+}
+
+async function sameTransition(file: string, expected: TransitionSnapshot): Promise<boolean> {
+	try {
+		const actual = await fs.lstat(file, { bigint: true });
+		return actual.isFile() && actual.dev === expected.dev && actual.ino === expected.ino;
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+		throw error;
+	}
+}
+
+async function reclaimDeadTransition(file: string, bootId: string | null): Promise<void> {
+	if (!bootId) return;
+	const previous = await transitionSnapshot(file);
+	if (!previous || previous.owner.bootId !== bootId) return;
+	try {
+		await fs.access(`/proc/${previous.owner.ownerPid}`);
+		return;
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+	}
+
+	// A retained hard link elects exactly one reclaimer for this dead generation.
+	// Never remove it: a paused contender must not acquire the same election later
+	// and unlink a successor. If the reclaimer itself crashes, preserve ambiguity.
+	const retired = `${file}.retired-${previous.owner.id}`;
+	try {
+		await fs.link(file, retired);
+	} catch (error) {
+		if (["EEXIST", "ENOENT"].includes((error as NodeJS.ErrnoException).code ?? "")) return;
+		throw error;
+	}
+	if (await sameTransition(retired, previous) && await sameTransition(file, previous)) {
+		await fs.unlink(file);
+	}
+}
+
+async function releaseTransition(file: string, published: TransitionSnapshot): Promise<void> {
+	if (!await sameTransition(file, published)) {
+		throw new Error("Desktop control transition ownership changed; refusing stale release.");
+	}
+	await fs.unlink(file);
 }
 
 const automationScopes = new AsyncLocalStorage<ReadonlyMap<string, GateOwner>>();
@@ -38,22 +129,38 @@ export class DesktopControlGate {
 	private async transition<T>(operation: () => Promise<T>): Promise<T> {
 		await fs.mkdir(path.dirname(this.lockPath), { recursive: true, mode: 0o700 });
 		const transitionPath = `${this.lockPath}.transition`;
-		let acquired = false;
-		for (let attempt = 0; attempt < 100; attempt += 1) {
-			try {
-				await fs.mkdir(transitionPath, { mode: 0o700 });
-				acquired = true;
-				break;
-			} catch (error) {
-				if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-				await delay(20);
-			}
-		}
-		if (!acquired) throw new DesktopControlBusyError("Desktop control coordination is busy.");
+		const owner: TransitionOwner = {
+			version: 1, id: randomUUID(), ownerPid: process.pid, bootId: await linuxBootId(),
+		};
+		const pendingPath = `${transitionPath}.${owner.id}.pending`;
+		// Publish a complete immutable identity with one atomic link, avoiding the
+		// old mkdir-before-owner crash window. Older clients still see EEXIST.
+		await fs.writeFile(pendingPath, JSON.stringify(owner), { mode: 0o600, flag: "wx" });
 		try {
-			return await operation();
+			const published = await transitionSnapshot(pendingPath);
+			if (!published) throw new Error("Desktop control transition identity is invalid.");
+			let acquired = false;
+			for (let attempt = 0; attempt < 100; attempt += 1) {
+				try {
+					await fs.link(pendingPath, transitionPath);
+					acquired = true;
+					break;
+				} catch (error) {
+					if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+					await reclaimDeadTransition(transitionPath, owner.bootId);
+					await delay(20);
+				}
+			}
+			if (!acquired) throw new DesktopControlBusyError(
+				"Desktop control coordination is busy. Preserve unqualified transition records for explicit recovery.",
+			);
+			try {
+				return await operation();
+			} finally {
+				await releaseTransition(transitionPath, published);
+			}
 		} finally {
-			await fs.rm(transitionPath, { recursive: true });
+			await fs.rm(pendingPath, { force: true });
 		}
 	}
 

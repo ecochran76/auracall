@@ -145,6 +145,7 @@ test('owner publication never exposes a partial owner.json', async () => {
   const original = fs.writeFile.bind(fs);
   let destination = '';
   const spy = vi.spyOn(fs, 'writeFile').mockImplementation(async (...args) => {
+    if (!path.basename(String(args[0])).startsWith('owner.')) return original(...args);
     destination = String(args[0]);
     await original(args[0], '', args[2]);
     await expect(fs.readFile(path.join(lock, 'owner.json'))).rejects.toMatchObject({code:'ENOENT'});

@@ -394,6 +394,12 @@ auracall tui
 Engine auto-picks API when `OPENAI_API_KEY` is set, otherwise browser; browser is stable on macOS and works on Linux and Windows. On Linux pass `--browser-chrome-path/--browser-cookie-path` if detection fails; on Windows prefer `--browser-manual-login` or inline cookies if decryption is blocked. From WSL, integrated Windows Chrome runs now use an auto-assigned DevTools port plus Aura-Call’s built-in `windows-loopback` relay by default, so firewall rules and `portproxy` are only for manual direct-CDP debugging.
 
 Current browser-mode default posture:
+- desktop coordination publishes transition ownership atomically. On Linux,
+  a proven-dead transition owner from the same boot can be recovered without
+  clearing human desktop control. Legacy empty, invalid or foreign-boot
+  transitions and interrupted recovery claims require explicit qualification.
+  Elapsed time alone never clears ownership. See
+  [desktop transition recovery](docs/dev/browser-service-tools.md#desktop-transition-crash-recovery).
 - browser runs still default to Aura-Call-managed profile launch
 - a browser profile can opt into an agent-browser-owned hidden RDP/Guacamole
   process with `agentBrowserRdp.enabled: true`; AuraCall still owns and passes
