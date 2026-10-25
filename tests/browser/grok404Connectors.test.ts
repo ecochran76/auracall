@@ -90,6 +90,13 @@ describe("Grok Connector public inventory", () => {
 		});
 		expect(JSON.stringify(result)).not.toContain("Account label");
 	});
+	it("restores its own nested detail when the provider makes the parent dialog inert", async () => {
+		const fixture = connectorDomFixture({ inertParent: true });
+		const client = createGrokConnectorClient(fixture.runtime);
+		const result = await client.inspect({ name: "Example", kind: "installed" });
+		expect(result.endpoint).toBe("https://mcp.example.test/mcp");
+		expect((await client.list()).installed).toHaveLength(1);
+	});
 	it("selects an observed exact endpoint and refuses to infer absence from visible rows", async () => {
 		const client = createGrokConnectorClient(connectorDomFixture().runtime);
 		const result = await client.inspect({

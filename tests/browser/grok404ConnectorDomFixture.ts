@@ -83,6 +83,7 @@ export function connectorDomFixture({
 	gated = false,
 	broken = false,
 	toolExpansion = true,
+	inertParent = false,
 	userEmail = "operator@example.test",
 	accountLabel = "Account label excluded",
 } = {}) {
@@ -146,6 +147,7 @@ export function connectorDomFixture({
 	detail.hidden = true;
 	installed.onClick = () => {
 		detail.hidden = false;
+		if (inertParent) plugins.setAttribute("aria-hidden", "true");
 	};
 	more.onClick = () => {
 		if (!toolExpansion) return;
@@ -156,6 +158,7 @@ export function connectorDomFixture({
 	};
 	close.onClick = () => {
 		detail.hidden = true;
+		if (inertParent) delete plugins.attributes["aria-hidden"];
 	};
 	const document = new N("document", "", {}, [plugins, detail]);
 	return {

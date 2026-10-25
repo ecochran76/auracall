@@ -56413,3 +56413,8 @@ Actual public collector restart plus controlled-CDP service regressions pass;
 explicit partial/full-sweep work; no global-order claim. Optional predicate
 extraction deferred. Frozen review artifact records adjudication and all causal
 receipts. Main integration/443 reclosure/final closeout remain, no broad rerun.
+
+
+### Plan0458 approved native execution —2026-10-25
+
+User approved the four prepared native canaries and fixed review baseline d107e13ce, then directed continued ticket execution. Registration PR458 merged at d468ee7a6. Primary405; isolated workers403/408/410. Fresh built public identity smoke matched configured default/grok without launch. Public405 installation stopped unsupported before Add because an existing endpoint was unobserved; no install dispatched. Native source discovery continues without weakening duplicate protection. All eight tickets remain open; reserved whole-range review/TDD counters remain zero. Publication requires a concrete generated app/version packet.

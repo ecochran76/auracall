@@ -23,7 +23,11 @@
     410
   ],
   "primaryTicket": 405,
-  "workers": {},
+  "workers": {
+    "403": "feat/grok403-native-20261025",
+    "408": "feat/grok-408-native-20261025",
+    "410": "feat/grok410-native-20261025"
+  },
   "nodes": {
     "399": {
       "title": "Grok: Govern Grok reads and expose effective account controls",
@@ -324,12 +328,12 @@
     "postReviewTddPasses": 0,
     "reviewAfterAllTicketsClosed": true,
     "proposedFixedBase": "d107e13cef6a83b76f63de9b3f268366be936a6b",
-    "fixedBaseUserConfirmed": false
+    "fixedBaseUserConfirmed": true
   },
   "executionControl": {
     "scopeAuthority": "User requested closing remaining graph with one primary and one worker per other unblocked ticket.",
     "nativeReadPreparation": "Allowed bounded same-account read/preflight; serialize all Grok native work through primary.",
-    "nativeWriteCanaries": "Exact packet prepared; awaiting explicit native effects/Terms/consent approval retained by existing ticket execution boundaries.",
+    "nativeWriteCanaries": "User approved four exact canaries in prepared packet; publication excluded until concrete app/version.",
     "sharedRuntimeInstallation": "Not performed; concrete adoption candidate must be prepared and bound if required.",
     "resourceAllowance": "No new resource deadline inferred; previous native goal is complete.",
     "nativeSerialization": "one operation at a time, exact owned target/custody; no foreign-tab adoption or blind replay",
@@ -339,5 +343,11 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "Fresh8ticketreadbacks/currentgraph; fourfrontierassignedbyplan; exactsyntheticinputs/effectpacketprepared; registration and worker dispatch pending."
+  "lastCheckpoint": "Registration merged d468ee7a6; workers403/408/410 prepared; fresh built account match;405 native install in progress.",
+  "nativeApproval": {
+    "status": "approved",
+    "source": "user approved followed by continue tickets",
+    "scope": "four exact canaries in prepared effect packet",
+    "publication": "not approved until concrete app/version"
+  }
 }
