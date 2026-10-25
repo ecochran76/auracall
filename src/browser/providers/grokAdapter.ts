@@ -3818,6 +3818,11 @@ export function createGrokAdapter(): Pick<
         const openConversations = await listOpenConversations(host, port, resolvedProjectId);
         let rootSidebarConversations: Conversation[] = [];
         if (resolvedProjectId) {
+          if (options?.includeHistory) {
+            // Mounted/open rows do not establish history completeness or belong to
+            // the continuation window. Return only the bounded, attributed inventory.
+            return await finish(await listHistoryConversations(client, resolvedProjectId, options));
+          }
           const projectPageConversations = await listProjectPageConversations(client, resolvedProjectId);
           const merged = new Map<string, Conversation>();
           const mergeConversation = (entry: Conversation) => {
@@ -3825,11 +3830,6 @@ export function createGrokAdapter(): Pick<
           };
           for (const entry of projectPageConversations) {
             mergeConversation(entry);
-          }
-          if (projectPageConversations.length === 0 && options?.includeHistory) {
-            for (const entry of await listHistoryConversations(client, resolvedProjectId, options)) {
-              mergeConversation(entry);
-            }
           }
           for (const entry of openConversations) {
             mergeConversation(entry);
