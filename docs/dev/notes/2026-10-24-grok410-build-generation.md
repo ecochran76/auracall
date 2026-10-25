@@ -95,3 +95,34 @@ Memory disposition: forbidden. Developer instructions prohibit memory writes
 without an explicit user request; this implementation objective is not such a
 request. No Graphiti write was attempted. Non-write receipt:
 `/tmp/grok410-resume-memory-disposition.json` (`recorded_no_write`, zero writes).
+
+
+## Source-only continuation — selected native file guard
+
+The coordinator resumed source preparation while configured native reads were
+stopped at provider-session provenance proof. No provider call was made by this
+worker. A focused regression showed the empty-root Build guard accepted a native
+file input with one selected file but no provider chip, then dispatched Send. The
+guard now rejects any nonempty native FileList in its composer form. This uses
+platform presence evidence only; it does not claim upload identity or repair 403.
+
+Red and green command:
+`pnpm vitest run tests/browser/grok410Build.test.ts -t 'selected native file' --maxWorkers=1`.
+Red returned partial/completed and sent once; green returns unavailable/no effect
+and sends zero times. Focused combined suite now has 38 passing tests across the
+same 3 files (15 Build cases); targeted lint/diff checks and `pnpm typecheck` pass.
+
+Read-only existing-conversation discovery is a bounded Chats inventory followed by
+an exact selected conversation/target. A title or current selected model is only
+a candidate hint, never Build provenance. Generic conversation context is not
+the clean Build observation seam: it can open sources/accordions, omits same-origin
+source links and has no app/version contract. After proof repair, use one
+same-target `Runtime.evaluate` inventory with no navigation/click/Send. A prepared
+private operator helper lives at `/tmp/grok410-observe-existing-target.ts`; it is
+not product code and was import-checked only. It requires configured exact-target
+account proof both before and after observation, records bounded raw DOM only to a
+private owner-only file, and returns sanitized counts. No native invocation or
+app/version inference occurred. Coordinator retains native authority and timing.
+
+Continuation memory disposition: forbidden; non-write receipt
+`/tmp/grok410-continuation-memory-disposition.json`, zero writes.

@@ -36,8 +36,8 @@ The actual provider publication state remains `unknown`; terminal text or a
 preview does not prove publication. App publication is a separate operation under
 issue 411 and is not implemented by this command.
 
-Invalid/unconfirmed requests, missing/gated Build, nonempty drafts and preflight
-refusals send nothing. Completed/uncertain submissions have `retrySafe=false`.
+Invalid/unconfirmed requests, missing/gated Build, nonempty drafts, selected native files (including files without a provider chip),
+and preflight refusals send nothing. Completed/uncertain submissions have `retrySafe=false`.
 Cleanup failure is separately reported and retains a completed response when one
 was already proved. The target is retained for operator reconciliation.
 
