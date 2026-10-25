@@ -56527,3 +56527,38 @@ cleanup focuses the exact owned dialog before native Escape. No Add or OAuth
 has been dispatched in this slice. Focused installer/service/account tests:
 40 passed; earlier discovery selection: 36 passed; typecheck and changed-file
 Biome pass. All eight ticket gates remain open; reserved final review/TDD 0/0.
+
+### 2026-10-25 — Plan0458 Connector continuation and retained completion checkpoint
+
+The source a180c902f preparation-only native run reached the exact custom form,
+matched the configured account before/after and restored it with no Add. The
+already approved public install continuation then dispatched one Add; Grok's
+Custom Connector surface reports "Connection failed" / "Sorry, there was a
+problem connecting to this MCP server." No Connector ID, OAuth grant or tool
+catalog is qualified. The journal continuation is consumed and target retained;
+cleanup was unknown. Independent guarded exact-target readonly diagnosis saved
+privately; original unsent @ remains intact. Do not replay installation.
+
+Integrated403 source f716e2a6c as daafc133e and410 source93933f99f as53cbfbb7a.
+403 is assigned only a replay-free exact-A context read. 408's one public Save
+and independent same-ID readback are verified for Name/Description; Instructions
+and Model remain unavailable and the explicit acceptance split awaits user reply.
+410's single generation completion was validated and settled through supported
+CAS with prior uncertainty retained; app/version/export remain unqualified.
+All eight original issues remain open; final review/TDD counters remain0/0.
+
+### 2026-10-25 — Plan0458 failed Connector settlement and public File readiness
+
+Primary validated the immutable native terminal Connector failure/account/target
+proof (943d53a9f10a014d572dbe447f3a09b584b2956189ec71d05fad8bfc122fb63f).
+Supported CAS settled only that failed effect and released its preserved lease
+at revision5; prior uncertainty remains audited, installation is not accepted,
+OAuth is not granted and replay remains unauthorized. Anonymous initialize
+returns401 with Bearer resource metadata; protected-resource and authorization
+metadata return200. This is endpoint diagnostic evidence, not Grok acceptance.
+
+#403's configured public context read at53cbfbb7a confirms A ready/complete with
+observed-native source hash, no replay or Send and no unreleased utility lease.
+Primary verified composite83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca
+and linked source receipts. Worker granted only the remaining single approved B
+upload on a genuinely new empty composer; B had not dispatched at this checkpoint.

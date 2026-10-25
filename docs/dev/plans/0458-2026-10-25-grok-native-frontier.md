@@ -14,8 +14,9 @@ User requested the remaining eight tickets be closed, with one primary ticket
 and one worker per other unblocked ticket, followed by one code-review/TDD pass.
 Current24-node graph has16closed/eightopen. Primary405; workers403/408/410.
 406 depends405;409 depends403/408 (404closed);411/414 depend410 (413closed).
-Fresh main includes only an unrelated retrospective since the accepted repairs;
-startd107e13ce and preserve both journal histories. Register before parallel work.
+Registration started at d107e13ce and preserved both journal histories.
+Main advanced independently through ce91367d1; merge that history before the
+next source integration, preserving unrelated inventory/ledger fixes and notes.
 
 The prior account proof qualified default/grok, but must be refreshed before
 native effects. Retained unsent @/catalog state must be preserved. Source-only
@@ -51,3 +52,21 @@ After all eight close, run exactly one two-axis code-review, then one bounded TD
 findings pass with closed-world verification. Proposed fixed based107e13cef6a83b76f63de9b3f268366be936a6b was
 confirmed by the user approval before native execution. No new budget
 or old-goal reset is inferred from this ordinary execution request.
+
+
+## Native checkpoint — 2026-10-25
+
+The first exact file is now publicly ready with native-byte identity verified;
+the remaining approved same-basename B canary is assigned to403. One Bot Create
+and one supported-field public Save/readback are verified, but original
+Instructions/Model criteria remain unmet; a concrete scope split awaits user
+response. One Build generation completed and was reconciled with its retained
+target; app/version/export remain unqualified.
+
+The approved Connector continuation dispatched one Add and reached Grok's
+terminal Connection failed surface. Primary-qualified account/target/runtime
+proof supported an audited failed-effect settlement and separate preserved
+release, without replay authority. #405/406 remain open. See the
+[native failure note](../notes/2026-10-25-grok405-native-connection-failure.md).
+
+All eight issues remain open at this checkpoint. Final review/TDD counters0/0.
