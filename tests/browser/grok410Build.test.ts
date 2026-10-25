@@ -103,6 +103,7 @@ function buildFixture({
 	modalMenu = false,
 	draftAfterSelection = false,
 	fileAfterSelection = false,
+	retainedClosedMenu = false,
 } = {}) {
 	const fast = new Button("Fast", { role: "menuitemradio", "aria-checked": "true" });
 	const build = new Button(gated ? "Build Requires subscription" : "Build", {
@@ -127,7 +128,13 @@ function buildFixture({
 		main.setAttribute("aria-hidden", "true");
 	};
 	closeMenu();
-	const document = Object.assign(new Node("document", "", {}, [main, menu]), { body: main });
+	const stale = new Node("div", "", { role: "menu", "data-state": "closed" }, [
+		new Button("Expert", { role: "menuitemradio", "aria-checked": "true" }),
+	]);
+	const document = Object.assign(
+		new Node("document", "", {}, [main, menu, ...(retainedClosedMenu ? [stale] : [])]),
+		{ body: main },
+	);
 	const location = { href: "https://grok.com/" };
 	let submissions = 0;
 	build.onClick = () => {
@@ -510,4 +517,12 @@ test.each([
 	});
 	expect(fixture.submissions()).toBe(0);
 	expect(fixture.draft()).toBe(kind === "draft" ? "A draft arrived while selecting Build" : "");
+});
+
+test("a retained explicitly closed model menu cannot supply Build discovery", async () => {
+	const fixture = buildFixture({ modalMenu: true, retainedClosedMenu: true });
+	expect(
+		await fixture.service.generate({ prompt: "Make a local timer", confirmed: true }),
+	).toMatchObject({ status: "partial", generation: { status: "response_completed" } });
+	expect(fixture.submissions()).toBe(1);
 });

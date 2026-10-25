@@ -166,3 +166,14 @@ checks the root again before inserting text. Separate draft/native-FileList race
 during selection remain unavailable and preserve the incoming state without Send.
 The fixture models observed structural semantics; raw provider HTML and account
 proofs remain private. No app/version/export schema has been inferred from it.
+
+
+### Explicitly closed picker roots
+
+Primary native discovery additionally proved that closed provider overlays may
+remain mounted with nonzero geometry. The model-menu reader now excludes exact
+Radix `data-state="closed"` ancestors rather than treating their labels as live
+controls. A public Build fixture with a retained closed picker reproduced an
+unavailable result before the one-line filter; afterward it discovers the active
+picker and completes the controlled generation. Active-dialog and empty-root
+guards remain strict. Build/model selections pass24 focused checks across2files.
