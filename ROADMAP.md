@@ -4519,3 +4519,7 @@ acceptance is separate from source integration and installed/live adoption.
 ## P90 | Plan0405 | Developer-app affinity configuration
 
 State: OPEN. [Plan0405](docs/dev/plans/0405-2026-10-11-developer-app-affinity-config.md), issue #253. Selected resolved configuration forwarding; source validation in progress, LitScout installed acceptance pending.
+
+## App cleanup diagnostics — bounded follow-on
+
+[Plan0454](docs/dev/plans/0454-2026-10-24-app-cleanup-diagnostics.md) is CLOSED: bounded, sanitized nested CLI failure causes are merged and qualified in the installed CLI. Historical transport failure causality remains unconfirmed.

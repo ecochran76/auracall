@@ -27,6 +27,8 @@ with mutations. Concurrent reads share a locked snapshot; pure reads never
 rewrite it. Mixed-batch results publish only after durable commit. Cross-process
 locking, complete history and warning/ownership fences remain authoritative.
 CLI stage diagnostics preserve original error identity and aggregate causes.
+App failure receipts project bounded, sanitized cause/aggregate trees without
+serializing stacks or request objects; unknown cleanup retains its refusal.
 Identical concurrent tab-custody lists share only an unfinished observation,
 with separate caller clones; completed custody state is never cached.
 Active utility operations renew tab-owner liveness every 30 seconds through

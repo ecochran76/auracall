@@ -9,6 +9,16 @@ fields from `initialData.user`, without returning raw session data. Reject
 conflicting identities and traversal exhaustion. Keep source, built executable
 and native account-proof receipts distinct.
 
+## 2026-10-24 — Preserve nested cleanup failures at the CLI boundary
+
+Node's default inspection can collapse nested AggregateError.errors to [Array].
+App commands must emit a bounded metadata projection through the actual CLI
+catch path, not rethrow beyond the JSON formatter. Retain sanitized messages,
+codes, cause and aggregate children, mark truncation, and omit stacks/request
+objects. JSON goes to stdout with --json and stderr otherwise. Failed cleanup
+still exits nonzero and remains unknown; diagnostic capture never makes a retry
+safe. Public CLI regressions cover submitted tests, list and refresh-tools.
+
 ## 2026-10-24 — Keep bounded Grok detail aligned and attributable
 
 Slice content and referenced files against the same mounted-card inventory.

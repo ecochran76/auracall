@@ -5621,16 +5621,10 @@ async function runChatgptDeveloperAppsCliAction(
     console.log(formatChatgptDeveloperAppOperationResult(result));
     receiptEmitted = true;
   } catch (error) {
-    if (input.action === 'list' && commandOptions.json) {
-      process.exitCode = 1;
-      console.log(formatChatgptDeveloperAppListFailure(error));
-      receiptEmitted = true;
-      return;
-    }
-    if (input.action !== 'refresh-tools' || !commandOptions.json) throw error;
     process.exitCode = 1;
-    console.log(JSON.stringify({ action: input.action, status: 'unconfirmed', retrySafe: false,
-      message: error instanceof Error ? error.message : String(error) }, null, 2));
+    const diagnostic = formatChatgptDeveloperAppListFailure(error, input.action);
+    if (commandOptions.json) console.log(diagnostic);
+    else console.error(diagnostic);
     receiptEmitted = true;
   } finally {
     if (acquired?.acquired) await acquired.release();
