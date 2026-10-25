@@ -6,10 +6,11 @@ import {
 } from "../../src/browser/providers/grokHistoryInventory.js";
 
 /** Executes the production DOM reader against a controlled visible Chats document. */
-export function readGrokTimestampDom(
+export function readGrokTimestampDom<T = GrokHistoryPage>(
 	rows: readonly { id: string; title: string; label: string; datetime?: string }[],
 	now: number,
-): GrokHistoryPage {
+	expression = buildGrokHistoryPageExpression(undefined, "https://grok.com/c/"),
+): T {
 	const nodes = rows.map((input) => {
 		const node = {
 			textContent: input.title,
@@ -37,6 +38,7 @@ export function readGrokTimestampDom(
 	};
 	const document = {
 		querySelector: () => dialog,
+		querySelectorAll: () => nodes,
 		createTreeWalker: (node: { textContent: string }) => {
 			let done = false;
 			return {
@@ -54,8 +56,11 @@ export function readGrokTimestampDom(
 			return now;
 		}
 	}
-	return runInNewContext(buildGrokHistoryPageExpression(undefined, "https://grok.com/c/"), {
+	return runInNewContext(expression, {
 		document,
+		requestAnimationFrame: (callback: () => void) => callback(),
+		setTimeout,
+		clearTimeout,
 		Date: Clock,
 		location: { origin: "https://grok.com" },
 		URL,

@@ -3851,7 +3851,7 @@ export function createGrokAdapter(): Pick<
         let history: Conversation[] = [];
         if (!historyContinuation || historyContinuation.fresh) await navigateToProject(client, GROK_HOME_URL);
         await ensureMainSidebarOpen(client, { logPrefix: 'browser-root-conversations' });
-        rootSidebarConversations = await listRootSidebarConversations(client);
+        if (!includeHistory) rootSidebarConversations = await listRootSidebarConversations(client);
         if (includeHistory) {
           if (!historyContinuation && options?.configuredUrl?.includes('/project/')) {
             const historyConnection = await connectToGrokTab(
@@ -3878,6 +3878,11 @@ export function createGrokAdapter(): Pick<
           } else {
             history = await listHistoryConversations(client, undefined, options);
           }
+          // Only the qualified bounded history window owns its continuation and
+          // change evidence. Mounted/sidebar/open rows may be older, outside the
+          // window, or carry observation-clock estimates; they cannot refill an
+          // empty frontier or enrich a deliberately unqualified updatedAt.
+          return await finish(history);
         }
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
