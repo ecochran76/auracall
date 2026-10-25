@@ -22,7 +22,7 @@ native effects. Retained unsent @/catalog state must be preserved. Source-only
 fixtures cannot satisfy native source-binding/editor/app-version/OAuth gates.
 Existing tickets explicitly require exact execution targets and live authority;
 408 creation also accepts provider Terms. The concrete canary packet is prepared,
-with write effects awaiting that approval. Read-only preparation/source diagnosis
+with the four bounded canaries approved by the user on2026-10-25. Read-only preparation/source diagnosis
 continues independently, with all native interactions serialized by primary.
 
 ## Scope and acceptance
@@ -48,6 +48,6 @@ without primary assigning the exact currently qualified native window.
 At most2source attempts per packet, bounded native canary effects as specified,
 then split/reframe if evidence still insufficient. Preserve unknown-effect custody.
 After all eight close, run exactly one two-axis code-review, then one bounded TDD
-findings pass with closed-world verification. Proposed fixed based107e13cef6a83b76f63de9b3f268366be936a6b must
-be confirmed under the user-invoked review skill before that stage. No new budget
+findings pass with closed-world verification. Proposed fixed based107e13cef6a83b76f63de9b3f268366be936a6b was
+confirmed by the user approval before native execution. No new budget
 or old-goal reset is inferred from this ordinary execution request.
