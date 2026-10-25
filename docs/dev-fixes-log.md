@@ -16,6 +16,15 @@ Keep known no-effect preparation refusals distinct from uncertain effects. One
 explicit confirmed continuation of an exactly recorded endpoint-observation
 refusal uses an exclusive persistent claim; unknown outcomes never reopen Add.
 
+## 2026-10-25 — Qualify native File object identity before Grok upload acceptance
+
+Grok attachment metadata can live in the chip component's props without DOM file
+ID attributes. Bind only the identical selected File object, its SHA256/length,
+and observed metadata ID/account/source URI. Reject conflicting associations;
+never substitute filenames. Preserve processing as progress and unknown phases
+as unknown. Source identity and server materialization do not silently authorize
+Send, replay, or clearing an uncertainty fence.
+
 ## 2026-10-25 — Keep unknown upload custody through cleanup and diagnosis
 
 A cleanup AggregateError cannot replace a started file mutation's unknown outcome

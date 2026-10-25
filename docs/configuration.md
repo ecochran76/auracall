@@ -1304,9 +1304,13 @@ operator-authorized POST `/v1/grok/files/query`. Bodies use `action`, optional
 `runtimeProfile`, and either `id` for selection or `paths` for explicit local
 uploads. Recent selections require an exact unique provider file ID and explicit
 readiness in the same composer/project context. A duplicate basename is not an
-identity selector. The local upload path currently returns `unconfirmed` when
-provider evidence cannot bind the selected native File to its observed provider
-ID; it does not permit a prompt to proceed on that evidence. Reconcile the
+identity selector. Local upload hashes readable source bytes before dispatch.
+The native attachment component can bind the same selected File object and digest
+to its observed provider metadata ID, with matching account/source URI. These
+files report `sourceBinding: native-file-object` and `sourceSha256`; processing
+remains explicitly unconfirmed. An unbound native chip also makes a later context
+read incomplete. The local upload path returns `unconfirmed` when provider
+evidence cannot bind the selected native File to its observed provider ID; it does not permit a prompt to proceed on that evidence. Reconcile the
 retained target instead of retrying an uncertain upload. Limits, observed file
 states and provenance accompany results. Diagnostics contain counts and codes.
 
