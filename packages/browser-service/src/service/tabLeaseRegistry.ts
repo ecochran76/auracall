@@ -78,6 +78,11 @@ export interface BrowserTabLease {
   processBinding?: { processId: number; instanceId: string };
   retention?: 'live-follow' | 'ttl';
   effectState: TabLeaseEffectState;
+  effectReconciliations?: Array<{
+    observedAt: string;
+    previousEffectState: 'outcome-unknown';
+    evidence: { artifactRef: string; sha256: string };
+  }>;
   acquiredAt: string;
   heartbeatAt: string;
   lastMeaningfulUseAt: string;
@@ -147,6 +152,17 @@ export interface ReserveTabLeaseInput {
 }
 
 export interface BrowserTabLeaseRegistry {
+  /** Trusted provider/operator reconciler supplies already validated immutable
+   * evidence. This records a known completed effect, never authorizes replay,
+   * claims a target, closes it, or releases ownership implicitly. */
+  reconcileEffect(input: {
+    leaseId: string;
+    expectedRevision: number;
+    scope: TabLeaseScope;
+    targetId: string;
+    now: string;
+    evidence: { artifactRef: string; sha256: string };
+  }): Promise<TabLeaseResult<BrowserTabLease>>;
   findByProcess(scope: TabLeaseScope): Promise<BrowserTabLease | null>;
   acquireProcess(input: {
     leaseId: string;
@@ -956,6 +972,37 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return { ok: true, value: cloneLease(released) };
   }
 
+  async reconcileEffect(input: Parameters<BrowserTabLeaseRegistry['reconcileEffect']>[0]): Promise<TabLeaseResult<BrowserTabLease>> {
+    const artifactRef = requireNonEmpty(input.evidence?.artifactRef, 'evidence artifact');
+    if (artifactRef.length > 4096 || /[\x00-\x1f\x7f]/.test(artifactRef) || !/^[a-f0-9]{64}$/.test(input.evidence?.sha256 ?? '')) {
+      throw new Error('Qualified immutable reconciliation evidence is required');
+    }
+    const observedAt = new Date(parseTimestamp(input.now, 'now')).toISOString();
+    const existing = this.leases.get(input.leaseId);
+    if (!existing) return { ok: false, conflict: { kind: 'not-found' } };
+    if (existing.revision !== input.expectedRevision) {
+      return { ok: false, conflict: { kind: 'stale-claim', lease: cloneLease(existing) } };
+    }
+    const exactScope = normalizeScope(input.scope);
+    if (
+      !Object.entries(exactScope).every(([key, value]) => existing.scope[key as keyof TabLeaseScope] === value) ||
+      existing.targetId !== input.targetId ||
+      !['idle', 'lost'].includes(existing.state) ||
+      existing.ownerOperationId !== null || existing.ownerProcessId != null || existing.ownerInstanceId != null ||
+      existing.effectState !== 'outcome-unknown'
+    ) return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    const reconciled: BrowserTabLease = {
+      ...existing,
+      revision: existing.revision + 1,
+      effectState: 'settled',
+      effectReconciliations: [...(existing.effectReconciliations ?? []), {
+        observedAt, previousEffectState: 'outcome-unknown', evidence: {artifactRef, sha256: input.evidence.sha256},
+      }],
+    };
+    this.leases.set(reconciled.leaseId, reconciled);
+    return { ok: true, value: cloneLease(reconciled) };
+  }
+
   async releasePreserved(input: {
     leaseId: string;
     expectedRevision: number;
@@ -1117,6 +1164,10 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
 
   releasePreserved(input: Parameters<BrowserTabLeaseRegistry['releasePreserved']>[0]) {
     return this.write((registry) => registry.releasePreserved(input));
+  }
+
+  reconcileEffect(input: Parameters<BrowserTabLeaseRegistry['reconcileEffect']>[0]) {
+    return this.write((registry) => registry.reconcileEffect(input));
   }
 
   findByProcess(scope: TabLeaseScope) {
@@ -1356,6 +1407,7 @@ function cloneLease(lease: BrowserTabLease): BrowserTabLease {
     ...(lease.processBinding ? { processBinding: { ...lease.processBinding } } : {}),
     workload: { ...lease.workload } as TabLeaseWorkload,
     actionCounts: cloneActionCounts(lease.actionCounts),
+    ...(lease.effectReconciliations ? {effectReconciliations: lease.effectReconciliations.map(entry => ({...entry, evidence: {...entry.evidence}}))} : {}),
   };
 }
 

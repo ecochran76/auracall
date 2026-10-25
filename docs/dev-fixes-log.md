@@ -1,3 +1,11 @@
+## 2026-10-25 — Reconcile completed effects without erasing uncertainty
+
+Use exact account scope, target and revision plus a validated immutable evidence
+receipt to settle a positively observed completed effect. Preserve the prior
+unknown outcome in an appended audit; never turn a receipt string alone into
+provider proof. Keep live/in-flight ownership protected. Settlement does not
+close/release a target, authorize replay, or establish asynchronous file readiness.
+
 ## 2026-10-25 — Restore owned nested Connector details
 
 Grok marks the parent Plugins dialog inert while Connector details are open.
