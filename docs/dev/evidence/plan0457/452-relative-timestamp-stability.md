@@ -71,3 +71,62 @@ smoke, account mutation, issue closure or tracker change was performed. Primary
 owns operator docs, CONTEXT, journal, ledger, integration and intended-main proof.
 Memory disposition: `forbidden` because the task explicitly prohibits memory
 writes.
+
+## Acceptance correction: actual root adapter window
+
+The preceding core-reader and metadata-collector fixture proof did **not** qualify
+the root adapter merge. Primary acceptance inspection found that root
+`includeHistory` subsequently enriched qualified rows with raw relative-clock
+`updatedAt` values and could refill a correctly empty incremental frontier.
+This followup is based on integration `d3629f4915e11e632d41a577bdb4dc60e194e114`.
+
+For `includeHistory`, root discovery now returns only the qualified, bounded
+history window, matching the existing project mode. It does not merge mounted,
+sidebar or open-tab rows into that window. Thus unknown/relative timestamps
+cannot be re-enriched and a zero-row frontier remains empty. Existing history
+transport, account custody, final proof, configured-route handling, callback
+coverage, failures, cancellation and cleanup remain in the same control flow.
+Non-history root discovery retains its mounted/sidebar/open merging behavior.
+This is explicit mode authority, not a claim that qualified Chats covers every
+provider conversation or that mounted rows can establish history freshness.
+
+`grok452PublicAdapter.test.ts` copies the existing controlled transport seam from
+Ticket440 without changing its fixture or tests. It calls actual
+`createGrokAdapter().listConversations` through configured guarded traffic
+admission and executes the **production history and raw DOM expressions** against
+the same controlled timed document. Fresh transports/adapters and the real
+private checkpoint store exercise collector restart rather than bypassing the
+adapter merge.
+
+- Causal red: `pnpm vitest run tests/browser/grok452PublicAdapter.test.ts
+  --maxWorkers=1` on the unfixed integration adapter: two failures. A qualified
+  known relative-only history frontier returned raw rows instead of `[]`; the
+  persisted four-row/two-row-cycle account reported `changedRows: 2` instead of
+  zero after a one-minute clock advance. An initial harness-only head-reset gap
+  was corrected to execute the production reset expression, then the genuine
+  two failures were observed (`/tmp/auracall-452-adapter-red3.log`).
+- Green: the same public adapter seam now proves an empty frontier, no relative
+  re-enrichment, persisted bounded restart, and genuine absolute-only/title/new
+  changes after an unchanged row across a two-row continuation. A fourth case
+  confirms non-history root mounted discovery retains its previous behavior.
+- Final focused: `pnpm vitest run tests/browser/grok452PublicAdapter.test.ts
+  tests/browser/grok440CursorCustody.test.ts
+  tests/browser/grok441ProjectHistory.test.ts tests/browser/grokAdapter.test.ts
+  tests/browser/grok401AdapterCleanup.test.ts
+  tests/browser/grok452StableTimestamp.test.ts
+  tests/accountMirror/grok443IncrementalFollow.test.ts --maxWorkers=1`:
+  **seven files, 69 tests passed** (`/tmp/auracall-452-adapter-final.log`).
+- New/changed fixture and test Biome lint: passed, zero errors or warnings.
+- `pnpm exec tsc --noEmit`: final pass
+  (`/tmp/auracall-452-adapter-typecheck-final.log`). Its first run found a
+  test-only optional-method/unknown-array return inference error in the new
+  non-history case; explicit method/array guards corrected that fixture type.
+  The production patch did not change after the 69-test pass.
+- Final new adapter test rerun after the fixture type guards: four tests passed
+  (`/tmp/auracall-452-adapter-final4.log`).
+- `git diff --check`: passed.
+
+The earlier partial/full-sweep public projection evidence remains applicable;
+these seven source lines change the root history result's authority, not the
+CLI/API/MCP/Ops progress schemas. Primary owns the corresponding operator and
+CONTEXT documentation. Native/provider effects and memory writes remain excluded.
