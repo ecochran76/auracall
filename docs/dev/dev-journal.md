@@ -56498,3 +56498,15 @@ fails old source on encoding overhead (12151bytes vs10066.1budget) in70ms. Candi
 retains full schema1/history and lock/fsync/atomic publication; legacy snapshot
 and cross-instance preservation checks added. Final validation and installed
 native outcome remain pending; no provider call was made for these replays.
+
+## 2026-10-25 — Issue464 native encoding result and snapshot reuse
+
+PR467/544db831f CLI activation passed hash identity and installed replay. Native
+26-app inventory still took297.628s, so it does not close464. A follow-up108ms
+real admission fixture catches three full snapshot reads across self-owned
+reserve/start/settle. Reuse now checks file identity under the existing lock,
+invalidates on peer edit/removal and failures, and treats post-commit metadata
+errors as cache misses rather than failed durable effects. Append-only event
+prefix encoding further reduces copied-history replay to2.937s/2.482s. No global
+cache or history loss; legacy schema1/lock/fsync/publication semantics remain.
+Final checks and one additional serialized installed-native read are pending.

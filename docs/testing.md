@@ -3846,3 +3846,8 @@ encoding overhead and durable-write count while retaining account admission.
 Legacy indented snapshots retain all records, warnings and event history across
 restart and a cross-instance race. Performance replay timings are supporting
 measurements, not default wall-clock test assertions or a product latency SLO.
+
+The ledger suite also checks warm self-owned admissions, peer replacement and
+same-size edit, file deletion, aborted mutation invalidation, metadata errors
+after successful commit and complete append-only event serialization. Reuse
+must never skip the cross-process lock or a durable publication boundary.
