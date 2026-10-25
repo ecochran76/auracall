@@ -15,7 +15,8 @@ export async function hasEmptyGrokBuildRoot(runtime: ChromeClient["Runtime"]): P
     const editor = editors[0];
     if (String(editor.value ?? editor.textContent ?? '').trim() || editor.querySelectorAll('[contenteditable="false"]').length) return false;
     const form = editor.closest('form') || editor.parentElement;
-    return Boolean(form) && !form.querySelectorAll('[data-file-id], [data-attachment-id]').length;
+    return Boolean(form) && !form.querySelectorAll('[data-file-id], [data-attachment-id]').length &&
+      !Array.from(form.querySelectorAll('input[type="file"]')).some(input => input.files && input.files.length > 0);
   })()`,
 		returnByValue: true,
 	});

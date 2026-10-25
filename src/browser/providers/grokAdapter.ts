@@ -5795,6 +5795,33 @@ export function createGrokAdapter(): Pick<
   };
 }
 
+/** Attachment supplies target provenance, never provider identity or a browser PID.
+ * A retained proof belongs to its old target/endpoint and cannot authorize this one. */
+function bindGrokProviderSessionConnection<T extends { targetId?: string; host: string; port: number }>(
+  options: BrowserProviderListOptions | undefined,
+  connection: T,
+): T {
+  const authorization = options?.providerSessionAuthorization;
+  if (!authorization || !connection.targetId || authorization.context.providerId !== 'grok') return connection;
+  const previous = authorization.context;
+  const endpointMatches =
+    (!previous.devtoolsHost || previous.devtoolsHost === connection.host) &&
+    (!previous.devtoolsPort || previous.devtoolsPort === connection.port);
+  if (previous.browserTargetId !== connection.targetId ||
+      previous.devtoolsHost !== connection.host || previous.devtoolsPort !== connection.port) {
+    authorization.proof = null;
+  }
+  authorization.context = {
+    ...previous,
+    browserTargetId: connection.targetId,
+    devtoolsHost: connection.host,
+    devtoolsPort: connection.port,
+    // An endpoint change does not establish ownership by the previously observed process.
+    ...(endpointMatches ? {} : { browserProcessId: null }),
+  };
+  return connection;
+}
+
 export async function connectToGrokTab(
   options?: BrowserProviderListOptions,
   urlOverride?: string,
@@ -5819,14 +5846,14 @@ export async function connectToGrokTab(
       catch (error) { await client.close(); throw error; }
     }
     setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
-    return {
+    return bindGrokProviderSessionConnection(options, {
       client,
       targetId: options.tabTargetId,
       shouldClose: false,
       host,
       port,
       usedExisting: true,
-    };
+    });
   }
   const serviceResolver = options?.browserService as
     | (import('../service/browserService.js').BrowserService & {
@@ -5875,7 +5902,7 @@ export async function connectToGrokTab(
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
     await annotateClientMutationContext(client, options, 'provider:grok', requestedTargetId);
     setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
-    return { client, targetId: requestedTargetId, shouldClose: false, host, port: resolvedPort, usedExisting: true };
+    return bindGrokProviderSessionConnection(options, { client, targetId: requestedTargetId, shouldClose: false, host, port: resolvedPort, usedExisting: true });
   }
   const preferred = selectPreferredGrokTarget(candidates, preferredUrl);
   const serviceResolved = resolvedTargetIdFromService
@@ -5947,7 +5974,7 @@ export async function connectToGrokTab(
     await annotateClientMutationContext(client, options, 'provider:grok', targetId);
     if (hasProviderBackendRequestAdmission(options) && targetInfo?.url === 'about:blank') await navigateAndSettle(client, {url: preferredUrl});
     setClientSuppressFocus(client, tabPolicy.suppressFocus);
-    return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
+    return bindGrokProviderSessionConnection(options, { client, targetId, shouldClose, host, port: resolvedPort, usedExisting });
   } catch(error) {
     const failures: unknown[] = [error];
     if (createdOwnedTargetId) { try { await CDP.Close({host,port:resolvedPort,id:createdOwnedTargetId}); } catch(cleanup) { failures.push(cleanup); } }
@@ -7610,14 +7637,14 @@ async function connectToGrokProjectTab(
     const client = await CDP({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
     await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', options.tabTargetId);
-    return {
+    return bindGrokProviderSessionConnection(options, {
       client,
       targetId: options.tabTargetId,
       shouldClose: false,
       host,
       port,
       usedExisting: true,
-    };
+    });
   }
   const serviceResolver = options?.browserService as
     | (import('../service/browserService.js').BrowserService & {
@@ -7642,14 +7669,14 @@ async function connectToGrokProjectTab(
       const client = await CDP({ host, port: resolvedPort, target: resolvedTargetId });
       await Promise.all([client.Page.enable(), client.Runtime.enable()]);
       await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', resolvedTargetId);
-      return {
+      return bindGrokProviderSessionConnection(options, {
         client,
         targetId: resolvedTargetId,
         shouldClose: false,
         host,
         port: resolvedPort,
         usedExisting: true,
-      };
+      });
     }
   }
   if ((!port || !host) && options?.browserService) {
@@ -7703,7 +7730,7 @@ async function connectToGrokProjectTab(
   const client = await CDP({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
   await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', targetId);
-  return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
+  return bindGrokProviderSessionConnection(options, { client, targetId, shouldClose, host, port: resolvedPort, usedExisting });
 }
 
 function resolvePortFromEnv(): number | null {

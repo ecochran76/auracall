@@ -191,6 +191,13 @@ function buildFixture({
 			},
 		),
 		submissions: () => submissions,
+		addNativeFile: () => {
+			const input = Object.assign(new Node("input", "", { type: "file" }), {
+				files: [{ name: "existing.txt" }],
+			});
+			input.parentElement = form;
+			form.children.push(input);
+		},
 		draft: () => editor.value,
 	};
 }
@@ -408,4 +415,17 @@ test("Ops projection keeps state and proof presence without prompt, account or r
 		hasResponseIdentity: false,
 		effectState: "none",
 	});
+});
+
+test("a selected native file without a provider chip prevents Build submission", async () => {
+	const fixture = buildFixture();
+	fixture.addNativeFile();
+	expect(
+		await fixture.service.generate({ prompt: "Make a local timer", confirmed: true }),
+	).toMatchObject({
+		status: "unavailable",
+		code: "grok_build_empty_root_required",
+		effectState: "none",
+	});
+	expect(fixture.submissions()).toBe(0);
 });
