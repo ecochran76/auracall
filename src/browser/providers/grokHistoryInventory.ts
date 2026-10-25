@@ -44,6 +44,8 @@ export interface GrokHistoryRow {
 	title: string;
 	url?: string;
 	timestamp?: number | null;
+	/** DOM qualification. Omitted kind retains trusted numeric-reader compatibility. */
+	timestampKind?: "relative" | "absolute";
 	projectId?: string;
 	botId?: string;
 }
@@ -277,16 +279,21 @@ export async function collectGrokHistoryInventory(input: {
 					if (typeof row.timestamp !== "number") unknownTime = true;
 					else if (row.timestamp < cutoff) continue;
 				}
+				// Relative estimates remain available for since filtering above, but cannot
+				// identify a provider change or become a durable updatedAt observation.
+				const updatedAt =
+					row.timestampKind !== "relative" &&
+					typeof row.timestamp === "number" &&
+					Number.isFinite(row.timestamp)
+						? new Date(row.timestamp).toISOString()
+						: undefined;
 				if (
 					knownRows.get(row.id) ===
 					grokHistoryFingerprint({
 						id: row.id,
 						title: row.title,
 						projectId: rowProject,
-						updatedAt:
-							typeof row.timestamp === "number" && Number.isFinite(row.timestamp)
-								? new Date(row.timestamp).toISOString()
-								: undefined,
+						updatedAt,
 					})
 				) {
 					frontierReached = true;
@@ -301,10 +308,7 @@ export async function collectGrokHistoryInventory(input: {
 						provider: "grok",
 						projectId: rowProject,
 						url: url.href,
-						updatedAt:
-							typeof row.timestamp === "number" && Number.isFinite(row.timestamp)
-								? new Date(row.timestamp).toISOString()
-								: undefined,
+						updatedAt,
 						metadata: {
 							grokProvenance: {
 								projectId: rowProject ?? null,
@@ -434,8 +438,7 @@ export function buildGrokHistoryPageExpression(
                             : null;
               return ms === null ? null : now - ms;
             }
-            const parsed = Date.parse(text);
-            return Number.isFinite(parsed) ? parsed : null;
+            return null;
           };
             const readTimestamp = (node) => {
               const timeEl = node.querySelector?.('time');
@@ -449,9 +452,9 @@ export function buildGrokHistoryPageExpression(
               ];
               for (const candidate of candidates) {
                 const parsed = parseRelative(candidate);
-                if (parsed !== null) return { ts: parsed, label: String(candidate || '').trim() };
+                if (parsed !== null) return { ts: parsed, kind: 'relative', label: String(candidate || '').trim() };
                 const absolute = Date.parse(String(candidate || ''));
-                if (Number.isFinite(absolute)) return { ts: absolute, label: String(candidate || '').trim() };
+                if (Number.isFinite(absolute)) return { ts: absolute, kind: 'absolute', label: String(candidate || '').trim() };
               }
               const timeNode =
                 node.querySelector?.('.z-20') ||
@@ -460,18 +463,18 @@ export function buildGrokHistoryPageExpression(
               if (timeNode) {
                 const text = (timeNode.textContent || '').trim();
                 const parsed = parseRelative(text);
-                if (parsed !== null) return { ts: parsed, label: text };
+                if (parsed !== null) return { ts: parsed, kind: 'relative', label: text };
                 const absolute = Date.parse(text);
-                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
+                if (Number.isFinite(absolute)) return { ts: absolute, kind: 'absolute', label: text };
               }
               const descendants = Array.from(node.querySelectorAll?.('*') ?? []).reverse();
               for (const el of descendants) {
                 const text = (el.textContent || '').trim();
                 if (!text || text.length > 40) continue;
                 const parsed = parseRelative(text);
-                if (parsed !== null) return { ts: parsed, label: text };
+                if (parsed !== null) return { ts: parsed, kind: 'relative', label: text };
                 const absolute = Date.parse(text);
-                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
+                if (Number.isFinite(absolute)) return { ts: absolute, kind: 'absolute', label: text };
               }
               return { ts: null, label: '' };
             };
@@ -542,7 +545,7 @@ export function buildGrokHistoryPageExpression(
             if (!chatId) continue;
 
             const row = node.closest('div,li') || node;
-            const { ts, label } = readTimestamp(row);
+            const { ts, kind, label } = readTimestamp(row);
             if (typeof ts === 'number') {
               oldest = oldest === null ? ts : Math.min(oldest, ts);
             }
@@ -550,7 +553,7 @@ export function buildGrokHistoryPageExpression(
             const projectMatch = (() => { try { return new URL(url).pathname.match(/\\/project\\/([^/?#]+)/)?.[1]; } catch { return null; } })();
             const rowProjectId = node.closest('[data-project-id]')?.getAttribute('data-project-id') || projectMatch || undefined;
             const botId = node.closest('[data-bot-id]')?.getAttribute('data-bot-id') || undefined;
-            conversations.push({ id: chatId, title: text || chatId, url, timestamp: ts ?? null, projectId: rowProjectId, botId });
+            conversations.push({ id: chatId, title: text || chatId, url, timestamp: ts ?? null, timestampKind: kind, projectId: rowProjectId, botId });
           }
           const scrollables = Array.from(dialog.querySelectorAll('*')).filter((el) => {
             const element = el;
