@@ -1,3 +1,14 @@
+## 2026-10-25 — Plan0455 retrospective
+
+Reviewed the visible repair/deployment interval and reduced private receipts.
+Recommend explicit stateful deployment readiness with one in-flight probe,
+unique reconciliation receipt paths, and a reusable parent/start-time process
+census. Existing verifier and CLI flags are acknowledged; current fixture
+keepalive/kill-signal protections already address that lesson. CI and runtime
+changes excluded. See [report](notes/2026-10-25-plan0455-retrospective.md).
+Memory disposition: queued under standing capture authority; processing and
+retrieval remain separate.
+
 ## 2026-10-25 — Plan0457 complete after one post-closure gate
 
 PR455/main e55567f9cb4ebf28e6625180ffb311b7eb97bcd4 and fresh tracker readback
