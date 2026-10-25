@@ -12,7 +12,15 @@ scopes finish, steady follow preserves that completed backfill and makes bounded
 fresh head observations. Stored row fingerprints identify new or changed rows
 in that observed window; unfinished head work resumes without resetting the
 archive checkpoint. Newly discovered projects receive bounded inventory work.
-Retained rows survive incremental reads. Provider warning/failure is still a
+Root and project reads with `includeHistory` return only their qualified bounded
+history window; mounted/sidebar/open rows cannot refill an empty frontier or
+restore unqualified timestamps. Non-history mounted reads keep their existing
+merge behavior. Retained rows survive incremental reads. Relative labels such as today or an
+item age remain estimates for since-filtering; they are omitted from durable
+`updatedAt` and change fingerprints. Qualified absolute timestamps still detect
+date changes. Legacy checkpoints can normalize earlier unqualified estimates
+once through existing bounded continuation before reaching a stable frontier.
+Provider warning/failure is still a
 failure, rather than permission to serve cached success.
 
 Visible Chats does not establish a global newest-first change feed. Reaching a
@@ -42,7 +50,9 @@ provider effect or authorize another browser owner.
 Bounded history reads retain an AuraCall-owned history view for the exact
 account, browser generation and query. Settled views can coexist, while active
 history and foreground utility work share exclusive admission. Missing browser
-process provenance refuses the read before target discovery or creation. An
+process provenance refuses the read before target discovery or creation. A
+changed endpoint/process fingerprint also refuses before target lookup or any
+original custody mutation; absence from another browser cannot prove target loss. An
 uncertain cleanup fences later utility admission until ownership is reconciled.
 
 After a process restart, a retained view continues under the same page bound. If

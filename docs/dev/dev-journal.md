@@ -1,3 +1,56 @@
+## 2026-10-25 — Plan0457 final readiness confirmed
+
+Actual adapter source1866369dc passes172tests/17files, typecheck/build, eight-file
+scoped check and adapter lint. Final four adapter tests pass after import sorting.
+Real-file baseline/current adapter lint both exit0; their full checks have the
+same two pre-existing format/import diagnostics. An earlier stdin diagnostic
+probe did not emit JSON and was discarded, not treated as passing evidence.
+452 acceptance gap is closed; all three tickets ready for intended-main merge,
+then closure and the still-unconsumed single post-closure review/TDD gate.
+
+## 2026-10-25 — Actual public adapter gap repaired, revalidation running
+
+452 followup001c04d86 integrated1866369dc. Actual guarded adapter tests reproduced
+both timestamp enrichment and raw-row reappearance after an empty history frontier.
+Qualified root history now owns its window, matching project history; non-history
+mounted merging remains tested unchanged. Worker69focused tests plus typecheck
+pass. Primary17-file combined validation then compiler/build/lint runs serially
+before PR455 leaves draft. No source criteria narrowed or post-closure review used.
+
+## 2026-10-25 — Hold452 for actual adapter merge acceptance
+
+Primary inspection of the real root adapter found raw/sidebar/open merging can
+reintroduce relative timestamp estimates after the qualified history reader.
+Earlier125checks remain valid for covered seams but did not prove this public
+merge path. PR455 converted to draft;452 worker continues the same frozen ticket
+fromd3629f491 with a real adapter/collector regression. Qualified includeHistory
+window authority will match the existing project mode; non-history mounted reads
+retain their merge path.451/453 remain validated,452 running; no tickets closed
+or post-closure review consumed. This closes an evidence gap instead of narrowing
+or declaring acceptance from the easier core-reader fixture.
+
+## 2026-10-25 — Plan0457 combined acceptance ready for main
+
+Primary combined sourcec842ee577:125tests/15files pass, typecheck/build pass.
+Scoped check caught two test formatting/import-order findings; corrected without
+production changes,34affected tests pass and final seven-file check is clean.
+All451/452/453 validated on integration, not yet tracker-closed. Evidence453 moved
+to notes; operator/CONTEXT docs qualify relative estimates and generation refusal.
+One post-closure broad review and one bounded TDD pass remain unconsumed.
+
+## 2026-10-25 — Plan0457 source integrated
+
+RegistrationPR454/mainb509d45fa preceded worker dispatch. Primary451 c3089b363
+moves generation validation before target observation;3causalred/green cases plus
+mirror-store failure/recovery pass in41-test affected selection. Fixture port
+typing was corrected to context.devtoolsPort; combined typecheck pending. Worker
+453 da730224 integrated50e0c7ddc (49focusedtests);452 f38fbecda integratedc842ee577
+(41focused+3paritytests). Primary15-file combined check, then serialized compiler/
+build/lint, is running. Moved453 evidence from plan tree into notes to preserve
+canonical planning headers. Explicit package lint retains unchanged baseline
+3errors/1warning outside configured lint surface; no new diagnostics or suppression.
+No closures, post-closure review, native/provider effects or runtime changes yet.
+
 ## 2026-10-25 — Plan0457 approved and published
 
 User cleared the completed goal, approved three final-range review tickets and

@@ -8,6 +8,7 @@ import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { collectGrokHistoryInventory } from "../../src/browser/providers/grokHistoryInventory.js";
 import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
+import { readGrokTimestampDom } from "../browser/grok452DomFixture.js";
 
 let root: string;
 beforeEach(async () => {
@@ -18,7 +19,8 @@ afterEach(async () => {
 	setAuracallHomeDirOverrideForTest(null);
 	await fs.rm(root, { recursive: true, force: true });
 });
-async function fixture() {
+async function fixture(relativeDom = false) {
+	let now = Date.parse("2026-10-25T03:00:00Z");
 	const identity = { email: "one@example.test", source: "auth-session" };
 	const authority = createProviderSessionAuthority({ services: { grok: { identity } } });
 	const context = {
@@ -57,24 +59,32 @@ async function fixture() {
 				projectId: _project,
 				options,
 				onProgress: options.onHistoryInventory,
-				readPage: async () => ({
-					items: rows
-						.slice(0, visibleRows)
-						.filter((row) =>
-							_project
-								? (row as { projectId?: string }).projectId === _project
-								: !(row as { projectId?: string }).projectId,
-						)
-						.map((row) => ({
-							...row,
-							timestamp: Date.parse(row.updatedAt),
-							url: _project
-								? `https://grok.com/project/${_project}?chat=${row.id}`
-								: `https://grok.com/c/${row.id}`,
-						})),
-					atBottom: true,
-					emptyEvidence: rows.length === 0,
-				}),
+				readPage: async () =>
+					relativeDom
+						? readGrokTimestampDom(
+								rows
+									.slice(0, visibleRows)
+									.map((row, index) => ({ ...row, label: index % 2 ? "2 hours ago" : "today" })),
+								now,
+							)
+						: {
+								items: rows
+									.slice(0, visibleRows)
+									.filter((row) =>
+										_project
+											? (row as { projectId?: string }).projectId === _project
+											: !(row as { projectId?: string }).projectId,
+									)
+									.map((row) => ({
+										...row,
+										timestamp: Date.parse(row.updatedAt),
+										url: _project
+											? `https://grok.com/project/${_project}?chat=${row.id}`
+											: `https://grok.com/c/${row.id}`,
+									})),
+								atBottom: true,
+								emptyEvidence: rows.length === 0,
+							},
 			});
 			return inventory.items;
 		},
@@ -108,6 +118,9 @@ async function fixture() {
 	};
 	return {
 		rows,
+		advanceClock: () => {
+			now += 60_000;
+		},
 		showFirst: (count: number) => {
 			visibleRows = count;
 		},
@@ -216,8 +229,11 @@ test("follow retains changed and new rows already observed after an unchanged ro
 	expect(resumed.manifests.conversations.some((row) => row.id === "new-last")).toBe(true);
 });
 
-test("unobserved older changes require an explicit bounded full sweep", async () => {
-	const surface = await fixture();
+test.each([
+	false,
+	true,
+])("unobserved older changes require an explicit bounded full sweep (relative DOM: %s)", async (relativeDom) => {
+	const surface = await fixture(relativeDom);
 	await complete(surface);
 	surface.rows[3].title = "Changed older row";
 	surface.showFirst(2);
@@ -241,8 +257,11 @@ test("unobserved older changes require an explicit bounded full sweep", async ()
 	);
 });
 
-test("yield, cancellation and failed fresh follow observations preserve durable account state", async () => {
-	const surface = await fixture();
+test.each([
+	false,
+	true,
+])("yield, cancellation and failed fresh follow observations preserve durable account state (relative DOM: %s)", async (relativeDom) => {
+	const surface = await fixture(relativeDom);
 	await complete(surface);
 	const store = createGrokIndexCheckpointStore(path.join(root, "cache"), {
 		runtimeProfileId: "default",
@@ -267,4 +286,65 @@ test("yield, cancellation and failed fresh follow observations preserve durable 
 			identityKey: "other@example.test",
 		}).read(),
 	).toBeNull();
+});
+
+test("relative-only public DOM inventory stays incremental across persisted collector restarts as the clock advances", async () => {
+	const surface = await fixture(true);
+	await complete(surface);
+	const store = createGrokIndexCheckpointStore(path.join(root, "cache"), {
+		runtimeProfileId: "default",
+		identityKey: "one@example.test",
+	});
+	const completed = await store.read();
+	expect(completed).toMatchObject({ phase: "follow", scopes: [{ complete: true, cursor: null }] });
+	expect(completed?.items).toHaveLength(4);
+	// Every collect constructs a fresh service/collector and reloads its private disk checkpoint.
+	surface.showFirst(2);
+	for (let cycle = 0; cycle < 2; cycle++) {
+		surface.advanceClock();
+		const follow = await surface.collect();
+		expect(follow.evidence.grokIndex).toMatchObject({
+			phase: "follow",
+			changedRows: 0,
+			observationCoverage: "partial",
+			requiresFullSweep: true,
+			completedScopes: 1,
+			retainedRows: 4,
+		});
+		expect(surface.calls.at(-1)?.historyCursor).toBeNull();
+		expect(surface.calls.at(-1)?.historyKnownRows).toHaveLength(4);
+		expect((await store.read())?.scopes).toMatchObject([
+			{ projectId: null, complete: true, cursor: null, followCursor: null },
+		]);
+		const publicJson = JSON.stringify(follow.manifests);
+		expect(publicJson).not.toContain("fingerprint");
+		expect(publicJson).not.toContain("nextCursor");
+		expect(publicJson).not.toContain("timestampKind");
+	}
+});
+
+test("legacy unqualified timestamp checkpoints normalize once within bounds then retain a stable relative frontier", async () => {
+	const surface = await fixture(true);
+	await complete(surface);
+	const store = createGrokIndexCheckpointStore(path.join(root, "cache"), {
+		runtimeProfileId: "default",
+		identityKey: "one@example.test",
+	});
+	const checkpoint = await store.read();
+	if (!checkpoint) throw new Error("Expected completed private checkpoint");
+	await store.write({
+		...checkpoint,
+		items: checkpoint.items.map((row) => ({ ...row, updatedAt: "2026-10-25T02:00:00Z" })),
+	});
+	for (let cycle = 0; cycle < 3; cycle++) {
+		surface.advanceClock();
+		const normalized = await surface.collect();
+		expect(normalized.evidence.grokIndex).toMatchObject({ phase: "follow", completedScopes: 1 });
+		expect(normalized.evidence.grokIndex?.changedRows).toBeLessThanOrEqual(2);
+	}
+	surface.advanceClock();
+	const stable = await surface.collect();
+	expect(stable.evidence.grokIndex).toMatchObject({ phase: "follow", changedRows: 0 });
+	expect(surface.calls.at(-1)?.historyCursor).toBeNull();
+	expect((await store.read())?.items.every((row) => row.updatedAt === undefined)).toBe(true);
 });

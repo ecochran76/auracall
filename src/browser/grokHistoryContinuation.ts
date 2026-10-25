@@ -132,6 +132,9 @@ export async function acquireGrokHistoryContinuation(
 	);
 	if (legacy) throw new Error("Legacy Grok utility custody must settle before history admission.");
 	let existing = await registry.findByWorkload(scope, workload);
+	const fingerprint = JSON.stringify([host, port, context.browserProcessId ?? null]);
+	if (existing && existing.targetFingerprint !== fingerprint)
+		throw new Error("Grok history continuation browser generation changed.");
 	const targets = await transport.list(host, port);
 	options.abortSignal?.throwIfAborted();
 	if (existing && !targets.some((target) => target.id === existing?.targetId)) {
@@ -154,9 +157,6 @@ export async function acquireGrokHistoryContinuation(
 			throw new Error("Grok history continuation target loss could not be released.");
 		existing = null;
 	}
-	const fingerprint = JSON.stringify([host, port, context.browserProcessId ?? null]);
-	if (existing && existing.targetFingerprint !== fingerprint)
-		throw new Error("Grok history continuation browser generation changed.");
 	if (existing && existing.state !== "idle")
 		throw new Error("Grok history continuation is already in use or fenced.");
 	if (existing) {

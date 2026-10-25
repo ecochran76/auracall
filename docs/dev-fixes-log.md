@@ -1,3 +1,12 @@
+## 2026-10-25 — Qualify generation and timestamp evidence before reuse
+
+Compare the saved browser endpoint/process fingerprint before target lookup or
+loss interpretation: absence from another browser does not prove original-target
+loss. Relative date labels remain filtering estimates, not durable updatedAt or
+change identity; retain qualified absolute changes and normalize legacy estimates
+once within existing bounds. Keep exclusive-group admission policy centralized
+while callers preserve conflict precedence, scope, locking and process checks.
+
 ## 2026-10-25 — An unchanged row cannot hide observed Grok changes
 
 Without qualified provider ordering, process all available rows in the bounded

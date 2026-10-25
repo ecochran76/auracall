@@ -34,7 +34,31 @@
     453
   ],
   "primaryTicket": 451,
-  "workers": {},
+  "workers": {
+    "452": {
+      "handle": "/root/repair452",
+      "worktree": "auracall-grok-repair-452",
+      "branch": "feat/grok-repair-452-20261025",
+      "base": "b509d45fa52a605d0ba647554decf6d2344dad73",
+      "state": "validated-on-integration",
+      "result": "f38fbecdac3a2d6c21df3ec1492ea0818d5a9e2f",
+      "integratedCommit": "c842ee577",
+      "evidence": "41focused+3paritytests,tsc/lint/diffpass;primarycombinedpending",
+      "followupResult": "001c04d86b0802f38dd7e43ea754ea3a468214ea",
+      "followupIntegratedCommit": "1866369dc",
+      "followupEvidence": "Actualguardedpublicadapter2causalredthen4green;69focusedtests/typecheckpass;primary17filevalidationrunning"
+    },
+    "453": {
+      "handle": "/root/repair453",
+      "worktree": "auracall-grok-repair-453",
+      "branch": "feat/grok-repair-453-20261025",
+      "base": "b509d45fa52a605d0ba647554decf6d2344dad73",
+      "state": "integrated",
+      "result": "da730224ddc0754963efe84ab90a46bb1821a105",
+      "integratedCommit": "50e0c7ddc",
+      "evidence": "49focusedtests,tscconfiguredlintpass;explicitpackagelintlegacy3errors1warningunchanged"
+    }
+  },
   "nodes": {
     "399": {
       "title": "Grok: Govern Grok reads and expose effective account controls",
@@ -286,7 +310,7 @@
       "title": "Grok: Preserve Grok history custody across browser-generation changes",
       "url": "https://github.com/ecochran76/auracall/issues/451",
       "trackerState": "OPEN",
-      "state": "ready",
+      "state": "validated-on-integration",
       "blockedBy": [],
       "scope": "final-review-repair",
       "finding": "P1GEN",
@@ -299,7 +323,7 @@
       "title": "Grok: Keep Grok incremental fingerprints stable for relative timestamps",
       "url": "https://github.com/ecochran76/auracall/issues/452",
       "trackerState": "OPEN",
-      "state": "ready",
+      "state": "validated-on-integration",
       "blockedBy": [],
       "scope": "final-review-repair",
       "finding": "P2TIME",
@@ -312,7 +336,7 @@
       "title": "Grok: Centralize utility admission fencing",
       "url": "https://github.com/ecochran76/auracall/issues/453",
       "trackerState": "OPEN",
-      "state": "ready",
+      "state": "validated-on-integration",
       "blockedBy": [],
       "scope": "final-review-repair",
       "finding": "P3FENCE",
@@ -380,6 +404,51 @@
     }
   ],
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "Three independent tickets published/read back; graph extended from21to24nodes; registration pending main before workers.",
-  "scopeNote": "Close three approved final-range review tickets, then one post-closure two-axis review and one bounded TDD findings pass. Preserve original eight native gates and parent398."
+  "lastCheckpoint": "All3validatedactualpublicpaths:172tests/17files,typecheck/build,8filecheck+adapterlintpass. Fulladaptercheckretainsexactbaseline2format/importdiagnostics. PR455readyforintendedmain/closure,postreview/TDD0.",
+  "scopeNote": "Close three approved final-range review tickets, then one post-closure two-axis review and one bounded TDD findings pass. Preserve original eight native gates and parent398.",
+  "registrationMerge": {
+    "pr": 454,
+    "commit": "b509d45fa52a605d0ba647554decf6d2344dad73"
+  },
+  "lastManualObservation": {
+    "tokensUsed": 423065,
+    "timeUsedSeconds": 861,
+    "availableMemoryMiB": 37257,
+    "swapUsedMiB": 87036
+  },
+  "primaryEvidence": {
+    "ticket": 451,
+    "commit": "c3089b363",
+    "tests": "3causalred/green driftcases plusmirrorfreshfailure/unchangedcheckpoint;41affectedtests pass;fixturetypeaccess corrected,combinedtypingpending",
+    "note": "docs/dev/notes/2026-10-25-grok-451-browser-generation-custody.md"
+  },
+  "integratedValidation": {
+    "source": "1866369dc",
+    "tests": 172,
+    "files": 17,
+    "testSeconds": 47.92,
+    "typecheckExit": 0,
+    "buildExit": 0,
+    "scopedCheckFiles": 8,
+    "adapterLintExit": 0,
+    "adapterCheck": "baseline/current identical two format/import diagnostics; no changes to imports",
+    "packageLint": "baseline3errors1warningunchangedoutsideconfiguredsurface",
+    "formattedTestRecheck": 4,
+    "sourceQualification": "actual guarded adapter/service, persisted collector and public registry;controlled only"
+  },
+  "validationHistory": [
+    {
+      "source": "c842ee577b32e1843961b05ff923219ee9c40c96",
+      "tests": 125,
+      "files": 15,
+      "testSeconds": 52.96,
+      "typecheckExit": 0,
+      "buildExit": 0,
+      "scopedCheckFiles": 7,
+      "formatOnlyRecheckTests": 34,
+      "formatOnlyRecheckFiles": 2,
+      "packageLint": "3preexistingerrors/1warningunchangedoutsideconfiguredsurface",
+      "sourceQualification": "controlled-source/service-only"
+    }
+  ]
 }
