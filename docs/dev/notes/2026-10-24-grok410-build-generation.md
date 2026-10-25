@@ -222,3 +222,35 @@ The read closed successfully and the native slot was released. The unknown-effec
 lease remains preserved pending supported reconciliation; no new generation,
 publication or arbitrary download was performed. Private read/proof/source
 metadata files use the `supported-read-*` prefix in the directory above.
+
+
+## Plan0458 public retained-plane inspection
+
+The native terminal capture supplies the actual plane/assistant/gateway/response
+hierarchy and the native `thinking-container > canvas-trigger` completed-work
+marker. The public service now offers bounded exact-target inspection through
+the shared request schema, configured service, MCP and HTTP command boundary;
+the coordinator owns the CLI registration hunk at
+`/tmp/grok410-inspect-registration.patch`. No model menu or Send is used.
+
+The first public command tracer rejected `inspect` as invalid (RED). After the
+implementation, the same controlled-CDP fixture reads the native-shaped completed
+assistant response with preview presence and no input/selection/Send (GREEN).
+The provider-free fixture is based on observed structure, not copied raw account
+HTML. Wrong user response IDs, route/account drift, active Stop, a completed-work
+marker inside prose and a closed stale Stop control have focused coverage. The
+authenticated preview bearer is deliberately absent from all public data.
+
+Configured Build creation is lazy. Inspection resolves session options with
+`ensurePort=false`, refuses a missing endpoint before target acquisition, and
+requires the exact existing target with navigation disabled. Other callers retain
+the existing default launch behavior. Inspection never resolves an unknown-effect
+lease itself. App/version/export data remain unavailable and issue410 stays open.
+
+
+Inspection validation: `pnpm vitest run tests/browser/grok410Build.test.ts
+tests/http.grokBuild.test.ts tests/browser/grok444AccountReferences.test.ts
+--maxWorkers=1` passes42 focused checks across3files. The HTTP contract now checks
+strict inspect routing without generation dispatch; the native-shaped service
+tracer enters through the MCP handler. `pnpm typecheck` passes for the same source
+state. No new native inspection or installation is claimed from these checks.

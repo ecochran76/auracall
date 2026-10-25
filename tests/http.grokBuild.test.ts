@@ -18,7 +18,13 @@ test("Build HTTP validates confirmation before resolving and preserves partial g
 		retrySafe: false,
 	};
 	const generate = vi.fn(async () => result);
-	const resolver = vi.fn(async () => ({ discover: async () => result, generate }));
+	const inspection = { ...result, operation: "inspect" as const, effectState: "none" as const };
+	const inspect = vi.fn(async () => inspection);
+	const resolver = vi.fn(async () => ({
+		discover: async () => result,
+		generate,
+		inspect,
+	}));
 	const server = await createResponsesHttpServer(
 		{ host: "127.0.0.1", port: 0 },
 		{ grokBuildServiceResolver: resolver },
@@ -42,6 +48,23 @@ test("Build HTTP validates confirmation before resolving and preserves partial g
 		expect(await response.json()).toEqual(result);
 		expect(generate).toHaveBeenCalledWith({ ...request, confirmed: true });
 		expect(resolver).toHaveBeenCalledTimes(1);
+		const selected = {
+			action: "inspect",
+			targetId: "retained-target",
+			conversationId: "exact-conversation",
+			responseId: "response-selected",
+		};
+		const read = await fetch(endpoint, { method: "POST", body: JSON.stringify(selected) });
+		expect(read.status).toBe(200);
+		expect(await read.json()).toEqual(inspection);
+		expect(inspect).toHaveBeenCalledWith(selected);
+		expect(generate).toHaveBeenCalledTimes(1);
+		const invalidRead = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({ ...selected, confirmed: true }),
+		});
+		expect(invalidRead.status).toBe(400);
+		expect(resolver).toHaveBeenCalledTimes(2);
 	} finally {
 		await server.close();
 		setAuracallHomeDirOverrideForTest(null);

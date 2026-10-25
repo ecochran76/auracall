@@ -22,6 +22,7 @@ export async function resolveGrokReadSessionOptions(
 	config: ResolvedUserConfig,
 	runtimeProfile?: string,
 	abortSignal?: AbortSignal,
+	sessionOptions: { ensurePort?: boolean } = {},
 ) {
 	const selectedId = runtimeProfile ?? config.auracallProfile;
 	if (
@@ -34,7 +35,10 @@ export async function resolveGrokReadSessionOptions(
 		runtimeProfileId: selectedId,
 		provider: "grok",
 	}) as ResolvedUserConfig;
-	return GrokService.create(selected).buildListOptions({ abortSignal }, { ensurePort: true });
+	return GrokService.create(selected).buildListOptions(
+		{ abortSignal },
+		{ ensurePort: sessionOptions.ensurePort !== false },
+	);
 }
 export async function createConfiguredGrokConnectorsService(
 	config: ResolvedUserConfig,

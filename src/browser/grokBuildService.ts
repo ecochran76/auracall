@@ -14,9 +14,14 @@ import {
 	readGrokAssistantSnapshotForRuntime,
 	waitForGrokAssistantResult,
 } from "./actions/grok.js";
-import { hasEmptyGrokBuildRoot, readGrokBuildResponseIdentity } from "./providers/grokBuild.js";
+import {
+	hasEmptyGrokBuildRoot,
+	readGrokBuildResponseIdentity,
+	readGrokBuildPlaneSnapshot,
+} from "./providers/grokBuild.js";
 
 export interface GrokBuildResult {
+	operation?: "inspect";
 	status: "available" | "unavailable" | "partial" | "unknown" | "invalid";
 	code: string;
 	targetId: string | null;
@@ -27,18 +32,26 @@ export interface GrokBuildResult {
 		responseId: string | null;
 		text: string | null;
 		markdown: string | null;
+		gatewayRowId?: string | null;
+		uiState?: "running" | "completed" | "unknown";
 	};
 	conversationId: string | null;
 	conversationUrl: string | null;
 	app: { id: string | null; version: string | null };
-	preview: { status: "unknown"; url: null };
+	preview: { status: "unknown" | "available"; url: null; code?: string };
 	artifacts: { status: "unavailable"; code: string; entries: never[] };
 	publication: { requested: false; status: "unknown" };
 	cleanupState: "completed" | "unknown";
 	effectState: "none" | "completed" | "unknown";
 	retrySafe: boolean;
 }
+export interface GrokBuildInspectRequest {
+	targetId: string;
+	conversationId: string;
+	responseId?: string;
+}
 export interface GrokBuildService {
+	inspect(request: GrokBuildInspectRequest): Promise<GrokBuildResult>;
 	discover(): Promise<GrokBuildResult>;
 	generate(request: {
 		prompt: string;
@@ -323,5 +336,139 @@ export function createGrokBuildService(
 		if (operationError) throw operationError;
 		return result;
 	}
-	return { discover: () => run(), generate: (request) => run(request) };
+	async function inspect(request: GrokBuildInspectRequest): Promise<GrokBuildResult> {
+		const valid = (value: string) =>
+			typeof value === "string" && /^[A-Za-z0-9:_-]{1,200}$/.test(value);
+		if (
+			!valid(request.targetId) ||
+			!valid(request.conversationId) ||
+			(request.responseId !== undefined && !valid(request.responseId))
+		)
+			return {
+				...grokBuildUnknown("grok_build_request_invalid"),
+				status: "invalid",
+				operation: "inspect",
+			};
+		let result: GrokBuildResult = {
+			...grokBuildUnknown(),
+			operation: "inspect",
+			targetId: request.targetId,
+		};
+		if (
+			!Number.isInteger(options.port) ||
+			!options.port ||
+			options.port < 1 ||
+			options.port > 65535
+		)
+			return {
+				...result,
+				status: "unavailable",
+				code: "grok_build_existing_browser_required",
+				cleanupState: "completed",
+			};
+		options.abortSignal?.throwIfAborted();
+		const connect =
+			dependencies.connect ??
+			(async (input: BrowserProviderListOptions) => {
+				const { connectToGrokTab } = await import("./providers/grokAdapter.js");
+				return connectToGrokTab(input);
+			});
+		const connection = await connect({
+			...options,
+			tabTargetId: request.targetId,
+			tabUrl: undefined,
+			requireExistingTarget: true,
+			allowNavigation: false,
+			preserveActiveTab: true,
+			tabLifecycle: "retain",
+			providerTrafficRequired: true,
+		});
+		const client = connection.client as ChromeClient;
+		try {
+			if (connection.targetId !== request.targetId)
+				throw new Error("grok_build_target_not_verified");
+			const governor = resolveProviderTrafficGovernor(client);
+			if (
+				!governor ||
+				governor.attribution.provider !== "grok" ||
+				governor.attribution.targetId !== request.targetId ||
+				!governor.admitBackendRequest
+			)
+				throw new Error("grok_build_governor_required");
+			const verify =
+				dependencies.verifyAccount ??
+				(async (runtime: ChromeClient["Runtime"], input: BrowserProviderListOptions) => {
+					const { checkGrokBrowserAuthPreflight } = await import("./providers/grokAdapter.js");
+					const proof = await checkGrokBrowserAuthPreflight(runtime, input);
+					return proof.ok
+						? projectGrokAccountReference(proof.actualIdentity, "legacy-untagged")
+						: null;
+				});
+			await governor.checkWarning?.(client.Runtime);
+			const admission = await governor.begin({
+				kind: "provider-read",
+				interactionClass: "generic",
+				source: "provider:grok:build-inspect",
+				targetId: request.targetId,
+				abortSignal: options.abortSignal,
+			});
+			try {
+				const account = await verify(client.Runtime, options);
+				if (!account) throw new Error("grok_build_account_not_verified");
+				options.abortSignal?.throwIfAborted();
+				const view = await readGrokBuildPlaneSnapshot(client.Runtime, request);
+				options.abortSignal?.throwIfAborted();
+				if ((await verify(client.Runtime, options)) !== account)
+					throw new Error("grok_build_account_changed");
+				result = {
+					...result,
+					status: view.state === "unknown" ? "unknown" : "partial",
+					code: view.state === "completed" ? "grok_build_app_identity_unobserved" : view.code,
+					providerAccountRef: account,
+					conversationId: view.conversationId,
+					conversationUrl: view.conversationUrl,
+					generation: {
+						status: view.state === "completed" ? "response_completed" : "unknown",
+						responseId: view.responseId,
+						text: view.text,
+						markdown: view.text,
+						gatewayRowId: view.gatewayRowId,
+						uiState: view.state,
+					},
+					preview: {
+						status: view.previewAvailable ? "available" : "unknown",
+						url: null,
+						...(view.previewAvailable ? { code: "grok_build_preview_session_required" } : {}),
+					},
+				};
+				await admission.settle({ outcome: "succeeded", probeContext: client.Runtime });
+			} catch (error) {
+				await admission.settle({
+					outcome: "failed",
+					effectState: "none",
+					error: "grok_build_inspection_failed",
+					probeContext: client.Runtime,
+				});
+				throw error;
+			}
+		} catch {
+			result = {
+				...grokBuildUnknown("grok_build_inspection_failed"),
+				operation: "inspect",
+				targetId: request.targetId,
+			};
+		} finally {
+			try {
+				await client.close();
+				result.cleanupState = "completed";
+			} catch {
+				result.cleanupState = "unknown";
+				result.retrySafe = false;
+				result.code = "grok_build_cleanup_unknown";
+				result.status = "unknown";
+			}
+		}
+		return result;
+	}
+	return { discover: () => run(), generate: (request) => run(request), inspect };
 }
