@@ -71,3 +71,35 @@ shaped fixture reproduced a closed Settings dialog being misclassified as active
 before the predicate repair. A saved-readback fixture keeps the closed dialog
 mounted and verifies one actual reopen before returning persisted values. No
 native interaction accompanied this source repair.
+
+## Supported-field native acceptance — source69e443393
+
+The one approved public `grok-bots --request-json` edit ran from clean source
+69e443393 and exited0 with `grok_bot_settings_saved`, supported status and completed
+effect. The returned exact original Bot ID has the name suffix-edited, approved
+synthetic Description, and preserved empty Title. The durable account-bound result
+journal was persisted before transport close. No Instructions/Model change was
+requested, no model default was altered, and no second Save was dispatched.
+
+An independent operator diagnostic using the same guarded exact-target transport
+and profile dispatcher as browser-tools verified account before/after, explicitly
+closed the saved editor, freshly reopened that same canonical ID, and reread the
+exact edited Name/Description and preserved Title. Raw results and source/helper
+provenance were saved before transport cleanup; cleanup and dispatcher release
+succeeded. The retained target is left with saved Settings open, no unsaved input.
+Private qualification: `20261025-plan0458-408-native-qualification.json` under the
+user-scoped implementation-native receipts. No global installed-runtime adoption
+is claimed.
+
+A preliminary owned-Close helper had an asynchronous shared-ledger flush failure.
+Its exact utility lease was independently verified released/settled with no live
+owner; no recovery or generic lock removal was needed. A separate guarded operator
+read proved the form still contained the original Name/Description and empty Title,
+then closed only that unchanged owned form before the public edit. It performed
+no Save. Evidence retains this failed probe rather than relabeling it a clean run.
+
+The original #408 remains OPEN: separate Instructions and Model controls were not
+exposed in observed Settings. Plan0452 explicitly forbids counting unsupported
+controls as live capability acceptance. See the concrete
+[acceptance decision](2026-10-25-grok408-acceptance-decision.md); no issue criteria,
+parent gate, or dependency has been revised by these results.
