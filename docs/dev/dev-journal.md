@@ -56262,3 +56262,15 @@ will use4ffe87be2 (main immediately before repair source landed), excluding the
 independently merged desktop deployment docs. The one review and bounded TDD
 pass remain unconsumed until443 closes. Manual allowance at54min/~1.00MM
 against2h/2MM; no reset or runtime/provider effects.
+
+## 2026-10-25 — Incremental follow qualified on integration
+
+443 source90f36eccc preserves completed backfill, fair resumable head observations
+and explicit bounded full sweeps. Native ordering remains unqualified; observed
+frontier completion reports partial/requiresFullSweep. Primary112tests/15files
+pass with compilation serialized; typecheck/build/focusedlint pass. First
+concurrent run's5s ownership-test timeout retained as timing-flake evidence;
+isolated1.35s and finalserial1.16s diagnostics support scheduling mitigation,
+without raising limits or masking a known source defect. Operator docs and
+CONTEXT now state these observation boundaries.443 intended-main merge/closure
+and then the single post-closure review/TDD pass remain.

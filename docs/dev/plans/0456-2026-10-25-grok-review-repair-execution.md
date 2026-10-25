@@ -16,13 +16,22 @@ are freshly published/read back with ready-for-agent and bug/enhancement labels.
 No parent issue was modified. Current main's desktop transition fixes and both
 journal histories were preserved while integrating the review report.
 
-Ready frontier:440,441,442,444. Primary440; workers441/442/444, one ticket each.
-443 is blocked by440/441/442 validated on this integration branch. All original
-399–414 graph nodes remain visible.401/412 tracker closures remain historical;
-affected acceptance requires corrective validation (401:440/442;
-412:440/441/442/443). Corrective edges do not make the repair depend on its broken
-predecessor. Original403/405/406/408/409/410/411/414 remain open with their existing
-provider-contract/effect gates; this repair wave does not falsely close them.
+Four foundations440/441/442/444 are merged through PR447/main7586dfdf2 and
+fresh tracker readbacks confirm CLOSED.443 source is integrated as90f36eccc;
+primary combined validation is running before its separate intended-main PR.
+All original399–414 nodes remain visible.401/412 historical closures now have
+corrective foundation evidence;412 still requires443. Original403/405/406/408/
+409/410/411/414 remain open at existing native contract/effect gates.
+
+443 follows bounded freshly observed heads using private stable row fingerprints,
+preserving completed backfill and independent unfinished follow continuations.
+No global provider ordering is inferred: public partial coverage explicitly
+requires full sweep for older/unobserved changes. Existing bounded completion
+operations expose full_sweep; new project scopes receive fair bounded work.
+This records the evidence limits of the incremental frontier, not a provider-wide
+change-feed guarantee. One post-closure two-axis review will compare4ffe87be2
+(main before repair source) through the final repair head; neither that review
+nor its one bounded TDD findings pass has run yet.
 
 ## Frozen scope and acceptance
 

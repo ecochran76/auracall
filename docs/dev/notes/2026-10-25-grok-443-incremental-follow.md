@@ -76,3 +76,18 @@ issue closure belong to the primary lane.
 
 Memory disposition: `forbidden` — the delegated task and Plan0456 prohibit memory
 writes without an explicit save request. No memory write was attempted.
+
+## Primary integration qualification
+
+Cherry-picked as90f36eccc after the442 retiring-target fence. Primary final
+selection:112tests/15files passed in77.18s, covering all five repair regressions,
+registry/factory ownership and public CLI/HTTP/MCP progress/sweep paths. Local
+typecheck, build and focused lint pass.
+
+The first112-case run, concurrent with compilation, passed111 and hit the5s
+default timeout in the existing442 foreground-exclusion case. The isolated
+diagnostic passed in1.35s; the final serial selection passed that case in1.16s.
+No source behavior or timeout changed. Disposition: contention-associated timing
+flake retained, not erased by retry; primary owns verification with compilation
+serialized from this durable-filesystem selection at subsequent presubmits.
+The source cause was not reproduced; no test was skipped or quarantined.

@@ -77,7 +77,9 @@
       "worktree": "auracall-grok-repair-443",
       "branch": "feat/grok-repair-443-20261025",
       "base": "0b8eda9af",
-      "state": "running"
+      "state": "integrated",
+      "result": "281cf2d27d5e0d60e201af29b9ca4eb47f59731e",
+      "integratedCommit": "90f36eccc"
     }
   },
   "nodes": {
@@ -302,7 +304,7 @@
         441,
         442
       ],
-      "state": "running",
+      "state": "validated-on-integration",
       "scope": "review-repair",
       "finding": "SPEC4",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md"
@@ -383,7 +385,7 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "Four foundations merged inPR447/main7586dfdf2 and trackerCLOSED440/441/442/444. Primary40-test final fence selection passed;443 sole remaining repair, original8open unchanged.",
+  "lastCheckpoint": "443 integrated; primary112tests/15files serialpass, typecheck/build/focusedlint pass. Initial concurrency timingflake retained with serial scheduling mitigation.443 mainmerge/closure thenone review/TDD pending.",
   "registrationMerge": {
     "pr": 445,
     "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"

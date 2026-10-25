@@ -217,6 +217,12 @@ An external service connected to Grok through its Plugins connector surface,
 including a custom MCP server. Its connected account and permissions are distinct
 from a generated app or a Bot.
 
+**Grok incremental index follow**:
+Bounded fresh observations of visible Chats heads that retain completed backfill
+and merge observed new or changed rows. A known row fingerprint bounds the
+observed window; it does not establish global provider ordering or prove older
+rows unchanged. An explicit full sweep covers that separate observation gap.
+
 **Grok Bot**:
 A named Grok agent with its own configuration that an operator can select for a
 conversation. It is distinct from an AuraCall runtime profile or execution agent.
