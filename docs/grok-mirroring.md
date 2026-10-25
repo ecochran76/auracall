@@ -12,7 +12,10 @@ scopes finish, steady follow preserves that completed backfill and makes bounded
 fresh head observations. Stored row fingerprints identify new or changed rows
 in that observed window; unfinished head work resumes without resetting the
 archive checkpoint. Newly discovered projects receive bounded inventory work.
-Retained rows survive incremental reads. Relative labels such as today or an
+Root and project reads with `includeHistory` return only their qualified bounded
+history window; mounted/sidebar/open rows cannot refill an empty frontier or
+restore unqualified timestamps. Non-history mounted reads keep their existing
+merge behavior. Retained rows survive incremental reads. Relative labels such as today or an
 item age remain estimates for since-filtering; they are omitted from durable
 `updatedAt` and change fingerprints. Qualified absolute timestamps still detect
 date changes. Legacy checkpoints can normalize earlier unqualified estimates

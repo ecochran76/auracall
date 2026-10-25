@@ -10,13 +10,13 @@ import {
 	createGrokIndexCheckpointStore,
 } from "../../src/accountMirror/grokIndexBackfill.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
-import type { Conversation } from "../../src/browser/providers/domain.js";
 import type { BrowserAutomationClient } from "../../src/browser/client.js";
 import { createConfiguredProviderTrafficAuthorityFactory } from "../../src/browser/configuredProviderTrafficAuthority.js";
+import type { Conversation } from "../../src/browser/providers/domain.js";
 import { createGrokAdapter } from "../../src/browser/providers/grokAdapter.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
-import { readGrokTimestampDom } from "./grok452DomFixture.js";
 import { historyTransportFixture } from "./grok401ConversationTransportFixture.js";
+import { readGrokTimestampDom } from "./grok452DomFixture.js";
 
 const wire = vi.hoisted(() => ({
 	raw: undefined as unknown,

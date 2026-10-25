@@ -1,3 +1,12 @@
+## 2026-10-25 — Actual public adapter gap repaired, revalidation running
+
+452 followup001c04d86 integrated1866369dc. Actual guarded adapter tests reproduced
+both timestamp enrichment and raw-row reappearance after an empty history frontier.
+Qualified root history now owns its window, matching project history; non-history
+mounted merging remains tested unchanged. Worker69focused tests plus typecheck
+pass. Primary17-file combined validation then compiler/build/lint runs serially
+before PR455 leaves draft. No source criteria narrowed or post-closure review used.
+
 ## 2026-10-25 — Hold452 for actual adapter merge acceptance
 
 Primary inspection of the real root adapter found raw/sidebar/open merging can
