@@ -852,6 +852,12 @@ describe("interactionLedger (package)", () => {
 				"admission-rejected",
 			]);
 
+			const statePath = path.join(directory, "provider-interactions.v1.json");
+			const retained = JSON.parse(await fs.readFile(statePath, "utf8"));
+			// Existing installations contain indented snapshots. Reload one, then
+			// retain every prior record, warning and event during another commit.
+			await fs.writeFile(statePath, JSON.stringify(retained, null, 2));
+			const legacyRestart = createFileBackedProviderInteractionLedger(options);
 			const raceScope = { ...foregroundScope, tenantKey: "account-b" };
 			const racePolicy = { ...policy, maxConcurrentChats: 1 };
 			const reserveRacer = (ledger: typeof firstLedger, operationId: string) =>
@@ -869,12 +875,17 @@ describe("interactionLedger (package)", () => {
 				});
 			const raced = await Promise.all([
 				reserveRacer(restarted, "race-a"),
-				reserveRacer(afterWarningRestart, "race-b"),
+				reserveRacer(legacyRestart, "race-b"),
 			]);
 			expect(raced.filter((result) => result.allowed)).toHaveLength(1);
 			expect(raced.filter((result) => !result.allowed)).toEqual([
 				{ allowed: false, reason: "concurrent-limit" },
 			]);
+			const committed = JSON.parse(await fs.readFile(statePath, "utf8"));
+			expect(committed.schemaVersion).toBe(retained.schemaVersion);
+			expect(committed.records).toEqual(expect.arrayContaining(retained.records));
+			expect(committed.warnings).toEqual(retained.warnings);
+			expect(committed.events.slice(0, retained.events.length)).toEqual(retained.events);
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}
@@ -1072,6 +1083,14 @@ test("a backend burst shares durable writes while retaining the account ceiling"
 			await createFileBackedProviderInteractionLedger({ ledgerRoot: directory }).list(),
 		).toHaveLength(3);
 		expect(durableWrites).toBeLessThanOrEqual(1);
+		// Bound serialization overhead as well as commit count: every admitted
+		// backend request pays this full-history cost under the shared lock.
+		const stored = await fs.default.readFile(
+			path.join(directory, "provider-interactions.v1.json"),
+			"utf8",
+		);
+		const contentBytes = Buffer.byteLength(JSON.stringify(JSON.parse(stored)));
+		expect(Buffer.byteLength(stored)).toBeLessThanOrEqual(contentBytes * 1.1);
 	} finally {
 		rename.mockRestore();
 		await rm(directory, { recursive: true, force: true });

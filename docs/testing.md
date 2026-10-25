@@ -3838,3 +3838,11 @@ the real adapter with visible Plugins failure text observed on the live page.
 Immediate and delayed main failures terminate, while hidden/sidebar-only failures
 remain nonblocking. This proves prompt failure detection, not faster successful
 inventory or attribution of the historical347.649s read (issue464/Plan0460).
+
+Ledger admission serialization (issue464): run `tests/browser-service/interactionLedger.test.ts`
+with `tests/browser-service/providerTrafficGovernor.test.ts` and
+`tests/browser/backendRequestAdmission.test.ts`. The backend-burst case bounds
+encoding overhead and durable-write count while retaining account admission.
+Legacy indented snapshots retain all records, warnings and event history across
+restart and a cross-instance race. Performance replay timings are supporting
+measurements, not default wall-clock test assertions or a product latency SLO.

@@ -238,3 +238,9 @@ conversation. It is distinct from an AuraCall runtime profile or execution agent
 **Grok generated app**:
 An app created through Grok Build mode. Generation, preview, artifact retrieval
 and publication are distinct outcomes; a Connector is not a generated app.
+
+Interaction-ledger durable encoding serializes the lock-owned complete state to
+an immutable compact JSON string before I/O. Internal mutable records/warnings/
+events do not escape; schema1, complete history, lock ordering, fsync and atomic
+commit publication remain authoritative. Human-readable views may format JSON
+at the read boundary rather than imposing that cost on every admission commit.
