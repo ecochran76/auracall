@@ -346,11 +346,18 @@ test("changing project context during upload cannot confirm readiness in the wro
 	).toMatchObject({ status: "unconfirmed", code: "grok_file_context_changed" });
 });
 
-test("governed upload transport ambiguity keeps the owned target for reconciliation and never retries", async () => {
+test.each([
+	false,
+	true,
+])("governed upload ambiguity retains target even when cleanup fails (%s)", async (cleanupFails) => {
 	const f = fixture();
 	const closeTarget = vi.fn(async () => {});
 	const close = vi.fn(async () => {});
 	const settle = vi.fn(async () => {});
+	if (cleanupFails)
+		close.mockRejectedValue(
+			new AggregateError([new Error("private cleanup failure")], "cleanup failed"),
+		);
 	f.dom.setFileInputFiles.mockRejectedValue(new Error("transport closed /private/source.txt"));
 	const service = createGrokFilesService(fixtureConnectorServiceOptions(), {
 		connect: async () => ({

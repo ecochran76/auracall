@@ -1,3 +1,11 @@
+## 2026-10-25 — Keep unknown upload custody through cleanup and diagnosis
+
+A cleanup AggregateError cannot replace a started file mutation's unknown outcome
+with generic failure. Preserve its target and fail visibly. Diagnose a retained
+target by exact ID through the governed browser tool; broad Puppeteer page
+initialization can wait on unrelated renderers even when its transport is ready.
+Native FileList bytes and a visible chip still do not prove provider-file identity.
+
 ## 2026-10-25 — Honor Grok fresh-operation target lifecycles
 
 A matching root URL does not prove an empty composer. Honor `retain-new` and
