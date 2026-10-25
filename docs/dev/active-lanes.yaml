@@ -1,6 +1,22 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: Plan0454
+    objective: Preserve bounded sanitized app cleanup failure causes
+    work_items: [Plan0454]
+    plan: docs/dev/plans/0454-2026-10-24-app-cleanup-diagnostics.md
+    plan_ref: refs/heads/fix/app-cleanup-diagnostics
+    branch: fix/app-cleanup-diagnostics
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 2d82d97d097681ab697782f1cef2b990f3882c07
+    remote_ref: refs/remotes/origin/fix/app-cleanup-diagnostics
+    integration: merge
+    dependencies: []
+    overlaps: [issue368]
+    validation_status: source-and-compiled-fixture-qualified
+    updated_at: 2026-10-24
   - id: issue368
     objective: Govern first-tab developer-app utility acquisition
     work_items: [ecochran76/auracall#368]

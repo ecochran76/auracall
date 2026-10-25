@@ -166,7 +166,11 @@ auracall --profile wsl-chrome-3 skills delete <32-hex-skill-id> \
 # Guarded ChatGPT developer-app lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 apps --target chatgpt list --json
 # The read-only list operation has a 45-second base outer deadline, extended by
-# configured backend capacity waiting. Observed account-load failure returns
+# configured backend capacity waiting. App operation failures emit bounded,
+# sanitized diagnostics (nested Error.cause and AggregateError.errors): JSON to
+# stdout with --json, otherwise JSON to stderr; exit status remains nonzero.
+# Unknown cleanup stays unknown and non-list failures retain retrySafe=false.
+# Observed account-load failure returns
 # developer_app_account_load_error promptly; recover the page before retrying.
 # A disabled Plugins Add dropdown gets one refresh before form input, with
 # account continuity/readiness checked again. Persistent disablement stops create;
