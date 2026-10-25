@@ -40,7 +40,7 @@
       "worktree": "auracall-grok-repair-452",
       "branch": "feat/grok-repair-452-20261025",
       "base": "b509d45fa52a605d0ba647554decf6d2344dad73",
-      "state": "integrated-followup",
+      "state": "validated-on-integration",
       "result": "f38fbecdac3a2d6c21df3ec1492ea0818d5a9e2f",
       "integratedCommit": "c842ee577",
       "evidence": "41focused+3paritytests,tsc/lint/diffpass;primarycombinedpending",
@@ -323,7 +323,7 @@
       "title": "Grok: Keep Grok incremental fingerprints stable for relative timestamps",
       "url": "https://github.com/ecochran76/auracall/issues/452",
       "trackerState": "OPEN",
-      "state": "integrated-followup-awaiting-validation",
+      "state": "validated-on-integration",
       "blockedBy": [],
       "scope": "final-review-repair",
       "finding": "P2TIME",
@@ -404,7 +404,7 @@
     }
   ],
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "452qualifiedrootwindowfollowupintegrated1866369dc;actualadaptergapcausalred/greenproved,primary172-testselection+type/build/lint running. PR455draftuntilcomplete;no closures orpostreview.",
+  "lastCheckpoint": "All3validatedactualpublicpaths:172tests/17files,typecheck/build,8filecheck+adapterlintpass. Fulladaptercheckretainsexactbaseline2format/importdiagnostics. PR455readyforintendedmain/closure,postreview/TDD0.",
   "scopeNote": "Close three approved final-range review tickets, then one post-closure two-axis review and one bounded TDD findings pass. Preserve original eight native gates and parent398.",
   "registrationMerge": {
     "pr": 454,
@@ -423,16 +423,32 @@
     "note": "docs/dev/notes/2026-10-25-grok-451-browser-generation-custody.md"
   },
   "integratedValidation": {
-    "source": "c842ee577b32e1843961b05ff923219ee9c40c96",
-    "tests": 125,
-    "files": 15,
-    "testSeconds": 52.96,
+    "source": "1866369dc",
+    "tests": 172,
+    "files": 17,
+    "testSeconds": 47.92,
     "typecheckExit": 0,
     "buildExit": 0,
-    "scopedCheckFiles": 7,
-    "formatOnlyRecheckTests": 34,
-    "formatOnlyRecheckFiles": 2,
-    "packageLint": "3preexistingerrors/1warningunchangedoutsideconfiguredsurface",
-    "sourceQualification": "controlled-source/service-only"
-  }
+    "scopedCheckFiles": 8,
+    "adapterLintExit": 0,
+    "adapterCheck": "baseline/current identical two format/import diagnostics; no changes to imports",
+    "packageLint": "baseline3errors1warningunchangedoutsideconfiguredsurface",
+    "formattedTestRecheck": 4,
+    "sourceQualification": "actual guarded adapter/service, persisted collector and public registry;controlled only"
+  },
+  "validationHistory": [
+    {
+      "source": "c842ee577b32e1843961b05ff923219ee9c40c96",
+      "tests": 125,
+      "files": 15,
+      "testSeconds": 52.96,
+      "typecheckExit": 0,
+      "buildExit": 0,
+      "scopedCheckFiles": 7,
+      "formatOnlyRecheckTests": 34,
+      "formatOnlyRecheckFiles": 2,
+      "packageLint": "3preexistingerrors/1warningunchangedoutsideconfiguredsurface",
+      "sourceQualification": "controlled-source/service-only"
+    }
+  ]
 }

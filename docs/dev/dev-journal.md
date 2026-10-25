@@ -1,3 +1,13 @@
+## 2026-10-25 — Plan0457 final readiness confirmed
+
+Actual adapter source1866369dc passes172tests/17files, typecheck/build, eight-file
+scoped check and adapter lint. Final four adapter tests pass after import sorting.
+Real-file baseline/current adapter lint both exit0; their full checks have the
+same two pre-existing format/import diagnostics. An earlier stdin diagnostic
+probe did not emit JSON and was discarded, not treated as passing evidence.
+452 acceptance gap is closed; all three tickets ready for intended-main merge,
+then closure and the still-unconsumed single post-closure review/TDD gate.
+
 ## 2026-10-25 — Actual public adapter gap repaired, revalidation running
 
 452 followup001c04d86 integrated1866369dc. Actual guarded adapter tests reproduced
