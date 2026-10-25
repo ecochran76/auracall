@@ -1,3 +1,12 @@
+## 2026-10-25 — Read native composer eligibility, not an isolated phase label
+
+A committed attachment phase may remain processing after valid metadata arrives.
+Its renderer suppresses loading then, while the actual submit component gates
+on isQueryable. Require the committed same-form eligibility and enabled native
+control, valid source-bound metadata, and no private/disabled/deleted/error flags.
+Preserve unknown gates as non-ready and recheck the stable account in ordinary
+prompt attachment preparation before any later submission.
+
 ## 2026-10-25 — A DOM React pointer does not establish current provider state
 
 Resolve the committed HostRoot.current topology before consuming attachment

@@ -146,7 +146,7 @@ export function createGrokFileClient(
 				return {
 					...result,
 					files,
-					status: "incomplete",
+					status: files.every((file) => file.state === "ready") ? "complete" : "incomplete",
 					code: "grok_file_context",
 					coverage: { scope: "composer", complete: true },
 				};
@@ -245,13 +245,18 @@ export function createGrokFileClient(
 					if (native.status === "conflict")
 						return { ...current, status: "unconfirmed", code: "grok_file_source_binding_conflict" };
 					if (native.status === "verified") {
-						// Only processing/uploading/retrying are qualified native phases.
-						// Bound provider identity cannot promote an unobserved ready state.
+						const files = [
+							...new Map(
+								[...current.files, ...native.files].map((file) => [file.id, file]),
+							).values(),
+						];
+						const ready = files.every((file) => file.state === "ready");
 						return {
 							...current,
-							files: native.files,
-							status: "unconfirmed",
-							code: "grok_file_readiness_unconfirmed",
+							files,
+							status: ready ? "complete" : "unconfirmed",
+							code: ready ? "grok_files_ready" : "grok_file_readiness_unconfirmed",
+							coverage: { scope: "composer", complete: true },
 						};
 					}
 				}

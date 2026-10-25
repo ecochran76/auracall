@@ -12,7 +12,8 @@ export interface GrokNativeBindingResult {
 
 /** Native discovery: the attachment component retains the exact input File
  * alongside metadata.fileMetadataId. A name or a newly mounted chip is never
- * this relationship. Unknown phases deliberately stay unknown. */
+ * this relationship. Ready requires the actual committed native submit gate;
+ * attachment phase alone is presentation state. */
 export async function observeGrokNativeFileBinding(
 	runtime: GrokFileRuntime,
 	input: {
@@ -75,7 +76,23 @@ export async function observeGrokNativeFileBinding(
         if (!matches[0].some(fiber => fiber.stateNode === root)) return null;
         return {owner,current,path:matches[0].reverse()};
       };
+      // Native submit's handler and aria-disabled are both gated by the
+      // committed isQueryable prop. Attachment phase alone is presentation
+      // state once a valid metadata object exists.
+      let submitGate = null;
+      const submits = Array.from(root.querySelectorAll('button[data-testid="chat-submit"]'));
+      if (submits.length === 1) {
+        const submit = submits[0];
+        const keys = Object.keys(submit).filter(key=>key.startsWith('__reactFiber'));
+        const committed = keys.length === 1 ? committedPath(submit[keys[0]],submit) : null;
+        if (committed) {
+          const flags = committed.path.filter(fiber=>fiber.memoizedProps && Object.prototype.hasOwnProperty.call(fiber.memoizedProps,'isQueryable')).map(fiber=>fiber.memoizedProps.isQueryable);
+          const disabled = committed.path.some(fiber=>fiber.memoizedProps?.disabled===true || fiber.memoizedProps?.isDisabled===true);
+          submitGate = {owner:committed.owner,current:committed.current,ready:flags.length>0 && flags.every(flag=>flag===true) && !disabled && submit.disabled===false && submit.getAttribute('aria-disabled')==='false' && submit.getAttribute('type')==='submit'};
+        }
+      }
       const bindings = new Map();
+      const denied = new Set();
       const ids = new Map();
       let observedRoot = null;
       for (const button of buttons) {
@@ -92,6 +109,7 @@ export async function observeGrokNativeFileBinding(
             const index = selected.indexOf(local);
             if (index >= 0 && props.metadata) {
               const metadata = props.metadata;
+              if (metadata instanceof Error || Object.prototype.toString.call(metadata)==='[object Error]') return conflict;
               const source = sources[index];
               const id = metadata.fileMetadataId;
               if (typeof id !== 'string' || !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id) ||
@@ -103,9 +121,8 @@ export async function observeGrokNativeFileBinding(
               if (digest !== source.sha256) return conflict;
               if (committed.owner.current !== committed.current) return unavailable;
               if (props.metadata !== metadata || metadata.fileMetadataId !== id || metadata.fileUri !== 'users/'+expected.providerUserId+'/'+id+'/content') return conflict;
-              const phase = typeof props.phase === 'string' ? props.phase : null;
-              const state = ['processing','uploading','retrying'].includes(phase) ? 'progress' : 'unknown';
-              const binding = {id,name:metadata.fileName,state,sourceSha256:digest,sourceBinding:'native-file-object',sourceAgreement:expected.sources===null?'observed-native':'local-manifest'};
+              if (props.isPrivate===true || props.isDisabled===true || props.isClickDisabled===true || props.isDeleted===true || button.disabled===true || button.getAttribute('aria-disabled')==='true') denied.add(index);
+              const binding = {id,name:metadata.fileName,sourceSha256:digest,sourceBinding:'native-file-object',sourceAgreement:expected.sources===null?'observed-native':'local-manifest'};
               const old = bindings.get(index);
               if ((old && JSON.stringify(old) !== JSON.stringify(binding)) || (ids.has(id) && ids.get(id) !== index)) return conflict;
               bindings.set(index,binding);ids.set(id,index);
@@ -116,7 +133,8 @@ export async function observeGrokNativeFileBinding(
         if (committed.owner.current !== committed.current) return unavailable;
       }
       if (!observedRoot || observedRoot.owner.current !== observedRoot.current || bindings.size !== selected.length) return unavailable;
-      return {status:'verified',files:Array.from(bindings.entries()).sort((a,b)=>a[0]-b[0]).map(entry=>entry[1])};
+      if (submitGate && (submitGate.owner !== observedRoot.owner || submitGate.current !== observedRoot.current || submitGate.owner.current !== submitGate.current)) return unavailable;
+      return {status:'verified',files:Array.from(bindings.entries()).sort((a,b)=>a[0]-b[0]).map(([index,file])=>({...file,state:submitGate?.ready && !denied.has(index)?'ready':'unknown'}))};
     })()`,
 	});
 	if (response.exceptionDetails) return { status: "unavailable", files: [] };
