@@ -2025,3 +2025,22 @@ lanes:
     integration_receipt: e55567f9cb4ebf28e6625180ffb311b7eb97bcd4
     disposition: All three source repairs closed; original eight native-gated program tickets and parent398 remain open.
     updated_at: 2026-10-25
+
+  - id: grok-native-frontier-0458
+    objective: Close the remaining eight Grok tickets with qualified native acceptance
+    work_items: [ecochran76/auracall#403, ecochran76/auracall#405, ecochran76/auracall#406, ecochran76/auracall#408, ecochran76/auracall#409, ecochran76/auracall#410, ecochran76/auracall#411, ecochran76/auracall#414]
+    plan: docs/dev/plans/0458-2026-10-25-grok-native-frontier.md
+    plan_ref: refs/heads/feat/grok-native-frontier-20261025
+    branch: feat/grok-native-frontier-20261025
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: d107e13cef6a83b76f63de9b3f268366be936a6b
+    remote_ref: refs/remotes/origin/feat/grok-native-frontier-20261025
+    integration: merge
+    dependencies: []
+    overlaps: [grok398]
+    reconciled_overlaps: [grok398]
+    reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
+    validation_status: eight-open-four-dependency-ready-native-effect-packet-prepared
+    updated_at: 2026-10-25

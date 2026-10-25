@@ -1,0 +1,343 @@
+{
+  "version": 1,
+  "state": "OPEN",
+  "plan": "0458-2026-10-25-grok-native-frontier.md",
+  "integrationBranch": "feat/grok-native-frontier-20261025",
+  "integrationBase": "d107e13cef6a83b76f63de9b3f268366be936a6b",
+  "parent": 398,
+  "parentMutationAuthorized": false,
+  "scopeTickets": [
+    403,
+    405,
+    406,
+    408,
+    409,
+    410,
+    411,
+    414
+  ],
+  "initialReady": [
+    403,
+    405,
+    408,
+    410
+  ],
+  "primaryTicket": 405,
+  "workers": {},
+  "nodes": {
+    "399": {
+      "title": "Grok: Govern Grok reads and expose effective account controls",
+      "url": "https://github.com/ecochran76/auracall/issues/399",
+      "trackerState": "CLOSED",
+      "blockedBy": [],
+      "state": "validated-historical",
+      "scope": "original-program"
+    },
+    "400": {
+      "title": "Grok: Admit owned Grok backend requests before dispatch",
+      "url": "https://github.com/ecochran76/auracall/issues/400",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        399
+      ],
+      "state": "validated-historical",
+      "scope": "original-program"
+    },
+    "401": {
+      "title": "Grok: Discover current Chats and scoped conversation history",
+      "url": "https://github.com/ecochran76/auracall/issues/401",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        400
+      ],
+      "state": "corrective-source-revalidated",
+      "scope": "original-program",
+      "acceptanceRepairDependencies": [
+        440,
+        442
+      ]
+    },
+    "402": {
+      "title": "Grok: Submit and complete Grok text prompts reliably",
+      "url": "https://github.com/ecochran76/auracall/issues/402",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        400
+      ],
+      "state": "validated-historical",
+      "scope": "original-program"
+    },
+    "403": {
+      "title": "Grok: Use exact composer attachments and recent files",
+      "url": "https://github.com/ecochran76/auracall/issues/403",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        402
+      ],
+      "state": "assigned-preparation",
+      "scope": "original-program",
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+    },
+    "404": {
+      "title": "Grok: Inspect Grok Connector catalog and installed state",
+      "url": "https://github.com/ecochran76/auracall/issues/404",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        400
+      ],
+      "state": "validated-historical",
+      "scope": "original-program"
+    },
+    "405": {
+      "title": "Grok: Install and authenticate exact custom MCP Connectors",
+      "url": "https://github.com/ecochran76/auracall/issues/405",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        404
+      ],
+      "state": "assigned-preparation",
+      "scope": "original-program",
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+    },
+    "406": {
+      "title": "Grok: Invoke Connectors and qualify Mail Receipts through Grok",
+      "url": "https://github.com/ecochran76/auracall/issues/406",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        402,
+        405
+      ],
+      "state": "blocked-dependencies",
+      "scope": "original-program"
+    },
+    "407": {
+      "title": "Grok: Discover and invoke existing Grok Bots",
+      "url": "https://github.com/ecochran76/auracall/issues/407",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        402
+      ],
+      "state": "validated-historical",
+      "scope": "original-program"
+    },
+    "408": {
+      "title": "Grok: Create and edit Bot instructions and model defaults",
+      "url": "https://github.com/ecochran76/auracall/issues/408",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        407
+      ],
+      "state": "assigned-preparation",
+      "scope": "original-program",
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+    },
+    "409": {
+      "title": "Grok: Configure Bot Connectors, Skills and knowledge",
+      "url": "https://github.com/ecochran76/auracall/issues/409",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        403,
+        404,
+        408
+      ],
+      "state": "blocked-dependencies",
+      "scope": "original-program"
+    },
+    "410": {
+      "title": "Grok: Generate Build apps and retrieve their artifacts",
+      "url": "https://github.com/ecochran76/auracall/issues/410",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        402
+      ],
+      "state": "assigned-preparation",
+      "scope": "original-program",
+      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations."
+    },
+    "411": {
+      "title": "Grok: Publish an explicitly selected Build app through Grok",
+      "url": "https://github.com/ecochran76/auracall/issues/411",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        410
+      ],
+      "state": "blocked-dependencies",
+      "scope": "original-program"
+    },
+    "412": {
+      "title": "Grok: Backfill Grok conversation indexes and follow changes",
+      "url": "https://github.com/ecochran76/auracall/issues/412",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        401
+      ],
+      "state": "corrective-source-revalidated",
+      "scope": "original-program",
+      "acceptanceRepairDependencies": [
+        440,
+        441,
+        442,
+        443
+      ]
+    },
+    "413": {
+      "title": "Grok: Mirror full Grok conversation content incrementally",
+      "url": "https://github.com/ecochran76/auracall/issues/413",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        412
+      ],
+      "state": "validated-historical",
+      "scope": "original-program"
+    },
+    "414": {
+      "title": "Grok: Materialize Grok referenced files and generated artifacts",
+      "url": "https://github.com/ecochran76/auracall/issues/414",
+      "trackerState": "OPEN",
+      "blockedBy": [
+        410,
+        413
+      ],
+      "state": "blocked-dependencies",
+      "scope": "original-program"
+    },
+    "440": {
+      "title": "Grok: Preserve cursor-covered Grok rows through public discovery and mirror checkpoints",
+      "url": "https://github.com/ecochran76/auracall/issues/440",
+      "trackerState": "CLOSED",
+      "blockedBy": [],
+      "state": "complete",
+      "scope": "review-repair",
+      "finding": "SPEC1",
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/440.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447
+    },
+    "441": {
+      "title": "Grok: Complete bounded Grok project inventories without starving later scopes",
+      "url": "https://github.com/ecochran76/auracall/issues/441",
+      "trackerState": "CLOSED",
+      "blockedBy": [],
+      "state": "complete",
+      "scope": "review-repair",
+      "finding": "SPEC2",
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/441.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447
+    },
+    "442": {
+      "title": "Grok: Make bounded Grok history continuation progress after restart",
+      "url": "https://github.com/ecochran76/auracall/issues/442",
+      "trackerState": "CLOSED",
+      "blockedBy": [],
+      "state": "corrective-source-revalidated",
+      "scope": "review-repair",
+      "finding": "SPEC3",
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/442.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447,
+      "acceptanceRepairDependencies": [
+        451
+      ]
+    },
+    "443": {
+      "title": "Grok: Follow Grok index changes incrementally after completed backfill",
+      "url": "https://github.com/ecochran76/auracall/issues/443",
+      "trackerState": "CLOSED",
+      "blockedBy": [
+        440,
+        441,
+        442
+      ],
+      "state": "corrective-source-revalidated",
+      "scope": "review-repair",
+      "finding": "SPEC4",
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md",
+      "mergeCommit": "69f953d77741694c45ccd8f01ea9e5d6daf389ce",
+      "pr": 449,
+      "acceptanceRepairDependencies": [
+        452
+      ]
+    },
+    "444": {
+      "title": "Grok: Centralize Grok account-reference projection with compatibility safeguards",
+      "url": "https://github.com/ecochran76/auracall/issues/444",
+      "trackerState": "CLOSED",
+      "blockedBy": [],
+      "state": "complete",
+      "scope": "review-repair",
+      "finding": "STD1",
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/444.md",
+      "mergeCommit": "7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4",
+      "pr": 447
+    },
+    "451": {
+      "title": "Grok: Preserve Grok history custody across browser-generation changes",
+      "url": "https://github.com/ecochran76/auracall/issues/451",
+      "trackerState": "CLOSED",
+      "state": "complete",
+      "blockedBy": [],
+      "scope": "final-review-repair",
+      "finding": "P1GEN",
+      "body": "docs/dev/plans/0457-grok-final-review-repair-tickets/451.md",
+      "related": [
+        442
+      ],
+      "mergeCommit": "e55567f9cb4ebf28e6625180ffb311b7eb97bcd4",
+      "pr": 455
+    },
+    "452": {
+      "title": "Grok: Keep Grok incremental fingerprints stable for relative timestamps",
+      "url": "https://github.com/ecochran76/auracall/issues/452",
+      "trackerState": "CLOSED",
+      "state": "complete",
+      "blockedBy": [],
+      "scope": "final-review-repair",
+      "finding": "P2TIME",
+      "body": "docs/dev/plans/0457-grok-final-review-repair-tickets/452.md",
+      "related": [
+        443
+      ],
+      "mergeCommit": "e55567f9cb4ebf28e6625180ffb311b7eb97bcd4",
+      "pr": 455
+    },
+    "453": {
+      "title": "Grok: Centralize utility admission fencing",
+      "url": "https://github.com/ecochran76/auracall/issues/453",
+      "trackerState": "CLOSED",
+      "state": "complete",
+      "blockedBy": [],
+      "scope": "final-review-repair",
+      "finding": "P3FENCE",
+      "body": "docs/dev/plans/0457-grok-final-review-repair-tickets/453.md",
+      "related": [
+        399,
+        400,
+        442
+      ],
+      "mergeCommit": "e55567f9cb4ebf28e6625180ffb311b7eb97bcd4",
+      "pr": 455
+    }
+  },
+  "reviewControl": {
+    "broadReviews": 0,
+    "postReviewTddPasses": 0,
+    "reviewAfterAllTicketsClosed": true,
+    "proposedFixedBase": "d107e13cef6a83b76f63de9b3f268366be936a6b",
+    "fixedBaseUserConfirmed": false
+  },
+  "executionControl": {
+    "scopeAuthority": "User requested closing remaining graph with one primary and one worker per other unblocked ticket.",
+    "nativeReadPreparation": "Allowed bounded same-account read/preflight; serialize all Grok native work through primary.",
+    "nativeWriteCanaries": "Exact packet prepared; awaiting explicit native effects/Terms/consent approval retained by existing ticket execution boundaries.",
+    "sharedRuntimeInstallation": "Not performed; concrete adoption candidate must be prepared and bound if required.",
+    "resourceAllowance": "No new resource deadline inferred; previous native goal is complete.",
+    "nativeSerialization": "one operation at a time, exact owned target/custody; no foreign-tab adoption or blind replay",
+    "sourceAttemptsPerPacket": 2,
+    "broadReviewLimit": 1,
+    "tddFindingsPassLimit": 1
+  },
+  "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
+  "progressClassification": "blocker_reduction",
+  "lastCheckpoint": "Fresh8ticketreadbacks/currentgraph; fourfrontierassignedbyplan; exactsyntheticinputs/effectpacketprepared; registration and worker dispatch pending."
+}
