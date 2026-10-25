@@ -5,17 +5,18 @@ lanes:
     objective: Repair silent installed app inventory
     work_items: [ecochran76/auracall#427]
     plan: docs/dev/plans/0459-2026-10-25-app-inventory-silence.md
-    plan_ref: refs/heads/fix/issue427-inventory-silence
+    plan_ref: refs/remotes/origin/main
     branch: fix/issue427-inventory-silence
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: d468ee7a6
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 0d550bea35c6ef4d19b82147bccbe21e36e7d2b7
     remote_ref: refs/remotes/origin/fix/issue427-inventory-silence
     integration: merge
+    integration_receipt: 7a38eb67117407a7cb80b0fc46d628dd77bb9f93
     dependencies: []
     overlaps: []
-    validation_status: source-native-30-apps-complete-65-focused-green
+    validation_status: installed-progress-qualified-source-native-30-apps
     updated_at: 2026-10-25
   - id: P455
     objective: Recover attributable dead desktop transitions safely

@@ -1,6 +1,6 @@
 # Plan0459 — Silent installed app inventory
 
-State: OPEN
+State: CLOSED
 Branch: fix/issue427-inventory-silence
 Target: main
 Owner: ecochran76
@@ -21,7 +21,8 @@ The default CLI now reports long-wait stage/budget on stderr every30seconds.
 No inventory policy or deadline was shortened.65 focused checks and typecheck
 pass, as do build, scoped test lint and docs checks. Uninterrupted source-native
 acceptance returned complete inventory with30apps, exit0 in347.649s, ten stderr
-progress messages and one terminal JSON result. Review/integration remain open.
+progress messages and one terminal JSON result. PR461 merged; installed CLI
+qualification and activation are complete.
 
 ## Bounded outcome
 
@@ -95,3 +96,21 @@ Journal/fix-log conflicts preserve both intents; issue427 notes were placed
 beside stable entries rather than competing for the first line. Separate
 integration selections passed26 then23 checks, with fresh typecheck/build and
 docs checks. These selections overlap and are not a cumulative test count.
+
+## Installed acceptance and closure
+
+PR461 merged at7a38eb67117407a7cb80b0fc46d628dd77bb9f93. The staged installed
+compiled CLI matches the built source byte-for-byte (SHA256
+05c29d16323b3e95c94351457a1e332f057d6cc89ec881313622ad415edf0628).
+An installed-artifact fixture using the real operation/adapter/file dispatcher
+confirms default identity-stage progress, terminal-only JSON, nonzero failure
+exit and timer disposal without initiating provider calls. Installed version
+and apps help smokes pass. Only the user CLI wrapper was atomically promoted;
+MCP wrapper remained unchanged and API PID4185922 did not restart.
+
+The30-app live acceptance above is source-native; installed acceptance verifies
+the compiled action and deployment identity, not a second live inventory read.
+The incoming main tab-lease reconciliation fixture also passes. CI was excluded
+as instructed. Private installed qualification and deployment receipts remain
+in the same issue427 user-state directory. Long-read cause remains unqualified;
+no performance improvement, provider mutation or browser restart is claimed.
