@@ -2011,14 +2011,17 @@ lanes:
     plan_ref: refs/heads/feat/grok-final-review-repairs-20261025
     branch: feat/grok-final-review-repairs-20261025
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 92170f6d1bc4b8f3b25a303b8e5f67078f58c769
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: e55567f9cb4ebf28e6625180ffb311b7eb97bcd4
     remote_ref: refs/remotes/origin/feat/grok-final-review-repairs-20261025
     integration: merge
     dependencies: []
     overlaps: [grok398, grok-review-repairs-0456]
     reconciled_overlaps: [grok398, grok-review-repairs-0456]
     reconciliation_note: New corrective source repairs preserve both historical repair closures and original eight native gates; no concurrent Grok PR found.
-    validation_status: three-approved-tickets-published-24-node-graph-acyclic
+    validation_status: three-repairs-closed-one-review-one-tdd-no-findings
+    validation_ref: docs/dev/notes/2026-10-25-grok-0457-postclosure-review.md
+    integration_receipt: e55567f9cb4ebf28e6625180ffb311b7eb97bcd4
+    disposition: All three source repairs closed; original eight native-gated program tickets and parent398 remain open.
     updated_at: 2026-10-25

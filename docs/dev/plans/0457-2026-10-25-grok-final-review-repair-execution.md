@@ -1,6 +1,6 @@
 # Plan0457 — final-range Grok review repairs
 
-State: OPEN
+State: CLOSED
 Branch: feat/grok-final-review-repairs-20261025
 Target: main
 Owner: ecochran76
@@ -10,22 +10,25 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## Current State
 
-User approved the three-ticket breakdown, publication, current implementation-graph
-integration and implementation. Tickets451/452/453 are freshly published with exact actor/body/state/label
-readbacks. All are independent and ready; primary owns451, workers own452/453, one each.
-RegistrationPR454 mergedb509d45fa before dispatch. All three repairs are now
-integrated and validated against the actual public adapter:172tests/17files,
-typecheck/build, eight-file scoped check and adapter lint pass. Supplemental root
-merging initially escaped core-reader fixtures; the same452 ticket now returns
-only the qualified history window, with causal adapter/collector regressions and
-non-history controls. Earlier125-test core evidence remains historical. Exact
-baseline/current adapter format/import findings and package lint debt remain
-unchanged. PR455/main merge and closures remain; post-closure review has not run.
+All three repairs451/452/453 are CLOSED after PR455/main
+e55567f9cb4ebf28e6625180ffb311b7eb97bcd4, with fresh tracker/main readbacks.
+Primary451 and the two isolated worker tickets are implemented, integrated and
+validated. The initial452 core-reader gap was repaired through the actual guarded
+adapter, rather than narrowing acceptance. Final172tests/17files,typecheck/build,
+eight-file scoped check and adapter lint pass. Existing formatter/package lint
+debt is explicitly unchanged; global formatting cleanliness is not claimed.
 
-Original21nodes plus three repairs
-remain acyclic. Historical442/443 closures now require new corrective source
-validation; no parent or historical issue was modified. Original eight tickets
-403/405/406/408/409/410/411/414 stay open at their existing native gates.
+The one post-closure Standards/Spec review at92170f6d1...e55567f9c found no
+candidates. Primary adjudication accepted both axes. The one bounded TDD findings
+pass is complete with no remediation required. No second broad review ran.
+See [post-closure record](../notes/2026-10-25-grok-0457-postclosure-review.md).
+
+The graph contains24nodes plus parent398; all eight original native-gated tickets
+403/405/406/408/409/410/411/414 and parent398 remain OPEN. Historical442/443 source
+acceptance is now correctively revalidated. This three-repair goal is complete;
+the broader native program remains open. No provider/native effect, installation
+or shared controller change was performed. Resource monitoring remained manual
+under the renewed2h/2MM allowance; automatic enforcement was not claimed.
 
 ## Frozen scope and acceptance
 
