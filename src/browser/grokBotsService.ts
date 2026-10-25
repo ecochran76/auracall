@@ -1,6 +1,15 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP protocol and provider identity wire names are case-sensitive.
-import { projectGrokAccountReference } from "./grokAccountReference.js";
+
 import { BrowserAutomationError } from "../oracle/errors.js";
+import {
+	readGrokAssistantSnapshotForRuntime,
+	setGrokPrompt,
+	submitGrokPrompt,
+	waitForGrokAssistantResult,
+} from "./actions/grok.js";
+import { projectGrokAccountReference } from "./grokAccountReference.js";
+import type { GrokConnectorConnection } from "./grokConnectorsService.js";
+import { runGrokUiOperation } from "./grokUiOperation.js";
 import {
 	createGrokBotClient,
 	type GrokBotIdentity,
@@ -8,17 +17,9 @@ import {
 	type GrokBotSelector,
 	type GrokBotSource,
 } from "./providers/grokBots.js";
-import type { GrokConnectorConnection } from "./grokConnectorsService.js";
+import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
 import type { ChromeClient } from "./types.js";
-import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
-import { runGrokUiOperation } from "./grokUiOperation.js";
-import {
-	readGrokAssistantSnapshotForRuntime,
-	setGrokPrompt,
-	submitGrokPrompt,
-	waitForGrokAssistantResult,
-} from "./actions/grok.js";
 
 export interface GrokBotConversationResult {
 	targetId: string | null;
@@ -134,7 +135,9 @@ export function createGrokBotsService(
 				(async (runtime: ChromeClient["Runtime"], input: BrowserProviderListOptions) => {
 					const { checkGrokBrowserAuthPreflight } = await import("./providers/grokAdapter.js");
 					const result = await checkGrokBrowserAuthPreflight(runtime, input);
-					return result.ok ? projectGrokAccountReference(result.actualIdentity, "legacy-untagged") : null;
+					return result.ok
+						? projectGrokAccountReference(result.actualIdentity, "legacy-untagged")
+						: null;
 				});
 			await governor.checkWarning?.(client.Runtime);
 			const action = await governor.begin({

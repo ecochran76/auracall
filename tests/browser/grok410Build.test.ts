@@ -1,9 +1,9 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and DOM platform names are case-sensitive.
 import { createContext, runInContext } from "node:vm";
-import { readGrokAssistantSnapshotForRuntime } from "../../src/browser/actions/grok.js";
 import { expect, test } from "vitest";
-import { ConnectorFixtureNode } from "./grok404ConnectorDomFixture.js";
+import { readGrokAssistantSnapshotForRuntime } from "../../src/browser/actions/grok.js";
 import { createGrokBuildService } from "../../src/browser/grokBuildService.js";
+import { ConnectorFixtureNode } from "./grok404ConnectorDomFixture.js";
 
 class Node extends ConnectorFixtureNode {
 	disabled = false;

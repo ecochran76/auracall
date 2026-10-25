@@ -1,13 +1,13 @@
+import { summarizeGrokBuildDiagnostics } from "../cli/grokBuildCommand.js";
 import type { ResolvedUserConfig } from "../config.js";
 import { resolveGrokReadSessionOptions } from "./configuredGrokDiscovery.js";
 import {
 	createGrokBuildService,
-	grokBuildUnknown,
-	type GrokBuildService,
 	type GrokBuildResult,
+	type GrokBuildService,
+	grokBuildUnknown,
 } from "./grokBuildService.js";
 import { recordGrokEcosystemProgress } from "./grokEcosystemProgress.js";
-import { summarizeGrokBuildDiagnostics } from "../cli/grokBuildCommand.js";
 
 export async function createConfiguredGrokBuildService(
 	config: ResolvedUserConfig,

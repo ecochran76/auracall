@@ -1,23 +1,23 @@
-import { createGrokBotLifecycleService } from "./grokBotLifecycleService.js";
-import { createGrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
-import { createGrokFilesService } from "./grokFilesService.js";
-import { createGrokBotsService } from "./grokBotsService.js";
-import { grokFilesFailure } from "./providers/grokFiles.js";
 import { grokBotsFailureResult, summarizeGrokBotDiagnostics } from "../cli/grokBotsCommand.js";
-import { summarizeGrokFilesDiagnostics } from "../cli/grokFilesCommand.js";
-import { recordGrokEcosystemProgress } from "./grokEcosystemProgress.js";
-import { createGrokConversationsService } from "./grokConversationsService.js";
-import { recordGrokHistoryProgress } from "./grokHistoryProgress.js";
 import {
-	summarizeGrokConnectorDiagnostics,
 	grokConnectorsFailureResult,
+	summarizeGrokConnectorDiagnostics,
 } from "../cli/grokConnectorsCommand.js";
-import { recordGrokConnectorProgress } from "./grokConnectorProgress.js";
-import type { ResolvedUserConfig } from "../config.js";
+import { summarizeGrokFilesDiagnostics } from "../cli/grokFilesCommand.js";
 import { getCurrentRuntimeProfiles } from "../config/model.js";
-import { resolveRuntimeProfileUserConfig } from "./service/profileConfig.js";
-import { GrokService } from "./llmService/providers/grokService.js";
+import type { ResolvedUserConfig } from "../config.js";
+import { createGrokBotLifecycleService } from "./grokBotLifecycleService.js";
+import { createGrokBotsService } from "./grokBotsService.js";
+import { createGrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
+import { recordGrokConnectorProgress } from "./grokConnectorProgress.js";
 import { createGrokConnectorsService } from "./grokConnectorsService.js";
+import { createGrokConversationsService } from "./grokConversationsService.js";
+import { recordGrokEcosystemProgress } from "./grokEcosystemProgress.js";
+import { createGrokFilesService } from "./grokFilesService.js";
+import { recordGrokHistoryProgress } from "./grokHistoryProgress.js";
+import { GrokService } from "./llmService/providers/grokService.js";
+import { grokFilesFailure } from "./providers/grokFiles.js";
+import { resolveRuntimeProfileUserConfig } from "./service/profileConfig.js";
 
 export async function resolveGrokReadSessionOptions(
 	config: ResolvedUserConfig,
@@ -70,8 +70,13 @@ export async function createConfiguredGrokConnectorsService(
 			return result;
 		} catch (error) {
 			try {
-				await recordGrokConnectorProgress(profile, summarizeGrokConnectorDiagnostics(grokConnectorsFailureResult()));
-			} catch { /* Preserve original provider outcome and target custody. */ }
+				await recordGrokConnectorProgress(
+					profile,
+					summarizeGrokConnectorDiagnostics(grokConnectorsFailureResult()),
+				);
+			} catch {
+				/* Preserve original provider outcome and target custody. */
+			}
 			throw error;
 		}
 	}
@@ -79,8 +84,10 @@ export async function createConfiguredGrokConnectorsService(
 		list: (query?: string) => read(() => service.list(query)),
 		inspect: (selector: Parameters<typeof service.inspect>[0]) =>
 			read(() => service.inspect(selector)),
-		install: (request: Parameters<typeof installation.install>[0]) => read(() => installation.install(request)),
-		reconcile: (request: Parameters<typeof installation.reconcile>[0]) => read(() => installation.reconcile(request)),
+		install: (request: Parameters<typeof installation.install>[0]) =>
+			read(() => installation.install(request)),
+		reconcile: (request: Parameters<typeof installation.reconcile>[0]) =>
+			read(() => installation.reconcile(request)),
 	};
 }
 
@@ -160,7 +167,10 @@ export async function createConfiguredGrokBotsService(
 		config.auracallProfile ??
 		"default";
 	async function run<
-		T extends Awaited<ReturnType<typeof service.list>> | Awaited<ReturnType<typeof service.invoke>> | Awaited<ReturnType<typeof lifecycle.run>>,
+		T extends
+			| Awaited<ReturnType<typeof service.list>>
+			| Awaited<ReturnType<typeof service.invoke>>
+			| Awaited<ReturnType<typeof lifecycle.run>>,
 	>(action: () => Promise<T>) {
 		try {
 			const result = await action();

@@ -8,19 +8,19 @@ export const GROK_MODEL_LABEL_NORMALIZER = `(text) => {
 }`;
 
 export function normalizeGrokModelLabel(text: string): string {
-  const cleaned = text
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[\u2022•]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return cleaned.split('\n')[0] || cleaned;
+	const cleaned = text
+		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+		.replace(/[\u2022•]+/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+	return cleaned.split("\n")[0] || cleaned;
 }
 
 // Keep observed menu labels distinct from underlying model/version IDs.
 export interface GrokModelMenuEntry {
-  label: string;
-  selected: boolean;
-  entitlement: 'available' | 'account-gated';
+	label: string;
+	selected: boolean;
+	entitlement: "available" | "account-gated";
 }
 
 export const GROK_MODEL_MENU_ENTRIES_EXPRESSION = `(() => {

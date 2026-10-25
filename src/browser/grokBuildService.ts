@@ -1,25 +1,25 @@
-import { projectGrokAccountReference } from "./grokAccountReference.js";
-import type { ChromeClient } from "./types.js";
-import type { BrowserProviderListOptions } from "./providers/types.js";
-import type { GrokConnectorConnection } from "./grokConnectorsService.js";
-import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
-import { runGrokUiOperation } from "./grokUiOperation.js";
 import { BrowserAutomationError } from "../oracle/errors.js";
 import {
 	discoverGrokModels,
+	readGrokAssistantSnapshotForRuntime,
 	selectGrokMode,
-	verifyGrokCurrentModel,
 	setGrokPrompt,
 	submitGrokPrompt,
-	readGrokAssistantSnapshotForRuntime,
+	verifyGrokCurrentModel,
 	waitForGrokAssistantResult,
 } from "./actions/grok.js";
+import { projectGrokAccountReference } from "./grokAccountReference.js";
+import type { GrokConnectorConnection } from "./grokConnectorsService.js";
+import { runGrokUiOperation } from "./grokUiOperation.js";
 import {
 	hasEmptyGrokBuildRoot,
-	readGrokBuildResponseIdentity,
 	readGrokBuildPlaneSnapshot,
+	readGrokBuildResponseIdentity,
 	redactGrokBuildPreviewBearers,
 } from "./providers/grokBuild.js";
+import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
+import type { BrowserProviderListOptions } from "./providers/types.js";
+import type { ChromeClient } from "./types.js";
 
 export interface GrokBuildResult {
 	operation?: "inspect";

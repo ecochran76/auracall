@@ -1,17 +1,19 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP wire fields use provider spelling.
+
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto";
-import { createResponsesHttpServer } from "../../src/http/responsesServer.js";
-import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { afterEach, expect, it } from "vitest";
+import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { createGrokConnectorInstallationService } from "../../src/browser/grokConnectorInstallationService.js";
+import { createResponsesHttpServer } from "../../src/http/responsesServer.js";
 import {
 	connectorDomFixture,
-	ConnectorFixtureNode as N,
 	fixtureConnectorServiceOptions,
+	ConnectorFixtureNode as N,
 } from "./grok404ConnectorDomFixture.js";
+
 const roots: string[] = [];
 afterEach(async () => {
 	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));

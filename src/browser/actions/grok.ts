@@ -1,20 +1,20 @@
 import { randomUUID } from 'node:crypto';
-import { createGrokFileClient } from '../providers/grokFiles.js';
 import { BrowserAutomationError } from '../../oracle/errors.js';
-import type { ChromeClient, BrowserLogger, BrowserAttachment } from '../types.js';
-import { delay } from '../utils.js';
+import { ensureServicesRegistry, normalizeServiceModelToken } from '../../services/registry.js';
 import { GROK_PROVIDER } from '../providers/grok.js';
 import { GROK_BUILD_PLANE_COMPLETION_EXPRESSION } from '../providers/grokBuild.js';
+import { type GrokAssistantSnapshot, isGrokRateLimitToastText } from '../providers/grokEvidence.js';
+import { createGrokFileClient } from '../providers/grokFiles.js';
 import { detectGrokSignedInIdentity } from '../providers/grokIdentity.js';
-import { ensureServicesRegistry, normalizeServiceModelToken } from '../../services/registry.js';
-import { buildFindAllSelectorsExpression, buildSelectorArrayLiteral } from '../providers/shared.js';
 import {
   GROK_MODEL_MENU_ENTRIES_EXPRESSION,
   type GrokModelMenuEntry,
   normalizeGrokModelLabel,
 } from '../providers/grokModelMenu.js';
-import { isGrokRateLimitToastText, type GrokAssistantSnapshot } from '../providers/grokEvidence.js';
-import { navigateAndSettle, type NavigateAndSettleOptions } from '../service/ui.js';
+import { buildFindAllSelectorsExpression, buildSelectorArrayLiteral } from '../providers/shared.js';
+import { type NavigateAndSettleOptions, navigateAndSettle } from '../service/ui.js';
+import type { BrowserAttachment, BrowserLogger, ChromeClient } from '../types.js';
+import { delay } from '../utils.js';
 
 const GROK_SELECTORS = GROK_PROVIDER.selectors;
 const GROK_INPUT_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.input);

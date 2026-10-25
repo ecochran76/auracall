@@ -1,11 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { grokBuildUnknown } from "../../browser/grokBuildService.js";
 import {
 	GrokBuildRequestSchema,
-	runGrokBuildCommand,
 	type GrokBuildServiceResolver,
+	runGrokBuildCommand,
 } from "../../cli/grokBuildCommand.js";
-import { grokBuildUnknown } from "../../browser/grokBuildService.js";
 export function createGrokBuildToolHandler(resolveService: GrokBuildServiceResolver) {
 	return async (input: unknown) => {
 		const parsed = GrokBuildRequestSchema.safeParse(input);

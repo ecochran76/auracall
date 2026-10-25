@@ -1,11 +1,11 @@
 // biome-ignore-all lint/style/useNamingConvention: Public Zod schemas follow repository naming.
 import { z } from "zod";
-import { BrowserAutomationError } from "../oracle/errors.js";
 import {
-	grokBuildUnknown,
 	type GrokBuildResult,
 	type GrokBuildService,
+	grokBuildUnknown,
 } from "../browser/grokBuildService.js";
+import { BrowserAutomationError } from "../oracle/errors.js";
 
 const retainedId = z.string().regex(/^[A-Za-z0-9:_-]{1,200}$/);
 export const GrokBuildRequestSchema = z.discriminatedUnion("action", [
