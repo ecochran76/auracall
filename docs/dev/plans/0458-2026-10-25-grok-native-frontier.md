@@ -15,8 +15,8 @@ and one worker per other unblocked ticket, followed by one code-review/TDD pass.
 Current24-node graph has16closed/eightopen. Primary405; workers403/408/410.
 406 depends405;409 depends403/408 (404closed);411/414 depend410 (413closed).
 Registration started at d107e13ce and preserved both journal histories.
-Main advanced independently through ce91367d1; merge that history before the
-next source integration, preserving unrelated inventory/ledger fixes and notes.
+Main advanced independently through ce91367d1 and was merged as244871611,
+preserving unrelated inventory/ledger fixes and both documentation histories.
 
 The prior account proof qualified default/grok, but must be refreshed before
 native effects. Retained unsent @/catalog state must be preserved. Source-only
@@ -56,8 +56,9 @@ or old-goal reset is inferred from this ordinary execution request.
 
 ## Native checkpoint — 2026-10-25
 
-The first exact file is now publicly ready with native-byte identity verified;
-the remaining approved same-basename B canary is assigned to403. One Bot Create
+Both same-basename files are publicly ready with distinct IDs and exact server
+bytes verified; the two-upload cap is consumed. Native recent-file selection
+remains a separate pending check before403 closure. One Bot Create
 and one supported-field public Save/readback are verified, but original
 Instructions/Model criteria remain unmet; a concrete scope split awaits user
 response. One Build generation completed and was reconciled with its retained

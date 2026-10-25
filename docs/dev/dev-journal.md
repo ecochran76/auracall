@@ -56667,3 +56667,19 @@ Plan0460 is CLOSED. API PID4185922/MCP wrapper and browser PID2122493/startTicks
 capacity/deadline change, app mutation, prompt or browser restart; CI excluded.
 Runtime/trace/catalog evidence remains private. API/MCP process upgrades are not
 part of this CLI delivery. Final Graphiti capture follows qualified closeout.
+
+### 2026-10-25 — Plan0458 integrated source validation
+
+Merged current main ce91367d1 as244871611, preserving unrelated ledger/inventory
+changes and both independent documentation histories. Primary ran324focused
+checks/20files (105.25s) and full typecheck successfully; import/format hygiene
+then passed53affected checks/3files. Scoped lint has no errors and retains one
+pre-existing unused Input parameter warning. Actual source CLI invalid inspect
+returns invalid/grok_build_request_invalid with exit1 before provider work.
+
+Primary independently validated B compositec01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1
+including linked raw metadata ID, distinct A/B identity, exact server104-byte B
+hash and consumed2/2uploads. No Send/replay. #403's recent-file behavior has source
+fixtures but native chooser selection remains a distinct gate; worker preparing
+one exact-known-B selection packet. #410 gets the next native slot after source
+integration. All eight issues remain open; reserved review/TDD counters0/0.

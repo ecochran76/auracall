@@ -93,7 +93,11 @@
           "c6f578622",
           "daafc133e"
         ],
-        "operatorSettlement": "PR462 supported CAS and preserved-release; prior uncertainty audit retained"
+        "operatorSettlement": "PR462 supported CAS and preserved-release; prior uncertainty audit retained",
+        "nativeB": "one public upload complete/ready/local-manifest; distinct native ID; actual server104bytes/hash verified; primary validation passed",
+        "nativeBCompositeSha256": "c01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1",
+        "recentSelection": "source fixture qualified; native exact-B recent selection packet being prepared; no additional upload or Send",
+        "acceptance": "two-upload native evidence qualified; Recent native gate retained before closure"
       }
     },
     "404": {
@@ -391,7 +395,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "Source53cbfbb7a;403native-ready candidate awaiting replay-free A reread;405oneAdd/providerConnectionFailed/unknowncustody/noReplay;408Saveproved/scopeDecisionPending;410completed/CASsettled/appVersionExportPending;all8open;reviewTDD0.",
+  "lastCheckpoint": "Merged main ce91367d1 through244871611; 324focused/20files andtypecheckpass;53importregressionspass;bothuploads2/2verified;403Recentnativepending;405terminalfailureCASreleased/noRetry;408scopeDecisionPending;410completed/appVersionExportPending;all8open;reviewTDD0.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
@@ -401,7 +405,7 @@
   "nativeEffects": {
     "syntheticUploads": {
       "A": "one dispatch; exact source/server bytes verified; public context ready; no replay/Send",
-      "B": "not dispatched"
+      "B": "one dispatch; complete/ready/local-manifest; distinct ID; exact server bytes verified; no Send/replay"
     },
     "botCreate": "one confirmed; canonical native entity retained",
     "botEditSave": "one public same-ID Save; independent fresh readback verified",
