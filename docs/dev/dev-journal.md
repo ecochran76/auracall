@@ -1,3 +1,16 @@
+## 2026-10-25 — Grok review repair tickets drafted
+
+User invoked to-tickets for the accepted full-review findings. Five complete
+repair slices are prepared: cursor/row custody, project-scope completion,
+restart progress, incremental follow and compatible account-reference projection.
+First three and the maintenance slice have no blockers; incremental follow is
+blocked by the three history foundations. Full proposed bodies and idempotency
+markers are under `/tmp/auracall-grok-review-20261025/ticket-drafts`.
+Read-only GitHub preflight confirms canonical target, actor capability, existing
+bug/enhancement/ready-for-agent labels and no marker duplicates. Publication is
+pending the skill-required breakdown approval; no issue or parent was mutated.
+Memory forbidden: no explicit request to remember.
+
 ## 2026-10-25 — User-requested full Grok code review
 
 Frozen c9beb45b...dabde7caf; independent Standards/Spec reviewers, primary
