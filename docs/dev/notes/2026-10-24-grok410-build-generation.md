@@ -177,3 +177,25 @@ controls. A public Build fixture with a retained closed picker reproduced an
 unavailable result before the one-line filter; afterward it discovers the active
 picker and completes the controlled generation. Active-dialog and empty-root
 guards remain strict. Build/model selections pass24 focused checks across2files.
+
+
+## Plan0458 bounded Build canary — retained unknown outcome
+
+The clean source CLI at `669023e34` ran the approved exact timer prompt after
+a fresh no-launch configured-account match. The earlier preflight/no-Send
+receipts remain intact. This invocation progressed beyond Build discovery but
+returned `grok_build_cleanup_unknown`: generation/effect unknown, cleanup unknown
+and `retrySafe=false`, with an exact retained target and no qualified
+conversation/response/app/version identifiers. No publication was requested.
+
+Read-only registry inspection found the exact target's utility lease idle with
+`effectState=outcome-unknown`, no active process owner and no final disposition.
+The native window was released to the coordinator for supported same-lease
+read-only reconciliation. No lease, target or lock was removed, no browser
+navigation/cleanup was attempted, and no generation was replayed. The one-Send
+canary authority is consumed or uncertain until that exact target is reconciled.
+Raw result, source/dirty/helper hashes and lease snapshot are private files
+`modal-fixed-generation.json`, `modal-fixed-dispatch-source.json` and
+`modal-fixed-terminal-leases.json` beneath the user-scoped directory above.
+Issue410 stays open; app/version/preview/export evidence and installed-runtime
+acceptance remain unproved.
