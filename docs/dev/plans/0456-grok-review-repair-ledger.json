@@ -16,9 +16,12 @@
     "tokenLimit": 2000000,
     "manualMonitoring": true,
     "wake319Excluded": true,
-    "broadPostClosureReviews": 0,
-    "postReviewTddPasses": 0,
-    "postClosureReviewBase": "4ffe87be2"
+    "broadPostClosureReviews": 1,
+    "postReviewTddPasses": 1,
+    "postClosureReviewBase": "4ffe87be2",
+    "postClosureReviewHead": "99e877d8acce80f59b06880f4f44df09cb131e78",
+    "postClosureReviewState": "adjudicated",
+    "postReviewTddState": "source-verified-awaiting-main"
   },
   "repairTicketSet": [
     440,
@@ -304,10 +307,12 @@
         441,
         442
       ],
-      "state": "validated-on-integration",
+      "state": "review-remediation-validated-on-integration",
       "scope": "review-repair",
       "finding": "SPEC4",
-      "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md"
+      "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md",
+      "mergeCommit": "99e877d8acce80f59b06880f4f44df09cb131e78",
+      "pr": 448
     },
     "444": {
       "title": "Grok: Centralize Grok account-reference projection with compatibility safeguards",
@@ -385,7 +390,7 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "443 integrated; primary112tests/15files serialpass, typecheck/build/focusedlint pass. Initial concurrency timingflake retained with serial scheduling mitigation.443 mainmerge/closure thenone review/TDD pending.",
+  "lastCheckpoint": "Single reviewadjudicated:Standards0hardbreaches/1backlog;Spec1blocking.443reopened; oneTDDpasscausalred then44testgreen/typecheck/build/lint. Sourcefixawaitsmainandreclosure.",
   "registrationMerge": {
     "pr": 445,
     "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"
@@ -396,8 +401,8 @@
     "note": "docs/dev/notes/2026-10-25-grok-440-cursor-row-custody.md"
   },
   "lastManualObservation": {
-    "tokensUsed": 1004150,
-    "timeUsedSeconds": 3237,
+    "tokensUsed": 1204283,
+    "timeUsedSeconds": 3897,
     "availableMemoryMiB": 41026,
     "swapUsedMiB": 91483
   },
@@ -406,5 +411,18 @@
     "primary440": "2673ca0c6",
     "validation": "100 tests/13files passed across custody, projects, references and existing public-service/HTTP surfaces",
     "remaining": "442 integration and full joint typing/build;443 stillblocked"
+  },
+  "reviewFindings": {
+    "Standards": {
+      "blocking": 0,
+      "nonblockingBacklog": 1,
+      "highestPriority": "P3"
+    },
+    "Spec": {
+      "acceptedBlocking": 1,
+      "highestPriority": "P1",
+      "finding": "POST-SPEC1: later observed changed/new rows discarded after first unchanged row",
+      "state": "source-remediated"
+    }
   }
 }

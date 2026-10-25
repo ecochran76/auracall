@@ -4,13 +4,13 @@ import { createGrokConversationsService } from "../../src/browser/grokConversati
 import { grokHistoryFingerprint } from "../../src/browser/providers/grokHistoryInventory.js";
 import { historyTransportFixture } from "./grok401ConversationTransportFixture.js";
 
-test("public controlled-CDP history service stops at known row without claiming global ordering", async () => {
+test("public controlled-CDP history service retains observed rows past a known row without claiming global ordering", async () => {
 	const fixture = historyTransportFixture({
 		empty: false,
 		rows: [
 			{ id: "new", title: "New head row" },
 			{ id: "known", title: "Known row" },
-			{ id: "older", title: "Unobserved older change" },
+			{ id: "older", title: "Later observed row" },
 		],
 	});
 	const connection = await fixture.dependencies.connect();
@@ -41,12 +41,12 @@ test("public controlled-CDP history service stops at known row without claiming 
 		fixture.dependencies,
 	);
 	const result = await service.list({ limit: 10 });
-	expect(result.items.map((row) => row.id)).toEqual(["new"]);
+	expect(result.items.map((row) => row.id)).toEqual(["new", "older"]);
 	expect(result.coverage).toMatchObject({
 		state: "incomplete",
 		reason: "incremental-frontier",
 		nextCursor: null,
-		loadedCount: 1,
+		loadedCount: 2,
 		pages: 1,
 	});
 	expect(fixture.targetWasClosed()).toBe(true);

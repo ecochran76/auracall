@@ -3,10 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { createChatgptAccountMirrorMetadataCollector } from "../../src/accountMirror/chatgptMetadataCollector.js";
-import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
+import { createGrokIndexCheckpointStore } from "../../src/accountMirror/grokIndexBackfill.js";
 import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import { collectGrokHistoryInventory } from "../../src/browser/providers/grokHistoryInventory.js";
-import { createGrokIndexCheckpointStore } from "../../src/accountMirror/grokIndexBackfill.js";
+import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 
 let root: string;
@@ -43,6 +43,7 @@ async function fixture() {
 	const calls: BrowserProviderListOptions[] = [];
 	const projects: { id: string; name: string; provider: "grok" }[] = [];
 	let fail = false;
+	let visibleRows = Number.POSITIVE_INFINITY;
 	const client = {
 		getProviderSessionProof: async () => proof,
 		listProjects: async () => projects,
@@ -58,6 +59,7 @@ async function fixture() {
 				onProgress: options.onHistoryInventory,
 				readPage: async () => ({
 					items: rows
+						.slice(0, visibleRows)
 						.filter((row) =>
 							_project
 								? (row as { projectId?: string }).projectId === _project
@@ -106,6 +108,9 @@ async function fixture() {
 	};
 	return {
 		rows,
+		showFirst: (count: number) => {
+			visibleRows = count;
+		},
 		calls,
 		projects,
 		fail: () => {
@@ -181,10 +186,41 @@ test("new head changes span bounded restart cycles and new scopes receive fair d
 	expect(latest.manifests.conversations.find((row) => row.id === "n1")?.title).toBe("Changed head");
 });
 
+test("follow retains changed and new rows already observed after an unchanged row", async () => {
+	const surface = await fixture();
+	await complete(surface);
+	surface.rows[3].title = "Changed observed row";
+	surface.rows.push({
+		id: "new-tail",
+		title: "New observed row",
+		provider: "grok",
+		updatedAt: "2026-10-25T02:00:00Z",
+	});
+	surface.rows.push({
+		id: "new-last",
+		title: "Another observed row",
+		provider: "grok",
+		updatedAt: "2026-10-25T02:00:00Z",
+	});
+	const observed = await surface.collect();
+	expect(observed.manifests.conversations.find((row) => row.id === "d")?.title).toBe(
+		"Changed observed row",
+	);
+	expect(observed.manifests.conversations.some((row) => row.id === "new-tail")).toBe(true);
+	expect(observed.evidence.grokIndex).toMatchObject({
+		phase: "follow",
+		observationCoverage: "partial",
+		requiresFullSweep: true,
+	});
+	const resumed = await surface.collect();
+	expect(resumed.manifests.conversations.some((row) => row.id === "new-last")).toBe(true);
+});
+
 test("unobserved older changes require an explicit bounded full sweep", async () => {
 	const surface = await fixture();
 	await complete(surface);
 	surface.rows[3].title = "Changed older row";
+	surface.showFirst(2);
 	const head = await surface.collect();
 	expect(head.manifests.conversations.find((row) => row.id === "d")?.title).toBe("d");
 	expect(head.evidence.grokIndex).toMatchObject({
@@ -192,6 +228,7 @@ test("unobserved older changes require an explicit bounded full sweep", async ()
 		requiresFullSweep: true,
 		observationCoverage: "partial",
 	});
+	surface.showFirst(Number.POSITIVE_INFINITY);
 	const sweep = await surface.collect({ sweepMode: "full_sweep" });
 	expect(sweep.evidence.grokIndex?.phase).toBe("backfill");
 	expect(sweep.evidence.truncated.conversations).toBe(true);

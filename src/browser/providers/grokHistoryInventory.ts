@@ -291,7 +291,8 @@ export async function collectGrokHistoryInventory(input: {
 				) {
 					frontierReached = true;
 					reason = "incremental-frontier";
-					break;
+					// No ordering contract lets one unchanged row hide later observed changes.
+					continue;
 				}
 				if (!entries.has(row.id))
 					entries.set(row.id, {
@@ -314,6 +315,8 @@ export async function collectGrokHistoryInventory(input: {
 					});
 				if (entries.size >= limit) {
 					reason = "item-limit";
+					// Unprocessed rows must resume even if an earlier row was unchanged.
+					frontierReached = false;
 					break;
 				}
 			}

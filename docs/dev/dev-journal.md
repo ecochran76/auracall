@@ -56274,3 +56274,26 @@ isolated1.35s and finalserial1.16s diagnostics support scheduling mitigation,
 without raising limits or masking a known source defect. Operator docs and
 CONTEXT now state these observation boundaries.443 intended-main merge/closure
 and then the single post-closure review/TDD pass remain.
+
+## 2026-10-25 — All five repairs closed; one frozen review running
+
+PR448 merged99e877d8acce80f59b06880f4f44df09cb131e78; remote main and443
+CLOSED readbacks verified. All five repair closures are now proved. The single
+authorized post-closure code-review is running as independent Standards and Spec
+axes against4ffe87be25d53dc5ec309ba011a7b53882f11bcf...99e877d8acce80f59b06880f4f44df09cb131e78.
+Primary will adjudicate once, then perform one bounded TDD findings pass and
+closed-world verification. No second discovery cycle. Original eight native
+gates and parent398 remain open. Manual counter1,204,283tokens/3897seconds
+against2MM/7200; original deadline preserved.
+
+## 2026-10-25 — Single review adjudicated; TDD repair source verified
+
+Standards:0hard breaches/1nonblocking duplicated-predicate concern. Spec:accepted
+POST-SPEC1,P1, discarding later changed/new rows already present after an unchanged
+fingerprint.443 reopened with readback. Single bounded TDD pass reproduced stale d
+then processes every available page row, preserving row-limit continuation.
+Actual public collector restart plus controlled-CDP service regressions pass;
+44tests/8files, typecheck/build/focusedlint green. Unavailable older rows remain
+explicit partial/full-sweep work; no global-order claim. Optional predicate
+extraction deferred. Frozen review artifact records adjudication and all causal
+receipts. Main integration/443 reclosure/final closeout remain, no broad rerun.
