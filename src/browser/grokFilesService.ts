@@ -1,6 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and provider identity wire names are case-sensitive.
-import { projectGrokAccountReference } from "./grokAccountReference.js";
+
 import { BrowserAutomationError } from "../oracle/errors.js";
+import { projectGrokAccountReference } from "./grokAccountReference.js";
 import {
 	createGrokFileClient,
 	type GrokFileDom,
@@ -91,7 +92,10 @@ export function createGrokFilesService(
 					JSON.stringify(finalIdentity.actualIdentity) !== JSON.stringify(identity.actualIdentity)
 				)
 					throw new Error("grok_file_account_not_verified");
-				result.providerAccountRef = projectGrokAccountReference(identity.actualIdentity, "typed-v1");
+				result.providerAccountRef = projectGrokAccountReference(
+					identity.actualIdentity,
+					"typed-v1",
+				);
 			} catch (caught) {
 				let error = caught;
 				if (operationStarted && kind !== "provider-read") {
@@ -131,8 +135,22 @@ export function createGrokFilesService(
 			});
 			return result;
 		} finally {
+			await closeConnection();
+		}
+		async function closeConnection() {
 			// Unknown owned-request cleanup must retain its target for reconciliation.
-			await connection.client.close();
+			try {
+				await connection.client.close();
+			} catch (error) {
+				if (retainTarget || (operationStarted && kind !== "provider-read")) {
+					throw new BrowserAutomationError(
+						"Grok file cleanup unconfirmed; reconcile the retained target before retrying.",
+						{ stage: "grok-files-cleanup", effectState: "unknown", targetId: connection.targetId },
+						error,
+					);
+				}
+				throw error;
+			}
 			if (connection.shouldClose && connection.targetId && !retainTarget) {
 				if (dependencies.closeTarget) await dependencies.closeTarget(connection);
 				else {

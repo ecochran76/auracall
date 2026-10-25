@@ -1,3 +1,13 @@
+## 2026-10-25 — Preserve and inspect uncertain Grok upload custody (#403)
+
+A synthetic native upload emitted a real request but omitted its body from CDP.
+It remains unqualified for exact provider-file identity; no replay or Send.
+Cleanup failure must preserve the public unknown outcome and retained target.
+The focused regression failed before that repair. Existing governed browser-tools
+now supports exact target selection without broad page initialization; URL/focus
+fallback cannot inspect another retained composer. Source tests pass; private
+native observation proves the selected File bytes, not their provider-ID binding.
+
 ## 2026-10-25 — Grok fresh-operation target isolation (#403)
 
 Native preparation found `retain-new` could reuse an existing root tab containing
@@ -56428,3 +56438,6 @@ receipts. Main integration/443 reclosure/final closeout remain, no broad rerun.
 ### Plan0458 approved native execution —2026-10-25
 
 User approved the four prepared native canaries and fixed review baseline d107e13ce, then directed continued ticket execution. Registration PR458 merged at d468ee7a6. Primary405; isolated workers403/408/410. Fresh built public identity smoke matched configured default/grok without launch. Public405 installation stopped unsupported before Add because an existing endpoint was unobserved; no install dispatched. Native source discovery continues without weakening duplicate protection. All eight tickets remain open; reserved whole-range review/TDD counters remain zero. Publication requires a concrete generated app/version packet.
+
+
+Plan0458 native checkpoint: PR459 merged at6a712f57d (55 focused tests/full typecheck). A real synthetic A upload request reached the exact fresh composer; its result remains unconfirmed because the CDP event omitted request postData and cleanup raised an aggregate error. Preserve A and its unknown-effect lease; no replay or B upload.403 owns bounded read-only reconciliation and preserving public unknown-target outcomes.408/410 remain queued behind that reconciliation. The prior dead no-effect Escape utility owner was recovered through registry markLost/releasePreserved with exact revision/dead-owner evidence; no target was closed or history erased. All eight ticket criteria remain open; review/TDD counters zero.

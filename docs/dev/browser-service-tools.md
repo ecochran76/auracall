@@ -757,6 +757,16 @@ Shared DevTools attachment is owned by
 - Keep reusable UI helpers in browser-service or llmService; keep Grok-specific selectors only in adapters.
 - For workflow guidance, see `docs/dev/browser-automation-playbook.md`.
 
+## Exact retained-target diagnostics
+
+Use `pnpm tsx scripts/browser-tools.ts --auracall-profile <runtime> --browser-target <provider> eval --port <verified-port> --target-id <owned-target-id> '<read-only expression>'`
+for a bounded passive inspection of a retained uncertain operation. Exact selection
+uses the guarded target transport and existing browser-operation dispatcher;
+it does not enumerate or initialize other page renderers. A missing or changed
+target fails without URL/focus fallback. Keep expressions read-only and capture
+private output outside Git. Observation does not clear an unknown provider effect
+or authorize replay, navigation, submission, deletion or runtime replacement.
+
 ## Smoke helpers
 
 - `pnpm tsx scripts/browser-service/browser-tools.ts --auracall-profile <name> --browser-target <target> start`
