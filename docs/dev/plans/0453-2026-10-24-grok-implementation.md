@@ -14,13 +14,18 @@ Eight of16 children are closed; eight remain. #412 merged through PR430 as
 `ae21c97c907eb903360058c7b65c8bb267b70016`; #413 merged through PR432 as
 `fa06a1eecb40b749966663ab2acb37ac0e771796`. Both are freshly CLOSED.
 Primary independently qualified187 tests/10 files for413, plus exact custody
-assertions, typecheck/build and targeted lint. All workers are terminal.
+assertions, typecheck/build and targeted lint. Workers resumed bounded diagnosis/preparation after the source checkpoint.
 
 #405/#410 partial source and #403/#408 native discovery packets merged through
 PR431/16dbd7218. Native source-binding, saved identity/grants, Bot editor and
 Build app/version/export evidence remain open;406/409/411/414 stay locked.
-The exact expected Grok account and proposed Bot-canary authority are pending.
-No Grok browser startup or provider effect was performed in this renewed run.
+The configured Grok account has stable email/handle evidence, and the managed
+browser registry identifies a live browser. Earlier process scanning missed
+split-form user-data-dir arguments. One bounded native owned-Bot read failed
+account verification; no-launch identity smoke failed with
+`provider_session_provenance_missing`, target unknown, observation null. Diagnose
+source provenance before treating this as a login failure. No browser launch or
+provider mutation was performed; proposed canary effects remain pending authority.
 One whole-program code-review and TDD findings pass remains pending completion
 of all tickets; implementation red/green checks did not consume that pass.
 

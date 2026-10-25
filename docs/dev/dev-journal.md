@@ -1,3 +1,14 @@
+## 2026-10-24 — Grok native read provenance diagnosis
+
+Configured default Grok has stable account identifiers and a live managed-browser
+registry entry. Corrected the earlier missing-account/browser inference. One
+public owned-Bot inventory fails account verification; no-launch identity smoke
+returns `provider_session_provenance_missing` with target unknown and no
+observation. Source diagnosis/regression delegated under405;408/410 prepare
+read-only discovery. No browser launch or provider mutation. Private native
+receipts stay under `~/.auracall/private/grok/implementation-native`. Eight of16
+children remain closed; whole-program review awaits ticket completion.
+
 ## 2026-10-24 — Issue368 retrospective
 
 Reviewed visible session evidence and current source/check configuration. Report
