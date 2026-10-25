@@ -429,3 +429,32 @@ test("a selected native file without a provider chip prevents Build submission",
 	});
 	expect(fixture.submissions()).toBe(0);
 });
+
+// A configured retained target must never redirect a new Build into an existing draft.
+test("generation clears inherited target affinity before fresh root acquisition", async () => {
+	let acquisition: Record<string, unknown> | undefined;
+	const stopped = new Error("observed acquisition boundary");
+	const service = createGrokBuildService(
+		{
+			preserveActiveTab: true,
+			tabTargetId: "unrelated-retained-target",
+			tabUrl: "https://grok.com/c/existing",
+		},
+		{
+			connect: async (options) => {
+				acquisition = options as Record<string, unknown>;
+				throw stopped;
+			},
+		},
+	);
+	await expect(service.generate({ prompt: "Make a local timer", confirmed: true })).rejects.toBe(
+		stopped,
+	);
+	expect(acquisition).toMatchObject({
+		tabLifecycle: "retain-new",
+		preserveActiveTab: false,
+		configuredUrl: "https://grok.com/",
+	});
+	expect(acquisition?.tabTargetId).toBeUndefined();
+	expect(acquisition?.tabUrl).toBeUndefined();
+});
