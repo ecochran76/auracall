@@ -50,7 +50,10 @@ An uninterrupted source-native command completes30-app inventory in347.649s
 with ten progress messages and exit0. Delay cause remains unqualified; no
 performance claim or live browser/fence reset. Wake registration was rejected
 for missing host permission policy; the source probe finished during validation.
-Review/integration and installed qualification remain.
+PR461 merged at7a38eb671; installed CLI bytes match source and the compiled
+action fixture passes progress/JSON/failure/timer checks. CLI wrapper activated;
+API PID4185922 and MCP wrapper unchanged. Plan0459 is CLOSED. Installed version
+and help smokes pass; source-native live acceptance remains distinct. CI skipped.
 
 ## 2026-10-25 — Plan0457 complete after one post-closure gate
 
