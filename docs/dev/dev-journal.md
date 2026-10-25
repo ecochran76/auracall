@@ -1,3 +1,11 @@
+## 2026-10-25 — Approved Grok repair graph and renewed execution
+
+Plan0456: published440–444 and verified exact actor/body/state/labels. Complete
+21-node graph retains original dependencies and corrective acceptance barriers
+for401/412. Primary440, workers441/442/444;443 waits for the three foundations.
+User reset2h/2MM allowance with manual monitoring; no Wake/controller changes.
+Review/desktop main histories preserved; no parent or provider effects.
+
 ## 2026-10-25 — Grok review repair tickets drafted
 
 User invoked to-tickets for the accepted full-review findings. Five complete
