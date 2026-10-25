@@ -41,7 +41,8 @@
       "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
       "state": "implemented",
       "result": "b8959d2d91082a2fd75104ecbbc09a697e317b37",
-      "evidence": "3 new public/project tests and78 affected tests; typecheck/lint pass; primary integration pending"
+      "evidence": "3 new public/project tests and78 affected tests; typecheck/lint pass; primary integration pending",
+      "integratedCommit": "8d0dda06d"
     },
     "442": {
       "handle": "/root/repair442",
@@ -61,7 +62,11 @@
         "07bfbc3ddafe51cbd0f697a70db79fd586df1542",
         "2d9d8c40e7c6ad9851233cb1fc5ac8db7304a3dc"
       ],
-      "evidence": "71 tests/8files; typecheck/check/lint pass; primary integration pending"
+      "evidence": "71 tests/8files; typecheck/check/lint pass; primary integration pending",
+      "integratedCommits": [
+        "ed66059ba",
+        "82ef14bf7"
+      ]
     }
   },
   "nodes": {
@@ -246,7 +251,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/440",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "implemented",
+      "state": "integrated",
       "scope": "review-repair",
       "finding": "SPEC1",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/440.md"
@@ -256,7 +261,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/441",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "implemented",
+      "state": "integrated",
       "scope": "review-repair",
       "finding": "SPEC2",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/441.md"
@@ -290,7 +295,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/444",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "implemented",
+      "state": "integrated",
       "scope": "review-repair",
       "finding": "STD1",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/444.md"
@@ -359,7 +364,7 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "440 implemented;441/444 worker commits ready;442 real-authority continuation progressing; no tracker closures",
+  "lastCheckpoint": "440/441/444 integrated and focused100tests pass;44211 dedicatedtests green awaiting workercommit; no tracker closures",
   "registrationMerge": {
     "pr": 445,
     "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"
@@ -374,5 +379,11 @@
     "timeUsedSeconds": 1616,
     "availableMemoryMiB": 39731,
     "swapUsedMiB": 88797
+  },
+  "integratedCheckpoint": {
+    "tip": "82ef14bf7",
+    "primary440": "2673ca0c6",
+    "validation": "100 tests/13files passed across custody, projects, references and existing public-service/HTTP surfaces",
+    "remaining": "442 integration and full joint typing/build;443 stillblocked"
   }
 }
