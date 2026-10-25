@@ -1307,9 +1307,14 @@ readiness in the same composer/project context. A duplicate basename is not an
 identity selector. Local upload hashes readable source bytes before dispatch.
 The native attachment component can bind the same selected File object and digest
 to its observed provider metadata ID, with matching account/source URI. These
-files report `sourceBinding: native-file-object` and `sourceSha256`; processing
-remains explicitly unconfirmed. An unbound native chip also makes a later context
-read incomplete. The local upload path returns `unconfirmed` when provider
+files report `sourceBinding: native-file-object`, `sourceSha256`, and
+`sourceAgreement: local-manifest`. Context reads can recover the retained native
+File/metadata relationship after a process restart without another upload; they
+report `sourceAgreement: observed-native`, which does not assert agreement with
+a caller's local path. Metadata and phases come only from the proven committed
+React tree, with root consistency checked across digest observation. Processing
+remains unconfirmed and unobserved phases remain unknown. Unbound native chips
+make context reads incomplete. The local upload path returns `unconfirmed` when provider
 evidence cannot bind the selected native File to its observed provider ID; it does not permit a prompt to proceed on that evidence. Reconcile the
 retained target instead of retrying an uncertain upload. Limits, observed file
 states and provenance accompany results. Diagnostics contain counts and codes.

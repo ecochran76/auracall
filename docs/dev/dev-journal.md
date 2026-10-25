@@ -1,3 +1,15 @@
+## 2026-10-25 — Resolve committed Grok attachment state before interpreting props (#403)
+
+A DOM React pointer can name an inactive alternate. Previous raw phase snapshots
+remain discovery evidence; they do not establish current readiness. Source now
+locates HostRoot.current and proves the exact host through committed child/sibling
+topology, preserving the path even when shared children have stale return links.
+Cycle, duplicate-host, traversal bounds and concurrent commits fail unavailable.
+Four prior-source regressions failed before the correction. A new client can
+recover the retained selected File/metadata through context without uploading;
+its observed-native digest is explicitly distinct from local-manifest agreement.
+Native inspection waits for the next serialized slot; no provider effects here.
+
 ## 2026-10-25 — Bind native Grok upload source bytes without promoting readiness (#403)
 
 Private native discovery qualified same input File object and SHA256 alongside

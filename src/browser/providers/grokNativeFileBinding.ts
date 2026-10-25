@@ -17,9 +17,9 @@ export async function observeGrokNativeFileBinding(
 	runtime: GrokFileRuntime,
 	input: {
 		composerId: string;
-		uploadToken: string;
+		uploadToken: string | null;
 		providerUserId: string;
-		sources: GrokLocalFileSource[];
+		sources: GrokLocalFileSource[] | null;
 	},
 ): Promise<GrokNativeBindingResult> {
 	const response = await runtime.evaluate({
@@ -30,29 +30,69 @@ export async function observeGrokNativeFileBinding(
       const unavailable = {status:'unavailable',files:[]};
       const conflict = {status:'conflict',files:[]};
       const root = document.querySelector('[data-auracall-files-composer="'+expected.composerId+'"]');
-      const nativeInput = root?.querySelector('[data-auracall-upload="'+expected.uploadToken+'"]');
-      if (!root || !nativeInput || !expected.providerUserId) return unavailable;
-      const selected = Array.from(nativeInput.files || []);
-      if (selected.length !== expected.sources.length) return conflict;
+      if (!root || !expected.providerUserId) return unavailable;
+      const inputs = Array.from(root.querySelectorAll('input[type="file"]')).filter(input => {
+        const token = input.getAttribute('data-auracall-upload');
+        return expected.uploadToken ? token === expected.uploadToken : typeof token === 'string' && /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(token);
+      });
+      if (inputs.length !== 1) return unavailable;
+      const selected = Array.from(inputs[0].files || []);
+      if (!selected.length || selected.length > 100) return unavailable;
+      const observedSources = [];
+      if (expected.sources === null) {
+        for (const local of selected) {
+          if (typeof local.arrayBuffer !== 'function') return unavailable;
+          const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await local.arrayBuffer()))).map(value=>value.toString(16).padStart(2,'0')).join('');
+          observedSources.push({name:local.name,size:local.size,sha256});
+        }
+      }
+      const sources = expected.sources ?? observedSources;
+      if (selected.length !== sources.length) return conflict;
       const buttons = Array.from(root.querySelectorAll('button[aria-label="Open attachment"]'));
-      if (!buttons.length) return unavailable;
+      if (!buttons.length || buttons.length !== selected.length) return unavailable;
+      // The DOM key may retain an inactive alternate. Locate the root from
+      // it, then qualify the exact host through the committed child topology.
+      const committedPath = (seed, button) => {
+        let top = seed; const ascending = new Set();
+        for (let depth = 0; top?.return && depth < 256; depth++) {
+          if (ascending.has(top)) return null;
+          ascending.add(top); top = top.return;
+        }
+        if (!top || top.return || top.tag !== 3 || !top.stateNode) return null;
+        const owner = top.stateNode; const current = owner.current;
+        if (!current || current.tag !== 3 || current.stateNode !== owner || current.return) return null;
+        const stack = [{fiber:current,path:[]}]; const seen = new Set(); const matches = [];
+        let budget = 20000;
+        while (stack.length && budget-- > 0) {
+          const {fiber,path} = stack.pop();
+          if (!fiber || seen.has(fiber) || path.length >= 256) return null;
+          seen.add(fiber); const next = [...path,fiber];
+          if (fiber.stateNode === button) matches.push(next);
+          if (fiber.sibling) stack.push({fiber:fiber.sibling,path});
+          if (fiber.child) stack.push({fiber:fiber.child,path:next});
+        }
+        if (stack.length || matches.length !== 1 || owner.current !== current) return null;
+        if (!matches[0].some(fiber => fiber.stateNode === root)) return null;
+        return {owner,current,path:matches[0].reverse()};
+      };
       const bindings = new Map();
       const ids = new Map();
+      let observedRoot = null;
       for (const button of buttons) {
         const keys = Object.keys(button).filter(key => key.startsWith('__reactFiber'));
         if (keys.length !== 1) return unavailable;
-        let fiber = button[keys[0]];
-        const visited = new Set();
-        for (let depth = 0; fiber && depth < 48; depth++, fiber = fiber.return) {
-          if (visited.has(fiber)) return conflict;
-          visited.add(fiber);
+        const committed = committedPath(button[keys[0]],button);
+        if (!committed) return unavailable;
+        if (observedRoot && (observedRoot.owner !== committed.owner || observedRoot.current !== committed.current)) return unavailable;
+        observedRoot = committed;
+        for (const fiber of committed.path) {
           const props = fiber.memoizedProps;
           if (props && typeof props === 'object') {
             const local = props.localFile ?? props.file;
             const index = selected.indexOf(local);
             if (index >= 0 && props.metadata) {
               const metadata = props.metadata;
-              const source = expected.sources[index];
+              const source = sources[index];
               const id = metadata.fileMetadataId;
               if (typeof id !== 'string' || !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id) ||
                   metadata.fileSource !== 'SELF_UPLOAD_FILE_SOURCE' ||
@@ -61,9 +101,11 @@ export async function observeGrokNativeFileBinding(
                   local.name !== source.name || local.size !== source.size || typeof local.arrayBuffer !== 'function') return conflict;
               const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', await local.arrayBuffer()))).map(value=>value.toString(16).padStart(2,'0')).join('');
               if (digest !== source.sha256) return conflict;
+              if (committed.owner.current !== committed.current) return unavailable;
+              if (props.metadata !== metadata || metadata.fileMetadataId !== id || metadata.fileUri !== 'users/'+expected.providerUserId+'/'+id+'/content') return conflict;
               const phase = typeof props.phase === 'string' ? props.phase : null;
               const state = ['processing','uploading','retrying'].includes(phase) ? 'progress' : 'unknown';
-              const binding = {id,name:metadata.fileName,state,sourceSha256:digest,sourceBinding:'native-file-object'};
+              const binding = {id,name:metadata.fileName,state,sourceSha256:digest,sourceBinding:'native-file-object',sourceAgreement:expected.sources===null?'observed-native':'local-manifest'};
               const old = bindings.get(index);
               if ((old && JSON.stringify(old) !== JSON.stringify(binding)) || (ids.has(id) && ids.get(id) !== index)) return conflict;
               bindings.set(index,binding);ids.set(id,index);
@@ -71,8 +113,9 @@ export async function observeGrokNativeFileBinding(
           }
           if (fiber.stateNode === root) break;
         }
+        if (committed.owner.current !== committed.current) return unavailable;
       }
-      if (bindings.size !== selected.length) return unavailable;
+      if (!observedRoot || observedRoot.owner.current !== observedRoot.current || bindings.size !== selected.length) return unavailable;
       return {status:'verified',files:Array.from(bindings.entries()).sort((a,b)=>a[0]-b[0]).map(entry=>entry[1])};
     })()`,
 	});
