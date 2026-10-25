@@ -1,3 +1,14 @@
+## 2026-10-25 — Grok #403 two-file native acceptance packet
+
+Both approved same-basename104byte synthetic uploads are retained with distinct
+provider IDs and exact server-byte hashes. A recovered through replay-free public
+context; B completed one public source upload with local-manifest agreement.
+Current committed native submit eligibility qualifies ready without Send. The
+packet maps original criteria and preserves source/installed/native distinctions;
+Recent selection remains provider-free tested, not native-qualified by this run.
+See [acceptance packet](notes/2026-10-25-grok403-native-acceptance.md). Primary owns
+intended-main validation and tracker closure. No additional upload allowance remains.
+
 ## 2026-10-25 — Qualify Grok file readiness from the actual committed submit gate (#403)
 
 Read-only native evidence showed the sole source-bound file and empty text already
