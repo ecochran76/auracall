@@ -5,17 +5,18 @@ lanes:
     objective: Diagnose app inventory latency against live Apps UI
     work_items: [ecochran76/auracall#464]
     plan: docs/dev/plans/0460-2026-10-25-app-inventory-latency.md
-    plan_ref: refs/heads/fix/issue464-app-inventory-latency
+    plan_ref: refs/remotes/origin/main
     branch: fix/issue464-app-inventory-latency
     target: main
     plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: 97b49ced127f6a48c72487c4df0514e6e6651538
+    custody_state: INTEGRATED
+    checkpoint: 0bd7478b7c6006736b539b731c1deed33f45ae51
     remote_ref: refs/remotes/origin/fix/issue464-app-inventory-latency
     integration: merge
+    integration_receipt: 46e1306c29fb1ba50f5126b10e054f7aed14d8ab
     dependencies: []
     overlaps: []
-    validation_status: failed-page-guard-qualified-success-latency-open
+    validation_status: installed-failed-page-guard-qualified-success-latency-open
     updated_at: 2026-10-25
   - id: issue427
     objective: Repair silent installed app inventory
