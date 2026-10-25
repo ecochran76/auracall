@@ -5,17 +5,17 @@ lanes:
     objective: Diagnose app inventory latency against live Apps UI
     work_items: [ecochran76/auracall#464]
     plan: docs/dev/plans/0460-2026-10-25-app-inventory-latency.md
-    plan_ref: refs/heads/fix/issue464-ledger-snapshot-reuse
-    branch: fix/issue464-ledger-snapshot-reuse
+    plan_ref: refs/heads/fix/issue464-focused-inventory-read
+    branch: fix/issue464-focused-inventory-read
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 544db831f0e16e1c71abd203d8aac74943ec598f
-    remote_ref: refs/remotes/origin/fix/issue464-ledger-snapshot-reuse
+    checkpoint: d7e60793ba87b508f438cd8bbd07a125b0920187
+    remote_ref: refs/remotes/origin/fix/issue464-focused-inventory-read
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: snapshot-reload-red-native-encoding-only-still-297s
+    validation_status: focused-api-source-34-apps-39s-installed-pending
     updated_at: 2026-10-25
   - id: issue427
     objective: Repair silent installed app inventory

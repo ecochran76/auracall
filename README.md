@@ -165,6 +165,8 @@ auracall --profile wsl-chrome-3 skills delete <32-hex-skill-id> \
 
 # Guarded ChatGPT developer-app lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 apps --target chatgpt list --json
+# After browser identity/bootstrap, list reads installed and linked inventory
+# without additional Plugins/Home page navigation. Developer mode stays unknown.
 # The read-only list operation has a 45-second base outer deadline, extended by
 # configured backend capacity waiting. Long list waits report the current stage,
 # elapsed time and declared budget to stderr every30seconds, including --json.

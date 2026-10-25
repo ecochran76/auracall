@@ -1,7 +1,7 @@
 # Plan0460 — App inventory latency
 
 State: OPEN
-Branch: fix/issue464-ledger-snapshot-reuse
+Branch: fix/issue464-focused-inventory-read
 Target: main
 Work item: ecochran76/auracall#464
 Base: 97b49ced127f6a48c72487c4df0514e6e6651538
@@ -191,3 +191,52 @@ lint). The next native run will also passively record backend-request counts and
 endpoint timing on its newly created utility tab, without reading bodies or
 headers or issuing provider requests. This distinguishes residual request churn /
 provider waiting from local ledger work without starting another live command.
+
+## Focused inventory transport packet
+
+PR468 merged atd7e60793ba87b508f438cd8bbd07a125b0920187. Installed ledger replay
+measured3.158s/3.657s, and installed native inventory still took276.299s for the
+same26apps. This does not close the latency objective. Passive observation of
+one new utility tab recorded155backend requests (a lower bound after attachment):
+64responses200,89failed and2unclassified at observer closure. Installed inventory
+responses took4.712s/4.906s; no linked-list request was observed. The runtime
+recorded108minute-backend-request-limit refusals during the measured window.
+Reviewed current config keeps30backend requests/minute and600000ms wait allowance.
+Whole-page capture/navigation churn is therefore a qualified contributor beyond
+local encoding cost; capacity is not to be raised or bypassed.
+
+The22ms regression drove the real adapter and failed on two unnecessary UI
+navigations. CLI list now explicitly selects API inventory transport after its
+existing owned identity/bootstrap. Fresh browser session email/account/org
+continuity precedes installed and optional linked GETs on that same governed
+connection. No extra Plugins/Home/Developer mode navigation or restoration is
+needed for this inventory path. Default UI transport remains for mutation
+preflights and retains prior guards/restoration. Credentials are used only inside
+the browser expression and are not returned in its result.
+
+Initial source smoke failed before any inventory request because generic main
+Try again UI was treated as account authority. A13ms red regression reproduces
+that gate. API observation now accepts a generic UI load failure only subject to
+fresh session and HTTP inventory authority, while visible rate-limit and human
+verification still stop it. Wrong account/workspace, failed session, malformed
+installed inventory and HTTP failure fail closed; unavailable optional linked
+metadata stays unknown. Ten direct-expression cases pass in28ms.
+
+Uninterrupted source-native API inventory then completed in39.866s, exit0, with
+34apps. Private comparison against the preceding26-app native result confirms
+identical account, all26prior IDs retained, no changed fields for those entries,
+and8additional linked entries. This proves the focused source path rather than
+a smaller or incomplete result. Configured caps/deadlines remain unchanged; no
+prompts, app CRUD, warning clearance or browser/API restart occurred.
+
+Pending: final source validation/review, merge, installed artifact and native
+acceptance. Raw DOM, request trace and catalog data remain in private user state.
+
+Focused-read validation:187checks across direct inventory, legacy UI inventory /
+readiness/navigation, CLI semantics/diagnostics and real backend admission pass.
+Typecheck/build pass. Primary review accepted one fixture readability/lint finding
+(comma/assignment in a walker); remediated and all10affected direct cases pass.
+Scoped lint passes. Standards has no remaining blocking findings; Spec accepts
+explicit API selection for CLI list, legacy UI behavior retained for mutations,
+fresh known identity scope, optional metadata uncertainty and no credential result.
+Installed/native delivery remains the final gate; CI remains excluded.

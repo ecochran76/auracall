@@ -56510,3 +56510,18 @@ errors as cache misses rather than failed durable effects. Append-only event
 prefix encoding further reduces copied-history replay to2.937s/2.482s. No global
 cache or history loss; legacy schema1/lock/fsync/publication semantics remain.
 Final checks and one additional serialized installed-native read are pending.
+
+## 2026-10-25 — Issue464 whole-page churn isolated and focused read accepted
+
+Cache refinement PR468 still produced276.299s inventory. A passive trace on its
+new utility tab observed155backend requests under a30/minute cap; actual installed
+responses took about5s and optional linked-list traffic never appeared. The
+runtime recorded108capacity refusals. A22ms real-adapter regression catches two
+extra inventory navigations. CLI list now selects focused API inventory after
+owned bootstrap, fresh session email/workspace/org checks and the existing
+governed connection. Mutation preflights retain UI transport. Generic UI retry
+can defer to fresh session/HTTP authority for this read; provider limits and
+human verification still stop it. Initial guard failure was reproduced and fixed
+with a13ms regression. Source-native read succeeds in39.866s with34apps: all26
+prior entries unchanged,8linked entries added, same account. Final checks and
+installed proof remain pending; caps and provider deadlines were not changed.

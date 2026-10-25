@@ -3851,3 +3851,12 @@ The ledger suite also checks warm self-owned admissions, peer replacement and
 same-size edit, file deletion, aborted mutation invalidation, metadata errors
 after successful commit and complete append-only event serialization. Reuse
 must never skip the cross-process lock or a durable publication boundary.
+
+`tests/browser/chatgptDeveloperAppDirectInventory.test.ts` exercises the real
+inventory adapter and its browser expression in a VM with HTTP fixtures. CLI list
+selects API transport explicitly; UI lifecycle observation remains the default
+for mutation preflights. Cover fresh email/workspace mismatch, unavailable
+session, HTTP/malformed inventory, optional linked failure, generic UI retry,
+provider rate limits and human verification. No extra inventory navigation or
+browser credentials may appear in returned data. Source-native and installed
+acceptance remain separate receipts.

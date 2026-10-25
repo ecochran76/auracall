@@ -174,7 +174,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 	) {}
 
 	async readState(
-		options: { includeDeveloperMode?: boolean } = {},
+		options: { includeDeveloperMode?: boolean; inventoryTransport?: "api" | "ui" } = {},
 	): Promise<ChatgptDeveloperAppBrowserState> {
 		this.throwIfAborted();
 		debugDeveloperApps("reading ChatGPT identity");
@@ -188,7 +188,10 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		try {
 			debugDeveloperApps("reading installed and linked app signals");
 			this.submissionOptions.onInventoryStage?.("inventory");
-			const featureSignature = await this.captureInventoryFeatureSignature(client);
+			const featureSignature = await this.captureInventoryFeatureSignature(client, {
+				inventoryOnly: options.inventoryTransport === "api",
+				identity,
+			});
 			this.throwIfAborted();
 			debugDeveloperApps(
 				options.includeDeveloperMode === false
@@ -197,7 +200,9 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			);
 			this.submissionOptions.onInventoryStage?.("developer-mode");
 			const developerMode =
-				options.includeDeveloperMode === false ? null : await readChatgptDeveloperMode(client);
+				options.includeDeveloperMode === false || options.inventoryTransport === "api"
+					? null
+					: await readChatgptDeveloperMode(client);
 			this.throwIfAborted();
 			debugDeveloperApps("developer-app inventory complete");
 			return deriveChatgptDeveloperAppState({
@@ -207,7 +212,11 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				observedAt: new Date().toISOString(),
 			});
 		} finally {
-			if (!this.abortSignal?.aborted && originalUrl?.startsWith("https://chatgpt.com/")) {
+			if (
+				options.inventoryTransport !== "api" &&
+				!this.abortSignal?.aborted &&
+				originalUrl?.startsWith("https://chatgpt.com/")
+			) {
 				this.submissionOptions.onInventoryStage?.("restore-navigation");
 				await navigateChatgpt(client, originalUrl).catch(() => undefined);
 			}
@@ -712,12 +721,23 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		debugDeveloperApps("developer-app browser client closed");
 	}
 
-	private captureInventoryFeatureSignature(client: ChromeClient): Promise<string> {
+	private captureInventoryFeatureSignature(
+		client: ChromeClient,
+		options: { inventoryOnly?: boolean; identity?: ProviderUserIdentity | null } = {},
+	): Promise<string> {
 		const config = this.browser.userConfig;
 		const budgetWaitMs = resolveChatgptBackendRequestBudgetWaitMs(
 			config as Record<string, unknown>,
 			config.auracallProfile ?? "default",
 		);
+		if (options.inventoryOnly) {
+			return readChatgptDeveloperAppInventory(
+				client,
+				options.identity ?? null,
+				budgetWaitMs,
+				this.abortSignal,
+			);
+		}
 		return captureChatgptDeveloperAppFeatureSignature(
 			client,
 			12_000 + budgetWaitMs,
@@ -1018,6 +1038,101 @@ function readBoolean(value: unknown): boolean | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+async function readChatgptDeveloperAppInventory(
+	client: ChromeClient,
+	identity: ProviderUserIdentity | null,
+	budgetWaitMs: number,
+	signal?: AbortSignal,
+): Promise<string> {
+	const expectedEmail = identity?.email?.trim().toLowerCase();
+	if (!expectedEmail) {
+		throw Object.assign(new Error("ChatGPT account identity is unavailable for app inventory."), {
+			code: "developer_app_account_load_error",
+		});
+	}
+	await assertNoChatgptBlockingSurface(client, "read app inventory", { authenticatedRead: true });
+	const result = await runDeveloperAppAttachmentStage(
+		client.Runtime.evaluate({
+			expression: `(async () => {
+      if (location.origin !== 'https://chatgpt.com') return { ok: false, code: 'origin' };
+      const request = async (url, timeoutMs, headers = {}) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(url, {
+            method: 'GET', credentials: 'include',
+            headers: { accept: 'application/json', ...headers }, signal: controller.signal,
+          });
+          if (!response.ok) return { ok: false, status: response.status };
+          return { ok: true, status: response.status, data: await response.json() };
+        } catch {
+          return { ok: false, status: 0 };
+        } finally { clearTimeout(timer); }
+      };
+      const session = await request('/api/auth/session', 8000);
+      const email = session.data?.user?.email ?? session.data?.account?.email;
+      if (!session.ok || typeof email !== 'string') return { ok: false, code: 'account' };
+      const expected = ${JSON.stringify({ email: expectedEmail, accountId: identity?.accountId ?? null, organizationId: identity?.organizationId ?? null })};
+      if (email.trim().toLowerCase() !== expected.email ||
+          (expected.accountId && session.data?.account?.id !== expected.accountId) ||
+          (expected.organizationId && session.data?.account?.organizationId !== expected.organizationId)) {
+        return { ok: false, code: 'identity' };
+      }
+      // Do not include browser credentials in the evaluation result.
+      const headers = {};
+      if (typeof session.data.accessToken === 'string' && session.data.accessToken) {
+        headers.authorization = 'Bearer ' + session.data.accessToken;
+      }
+      if (typeof session.data?.account?.id === 'string' && session.data.account.id) {
+        headers['chatgpt-account-id'] = session.data.account.id;
+      }
+      const [installed, linked] = await Promise.all([
+        request('/backend-api/ps/plugins/installed', ${12_000 + budgetWaitMs}, headers),
+        request('/backend-api/aip/connectors/links/list_accessible', 12000, headers),
+      ]);
+      if (!installed.ok) return { ok: false, code: 'inventory', status: installed.status };
+      return { ok: true, installed: installed.data, linked: linked.ok ? linked.data : null };
+    })()`,
+			awaitPromise: true,
+			returnByValue: true,
+		}),
+		{
+			stage: "developer-app inventory API read",
+			timeoutMs: 20_000 + budgetWaitMs,
+			abortSignal: signal,
+		},
+	);
+	const probe = isRecord(result.result?.value) ? result.result.value : {};
+	if (result.exceptionDetails || probe.ok !== true) {
+		const code =
+			probe.code === "identity"
+				? "developer_app_account_mismatch"
+				: probe.code === "account"
+					? "developer_app_account_load_error"
+					: "developer_app_inventory_read_failed";
+		const status = typeof probe.status === "number" ? probe.status : 0;
+		throw Object.assign(
+			new Error(
+				`ChatGPT app inventory read failed (${String(probe.code ?? "browser")}, HTTP ${status}).`,
+			),
+			{ code },
+		);
+	}
+	if (!isCompleteChatgptInstalledAppsPayload(probe.installed)) {
+		throw Object.assign(
+			new Error("ChatGPT installed-app response did not contain a complete inventory."),
+			{ code: "developer_app_inventory_incomplete" },
+		);
+	}
+	const installed = isRecord(probe.installed) ? probe.installed : {};
+	const linked = isRecord(probe.linked) ? probe.linked : {};
+	return JSON.stringify({
+		inventory_complete: true,
+		installed_apps: normalizeChatgptInstalledAppProbes(installed.plugins),
+		linked_apps: normalizeChatgptLinkedAppProbes(linked.links),
+	});
 }
 
 async function captureChatgptDeveloperAppFeatureSignature(
@@ -1616,7 +1731,11 @@ async function assertNoChatgptInventoryLoadError(
 	}
 }
 
-async function assertNoChatgptBlockingSurface(client: ChromeClient, action: string): Promise<void> {
+async function assertNoChatgptBlockingSurface(
+	client: ChromeClient,
+	action: string,
+	options: { authenticatedRead?: boolean } = {},
+): Promise<void> {
 	const result = await client.Runtime.evaluate({
 		expression: `(() => {
       const visible = (element) => {
@@ -1651,7 +1770,19 @@ async function assertNoChatgptBlockingSurface(client: ChromeClient, action: stri
 		ariaLabel: readString(probe.ariaLabel),
 		buttonLabels: readStringArray(probe.buttonLabels),
 	});
-	if (match) {
+	if (
+		options.authenticatedRead &&
+		/verify (?:that )?you are (?:a )?human|confirm (?:that )?you are (?:a )?human|complete (?:the )?captcha|checking your browser/i.test(
+			readString(probe.text) ?? "",
+		)
+	) {
+		throw Object.assign(new Error(`Cannot ${action}: human verification is required.`), {
+			code: "developer_app_human_verification_required",
+		});
+	}
+	// A failed UI bootstrap is not account authority for a focused read: the
+	// fresh session and inventory HTTP result decide. Provider limits still stop it.
+	if (match && (!options.authenticatedRead || match.kind === "rate-limit")) {
 		throw new Error(`Cannot ${action}: ${match.summary}`);
 	}
 }
