@@ -10,20 +10,25 @@ Ledger: [execution ledger](0453-grok-execution-ledger.json)
 
 ## Current State
 
-Seven children are closed; nine remain. #412 merged through PR430 as
-`ae21c97c907eb903360058c7b65c8bb267b70016` and is freshly CLOSED. Primary
-finished412 and owns serial integration. Worker `/root/grok413` returned full observed-content source; primary integrated
-and qualified it through f76545f7e with187 tests/10 files, typecheck/build/lint.
-#413 awaits main integration and tracker closure. No worker remains active.
-#405 and #410 partial source packets merged through PR431/16dbd7218; their
-native identity/grant and app/version/artifact gates remain open. #403/#408
-have concrete native discovery packets, with provider effects still pending.
+Eight of16 children are closed; eight remain. #412 merged through PR430 as
+`ae21c97c907eb903360058c7b65c8bb267b70016`; #413 merged through PR432 as
+`fa06a1eecb40b749966663ab2acb37ac0e771796`. Both are freshly CLOSED.
+Primary independently qualified187 tests/10 files for413, plus exact custody
+assertions, typecheck/build and targeted lint. All workers are terminal.
 
-User explicitly renewed the two-hour/2MM-token allowance on2026-10-24.
-The renewedRun ledger records current handles/deadline; older deadlines below
-are retained history. Manual monitoring continues; no Wake319/controller changes,
-runtime installation or live provider effects occurred. Tickets close only on
-full acceptance and merged integration evidence.
+#405/#410 partial source and #403/#408 native discovery packets merged through
+PR431/16dbd7218. Native source-binding, saved identity/grants, Bot editor and
+Build app/version/export evidence remain open;406/409/411/414 stay locked.
+The exact expected Grok account and proposed Bot-canary authority are pending.
+No Grok browser startup or provider effect was performed in this renewed run.
+One whole-program code-review and TDD findings pass remains pending completion
+of all tickets; implementation red/green checks did not consume that pass.
+
+User renewed the two-hour/2MM-token allowance on2026-10-24. Native readback at
+58minutes reported958,809 tokens; no counters or deadlines reset. The renewedRun
+ledger records current custody/gates; older run fields remain history. Manual
+monitoring continued with no Wake319/controller/shared-runtime changes. The
+whole goal remains active and incomplete; this checkpoint does not pause it.
 
 ## Execution contract
 
