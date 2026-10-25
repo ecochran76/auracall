@@ -3798,7 +3798,7 @@ export function createGrokAdapter(): Pick<
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
       let historyCoverage: import('./grokHistoryInventory.js').GrokHistoryCoverage | undefined;
       const originalProgress=options?.onHistoryInventory;
-      options={...options,onHistoryInventory:async coverage=>{historyCoverage=coverage;await originalProgress?.(coverage);}};
+      options={...options,historySearch:options?.historySearch?.trim(),onHistoryInventory:async coverage=>{historyCoverage=coverage;await originalProgress?.(coverage);}};
       const finish=async(items:Conversation[])=>{await assertGrokBrowserAuthPreflight(client.Runtime,options);return items.filter(item=>!options?.historySearch || item.title.toLowerCase().includes(options.historySearch.toLowerCase())).slice(0,options?.includeHistory ? options.historyLimit??2000 : items.length).map(item=>historyCoverage?({...item,metadata:{...item.metadata,grokInventory:historyCoverage}}):item);};
       const resolvedProjectId = projectId?.trim() || undefined;
       const projectUrl = resolvedProjectId ? resolveGrokProjectUrl(resolvedProjectId) : undefined;
@@ -4019,10 +4019,22 @@ export function createGrokAdapter(): Pick<
         if (raw.length === 0) {
            // Debug logging if needed, can be enabled via env
         }
+        const historyIds = new Set(history.map((entry) => entry.id));
         const merged = new Map<string, Conversation>();
         const mergeConversation = (entry: Conversation) => {
-          merged.set(entry.id, choosePreferredGrokConversation(merged.get(entry.id), entry));
+          const existing = merged.get(entry.id);
+          // Keep existing conflict checks and compatible enrichment, but a
+          // supplemental title must not undo a qualified history search match.
+          const preferred = choosePreferredGrokConversation(existing, entry);
+          merged.set(entry.id, historyIds.has(entry.id) && existing && options?.historySearch
+            ? { ...preferred, title: existing.title }
+            : preferred);
         };
+        // The continuation covers this bounded history window. Supplemental
+        // mounted/open rows must never crowd its qualified rows out of finish().
+        for (const entry of history) {
+          mergeConversation(entry);
+        }
         for (const entry of raw) {
           if (!entry || typeof entry !== 'object') continue;
           const record = entry as Record<string, unknown>;
@@ -4039,9 +4051,6 @@ export function createGrokAdapter(): Pick<
             url,
             updatedAt: timestamp ? new Date(timestamp).toISOString() : undefined,
           });
-        }
-        for (const entry of history) {
-          mergeConversation(entry);
         }
         for (const entry of rootSidebarConversations) {
           mergeConversation(entry);

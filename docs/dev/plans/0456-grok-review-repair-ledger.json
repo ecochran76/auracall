@@ -33,7 +33,37 @@
     444
   ],
   "primaryTicket": 440,
-  "workers": {},
+  "workers": {
+    "441": {
+      "handle": "/root/repair441",
+      "worktree": "auracall-grok-repair-441",
+      "branch": "feat/grok-repair-441-20261025",
+      "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
+      "state": "implemented",
+      "result": "b8959d2d91082a2fd75104ecbbc09a697e317b37",
+      "evidence": "3 new public/project tests and78 affected tests; typecheck/lint pass; primary integration pending"
+    },
+    "442": {
+      "handle": "/root/repair442",
+      "worktree": "auracall-grok-repair-442",
+      "branch": "feat/grok-repair-442-20261025",
+      "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
+      "state": "running",
+      "scopeExpansion": "Existing lease registry exclusive-group and borrowed-claim factory contract needed for bounded retained-view progress; no new coordinator/provider authority"
+    },
+    "444": {
+      "handle": "/root/repair444",
+      "worktree": "auracall-grok-repair-444",
+      "branch": "feat/grok-repair-444-20261025",
+      "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
+      "state": "implemented",
+      "results": [
+        "07bfbc3ddafe51cbd0f697a70db79fd586df1542",
+        "2d9d8c40e7c6ad9851233cb1fc5ac8db7304a3dc"
+      ],
+      "evidence": "71 tests/8files; typecheck/check/lint pass; primary integration pending"
+    }
+  },
   "nodes": {
     "399": {
       "title": "Grok: Govern Grok reads and expose effective account controls",
@@ -216,7 +246,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/440",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "pending",
+      "state": "implemented",
       "scope": "review-repair",
       "finding": "SPEC1",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/440.md"
@@ -226,7 +256,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/441",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "pending",
+      "state": "implemented",
       "scope": "review-repair",
       "finding": "SPEC2",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/441.md"
@@ -236,7 +266,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/442",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "pending",
+      "state": "running",
       "scope": "review-repair",
       "finding": "SPEC3",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/442.md"
@@ -250,7 +280,7 @@
         441,
         442
       ],
-      "state": "pending",
+      "state": "pending-blockers",
       "scope": "review-repair",
       "finding": "SPEC4",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md"
@@ -260,7 +290,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/444",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "pending",
+      "state": "implemented",
       "scope": "review-repair",
       "finding": "STD1",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/444.md"
@@ -329,5 +359,20 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "Five published issues verified; complete21-node dependency/corrective graph acyclic; source execution not started."
+  "lastCheckpoint": "440 implemented;441/444 worker commits ready;442 real-authority continuation progressing; no tracker closures",
+  "registrationMerge": {
+    "pr": 445,
+    "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"
+  },
+  "primaryEvidence": {
+    "ticket": 440,
+    "tests": "59 tests/4files pass;3 causal red/green defects and cancellation characterization",
+    "note": "docs/dev/notes/2026-10-25-grok-440-cursor-row-custody.md"
+  },
+  "lastManualObservation": {
+    "tokensUsed": 567285,
+    "timeUsedSeconds": 1616,
+    "availableMemoryMiB": 39731,
+    "swapUsedMiB": 88797
+  }
 }

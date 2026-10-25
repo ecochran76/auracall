@@ -1,3 +1,13 @@
+## 2026-10-25 — Grok440 public cursor custody repaired
+
+Three causal reds cover sidebar crowding, supplemental search-title replacement
+and inconsistent query trimming. Qualified history rows now precede supplemental
+rows, retain matching titles and preserve existing enrichment/conflict checks.
+Public adapter→collector→disk restart/cancellation checks pass; primary59-test
+selection and final47-test rerun pass, with typecheck/scoped lint. Worker441 and
+444 commits are ready for serial integration;442 owns retained-view lifecycle
+and real-authority/serialization gates. No tracker closure or provider effect.
+
 ## 2026-10-25 — Approved Grok repair graph and renewed execution
 
 Plan0456: published440–444 and verified exact actor/body/state/labels. Complete
