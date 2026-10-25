@@ -26067,3 +26067,12 @@ read-only reconciliation. Do not convert a rejected final DOM guard into a
 positive dispatched-effect claim, or let diagnostic persistence erase an unknown
 outcome. Public CLI/API/MCP fixtures cover the production path; saved provider
 identity, granted scopes and native built-in behavior remain separate open gates.
+
+### 2026-10-25 — Grok Bot lifecycle must follow actual native editor controls
+
+New Bot's animated text contains hidden labels for Connector/Skill/Bot; use its
+observed exact aria-label. The actual Settings editor offers Name, optional Title
+and Description, not separate Instructions/Model defaults. Preserve these missing
+capabilities explicitly instead of guessing fields or relabeling Description.
+Require a genuinely new empty target for creation and retain durable account-bound
+intent plus same-ID saved readback for ambiguous create/Save reconciliation.

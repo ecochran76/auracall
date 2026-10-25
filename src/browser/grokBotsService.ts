@@ -48,6 +48,9 @@ export interface GrokBotConversationResult {
 	effectState: "none" | "completed" | "unknown";
 }
 export interface GrokBotsService {
+	lifecycle?: (
+		request: import("./grokBotLifecycleService.js").GrokBotLifecycleRequest,
+	) => Promise<import("./providers/grokBotLifecycle.js").GrokBotLifecycleResult>;
 	list(source?: GrokBotSource): Promise<GrokBotInventory>;
 	invoke(selector: GrokBotSelector, prompt: string): Promise<GrokBotConversationResult>;
 }

@@ -1325,3 +1325,37 @@ Ops exposes whitelisted file/Bot progress. If diagnostic persistence fails, the
 original operation outcome is preserved; a returned outcome may include
 `progressPersistence: "failed"`. These source contracts do not establish installed
 or live Grok UI acceptance. Connector installation remains a separate open slice.
+
+Grok Bot lifecycle requests share `auracall grok-bots --request-json '<request>'`,
+MCP `grok_bots`, and POST `/v1/grok/bots/query`. Native discovery qualified the
+singular `/bot/<uuid>` route and the Settings fields Name, optional Title, and
+Description. Instructions and Model defaults are unavailable on the observed
+editor: requesting either returns an explicit unavailable code before input or
+Save. Description is not treated as Instructions.
+
+`create` requires `name`, `expectedProviderAccountRef`, `confirm: true`, and
+`acceptTerms: true`; the latter explicitly covers the displayed Grok Bot Terms.
+Creation uses a fresh empty owned root and one Create Bot action. `inspect` uses
+`selector: {id,name}`, `targetId`, and `expectedProviderAccountRef`. `edit` adds
+`patch: {name?,title?,description?}` and `confirm: true`; omitted fields are
+preserved. The exact retained target must already display the selected Bot.
+Saved readback reopens that same Bot's Settings after Save. No Bot invocation,
+Connector grant, deletion, or publication is included in lifecycle configuration.
+
+Mutations return an `operationId` and keep a private account-bound intent journal.
+Repeat calls observe the original target instead of dispatching again, including
+across process or runtime-profile changes. For an uncertain outcome use
+`{action:"reconcile",operationId,expectedProviderAccountRef}`; do not create a
+replacement. Missing identity, changed account, absent controls, or unavailable
+saved readback remains explicit. Source/fixture success and native canary evidence
+remain distinct from installed-runtime and full ticket acceptance.
+
+If the retained unknown-effect utility lease blocks ordinary reconciliation,
+AuraCall returns `grok_bot_operator_reconciliation_required` with the original
+operation and target. It does not bypass admission. An operator must first gather
+qualified immutable proof through the supported read-only exact-target diagnostic,
+then use the custody registry's qualified effect compare-and-set settlement, and
+only then repeat the public same-ID reconciliation. Queue/lease settlement is
+separate from native saved-state proof. An already-open Settings buffer can hold
+unsaved input and never establishes persisted reconciliation; it remains unknown
+until the original target can be safely reopened and inspected.

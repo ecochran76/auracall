@@ -3446,7 +3446,8 @@ program.command('grok-files').description('Inspect exact Grok composer files, li
   }catch{result=grokFilesFailure();}
   console.log(JSON.stringify(result,null,2));if(result.status==='failed'||result.status==='unconfirmed')process.exitCode=1;
  });
-program.command('grok-bots').description('List owned/catalog Grok Bots or invoke an exact existing Bot without installing it.')
+program.command('grok-bots').description('Discover/invoke Grok Bots and operate confirmed native Bot lifecycle settings.')
+ .option('--request-json <json>','Exact shared Grok Bots request, including confirmed create/edit/inspect/reconcile.')
  .option('--action <list|invoke>','Operation.','list').option('--source <owned|catalog>','Bot inventory source.','owned')
  .option('--id <id>','Stable observed Bot ID.').option('--author <author>','Exact observed catalog author.').option('--prompt <text>','Exact prompt text.')
  .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
@@ -3454,7 +3455,7 @@ program.command('grok-bots').description('List owned/catalog Grok Bots or invoke
   let result;
   try {
    if(options.action==='list'&&(options.id||options.author||options.prompt))throw new Error('Use invoke with a Bot selector.');
-   const request=GrokBotsRequestSchema.parse(options.action==='list'?{action:'list',source:options.source,runtimeProfile:options.runtimeProfile}:{action:options.action,selector:{id:options.id,source:options.source,author:options.author},prompt:options.prompt,runtimeProfile:options.runtimeProfile});
+   const request=GrokBotsRequestSchema.parse(options.requestJson?JSON.parse(options.requestJson):options.action==='list'?{action:'list',source:options.source,runtimeProfile:options.runtimeProfile}:{action:options.action,selector:{id:options.id,source:options.source,author:options.author},prompt:options.prompt,runtimeProfile:options.runtimeProfile});
    const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
    result=await runGrokBotsCommand(request,await createConfiguredGrokBotsService(config,request.runtimeProfile));
   }catch{result=grokBotsFailureResult();}

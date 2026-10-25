@@ -56423,3 +56423,14 @@ Actual public collector restart plus controlled-CDP service regressions pass;
 explicit partial/full-sweep work; no global-order claim. Optional predicate
 extraction deferred. Frozen review artifact records adjudication and all causal
 receipts. Main integration/443 reclosure/final closeout remain, no broad rerun.
+
+### 2026-10-25 — Plan0458 / #408 actual Bot editor
+
+Created one approved retained synthetic Bot; exact native route and Settings
+Name/Title/Description controls are now qualified. Instructions/Model controls
+are absent, so original #408 remains open and #409 stays blocked. Implementing
+public create/edit/inspect/reconcile against observed controls with account-bound
+durable intent, no duplicate dispatch and same-ID saved readback. One native
+Name/Description edit awaits serialized slot; Title/model default remain preserved.
+See `docs/dev/notes/2026-10-25-grok408-native-lifecycle.md` for private evidence
+boundaries and the corrected probe's reused-target history.
