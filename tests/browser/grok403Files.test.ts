@@ -730,3 +730,177 @@ test.each([
 	expect(closeTarget).not.toHaveBeenCalled();
 	expect(close).toHaveBeenCalledOnce();
 });
+
+test.each([
+	"ready",
+	"foreign-account",
+	"stale-row",
+	"pending-submit",
+	"foreign-context",
+	"private-context",
+	"changed-row",
+] as const)("native Recent joins duplicate labels by committed asset key (%s)", async (scenario) => {
+	const f = fixture();
+	Object.assign(f.document, {
+		getElementById: (id: string) =>
+			f.document.querySelectorAll("[id]").find((n) => n.getAttribute("id") === id) ?? null,
+	});
+	const ids = ["aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "11111111-2222-3333-4444-555555555555"];
+	const assets = ids.map((assetId) => ({
+		assetId,
+		rootAssetId: assetId,
+		name: "same.txt",
+		mimeType: "text/plain",
+		sizeBytes: 104,
+		key: `users/${scenario === "foreign-account" ? "foreign" : "user-1"}/${assetId}/content`,
+		ownerUserId: "user-1",
+		fileSource: "SELF_UPLOAD_FILE_SOURCE",
+		isDeleted: false,
+	}));
+	type Fiber = {
+		tag?: number;
+		key?: string;
+		stateNode?: unknown;
+		memoizedProps?: Record<string, unknown>;
+		return: Fiber | null;
+		child?: Fiber;
+		sibling?: Fiber;
+	};
+	const rootFor = (node: Node, child?: Fiber) => {
+		const owner: { current: Fiber | null } = { current: null };
+		const root: Fiber = { tag: 3, stateNode: owner, return: null };
+		const host: Fiber = { stateNode: node, return: root, child };
+		root.child = host;
+		owner.current = root;
+		Object.assign(node, { __reactFiberFixture: host });
+		return { owner, root, host };
+	};
+	rootFor(f.composer);
+	const attach = new Node(
+		"BUTTON",
+		{ "aria-label": "Attach", id: "attach", "aria-controls": "parent" },
+		"Attach",
+	);
+	const parent = new Node("DIV", { role: "menu", id: "parent", "aria-labelledby": "attach" });
+	parent.hidden = true;
+	const recent = new Node(
+		"DIV",
+		{ role: "menuitem", id: "recent", "aria-controls": "chooser" },
+		"Recent files",
+	);
+	const chooser = new Node("DIV", { role: "menu", id: "chooser", "aria-labelledby": "recent" });
+	chooser.hidden = true;
+	attach.onClick = () => {
+		parent.hidden = false;
+	};
+	recent.onClick = () => {
+		chooser.hidden = false;
+	};
+	parent.append(recent);
+	f.composer.append(attach);
+	f.body.append(parent, chooser);
+	rootFor(attach);
+	rootFor(recent);
+	const selected = vi.fn();
+	let previous: Fiber | undefined;
+	const list: Fiber = { memoizedProps: { assets }, return: null };
+	const chooserTree = rootFor(chooser, list);
+	list.return = chooserTree.host;
+	const keyedRows = new Map<string, Fiber>();
+	for (const asset of assets) {
+		const row = new Node("DIV", { role: "menuitem" }, "same.txt");
+		chooser.append(row);
+		const keyed: Fiber = { key: asset.assetId, return: list };
+		keyedRows.set(asset.assetId, keyed);
+		const host: Fiber = { stateNode: row, return: keyed };
+		keyed.child = host;
+		if (previous) previous.sibling = keyed;
+		else list.child = keyed;
+		previous = keyed;
+		Object.assign(row, { __reactFiberFixture: host });
+		row.onClick = () => {
+			selected(asset.assetId);
+			parent.hidden = true;
+			chooser.hidden = true;
+			const button = new Node("BUTTON", { "aria-label": "Open attachment" }, "same.txt");
+			const submit = new Node("BUTTON", {
+				"data-testid": "chat-submit",
+				type: "submit",
+				"aria-disabled": scenario === "pending-submit" ? "true" : "false",
+			});
+			const chip: Fiber = {
+				stateNode: button,
+				memoizedProps: {
+					metadata: {
+						fileMetadataId: asset.assetId,
+						fileName: asset.name,
+						fileMimeType: asset.mimeType,
+						fileSource: asset.fileSource,
+						fileUri:
+							scenario === "foreign-context" ? `users/foreign/${asset.assetId}/content` : asset.key,
+					},
+					phase: "processing",
+					isPrivate: scenario === "private-context",
+				},
+				return: null,
+			};
+			const gate: Fiber = {
+				stateNode: submit,
+				memoizedProps: { isQueryable: scenario !== "pending-submit" },
+				return: null,
+			};
+			chip.sibling = gate;
+			const form = rootFor(f.composer, chip);
+			chip.return = form.host;
+			gate.return = form.host;
+			Object.assign(button, { __reactFiberFixture: chip });
+			Object.assign(submit, { __reactFiberFixture: gate });
+			f.composer.append(button, submit);
+		};
+	}
+	if (scenario === "stale-row")
+		chooserTree.owner.current = { tag: 3, stateNode: chooserTree.owner, return: null };
+	if (scenario === "changed-row") {
+		const evaluate = f.runtime.evaluate.getMockImplementation();
+		if (!evaluate) throw new Error("fixture evaluator required");
+		f.runtime.evaluate.mockImplementation(async (input) => {
+			if (input.expression.includes("const matches=native.rows.filter")) {
+				const row = keyedRows.get(ids[1]);
+				if (row) row.key = ids[0];
+			}
+			return evaluate(input);
+		});
+	}
+	const client = createGrokFileClient(f.runtime, {
+		providerUserId: "user-1",
+		timeoutMs: 20,
+		pollMs: 0,
+	});
+	if (scenario === "foreign-account" || scenario === "stale-row") {
+		await expect(client.select(ids[1])).rejects.toThrow();
+		expect(selected).not.toHaveBeenCalled();
+		return;
+	}
+	const result = await client.select(ids[1]);
+	if (scenario === "changed-row") {
+		expect(result.status).toBe("failed");
+		expect(selected).not.toHaveBeenCalled();
+		return;
+	}
+	expect(selected).toHaveBeenCalledExactlyOnceWith(ids[1]);
+	expect(result.status).toBe(scenario === "ready" ? "complete" : "unconfirmed");
+	expect(result.files).toEqual(
+		scenario === "foreign-context"
+			? []
+			: [
+					{
+						id: ids[1],
+						name: "same.txt",
+						state: scenario === "ready" ? "ready" : "unknown",
+						sourceBinding: "native-metadata",
+						sourceAgreement: "observed-native",
+					},
+				],
+	);
+	expect(f.dom.setFileInputFiles).not.toHaveBeenCalled();
+});

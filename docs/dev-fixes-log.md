@@ -26233,3 +26233,11 @@ Actual Recent portals exceeded 256 ancestry; even a found composer host was
 rejected by a later branch reaching the topology cap. Raise both caps to 512,
 retain 20,000-node budget and all current-root/scope/unique-host checks, and reuse
 the same helper for File/Connector observation. Exhaustion remains unavailable.
+
+
+2026-10-25 — Grok Recent identity comes from current asset keys, not DOM labels.
+Actual Recent rows lack upload-shaped DOM IDs. Join the committed menu-item key
+to the current `assets[].assetId` DTO with verified owner/content URI; repeat
+that association immediately at selection. Metadata-only attachment recovery
+provides identity/readiness without a File hash or local-manifest/server-byte
+claim. The existing native File/digest upload guard remains separate.

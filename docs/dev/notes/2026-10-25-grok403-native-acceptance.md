@@ -81,3 +81,20 @@ unique-host and stable-current checks. File and Connector readers use that same
 helper. A deep portal plus unrelated deep branch regression fails before this
 correction and passes after; ancestry, topology and node-budget exhaustion still
 return unavailable. This is source qualification, not native Recent acceptance.
+
+Recent schema qualification: passive r23 proved each synthetic row's committed
+React key joins uniquely to `assets[].assetId` in its current list ancestor.
+The observed renderer uses that same key and invokes attachment with that asset
+DTO. The source parser now validates owned Attach/Recent ARIA relationships,
+current row topology, unique asset ID, verified account owner/content URI and
+non-deleted self-upload metadata. Selection repeats this qualification immediately
+before clicking the exact ID, so cached row position or annotation cannot select
+a replacement asset. Actual successful native Recent selection remains unrun.
+
+The metadata-only composer path reports `sourceBinding: native-metadata` with
+`sourceAgreement: observed-native`. Here agreement means native metadata
+association only; interpret it with `sourceBinding`. It has no `sourceSha256`,
+no local-manifest agreement and no server-byte qualification. Identity/readiness
+still requires current metadata, account/source URI, same-root Submit gate and
+error/private/disabled/deleted guards. Existing native-File digest proof remains
+a separate path and upload success still requires the exact local manifest.

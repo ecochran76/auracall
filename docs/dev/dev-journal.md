@@ -56739,3 +56739,12 @@ topology now bound at 512; 20,000-node limit/current-root/unique-host/scope chec
 remain fail closed. File binding imports shared helper. Native-derived deep portal
 regression observed RED before correction; exhaustion coverage retained. No native
 Recent row DTO or selection acceptance claimed; next passive read requires slot.
+
+
+2026-10-25 — Grok403 Recent parser/source recovery: r23 committed row keys join
+known synthetic IDs to the observed account-scoped asset DTO. Add owned ARIA
+chooser parsing and repeat current key/DTO/account qualification at selection.
+Metadata-only composer context carries no source digest or local-manifest proof;
+readiness retains the actual Submit gate. Public duplicate-name fixture selects
+the exact ID without upload; foreign/stale/reused rows and non-ready metadata
+remain refused/incomplete. No native selection repeated during source work.
