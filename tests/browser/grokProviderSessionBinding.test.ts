@@ -3,19 +3,20 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
-import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
-import { BrowserService } from "../../src/browser/service/browserService.js";
-import { createConfiguredGrokBotsService } from "../../src/browser/configuredGrokDiscovery.js";
-import { connectorDomFixture, ConnectorFixtureNode as N } from "./grok404ConnectorDomFixture.js";
 import GuardedCDP, {
 	setCdpCommandAdmissionResolver,
 } from "../../packages/browser-service/src/guardedCdp.js";
-import {
-	connectToGrokTab,
-	checkGrokBrowserAuthPreflight,
-} from "../../src/browser/providers/grokAdapter.js";
+import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
+import { createConfiguredGrokBotsService } from "../../src/browser/configuredGrokDiscovery.js";
 import { GrokService } from "../../src/browser/llmService/providers/grokService.js";
+import {
+	checkGrokBrowserAuthPreflight,
+	connectToGrokTab,
+} from "../../src/browser/providers/grokAdapter.js";
+import { BrowserService } from "../../src/browser/service/browserService.js";
 import type { ChromeClient } from "../../src/browser/types.js";
+import { connectorDomFixture, ConnectorFixtureNode as N } from "./grok404ConnectorDomFixture.js";
+
 const transport = vi.hoisted(() => ({
 	list: vi.fn(),
 	connect: vi.fn(),
@@ -191,6 +192,43 @@ test("a changed endpoint cannot borrow the previous browser process provenance",
 			ok: false,
 			reason: "provider_session_provenance_missing",
 		});
+	} finally {
+		await connection.client.close();
+	}
+});
+
+test.each([
+	"retain-new",
+	"dispose-new",
+] as const)("%s creates a distinct governed root target without touching an existing draft or dialog", async (tabLifecycle) => {
+	const f = await fixture();
+	// The retained root may hold an unsent draft or provider dialog. Merely
+	// matching its URL must never make it the new operation's composer.
+	transport.open.mockResolvedValue({ id: "fresh-root", type: "page", url: "about:blank" });
+	const options = await GrokService.create(f.config).buildListOptions(
+		{ tabLifecycle, configuredUrl: "https://grok.com/" },
+		{ ensurePort: false },
+	);
+	const connection = await connectToGrokTab(options);
+	try {
+		expect(connection).toMatchObject({ targetId: "fresh-root", usedExisting: false });
+		expect(transport.open).toHaveBeenCalledExactlyOnceWith(
+			45040,
+			"about:blank",
+			"127.0.0.1",
+			undefined,
+			expect.objectContaining({ kind: "pre-lease-target-acquisition" }),
+		);
+		expect(transport.connect).toHaveBeenCalledExactlyOnceWith({
+			host: "127.0.0.1",
+			port: 45040,
+			target: "fresh-root",
+		});
+		expect(transport.navigate).toHaveBeenCalledExactlyOnceWith(connection.client, {
+			url: "https://grok.com/",
+		});
+		expect(options.providerSessionAuthorization?.context.browserTargetId).toBe("fresh-root");
+		expect(transport.close).not.toHaveBeenCalled();
 	} finally {
 		await connection.client.close();
 	}
