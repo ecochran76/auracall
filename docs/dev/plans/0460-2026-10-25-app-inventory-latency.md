@@ -1,7 +1,7 @@
 # Plan0460 — App inventory latency
 
 State: OPEN
-Branch: fix/issue464-app-inventory-latency
+Branch: fix/issue464-ledger-admission-cost
 Target: main
 Work item: ecochran76/auracall#464
 Base: 97b49ced127f6a48c72487c4df0514e6e6651538
@@ -97,3 +97,45 @@ replay ledger processing off-provider with a representative history, count
 reads/commits, and preserve expiration, cross-process ordering and full history.
 A change requires its own red/green evidence and controlled timing; do not treat
 this profile as permission to prune history or to omit durable state effects.
+
+## Ledger admission packet — 2026-10-25
+
+Current packet base: ca3d632588f046616d521cd502e234b68b3aed69.
+The first candidate replay targeted usage summaries and demonstrated unnecessary
+writes, but call-site qualification found no production inventory caller. Its
+candidate patch was set aside privately and is not part of the repair. Earlier
+summary-specific tests/timings are not inventory acceptance evidence.
+
+The real owned backend-request authority calls ledger reserve/start/settle. An
+isolated replay of that public sequence against copied history measured10.884s
+and9.957s with zero provider calls. Compact JSON alone measured8.919s and7.956s;
+serializing the lock-owned records/warnings/events directly to an immutable
+string, without cloning history again just for encoding, measured5.202s and4.581s.
+Host timing varies: a later unchanged-source replay measured7.125s and6.439s,
+so an8s absolute timing gate was rejected as unreliable. These are samples, not
+a controlled end-to-end speedup claim or a product latency SLO.
+
+The deterministic regression extends the real backend-burst fixture: retain the
+account ceiling and one durable commit, while bounding encoding overhead to10%
+above the same semantic JSON contents. Against unchanged main, the test fails:
+12151bytes exceeds10066.1; body70ms. The candidate stores the same complete schema1
+snapshot compactly. A legacy-indented snapshot test also preserves all prior
+records, warnings and event prefixes across restart and a cross-instance race.
+
+Ranked predictions tested one variable at a time: pretty encoding adds avoidable
+bytes; clone-before-encode adds avoidable allocation; durable I/O remains a
+possible residual cost. Current repair retains full history, JSON schema1,
+ordering, file lock, fsync, atomic rename and publish-after-commit semantics.
+No caching, admission bypass or dropping expiry/warning/unknown-effect evidence.
+The immutable string is produced synchronously while the file lock is held;
+mutable internal references do not escape the serialization method.
+
+Pending: final source checks/review, integration, installed artifact qualification
+and one serialized native inventory read. Successful inventory latency remains
+OPEN until those outcomes are qualified. CI remains excluded.
+
+Source checkpoint:125checks across ledger, traffic governor and backend admission
+pass, along with typecheck/build and scoped test lint. Primary frozen-patch review
+against ca3d63258: Standards has no blocking findings; Spec qualifies encoding
+cost reduction and full-history/durability preservation, with installed native
+latency still pending. No summary-only candidate code remains in the patch.

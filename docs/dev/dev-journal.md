@@ -56486,3 +56486,15 @@ Version/help pass, API PID4185922 and MCP wrapper unchanged, browser PID2122493
 survives. Plan0460/issue464 remain OPEN for successful-read latency; next bounded
 measurement is provider-free representative-ledger replay with durable effects
 preserved. Deployment and raw runtime evidence remain in private user state.
+
+## 2026-10-25 — Issue464 actual ledger admission replay
+
+Continued Plan0460 through real reserve/start/settle after rejecting a usage-summary
+candidate with no production inventory caller. Copied-history native admission
+sequence measured10.884s/9.957s; compact encoding8.919s/7.956s; encoding locked state
+directly without a second history clone5.202s/4.581s. Timing varies with host load;
+an8s absolute gate was rejected. Real backend-burst regression deterministically
+fails old source on encoding overhead (12151bytes vs10066.1budget) in70ms. Candidate
+retains full schema1/history and lock/fsync/atomic publication; legacy snapshot
+and cross-instance preservation checks added. Final validation and installed
+native outcome remain pending; no provider call was made for these replays.

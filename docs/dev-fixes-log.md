@@ -26114,3 +26114,15 @@ exclusions and existing capacity/deadline rules. Real-adapter red/green fixtures
 and exact live DOM comparison qualify prompt failure detection; they do not
 prove faster successful inventory. Issue464/Plan0460 retains the separate latency
 investigation and measured ledger-processing lead.
+
+## 2026-10-25 — Reduce ledger admission encoding work
+
+An inventory CPU sample led to real reserve/start/settle replay, which exposed
+full-history cloning followed by indented JSON encoding on every commit. Encode
+lock-owned state directly to an immutable compact JSON string; preserve every
+record, warning and event, schema1, fsync and atomic publication. Backend-burst
+regression bounds bytes as well as durable-write count, and legacy snapshot /
+cross-instance tests retain prior history. Timing samples support reduced local
+work; host variation prevents an absolute timing assertion. Usage-summary-only
+optimization was rejected because it did not reach the production inventory path.
+Native successful-inventory qualification remains separate in Plan0460/issue464.

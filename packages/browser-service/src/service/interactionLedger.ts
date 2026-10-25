@@ -306,12 +306,15 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     this.events.push(...snapshot.events.map(cloneEvent));
   }
 
-  snapshot(): ProviderInteractionLedgerSnapshot {
-    return {
-      records: [...this.records.values()].map(cloneRecord),
-      warnings: [...this.warnings.values()].map(cloneWarning),
-      events: this.events.map(cloneEvent),
-    };
+  // Serialize synchronously while the file store owns its lock. Only the immutable
+  // string escapes; avoid cloning the entire history solely to encode it again.
+  serializeForPersistence(): string {
+    return JSON.stringify({
+      schemaVersion: 1,
+      records: [...this.records.values()],
+      warnings: [...this.warnings.values()],
+      events: this.events,
+    });
   }
 
   async reserve(input: ReserveProviderInteractionInput): Promise<ProviderInteractionAdmission> {
@@ -1084,7 +1087,7 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
           const ledger = await this.loadLedger();
           const values: unknown[] = [];
           for (const request of batch) values.push(await request.operation(ledger));
-          if (batch.some(request => request.persist)) await this.persist(ledger.snapshot());
+          if (batch.some(request => request.persist)) await this.persist(ledger.serializeForPersistence());
           return values;
         });
         batch.forEach((request, index) => { request.resolve(results[index]); });
@@ -1128,11 +1131,11 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
     );
   }
 
-  private async persist(snapshot: ProviderInteractionLedgerSnapshot): Promise<void> {
+  private async persist(serialized: string): Promise<void> {
     const tempPath = `${this.statePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
     const handle = await fs.open(tempPath, 'wx', 0o600);
     try {
-      await handle.writeFile(`${JSON.stringify({ schemaVersion: 1, ...snapshot }, null, 2)}\n`, 'utf8');
+      await handle.writeFile(`${serialized}\n`, 'utf8');
       await handle.sync();
     } finally {
       await handle.close();
