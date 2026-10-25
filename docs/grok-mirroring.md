@@ -17,7 +17,9 @@ failure, rather than permission to serve cached success.
 
 Visible Chats does not establish a global newest-first change feed. Reaching a
 known head fingerprint qualifies only the observed window; older changes outside
-it remain unobserved and require an explicit `full_sweep`. Follow reports this
+it remain unobserved and require an explicit `full_sweep`. All qualified rows
+already present in that observed page are considered, including changes after
+an unchanged row. A row-limit continuation preserves unfinished observed work. Follow reports this
 partial coverage rather than claiming the entire archive is unchanged. Explicit
 full sweeps use their own resumable bounded work and retain prior rows. Fresh
 cursor-null observations reset the owned history scroll surface to its head;

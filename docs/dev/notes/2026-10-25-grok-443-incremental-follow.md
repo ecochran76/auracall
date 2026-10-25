@@ -8,7 +8,9 @@ Source base: `0b8eda9af`; branch: `feat/grok-repair-443-20261025`.
 
 Completed backfill scope state survives steady-follow cycles. Follow reads a
 fresh bounded head window, using stable ID/title/project/update-time fingerprints
-from previously retained provider rows. It stops at the first unchanged row;
+from previously retained provider rows. After the post-closure repair, it processes every available row in the bounded
+observed page, skipping unchanged rows while retaining later changes. A fully
+processed page containing an unchanged row ends the head observation;
 `incremental-frontier` remains **incomplete**, with no continuation cursor. No
 provider-wide ordering is inferred from row order, timestamps, mounted rows or a
 fixture. A changed row behind that observed boundary is unobserved until an
@@ -55,7 +57,8 @@ each cycle. A failed fresh observation throws instead of returning cached succes
 
 `tests/browser/grok443HeadFrontier.test.ts` exercises the real public history
 service, auth/history DOM expressions and governed head reset through controlled
-CDP. It proves the new row is returned, the unchanged frontier stops traversal,
+CDP. It proves the new row is returned, the observed page containing the unchanged frontier bounds traversal without
+dropping later rows in that page,
 partial coverage remains explicit, and target cleanup occurs. This fixture is
 provider-free; it is not native UI or provider-ordering acceptance.
 
