@@ -156,7 +156,10 @@ export interface ChatgptDeveloperAppState {
 }
 
 export interface ChatgptDeveloperAppAdapter {
-	readState(options?: { includeDeveloperMode?: boolean }): Promise<ChatgptDeveloperAppState>;
+	readState(options?: {
+		includeDeveloperMode?: boolean;
+		inventoryTransport?: "api" | "ui";
+	}): Promise<ChatgptDeveloperAppState>;
 	create(input: ChatgptDeveloperAppCreateInput): Promise<ChatgptDeveloperAppMutationOutcome>;
 	refreshTools(
 		app: ChatgptDeveloperApp,
@@ -279,7 +282,7 @@ export async function executeChatgptDeveloperAppOperation(
 		adapter,
 		await adapter.readState(
 			input.action === "list" || input.action === "refresh-tools"
-				? { includeDeveloperMode: false }
+				? { includeDeveloperMode: false, inventoryTransport: "api" }
 				: undefined,
 		),
 	);

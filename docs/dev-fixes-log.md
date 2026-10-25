@@ -26138,3 +26138,15 @@ reporting that effect as failed. Encode the append-only event prefix once per
 loaded state, retaining full history in every legacy-compatible snapshot.
 127 focused checks and typecheck/build pass; private replay reaches2.5–2.9s.
 This is not yet a claim that native inventory latency is resolved (Plan0460).
+
+## 2026-10-25 — Avoid full-site navigation for app list
+
+A controlled utility-tab trace exposed155backend requests to observe an installed
+endpoint and absent optional linked metadata, colliding with the configured
+30/minute cap. After identity/bootstrap, CLI list now reads installed/linked JSON
+through its existing governed browser session, with fresh account/workspace/org
+continuity, no extra inventory navigation and no credential data in the result.
+Generic UI retry is not account authority for this API read; actual session/API
+errors, provider limits and human verification retain their stops. UI mutation
+preflights remain unchanged. Source-native result is39.866s/34apps, preserving all
+26prior entries and adding8linked entries. Installed proof is tracked in Plan0460.
