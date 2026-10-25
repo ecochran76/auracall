@@ -18,6 +18,29 @@ When targeting managed Aura-Call sessions through that wrapper, prefer
 same AuraCall runtime profile and managed browser profile that the real product
 path would use.
 
+## Desktop transition crash recovery
+
+Desktop input ownership uses a short coordination transition before reading or
+changing the retained human/automation record. New transitions atomically link
+a fully written private identity file into the `.transition` path; that identity
+contains a generation UUID, PID and Linux boot ID. Normal release compares file
+identity before unlinking. Hard-link support is required; failure does not fall
+back to an unqualified lock.
+
+On Linux, a contender may recover a transition only when its boot ID matches
+and its PID is absent from `/proc`. A retained `.transition.retired-<generation>`
+hard link elects one reclaimer; inode comparison fences successor transitions.
+Keep these links: deleting an election fence while another contender can resume
+could let it unlink a successor. A recovery process dying after claiming but
+before unlinking is ambiguous and remains blocked for explicit recovery.
+
+Legacy empty directories, malformed identities, live PIDs, foreign boots and
+already-claimed recoveries are preserved. Do not remove them based on age.
+Qualify exact process/generation state and all possible contenders before an
+explicit recovery; do not clear an entire coordination directory. Human desktop
+claims, control tokens and binding checks remain independent and authoritative.
+Other platforms retain normal locking but do not infer process-death recovery.
+
 ## Agent-browser hidden RDP ownership lane
 
 When remote-view opening reports `converging`, AuraCall resolves that exact

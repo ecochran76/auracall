@@ -1,3 +1,13 @@
+## 2026-10-24 — Desktop transition crash diagnosis
+
+Plan0455 / issue437: real child-process death inside a transition reproduces
+coordination busy; desktop owner data is unnecessary. Removing only the empty
+transition restores acquisition and normal release passes. Atomic transition
+identity and generation-fenced dead-owner recovery now pass22 focused checks
+and a full build. Review rejects malformed generation IDs via a separate red/
+green case. Human claims, live owners and delayed contenders remain protected.
+No live locks/browsers, deployment or CI changes; legacy ambiguity is preserved.
+
 ## 2026-10-25 — Grok native account proof restored
 
 Plan0453: actual target binding, bounded structured Flight identity projection and

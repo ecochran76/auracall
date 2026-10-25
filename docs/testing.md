@@ -1,3 +1,10 @@
+- Desktop transition crash recovery (provider-free, issue437):
+  `pnpm vitest run tests/browser/desktopTransitionRecovery.test.ts tests/browser/desktopControlGate.test.ts tests/browser/nativeDesktopCdp.test.ts tests/browser/desktopCdpTransport.test.ts --maxWorkers=1`.
+  Real child-process death covers acquisition/release; live-owner, human-token,
+  delayed-contender, foreign-boot, malformed and claimed-recovery controls retain
+  custody. Linux-only crash recovery cases are skipped on other platforms;
+  ordinary gate behavior remains covered separately. No live lock is removed.
+
 - Grok account operation governance (#399, provider-free):
   `pnpm vitest run tests/browser/grokTrafficGovernance.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser-service/ledgerInteractionGovernor.test.ts tests/browser/grokAdapter.test.ts tests/browser/chatgptProofSession.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers=2`.
   Actual GrokService reads, configured authority, isolated durable stores and

@@ -1,3 +1,13 @@
+## 2026-10-24 — Attribute desktop transitions before publication
+
+An empty transition directory stranded by process death blocks acquisition
+before dead desktop-owner recovery can run. Atomically link a complete identity
+instead. Reclaim only proven-dead same-boot Linux owners, elect one reclaimer
+per generation and compare inode identity before unlinking. Retain election
+links to fence paused contenders. Ambiguous/legacy records and human claims
+remain protected. Real child-process crash, live-owner, human-release and paused
+contender fixtures cover the public gate; no live lock cleanup is implied.
+
 ## 2026-10-25 — Bind Grok transport and project stable identity
 
 Bind the attached target and actual DevTools endpoint into provider-session

@@ -1,6 +1,22 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: P455
+    objective: Recover attributable dead desktop transitions safely
+    work_items: [ecochran76/auracall#437]
+    plan: docs/dev/plans/0455-2026-10-24-desktop-transition-recovery.md
+    plan_ref: refs/heads/fix/desktop-transition-recovery
+    branch: fix/desktop-transition-recovery
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: dabde7cafe3ae9b0c64757b9a0f27c3e96a56a10
+    remote_ref: refs/remotes/origin/fix/desktop-transition-recovery
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: focused-22-typecheck-build-lint-docs-green
+    updated_at: 2026-10-24
   - id: Plan0454
     objective: Preserve bounded sanitized app cleanup failure causes
     work_items: [Plan0454]
