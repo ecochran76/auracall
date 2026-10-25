@@ -5918,7 +5918,11 @@ export async function connectToGrokTab(
   }
   const resolvedPort = port;
   const targets = await CDP.List({ host, port: resolvedPort });
-  const candidates = targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
+  // New-operation lifecycles cannot inherit an existing composer's draft,
+  // dialog or attachments merely because its URL matches the root route.
+  const forceNewTarget = !options?.tabTargetId && options?.preserveActiveTab !== true &&
+    (options?.tabLifecycle === 'retain-new' || options?.tabLifecycle === 'dispose-new');
+  const candidates = forceNewTarget ? [] : targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
   const requestedTargetId = resolveGrokTargetId(options?.tabTargetId);
   if (requestedTargetId) {
     const requestedTarget = candidates.find((target) => resolveGrokTargetId(target) === requestedTargetId);
@@ -5942,7 +5946,8 @@ export async function connectToGrokTab(
   if (!targetInfo && preferredUrl && !hasProviderBackendRequestAdmission(options)) {
     const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
       host,
-      reusePolicy: 'same-origin',
+      reusePolicy: forceNewTarget ? 'new' : 'same-origin',
+      cleanupExistingTargets: !forceNewTarget,
       matchingTabLimit: tabPolicy.serviceTabLimit,
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
@@ -5973,7 +5978,8 @@ export async function connectToGrokTab(
     const fallbackUrl = preferredUrl ?? GROK_HOME_URL;
     const opened = await openOrReuseChromeTarget(resolvedPort, fallbackUrl, {
       host,
-      reusePolicy: 'same-origin',
+      reusePolicy: forceNewTarget ? 'new' : 'same-origin',
+      cleanupExistingTargets: !forceNewTarget,
       matchingTabLimit: tabPolicy.serviceTabLimit,
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,

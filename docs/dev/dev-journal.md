@@ -1,3 +1,13 @@
+## 2026-10-25 — Grok fresh-operation target isolation (#403)
+
+Native preparation found `retain-new` could reuse an existing root tab containing
+an unsent draft or Connector dialog. The adapter now excludes existing targets
+for new-operation lifecycles and provisions a blank target through its existing
+owned acquisition and governed navigation path. Exact target overrides retain
+precedence. Two focused regressions failed on the old attachment and passed
+after the fix; the selected session/file suites pass19tests. Native uploads and
+source-to-provider-file binding remain separate open acceptance gates.
+
 ## 2026-10-25 — Resume eight-ticket native frontier
 
 User assigned one primary405 and one worker each403/408/410, with descendants

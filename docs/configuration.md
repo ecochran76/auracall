@@ -1294,6 +1294,10 @@ Bot provenance stays distinct. Ops stores only count/reason/continuation presenc
 Account-mirror checkpoint and foreground-yield behavior is documented in
 [Grok index mirroring](grok-mirroring.md).
 
+Grok browser operations requesting a new tab (`retain-new` or `dispose-new`)
+create a distinct target rather than reusing a root tab that may contain an
+unsent draft, attachments or a dialog. An explicit target override remains exact.
+
 Grok composer files are available through `auracall grok-files --action context`,
 `--action recent`, `--action select --id <observed-id>`, MCP `grok_files`, and
 operator-authorized POST `/v1/grok/files/query`. Bodies use `action`, optional

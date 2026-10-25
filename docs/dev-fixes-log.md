@@ -8,6 +8,14 @@ Keep known no-effect preparation refusals distinct from uncertain effects. One
 explicit confirmed continuation of an exactly recorded endpoint-observation
 refusal uses an exclusive persistent claim; unknown outcomes never reopen Add.
 
+## 2026-10-25 — Honor Grok fresh-operation target lifecycles
+
+A matching root URL does not prove an empty composer. Honor `retain-new` and
+`dispose-new` during actual adapter target selection, not only while resolving
+configured options. Use owned blank-target acquisition before governed root
+navigation, preserve retained tabs, and keep explicit target overrides binding.
+Fixture success does not establish native upload-byte or Build artifact identity.
+
 ## 2026-10-25 — Qualify generation and timestamp evidence before reuse
 
 Compare the saved browser endpoint/process fingerprint before target lookup or
