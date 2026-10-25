@@ -216,7 +216,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 
 	private async openCreateDialog(client: ChromeClient): Promise<void> {
 		this.throwIfAborted();
-		await assertNoChatgptAccountLoadError(client, this.abortSignal);
+		await assertNoChatgptInventoryLoadError(client, this.abortSignal);
 		await assertNoChatgptBlockingSurface(client, "create developer app");
 		let control = await readDeveloperAppCreateControl(client, this.abortSignal);
 		if (control?.disabled) {
@@ -231,7 +231,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			});
 			if (!reloaded.ok) throw new Error("ChatGPT Plugins recovery refresh did not settle.");
 			this.throwIfAborted();
-			await assertNoChatgptAccountLoadError(client, this.abortSignal);
+			await assertNoChatgptInventoryLoadError(client, this.abortSignal);
 			await assertNoChatgptBlockingSurface(client, "create developer app");
 			const after = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
 			this.throwIfAborted();
@@ -1157,7 +1157,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 			},
 		);
 		while (!ready) {
-			await assertNoChatgptAccountLoadError(client, signal);
+			await assertNoChatgptInventoryLoadError(client, signal);
 			let pollTimer: NodeJS.Timeout | undefined;
 			try {
 				await Promise.race([
@@ -1569,7 +1569,7 @@ async function readDeveloperAppCreateControl(
 		: null;
 }
 
-async function assertNoChatgptAccountLoadError(
+async function assertNoChatgptInventoryLoadError(
 	client: ChromeClient,
 	signal?: AbortSignal,
 ): Promise<void> {
@@ -1592,6 +1592,14 @@ async function assertNoChatgptAccountLoadError(
 		{ stage: "developer-app account readiness", timeoutMs: 10_000, abortSignal: signal },
 	);
 	const text = readString(result.result?.value) ?? "";
+	if (/\bfailed to load plugins\b/i.test(text)) {
+		throw Object.assign(
+			new Error(
+				"ChatGPT could not load the Plugins inventory. Recover the Plugins page, then retry inventory; no app was changed.",
+			),
+			{ code: "developer_app_inventory_load_error" },
+		);
+	}
 	if (
 		/\b(?:error|problem|trouble) (?:while )?loading your account\b|\b(?:unable|failed) to load your account\b/i.test(
 			text,

@@ -56460,3 +56460,21 @@ Plan0458 native checkpoint: PR459 merged at6a712f57d (55 focused tests/full type
 
 
 Plan0458 file-effect reconciliation: primary independently validated the composite and all linked raw receipt hashes: same configured account/target, exact selected native File digest to provider metadata ID/URI, actual selected Openattachment server response200, and rendered104-byte content SHA matching A. Processing remains incomplete; no Send/replay/B. A new registry reconcileEffect CAS seam records a qualified completed effect with immutable evidence reference/hash and appends prior uncertainty, without closing/releasing/acquiring the target. Generic acquire/release guards remain.26 registry tests and full typecheck pass; no live CAS has occurred yet. PR460 merged at85c32aa39 with74 focused tests/typecheck for exact-target diagnostics and unknown-cleanup preservation.
+
+## 2026-10-25 — Issue464 live Apps comparison
+
+Plan0460 starts the performance follow-up to427. Five retained Apps tabs include
+three healthy and two failed panels; one shows signal timed out. Exact-tab DOM
+and screenshot inspection completed in481ms. The adapter has no per-app loop;
+it observes installed/linked responses across two navigations, but its polling
+recognizes account-load errors only. Added a candidate real-adapter regression
+for the observed main Plugins failure. Historical347.649s cause remains open.
+No app mutation, prompt, peer-tab closure, browser restart or CI work.
+
+Issue464 checkpoint: real-adapter Plugins failure regression went red, then27
+focused tests passed. The old guard missed actual failed-page DOM; patched guard
+caught it in20ms. Installed baseline separately returned complete26-app inventory
+in321.643s. A10s CPU sample during inventory measured roughly25percent ledger
+load/persist,16percent GC and34percent idle. This qualifies a performance lead,
+not the whole delay. Typecheck/build and test lint pass; the successful-read
+latency remains open. Only the owned CLI process was sampled; no browser restart.

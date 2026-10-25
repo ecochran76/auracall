@@ -26103,3 +26103,14 @@ read-only reconciliation. Do not convert a rejected final DOM guard into a
 positive dispatched-effect claim, or let diagnostic persistence erase an unknown
 outcome. Public CLI/API/MCP fixtures cover the production path; saved provider
 identity, granted scopes and native built-in behavior remain separate open gates.
+
+## 2026-10-25 — Stop inventory after visible Plugins load failure
+
+Live Apps inspection found a main panel saying Failed to load plugins / signal
+timed out while the adapter waited for successful response capture. The existing
+probe only recognized account-load wording. Recognize visible main Plugins
+failure as developer_app_inventory_load_error, preserving hidden/sidebar-only
+exclusions and existing capacity/deadline rules. Real-adapter red/green fixtures
+and exact live DOM comparison qualify prompt failure detection; they do not
+prove faster successful inventory. Issue464/Plan0460 retains the separate latency
+investigation and measured ledger-processing lead.
