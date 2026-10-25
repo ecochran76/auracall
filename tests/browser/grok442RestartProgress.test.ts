@@ -705,3 +705,37 @@ test("442: CLI, API, MCP and Ops preserve explicit restart-required continuation
 		await rm(home, { recursive: true, force: true });
 	}
 });
+
+test("442: unconfirmed owned target retirement fences foreground and other query admission", async () => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "grok-442-target-close-"));
+	setAuracallHomeDirOverrideForTest(home);
+	try {
+		const fixture = ownedHistoryFixture(
+			["a", "b", "c", "d", "e", "f"].map((id) => ({ id, title: `Chat ${id}` })),
+		);
+		const first = await createGrokConversationsService(fixture.options, fixture.dependencies).list({
+			maxPages: 2,
+		});
+		fixture.dependencies.continuationTransport.close = async () => {
+			throw new Error("controlled unconfirmed owned target close");
+		};
+		const failed = await createGrokConversationsService(fixture.options, fixture.dependencies).list(
+			{ maxPages: 2, cursor: first.coverage.nextCursor ?? undefined },
+		);
+		expect(failed).toMatchObject({
+			items: [],
+			coverage: { state: "failed", reason: "history-cleanup-unconfirmed", nextCursor: null },
+		});
+		await expect(
+			fixture.factory.acquire({ targetId: "foreground-after-unconfirmed-close" }),
+		).rejects.toThrow("workload-owned");
+		const other = await createGrokConversationsService(fixture.options, fixture.dependencies).list({
+			since: "2025-01-01",
+			maxPages: 1,
+		});
+		expect(other).toMatchObject({ items: [], coverage: { state: "failed", nextCursor: null } });
+	} finally {
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
