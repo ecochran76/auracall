@@ -146,3 +146,23 @@ Private raw/source/helper-hash receipts are under the user-scoped
 A subsequent identity probe was refused by a live shared interaction-ledger lock
 held by an unrelated ChatGPT app-list process. No lock was removed and no Build
 Send occurred. Native generation/app/version/export acceptance remains pending.
+
+
+## Plan0458 native continuation — modal model-picker ordering
+
+After the unrelated lock owner exited naturally, a fresh public identity probe
+matched and the patched public source CLI acquired a genuinely new target. Build
+was available, but generation was refused with `grok_build_empty_root_required`;
+no prompt or Send occurred. Exact-target readback confirmed the root editor's
+actual ProseMirror/combobox surface and the open Radix model menu. The menu marks
+its background editor `aria-hidden`, so checking that editor between menu
+discovery and selection incorrectly classified a clean root as unavailable.
+
+A controlled-CDP fixture now models the observed modal hiding. Before the fix,
+its public service result reproduced the same unavailable/no-Send failure.
+Generation checks the root before disclosure, selects observed Build, verifies
+that selection using the existing model verifier (which closes the menu), and
+checks the root again before inserting text. Separate draft/native-FileList races
+during selection remain unavailable and preserve the incoming state without Send.
+The fixture models observed structural semantics; raw provider HTML and account
+proofs remain private. No app/version/export schema has been inferred from it.

@@ -100,6 +100,9 @@ function buildFixture({
 	closeFailure = false,
 	drift = false,
 	noAdmission = false,
+	modalMenu = false,
+	draftAfterSelection = false,
+	fileAfterSelection = false,
 } = {}) {
 	const fast = new Button("Fast", { role: "menuitemradio", "aria-checked": "true" });
 	const build = new Button(gated ? "Build Requires subscription" : "Build", {
@@ -112,13 +115,33 @@ function buildFixture({
 	editor.value = draft;
 	const submit = new Button("Submit", { type: "submit", "aria-label": "Submit" });
 	const form = new Node("form", "", {}, [editor, submit]);
-	const main = new Node("main", "", {}, [form]);
+	const trigger = new Button("Fast", { id: "model-select-trigger", "aria-label": "Model: Fast" });
+	const main = new Node("main", "", {}, [form, ...(modalMenu ? [trigger] : [])]);
+	const closeMenu = () => {
+		if (!modalMenu) return;
+		menu.hidden = fast.hidden = build.hidden = true;
+		delete main.attributes["aria-hidden"];
+	};
+	trigger.onClick = () => {
+		menu.hidden = fast.hidden = build.hidden = false;
+		main.setAttribute("aria-hidden", "true");
+	};
+	closeMenu();
 	const document = Object.assign(new Node("document", "", {}, [main, menu]), { body: main });
 	const location = { href: "https://grok.com/" };
 	let submissions = 0;
 	build.onClick = () => {
 		fast.setAttribute("aria-checked", "false");
 		build.setAttribute("aria-checked", "true");
+		if (draftAfterSelection) editor.value = "A draft arrived while selecting Build";
+		if (fileAfterSelection) {
+			const input = Object.assign(new Node("input", "", { type: "file" }), {
+				files: [{ name: "arrived.txt" }],
+			});
+			input.parentElement = form;
+			form.children.push(input);
+		}
+		closeMenu();
 	};
 	submit.onClick = () => {
 		submissions++;
@@ -161,7 +184,9 @@ function buildFixture({
 			insertText: async ({ text }: { text: string }) => {
 				editor.value = text;
 			},
-			dispatchKeyEvent: async () => {},
+			dispatchKeyEvent: async ({ key }: { key: string }) => {
+				if (key === "Escape") closeMenu();
+			},
 		},
 		close: async () => {
 			if (closeFailure) throw new Error("cleanup private details");
@@ -457,4 +482,32 @@ test("generation clears inherited target affinity before fresh root acquisition"
 	});
 	expect(acquisition?.tabTargetId).toBeUndefined();
 	expect(acquisition?.tabUrl).toBeUndefined();
+});
+
+test("generation checks the root outside the observed modal model menu", async () => {
+	const fixture = buildFixture({ modalMenu: true });
+	expect(
+		await fixture.service.generate({ prompt: "Make a local timer", confirmed: true }),
+	).toMatchObject({ status: "partial", generation: { status: "response_completed" } });
+	expect(fixture.submissions()).toBe(1);
+});
+
+test.each([
+	"draft",
+	"file",
+])("a %s arriving during Build selection is preserved without Send", async (kind) => {
+	const fixture = buildFixture({
+		modalMenu: true,
+		draftAfterSelection: kind === "draft",
+		fileAfterSelection: kind === "file",
+	});
+	expect(
+		await fixture.service.generate({ prompt: "Make a local timer", confirmed: true }),
+	).toMatchObject({
+		status: "unavailable",
+		code: "grok_build_empty_root_required",
+		effectState: "none",
+	});
+	expect(fixture.submissions()).toBe(0);
+	expect(fixture.draft()).toBe(kind === "draft" ? "A draft arrived while selecting Build" : "");
 });

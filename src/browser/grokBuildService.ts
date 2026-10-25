@@ -150,19 +150,25 @@ export function createGrokBuildService(
 			try {
 				const account = await verify(client.Runtime, options);
 				if (!account) throw new Error("grok_build_account_not_verified");
-				const entries = await runGrokUiOperation({
-					governor,
-					runtime: client.Runtime,
-					kind: "in-page-click",
-					source: "provider:grok:build-discover",
-					abortSignal: options.abortSignal,
-					effect: () => discoverGrokModels(client.Input, client.Runtime),
-				});
+				const initiallyEmptyRoot = !request || (await hasEmptyGrokBuildRoot(client.Runtime));
+				const entries = initiallyEmptyRoot
+					? await runGrokUiOperation({
+							governor,
+							runtime: client.Runtime,
+							kind: "in-page-click",
+							source: "provider:grok:build-discover",
+							abortSignal: options.abortSignal,
+							effect: () => discoverGrokModels(client.Input, client.Runtime),
+						})
+					: [];
 				const matches = entries.filter((entry) => entry.label.toLowerCase() === "build");
 				result = grokBuildUnknown();
 				result.providerAccountRef = account;
 				result.targetId = connection.targetId;
-				if (matches.length !== 1) {
+				if (!initiallyEmptyRoot) {
+					result.status = "unavailable";
+					result.code = "grok_build_empty_root_required";
+				} else if (matches.length !== 1) {
 					result.status = "unavailable";
 					result.code = "grok_build_not_observed";
 				} else if (matches[0].entitlement !== "available") {
@@ -184,13 +190,19 @@ export function createGrokBuildService(
 						effect: fn,
 					});
 				if (request && result.mode === "available") {
+					await effect("in-page-click", "select", () =>
+						selectGrokMode(client.Input, client.Runtime, "Build", () => {}),
+					);
+					if (
+						(await effect("in-page-click", "verify-selected-mode", () =>
+							verifyGrokCurrentModel(client.Input, client.Runtime),
+						)) !== "Build"
+					)
+						throw new Error("grok_build_mode_changed");
 					if (!(await hasEmptyGrokBuildRoot(client.Runtime))) {
 						result.status = "unavailable";
 						result.code = "grok_build_empty_root_required";
 					} else {
-						await effect("in-page-click", "select", () =>
-							selectGrokMode(client.Input, client.Runtime, "Build", () => {}),
-						);
 						const baseline = await readGrokAssistantSnapshotForRuntime(client.Runtime);
 						await effect("input", "prompt", () =>
 							setGrokPrompt(client.Input, client.Runtime, request.prompt),

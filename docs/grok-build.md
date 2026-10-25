@@ -12,7 +12,10 @@ auracall grok-build --action discover --runtime-profile default --json
 
 Generation requires a separate explicit confirmation and an empty root composer.
 It acquires a new retained target and clears inherited target affinity; an
-existing draft, selected files or Connector dialog remains on its original target:
+existing draft, selected files or Connector dialog remains on its original target.
+AuraCall checks the empty root before opening the modal model picker, then
+selects and verifies Build, closes that picker, and checks again before inserting
+the prompt. A draft or selected file arriving during selection prevents Send:
 
 ```sh
 auracall grok-build --action generate --runtime-profile default --yes \
