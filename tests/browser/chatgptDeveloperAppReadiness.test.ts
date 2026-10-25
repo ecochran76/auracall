@@ -19,19 +19,25 @@ vi.mock("../../src/browser/service/ui.js", () => ({
 afterEach(() => vi.useRealTimers());
 test.each([
 	{ errorDelayMs: 0, scope: "main" },
+	{ errorDelayMs: 0, scope: "plugins-main" },
+	{ errorDelayMs: 1000, scope: "plugins-main" },
+	{ errorDelayMs: 0, scope: "plugins-sidebar" },
+	{ errorDelayMs: 0, scope: "plugins-hidden" },
 	{ errorDelayMs: 1000, scope: "main" },
 	{ errorDelayMs: 0, scope: "sidebar" },
 	{ errorDelayMs: 0, scope: "hidden" },
 	{ errorDelayMs: 0, scope: "hung-probe" },
-])("inventory account failure: %j", async ({ errorDelayMs, scope }) => {
+])("inventory page failure: %j", async ({ errorDelayMs, scope }) => {
 	const started = Date.now();
 	vi.useFakeTimers();
 	let url = "https://chatgpt.com/";
 	const element = {
-		textContent: "There was an error loading your account. Try again.",
+		textContent: scope.startsWith("plugins-")
+			? "Failed to load plugins. signal timed out. Retry"
+			: "There was an error loading your account. Try again.",
 		innerText: "There was an error loading your account. Try again.",
 		getBoundingClientRect: () => ({ width: 100, height: 30 }),
-		closest: () => (scope === "sidebar" ? {} : null),
+		closest: () => (scope.endsWith("sidebar") ? {} : null),
 		getAttribute: () => null,
 	};
 	const document = {
@@ -68,7 +74,7 @@ test.each([
 										NodeFilter: { SHOW_TEXT: 4 },
 										getComputedStyle: () => ({
 											display: "block",
-											visibility: scope === "hidden" ? "hidden" : "visible",
+											visibility: scope.endsWith("hidden") ? "hidden" : "visible",
 										}),
 									}),
 					},
@@ -103,7 +109,9 @@ test.each([
 	const result = adapter.readState({ includeDeveloperMode: false }).catch((error) => error);
 	await vi.advanceTimersByTimeAsync(2000);
 	const observed = await Promise.race([result, Promise.resolve("still waiting")]);
-	if (scope === "main")
+	if (scope === "plugins-main")
+		expect(observed).toMatchObject({ code: "developer_app_inventory_load_error" });
+	else if (scope === "main")
 		expect(observed).toMatchObject({ code: "developer_app_account_load_error" });
 	else {
 		expect(observed).toBe("still waiting");

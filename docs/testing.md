@@ -1,3 +1,10 @@
+- Default app-list waiting diagnostics (provider-free, issue427):
+  `pnpm vitest run tests/cli/developerAppWaitingDiagnostics.test.ts tests/cli/developerAppTerminalExit.test.ts tests/cli/developerAppFailureDiagnostics.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/cli/chatgptDeveloperAppsGovernor.test.ts --maxWorkers=1`.
+  Real CLI action/public operation/adapter/file dispatch with a stalled SDK read
+  proves default stderr progress, verbose continuity, terminal-only JSON and
+  timer disposal using virtual time. Source fixtures do not establish provider
+  response readiness or resolve a native inventory delay.
+
 - Desktop transition crash recovery (provider-free, issue437):
   `pnpm vitest run tests/browser/desktopTransitionRecovery.test.ts tests/browser/desktopControlGate.test.ts tests/browser/nativeDesktopCdp.test.ts tests/browser/desktopCdpTransport.test.ts --maxWorkers=1`.
   Real child-process death covers acquisition/release; live-owner, human-token,
@@ -3834,3 +3841,30 @@ Incomplete provider coverage keeps the mirror pending even when rows fit within 
   before mutation, and durable ambiguous Save reconciliation without replay.
   These checks do not supply the missing native Instructions/Model controls or
   close #408's original full criteria.
+App inventory latency: `tests/browser/chatgptDeveloperAppReadiness.test.ts` drives
+the real adapter with visible Plugins failure text observed on the live page.
+Immediate and delayed main failures terminate, while hidden/sidebar-only failures
+remain nonblocking. This proves prompt failure detection, not faster successful
+inventory or attribution of the historical347.649s read (issue464/Plan0460).
+
+Ledger admission serialization (issue464): run `tests/browser-service/interactionLedger.test.ts`
+with `tests/browser-service/providerTrafficGovernor.test.ts` and
+`tests/browser/backendRequestAdmission.test.ts`. The backend-burst case bounds
+encoding overhead and durable-write count while retaining account admission.
+Legacy indented snapshots retain all records, warnings and event history across
+restart and a cross-instance race. Performance replay timings are supporting
+measurements, not default wall-clock test assertions or a product latency SLO.
+
+The ledger suite also checks warm self-owned admissions, peer replacement and
+same-size edit, file deletion, aborted mutation invalidation, metadata errors
+after successful commit and complete append-only event serialization. Reuse
+must never skip the cross-process lock or a durable publication boundary.
+
+`tests/browser/chatgptDeveloperAppDirectInventory.test.ts` exercises the real
+inventory adapter and its browser expression in a VM with HTTP fixtures. CLI list
+selects API transport explicitly; UI lifecycle observation remains the default
+for mutation preflights. Cover fresh email/workspace mismatch, unavailable
+session, HTTP/malformed inventory, optional linked failure, generic UI retry,
+provider rate limits and human verification. No extra inventory navigation or
+browser credentials may appear in returned data. Source-native and installed
+acceptance remain separate receipts.

@@ -1,6 +1,40 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: issue464
+    objective: Diagnose app inventory latency against live Apps UI
+    work_items: [ecochran76/auracall#464]
+    plan: docs/dev/plans/0460-2026-10-25-app-inventory-latency.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue464-focused-inventory-read
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 94773974003b2324d992337ea5e2107b1da11dac
+    remote_ref: refs/remotes/origin/fix/issue464-focused-inventory-read
+    integration: merge
+    integration_receipt: 42fb89512351734d36beec4e976d0fb492f72c20
+    dependencies: []
+    overlaps: []
+    validation_status: installed-native-complete-34-apps-26s
+    updated_at: 2026-10-25
+  - id: issue427
+    objective: Repair silent installed app inventory
+    work_items: [ecochran76/auracall#427]
+    plan: docs/dev/plans/0459-2026-10-25-app-inventory-silence.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue427-inventory-silence
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 0d550bea35c6ef4d19b82147bccbe21e36e7d2b7
+    remote_ref: refs/remotes/origin/fix/issue427-inventory-silence
+    integration: merge
+    integration_receipt: 7a38eb67117407a7cb80b0fc46d628dd77bb9f93
+    dependencies: []
+    overlaps: []
+    validation_status: installed-progress-qualified-source-native-30-apps
+    updated_at: 2026-10-25
   - id: P455
     objective: Recover attributable dead desktop transitions safely
     work_items: [ecochran76/auracall#437]

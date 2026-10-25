@@ -46,6 +46,7 @@ now supports exact target selection without broad page initialization; URL/focus
 fallback cannot inspect another retained composer. Source tests pass; private
 native observation proves the selected File bytes, not their provider-ID binding.
 
+
 ## 2026-10-25 — Grok fresh-operation target isolation (#403)
 
 Native preparation found `retain-new` could reuse an existing root tab containing
@@ -76,6 +77,21 @@ keepalive/kill-signal protections already address that lesson. CI and runtime
 changes excluded. See [report](notes/2026-10-25-plan0455-retrospective.md).
 Memory disposition: queued under standing capture authority; processing and
 retrieval remain separate.
+
+## 2026-10-25 — Issue427 inventory silence
+
+Plan0459: default CLI omitted the progress observer; verbose-only control and
+real CLI/operation/adapter/file-queue fixture isolate silence in under1s. Add
+30s stderr stage/elapsed/budget reports without changing capacity/deadline rules
+or terminal-only JSON.65 focused tests, typecheck/build and scoped test lint pass.
+An uninterrupted source-native command completes30-app inventory in347.649s
+with ten progress messages and exit0. Delay cause remains unqualified; no
+performance claim or live browser/fence reset. Wake registration was rejected
+for missing host permission policy; the source probe finished during validation.
+PR461 merged at7a38eb671; installed CLI bytes match source and the compiled
+action fixture passes progress/JSON/failure/timer checks. CLI wrapper activated;
+API PID4185922 and MCP wrapper unchanged. Plan0459 is CLOSED. Installed version
+and help smokes pass; source-native live acceptance remains distinct. CI skipped.
 
 ## 2026-10-25 — Plan0457 complete after one post-closure gate
 
@@ -56562,3 +56578,81 @@ observed-native source hash, no replay or Send and no unreleased utility lease.
 Primary verified composite83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca
 and linked source receipts. Worker granted only the remaining single approved B
 upload on a genuinely new empty composer; B had not dispatched at this checkpoint.
+## 2026-10-25 — Issue464 live Apps comparison
+
+Plan0460 starts the performance follow-up to427. Five retained Apps tabs include
+three healthy and two failed panels; one shows signal timed out. Exact-tab DOM
+and screenshot inspection completed in481ms. The adapter has no per-app loop;
+it observes installed/linked responses across two navigations, but its polling
+recognizes account-load errors only. Added a candidate real-adapter regression
+for the observed main Plugins failure. Historical347.649s cause remains open.
+No app mutation, prompt, peer-tab closure, browser restart or CI work.
+
+Issue464 checkpoint: real-adapter Plugins failure regression went red, then27
+focused tests passed. The old guard missed actual failed-page DOM; patched guard
+caught it in20ms. Installed baseline separately returned complete26-app inventory
+in321.643s. A10s CPU sample during inventory measured roughly25percent ledger
+load/persist,16percent GC and34percent idle. This qualifies a performance lead,
+not the whole delay. Typecheck/build and test lint pass; the successful-read
+latency remains open. Only the owned CLI process was sampled; no browser restart.
+
+PR465 merged at46e1306c2 and CLI-only activation completed. Installed adapter/bin
+bytes match source; compiled guard detects actual failed panel in16ms, while old
+guard misses it. This is direct guard/DOM proof, not a full failed transaction.
+Version/help pass, API PID4185922 and MCP wrapper unchanged, browser PID2122493
+survives. Plan0460/issue464 remain OPEN for successful-read latency; next bounded
+measurement is provider-free representative-ledger replay with durable effects
+preserved. Deployment and raw runtime evidence remain in private user state.
+
+## 2026-10-25 — Issue464 actual ledger admission replay
+
+Continued Plan0460 through real reserve/start/settle after rejecting a usage-summary
+candidate with no production inventory caller. Copied-history native admission
+sequence measured10.884s/9.957s; compact encoding8.919s/7.956s; encoding locked state
+directly without a second history clone5.202s/4.581s. Timing varies with host load;
+an8s absolute gate was rejected. Real backend-burst regression deterministically
+fails old source on encoding overhead (12151bytes vs10066.1budget) in70ms. Candidate
+retains full schema1/history and lock/fsync/atomic publication; legacy snapshot
+and cross-instance preservation checks added. Final validation and installed
+native outcome remain pending; no provider call was made for these replays.
+
+## 2026-10-25 — Issue464 native encoding result and snapshot reuse
+
+PR467/544db831f CLI activation passed hash identity and installed replay. Native
+26-app inventory still took297.628s, so it does not close464. A follow-up108ms
+real admission fixture catches three full snapshot reads across self-owned
+reserve/start/settle. Reuse now checks file identity under the existing lock,
+invalidates on peer edit/removal and failures, and treats post-commit metadata
+errors as cache misses rather than failed durable effects. Append-only event
+prefix encoding further reduces copied-history replay to2.937s/2.482s. No global
+cache or history loss; legacy schema1/lock/fsync/publication semantics remain.
+Final checks and one additional serialized installed-native read are pending.
+
+## 2026-10-25 — Issue464 whole-page churn isolated and focused read accepted
+
+Cache refinement PR468 still produced276.299s inventory. A passive trace on its
+new utility tab observed155backend requests under a30/minute cap; actual installed
+responses took about5s and optional linked-list traffic never appeared. The
+runtime recorded108capacity refusals. A22ms real-adapter regression catches two
+extra inventory navigations. CLI list now selects focused API inventory after
+owned bootstrap, fresh session email/workspace/org checks and the existing
+governed connection. Mutation preflights retain UI transport. Generic UI retry
+can defer to fresh session/HTTP authority for this read; provider limits and
+human verification still stop it. Initial guard failure was reproduced and fixed
+with a13ms regression. Source-native read succeeds in39.866s with34apps: all26
+prior entries unchanged,8linked entries added, same account. Final checks and
+installed proof remain pending; caps and provider deadlines were not changed.
+
+## 2026-10-25 — Issue464 installed acceptance complete
+
+PR469/42fb89512 focused inventory is merged and CLI-only activation is qualified
+by exact compiled bin/command/provider/ledger hashes. Installed native command
+returns complete34-app inventory in26.736s, exit0, versus321.643s/26apps initially.
+All26prior entries remain unchanged;8linked entries are added. Source/installed
+34-app metadata and account match.187focused checks, typecheck/build, scoped lint
+and docs checks pass; primary Standards/Spec review has no unresolved blockers.
+Plan0460 is CLOSED. API PID4185922/MCP wrapper and browser PID2122493/startTicks
+14652453 are preserved; CDP is HTTP200 and the native CLI exited. No provider
+capacity/deadline change, app mutation, prompt or browser restart; CI excluded.
+Runtime/trace/catalog evidence remains private. API/MCP process upgrades are not
+part of this CLI delivery. Final Graphiti capture follows qualified closeout.

@@ -16,6 +16,107 @@ const foregroundScope: ProviderInteractionScope = {
 };
 
 describe("interactionLedger (package)", () => {
+	test.each([
+		"normal",
+		"post-commit-stat-error",
+	])("sequential owned admissions reuse unchanged history: %s", async (mode) => {
+		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-ledger-owned-cache-"));
+		const read = fs.readFile.bind(fs);
+		const stat = fs.stat.bind(fs);
+		let stateStats = 0;
+		const statSpy = vi
+			.spyOn(fs, "stat")
+			.mockImplementation(async (...args: Parameters<typeof fs.stat>) => {
+				if (String(args[0]) === path.join(directory, "provider-interactions.v1.json")) {
+					stateStats++;
+					if (mode === "post-commit-stat-error" && stateStats === 2)
+						throw Object.assign(new Error("fixture stat unavailable after commit"), {
+							code: "EIO",
+						});
+				}
+				return stat(...args);
+			});
+		let snapshotReads = 0;
+		const spy = vi
+			.spyOn(fs, "readFile")
+			.mockImplementation(async (...args: Parameters<typeof fs.readFile>) => {
+				if (String(args[0]) === path.join(directory, "provider-interactions.v1.json"))
+					snapshotReads++;
+				return read(...args);
+			});
+		try {
+			const ledger = createFileBackedProviderInteractionLedger({ ledgerRoot: directory });
+			const permit = await ledger.reserve({
+				scope: foregroundScope,
+				workloadId: "fixture",
+				operationId: "request",
+				tabLeaseId: "lease",
+				interactionClass: "backend-request",
+				mutability: "read-only",
+				startsNewConversation: false,
+				backendRequestKey: `sha256:${"a".repeat(64)}`,
+				now: "2026-10-25T12:00:00Z",
+				reservationTtlMs: 30000,
+				policy: {
+					maxConcurrentChats: null,
+					maxConversationStartsPerHour: null,
+					maxConversationStartsPerDay: null,
+				},
+			});
+			if (!permit.allowed) throw new Error("Expected fixture permit");
+			await ledger.start({
+				reservationId: permit.reservation.reservationId,
+				startedAt: "2026-10-25T12:00:00Z",
+			});
+			await ledger.settle({
+				reservationId: permit.reservation.reservationId,
+				settledAt: "2026-10-25T12:00:01Z",
+				effectState: "settled",
+				outcome: "succeeded",
+			});
+			expect(snapshotReads).toBe(mode === "normal" ? 1 : 2);
+			const restarted = createFileBackedProviderInteractionLedger({ ledgerRoot: directory });
+			expect(await restarted.list()).toMatchObject([{ state: "settled", outcome: "succeeded" }]);
+			const statePath = path.join(directory, "provider-interactions.v1.json");
+			const stored = JSON.parse(await read(statePath, "utf8"));
+			stored.events[0].reason = "hi"; // Same encoded length as null.
+			const edited = `${JSON.stringify(stored)}\n`;
+			const previousBytes = (await stat(statePath)).size;
+			expect(Buffer.byteLength(edited)).toBe(previousBytes);
+			await fs.writeFile(statePath, edited);
+			await fs.utimes(statePath, new Date("2000-01-01"), new Date("2000-01-01"));
+			expect((await ledger.listEvents())[0].reason).toBe("hi");
+			const passive = await ledger.observePassive({
+				scope: foregroundScope,
+				workloadId: "fixture",
+				operationId: "observed",
+				observedAt: "2026-10-25T12:00:02Z",
+			});
+			passive.reason = "caller-only edit";
+			passive.scope.tenantKey = "caller-only scope";
+			const copiedEvents = await ledger.listEvents();
+			copiedEvents[0].reason = "caller-only history edit";
+			await ledger.observePassive({
+				scope: foregroundScope,
+				workloadId: "fixture",
+				operationId: "observed-again",
+				observedAt: "2026-10-25T12:00:03Z",
+			});
+			const committed = JSON.parse(await read(statePath, "utf8"));
+			expect(committed.events.slice(0, stored.events.length)).toEqual(stored.events);
+			expect(committed.events.slice(-2)).toEqual([
+				expect.objectContaining({ type: "passive-observed", reason: null, scope: foregroundScope }),
+				expect.objectContaining({ type: "passive-observed", reason: null, scope: foregroundScope }),
+			]);
+
+			await fs.rm(statePath);
+			expect(await ledger.list()).toEqual([]);
+		} finally {
+			spy.mockRestore();
+			statSpy.mockRestore();
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
 	test("concurrent readers wait for their own slow snapshot instead of timing out on its lock", async () => {
 		const directory = await mkdtemp(path.join(os.tmpdir(), "auracall-ledger-read-burst-"));
 		let release!: () => void;
@@ -852,6 +953,12 @@ describe("interactionLedger (package)", () => {
 				"admission-rejected",
 			]);
 
+			const statePath = path.join(directory, "provider-interactions.v1.json");
+			const retained = JSON.parse(await fs.readFile(statePath, "utf8"));
+			// Existing installations contain indented snapshots. Reload one, then
+			// retain every prior record, warning and event during another commit.
+			await fs.writeFile(statePath, JSON.stringify(retained, null, 2));
+			const legacyRestart = createFileBackedProviderInteractionLedger(options);
 			const raceScope = { ...foregroundScope, tenantKey: "account-b" };
 			const racePolicy = { ...policy, maxConcurrentChats: 1 };
 			const reserveRacer = (ledger: typeof firstLedger, operationId: string) =>
@@ -869,12 +976,17 @@ describe("interactionLedger (package)", () => {
 				});
 			const raced = await Promise.all([
 				reserveRacer(restarted, "race-a"),
-				reserveRacer(afterWarningRestart, "race-b"),
+				reserveRacer(legacyRestart, "race-b"),
 			]);
 			expect(raced.filter((result) => result.allowed)).toHaveLength(1);
 			expect(raced.filter((result) => !result.allowed)).toEqual([
 				{ allowed: false, reason: "concurrent-limit" },
 			]);
+			const committed = JSON.parse(await fs.readFile(statePath, "utf8"));
+			expect(committed.schemaVersion).toBe(retained.schemaVersion);
+			expect(committed.records).toEqual(expect.arrayContaining(retained.records));
+			expect(committed.warnings).toEqual(retained.warnings);
+			expect(committed.events.slice(0, retained.events.length)).toEqual(retained.events);
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}
@@ -1072,6 +1184,14 @@ test("a backend burst shares durable writes while retaining the account ceiling"
 			await createFileBackedProviderInteractionLedger({ ledgerRoot: directory }).list(),
 		).toHaveLength(3);
 		expect(durableWrites).toBeLessThanOrEqual(1);
+		// Bound serialization overhead as well as commit count: every admitted
+		// backend request pays this full-history cost under the shared lock.
+		const stored = await fs.default.readFile(
+			path.join(directory, "provider-interactions.v1.json"),
+			"utf8",
+		);
+		const contentBytes = Buffer.byteLength(JSON.stringify(JSON.parse(stored)));
+		expect(Buffer.byteLength(stored)).toBeLessThanOrEqual(contentBytes * 1.1);
 	} finally {
 		rename.mockRestore();
 		await rm(directory, { recursive: true, force: true });
@@ -1140,6 +1260,8 @@ test.each([
 		release();
 		const settled = await outcomes;
 		if (mode === "failed") {
+			// Reusing this instance must not expose the aborted in-memory mutation.
+			expect(await ledger.list()).toHaveLength(0);
 			expect(settled).toEqual([
 				expect.objectContaining({ status: "rejected" }),
 				expect.objectContaining({ status: "rejected" }),

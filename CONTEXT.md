@@ -6,8 +6,9 @@ Developer-app inventory diagnostics retain browser resolution, utility/interacti
 admission, identity, attachment, inventory, Developer mode, navigation restoration
 and cleanup stages. Queue admission precedes the operation and has its own bound.
 The effective inventory deadline includes configured backend capacity waiting.
-A visible main-page account-load failure ends installed inventory observation with
-`developer_app_account_load_error`; sidebar/hidden text is not failure evidence.
+For UI-driven lifecycle observation, a visible main-page account-load failure ends observation with
+`developer_app_account_load_error`. A visible Plugins load failure ends the read
+with `developer_app_inventory_load_error`; sidebar/hidden text is not failure evidence.
 Plugins Add is a dropdown/combo. A disabled control permits one pre-form refresh,
 with exact account continuity and fresh readiness checks; missing identity or a
 still unavailable control stops creation. No recovery wraps form input/submission.
@@ -18,8 +19,15 @@ text, passive progress, completion, terminal deadline and later recovery evidenc
 are separate observations. A later completed answer cannot prove pre-deadline
 completion.
 
-App list reads use inventory-only observation and do not navigate Developer mode
-settings; unobserved Developer mode remains unknown. Mutation checks are separate.
+CLI app list selects authenticated API inventory after browser identity/bootstrap,
+without extra Plugins/Home or Developer mode navigation. Fresh session email,
+account/workspace and organization continuity precede two governed inventory GETs.
+Generic UI retry/load failure is not account authority for this path: fresh
+session and HTTP inventory responses decide. Visible provider limits and human
+verification still stop the read. Optional linked metadata failure remains
+unknown; malformed installed payload cannot establish complete inventory.
+Browser credentials are not returned by the evaluation. UI-driven mutation
+preflights retain their existing strict surfaces and navigation restoration.
 A failure receipt does not establish transport cleanup or authorize retries.
 
 Provider-interaction ledger observations share the same-instance operation queue
@@ -29,6 +37,9 @@ locking, complete history and warning/ownership fences remain authoritative.
 CLI stage diagnostics preserve original error identity and aggregate causes.
 App failure receipts project bounded, sanitized cause/aggregate trees without
 serializing stacks or request objects; unknown cleanup retains its refusal.
+Long app-list waits retain stage progress on stderr even without verbose mode;
+JSON stdout remains terminal-only. Reported budget is an allowance, not proof
+of capacity denial or a changed deadline.
 Identical concurrent tab-custody lists share only an unfinished observation,
 with separate caller clones; completed custody state is never cached.
 Active utility operations renew tab-owner liveness every 30 seconds through
@@ -234,3 +245,16 @@ conversation. It is distinct from an AuraCall runtime profile or execution agent
 **Grok generated app**:
 An app created through Grok Build mode. Generation, preview, artifact retrieval
 and publication are distinct outcomes; a Connector is not a generated app.
+
+Interaction-ledger durable encoding serializes the lock-owned complete state to
+an immutable compact JSON string before I/O. Internal mutable records/warnings/
+events do not escape; schema1, complete history, lock ordering, fsync and atomic
+commit publication remain authoritative. Human-readable views may format JSON
+at the read boundary rather than imposing that cost on every admission commit.
+
+A file-backed ledger may reuse its own state only after checking file identity
+under the existing cross-process lock. Peer replacement/edit/removal and failed
+operations/commits invalidate it; metadata failure after a successful commit
+only discards reuse. The append-only encoded event prefix belongs to that exact
+loaded state and is discarded when peer state is reloaded. Every snapshot still
+contains full records, warnings and events, with public reads returning copies.

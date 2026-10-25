@@ -76,6 +76,16 @@ change identity; retain qualified absolute changes and normalize legacy estimate
 once within existing bounds. Keep exclusive-group admission policy centralized
 while callers preserve conflict precedence, scope, locking and process checks.
 
+## 2026-10-25 — Preserve app inventory progress in default mode
+
+The apps CLI discarded onProgress unless verbose was enabled, hiding identity,
+inventory and queue waits throughout a capacity-extended operation budget.
+Retain the observer and emit bounded stage/elapsed/budget diagnostics on stderr
+every30seconds for long default list calls. Keep stdout terminal JSON and stop
+the timer on completion. A real CLI/operation/adapter/file-queue fixture varies
+only verbosity and proves the silence red before repair. Do not infer the
+provider delay's cause or shorten configured admission windows from this fix.
+
 ## 2026-10-25 — An unchanged row cannot hide observed Grok changes
 
 Without qualified provider ordering, process all available rows in the bounded
@@ -26154,3 +26164,49 @@ matching stable Connector ID, card key and verified account; never infer type
 from display name or absent URL. Preserve name conflicts and fail closed on
 foreign/unqualified metadata. Native Escape needs focus on the owned detail
 before the guarded key dispatch when Grok leaves a mounted background surface.
+## 2026-10-25 — Stop inventory after visible Plugins load failure
+
+Live Apps inspection found a main panel saying Failed to load plugins / signal
+timed out while the adapter waited for successful response capture. The existing
+probe only recognized account-load wording. Recognize visible main Plugins
+failure as developer_app_inventory_load_error, preserving hidden/sidebar-only
+exclusions and existing capacity/deadline rules. Real-adapter red/green fixtures
+and exact live DOM comparison qualify prompt failure detection; they do not
+prove faster successful inventory. Issue464/Plan0460 retains the separate latency
+investigation and measured ledger-processing lead.
+
+## 2026-10-25 — Reduce ledger admission encoding work
+
+An inventory CPU sample led to real reserve/start/settle replay, which exposed
+full-history cloning followed by indented JSON encoding on every commit. Encode
+lock-owned state directly to an immutable compact JSON string; preserve every
+record, warning and event, schema1, fsync and atomic publication. Backend-burst
+regression bounds bytes as well as durable-write count, and legacy snapshot /
+cross-instance tests retain prior history. Timing samples support reduced local
+work; host variation prevents an absolute timing assertion. Usage-summary-only
+optimization was rejected because it did not reach the production inventory path.
+Native successful-inventory qualification remains separate in Plan0460/issue464.
+
+## 2026-10-25 — Reuse ledger state only under verified file ownership
+
+Encoding-only mitigation still left inventory at297.628s. A real request lifecycle
+fixture demonstrated three full history reads across self-owned commits. Under
+the existing cross-process lock, reuse state only while file identity matches;
+invalidate after peer edit/removal and any aborted operation/commit. Metadata
+failure after an already successful commit discards the cache without falsely
+reporting that effect as failed. Encode the append-only event prefix once per
+loaded state, retaining full history in every legacy-compatible snapshot.
+127 focused checks and typecheck/build pass; private replay reaches2.5–2.9s.
+This is not yet a claim that native inventory latency is resolved (Plan0460).
+
+## 2026-10-25 — Avoid full-site navigation for app list
+
+A controlled utility-tab trace exposed155backend requests to observe an installed
+endpoint and absent optional linked metadata, colliding with the configured
+30/minute cap. After identity/bootstrap, CLI list now reads installed/linked JSON
+through its existing governed browser session, with fresh account/workspace/org
+continuity, no extra inventory navigation and no credential data in the result.
+Generic UI retry is not account authority for this API read; actual session/API
+errors, provider limits and human verification retain their stops. UI mutation
+preflights remain unchanged. Source-native result is39.866s/34apps, preserving all
+26prior entries and adding8linked entries. Installed proof is tracked in Plan0460.

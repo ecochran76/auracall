@@ -292,6 +292,8 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
   private readonly records = new Map<string, ProviderInteractionRecord>();
   private readonly warnings = new Map<string, ProviderWarningRecord>();
   private readonly events: ProviderInteractionEvent[] = [];
+  private encodedEventCount = 0;
+  private encodedEvents = '';
   private readonly createReservationId: () => string;
 
   constructor(
@@ -306,12 +308,18 @@ class InMemoryProviderInteractionLedger implements ProviderInteractionLedger {
     this.events.push(...snapshot.events.map(cloneEvent));
   }
 
-  snapshot(): ProviderInteractionLedgerSnapshot {
-    return {
-      records: [...this.records.values()].map(cloneRecord),
-      warnings: [...this.warnings.values()].map(cloneWarning),
-      events: this.events.map(cloneEvent),
-    };
+  // Serialize synchronously while the file store owns its lock. Only the immutable
+  // string escapes; avoid cloning the entire history solely to encode it again.
+  serializeForPersistence(): string {
+    // Events are append-only and public reads return copies. Encode the retained
+    // prefix once, then only the newly appended evidence on subsequent commits.
+    if (this.encodedEventCount !== this.events.length) {
+      const addition = this.events.slice(this.encodedEventCount)
+        .map(event => JSON.stringify(event)).join(',');
+      this.encodedEvents = this.encodedEventCount ? `${this.encodedEvents},${addition}` : addition;
+      this.encodedEventCount = this.events.length;
+    }
+    return `{"schemaVersion":1,"records":${JSON.stringify([...this.records.values()])},"warnings":${JSON.stringify([...this.warnings.values()])},"events":[${this.encodedEvents}]}`;
   }
 
   async reserve(input: ReserveProviderInteractionInput): Promise<ProviderInteractionAdmission> {
@@ -995,6 +1003,9 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
     reject: (error: unknown) => void;
   }> = [];
   private flushingOperations = false;
+  private cachedLedger: InMemoryProviderInteractionLedger | null = null;
+  private cachedIdentity: string | null = null;
+
 
   constructor(options: FileBackedProviderInteractionLedgerOptions) {
     this.ledgerRoot = path.resolve(options.ledgerRoot);
@@ -1084,11 +1095,23 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
           const ledger = await this.loadLedger();
           const values: unknown[] = [];
           for (const request of batch) values.push(await request.operation(ledger));
-          if (batch.some(request => request.persist)) await this.persist(ledger.snapshot());
+          if (batch.some(request => request.persist)) {
+            await this.persist(ledger.serializeForPersistence());
+            // The commit already succeeded. Cache bookkeeping must never turn
+            // that durable effect into a reported failure or an unsafe retry.
+            try {
+              const identity = await this.readStateIdentity();
+              this.cachedLedger = identity === null ? null : ledger;
+              this.cachedIdentity = identity;
+            } catch {
+              this.invalidateCachedLedger();
+            }
+          }
           return values;
         });
         batch.forEach((request, index) => { request.resolve(results[index]); });
       } catch (error) {
+        this.invalidateCachedLedger();
         // A failed operation or commit aborts the batch; callers received no uncommitted results.
         if (!batch.length) batch = this.pendingOperations.splice(0);
         for (const request of batch) request.reject(error);
@@ -1098,6 +1121,10 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
   }
 
   private async loadLedger(): Promise<InMemoryProviderInteractionLedger> {
+    // Called only under the cross-process lock. A peer replacement, in-place
+    // edit or removal invalidates reuse before any admission decision is made.
+    const identity = await this.readStateIdentity();
+    if (this.cachedLedger && this.cachedIdentity === identity) return this.cachedLedger;
     let snapshot: ProviderInteractionLedgerSnapshot = { records: [], warnings: [], events: [] };
     try {
       const parsed = JSON.parse(await fs.readFile(this.statePath, 'utf8')) as {
@@ -1122,17 +1149,35 @@ class FileBackedProviderInteractionLedger implements ProviderInteractionLedger {
     } catch (error) {
       if (!isNodeError(error, 'ENOENT')) throw error;
     }
-    return new InMemoryProviderInteractionLedger(
+    const ledger = new InMemoryProviderInteractionLedger(
       { createReservationId: this.createReservationId },
       snapshot,
     );
+    this.cachedLedger = ledger;
+    this.cachedIdentity = identity;
+    return ledger;
   }
 
-  private async persist(snapshot: ProviderInteractionLedgerSnapshot): Promise<void> {
+  private invalidateCachedLedger(): void {
+    this.cachedLedger = null;
+    this.cachedIdentity = null;
+  }
+
+  private async readStateIdentity(): Promise<string | null> {
+    try {
+      const stat = await fs.stat(this.statePath, { bigint: true });
+      return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+    } catch (error) {
+      if (isNodeError(error, 'ENOENT')) return null;
+      throw error;
+    }
+  }
+
+  private async persist(serialized: string): Promise<void> {
     const tempPath = `${this.statePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
     const handle = await fs.open(tempPath, 'wx', 0o600);
     try {
-      await handle.writeFile(`${JSON.stringify({ schemaVersion: 1, ...snapshot }, null, 2)}\n`, 'utf8');
+      await handle.writeFile(`${serialized}\n`, 'utf8');
       await handle.sync();
     } finally {
       await handle.close();

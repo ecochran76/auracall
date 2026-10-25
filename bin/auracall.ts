@@ -5597,6 +5597,13 @@ async function runChatgptDeveloperAppsCliAction(
   const input = buildInput(commandOptions);
   let acquired: Awaited<ReturnType<typeof dispatcher.acquireQueued>> | undefined;
   let receiptEmitted = false;
+  let waitingStage = 'queue-admission';
+  let waitingBudgetMs = 10 * 60 * 1000;
+  const waitingSince = Date.now();
+  const waitingReporter = input.action === 'list' && !commandOptions.verbose
+    ? setInterval(() => console.error(`[apps:list] waiting stage=${waitingStage} elapsedMs=${Date.now() - waitingSince} budgetMs=${waitingBudgetMs}`), 30_000)
+    : undefined;
+  waitingReporter?.unref();
   try {
     if (commandOptions.verbose) console.error(`[apps:${input.action}] stage=queue-admission timeoutMs=600000`);
     acquired = await dispatcher.acquireQueued({
@@ -5613,7 +5620,11 @@ async function runChatgptDeveloperAppsCliAction(
     }
     const result = await runChatgptDeveloperAppOperationForCli(userConfig, input, {
       browserOperationOwned: true,
-      onProgress: commandOptions.verbose ? (progress) => console.error(`[apps:${input.action}] stage=${progress.stage}${progress.timeoutMs === undefined ? '' : ` timeoutMs=${progress.timeoutMs}`}`) : undefined,
+      onProgress: (progress) => {
+        waitingStage = progress.stage;
+        if (progress.timeoutMs !== undefined) waitingBudgetMs = progress.timeoutMs;
+        if (commandOptions.verbose) console.error(`[apps:${input.action}] stage=${progress.stage}${progress.timeoutMs === undefined ? '' : ` timeoutMs=${progress.timeoutMs}`}`);
+      },
     });
     if (result.action !== 'list' && (result.status === 'failed' || (result.action === 'refresh-tools' && result.status !== 'completed'))) process.exitCode = 1;
     if (commandOptions.json) {
@@ -5630,6 +5641,7 @@ async function runChatgptDeveloperAppsCliAction(
     else console.error(diagnostic);
     receiptEmitted = true;
   } finally {
+    clearInterval(waitingReporter);
     if (acquired?.acquired) await acquired.release();
     if (receiptEmitted) await exitAfterCompletedBrowserUtilityCommand();
   }
