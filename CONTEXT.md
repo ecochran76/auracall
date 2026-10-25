@@ -244,3 +244,10 @@ an immutable compact JSON string before I/O. Internal mutable records/warnings/
 events do not escape; schema1, complete history, lock ordering, fsync and atomic
 commit publication remain authoritative. Human-readable views may format JSON
 at the read boundary rather than imposing that cost on every admission commit.
+
+A file-backed ledger may reuse its own state only after checking file identity
+under the existing cross-process lock. Peer replacement/edit/removal and failed
+operations/commits invalidate it; metadata failure after a successful commit
+only discards reuse. The append-only encoded event prefix belongs to that exact
+loaded state and is discarded when peer state is reloaded. Every snapshot still
+contains full records, warnings and events, with public reads returning copies.

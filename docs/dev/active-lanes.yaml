@@ -5,17 +5,17 @@ lanes:
     objective: Diagnose app inventory latency against live Apps UI
     work_items: [ecochran76/auracall#464]
     plan: docs/dev/plans/0460-2026-10-25-app-inventory-latency.md
-    plan_ref: refs/heads/fix/issue464-ledger-admission-cost
-    branch: fix/issue464-ledger-admission-cost
+    plan_ref: refs/heads/fix/issue464-ledger-snapshot-reuse
+    branch: fix/issue464-ledger-snapshot-reuse
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: ca3d632588f046616d521cd502e234b68b3aed69
-    remote_ref: refs/remotes/origin/fix/issue464-ledger-admission-cost
+    checkpoint: 544db831f0e16e1c71abd203d8aac74943ec598f
+    remote_ref: refs/remotes/origin/fix/issue464-ledger-snapshot-reuse
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: real-admission-bytes-red-copied-history-candidate-measured
+    validation_status: snapshot-reload-red-native-encoding-only-still-297s
     updated_at: 2026-10-25
   - id: issue427
     objective: Repair silent installed app inventory

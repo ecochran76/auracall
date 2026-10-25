@@ -1,7 +1,7 @@
 # Plan0460 — App inventory latency
 
 State: OPEN
-Branch: fix/issue464-ledger-admission-cost
+Branch: fix/issue464-ledger-snapshot-reuse
 Target: main
 Work item: ecochran76/auracall#464
 Base: 97b49ced127f6a48c72487c4df0514e6e6651538
@@ -139,3 +139,55 @@ pass, along with typecheck/build and scoped test lint. Primary frozen-patch revi
 against ca3d63258: Standards has no blocking findings; Spec qualifies encoding
 cost reduction and full-history/durability preservation, with installed native
 latency still pending. No summary-only candidate code remains in the patch.
+
+## Native result and snapshot-reuse packet
+
+PR467 merged at544db831f0e16e1c71abd203d8aac74943ec598f; installed CLI and ledger
+bytes match source. Installed replay measured5.968s/4.238s. CLI-only activation
+preserved API PID4185922 and the MCP wrapper. One native read returned complete
+26-app inventory in297.628s, exit0, with no outer timeout. Encoding mitigation
+did not resolve the slow successful read; issue464 remains OPEN. Private stage
+timestamps distinguish identity24.679s from later inventory work. Attempted
+second CPU capture raced process exit and produced no profile; do not infer a
+new CPU distribution from it.
+
+A108ms real backend-admission regression exposes three full snapshot reads for
+one reserve/start/settle sequence. Current packet base is544db831f. Ranked
+prediction: a cached lock-owned snapshot avoids unchanged rereads; peer changes
+must invalidate before admission; failed operations/commits must discard in-memory
+mutations; post-commit metadata failure must not relabel a durable effect as a
+failed operation. Every batch still acquires the existing cross-process lock.
+File identity includes device/inode/size/mtimeNs/ctimeNs, read under that lock.
+A successful local commit refreshes identity; missing/error identity discards
+reuse. Records/warnings/events and all admission/expiry computations stay intact.
+
+The private in-memory event history is append-only and public reads/observations
+return copies. Cache its encoded prefix and encode new events only; every durable
+snapshot still contains the full event history in schema1. Peer replacement
+loads a fresh ledger and prefix. Copied-history replay with snapshot reuse alone
+measured3.552s/3.144s, then2.937s/2.482s with the event-prefix optimization. Samples
+are supporting timing evidence, not a host-independent speed guarantee.
+
+Focused tests cover one load across self-owned admissions, metadata failure after
+commit, same-size in-place peer edit, file deletion, cross-instance warning/cap
+visibility, immutable public event copies, complete retained event prefixes and
+same-instance reads after failed commit. No global cache, stale-read admission,
+history pruning, schema migration, dropped fsync or API/browser restart.
+
+Because the first native outcome remained slow, one additional serialized native
+read after this packet is justified. It must use the installed hash-qualified
+artifact and original provider/capacity deadlines; no concurrent probe or CAPTCHA
+retry. Final source validation, integration and native outcome remain pending.
+
+Snapshot-reuse source validation:127checks across ledger/governor/backend
+admission pass; typecheck/build, scoped test lint, docs:list and diff checks pass.
+Primary Standards review has no blocking findings. Primary Spec review validates
+own-state reuse, peer/error invalidation, non-failing cache refresh after durable
+commit, immutable public event copies and complete history serialization.
+Native acceptance remains pending. No speculative usage-summary patch is present.
+
+Final snapshot-reuse validation is green (127checks, typecheck/build and scoped
+lint). The next native run will also passively record backend-request counts and
+endpoint timing on its newly created utility tab, without reading bodies or
+headers or issuing provider requests. This distinguishes residual request churn /
+provider waiting from local ledger work without starting another live command.

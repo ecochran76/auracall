@@ -26126,3 +26126,15 @@ cross-instance tests retain prior history. Timing samples support reduced local
 work; host variation prevents an absolute timing assertion. Usage-summary-only
 optimization was rejected because it did not reach the production inventory path.
 Native successful-inventory qualification remains separate in Plan0460/issue464.
+
+## 2026-10-25 — Reuse ledger state only under verified file ownership
+
+Encoding-only mitigation still left inventory at297.628s. A real request lifecycle
+fixture demonstrated three full history reads across self-owned commits. Under
+the existing cross-process lock, reuse state only while file identity matches;
+invalidate after peer edit/removal and any aborted operation/commit. Metadata
+failure after an already successful commit discards the cache without falsely
+reporting that effect as failed. Encode the append-only event prefix once per
+loaded state, retaining full history in every legacy-compatible snapshot.
+127 focused checks and typecheck/build pass; private replay reaches2.5–2.9s.
+This is not yet a claim that native inventory latency is resolved (Plan0460).
