@@ -946,3 +946,16 @@ launcher observed child exit, otherwise `BROWSER_CDP_NOT_READY`. Recovery action
 `inspect_browser_launch_diagnostics` requires inspecting the recorded PID, exit
 code/signal and managed directory before retrying through AuraCall. Neither error
 authorizes killing an unverified owner or deleting a retained lock.
+
+
+### Reconcile a positively observed completed utility effect
+
+A trusted provider/operator reconciler can use the registry `reconcileEffect`
+compare-and-swap transition only after validating an immutable evidence artifact
+for the exact account scope, target and unknown lease revision. Idle/lost custody
+must have no owner; live/in-flight ownership cannot be cleared. The transition
+records the artifact reference and SHA-256, appends the previous uncertainty,
+and marks the effect settled. It does not release or close the target, confer a
+new claim, establish file readiness, or authorize replay. Normal acquisition and
+`releasePreserved` still reject unreconciled unknown effects. A later preserved
+release is separate from provider acceptance and must retain the source receipt.
