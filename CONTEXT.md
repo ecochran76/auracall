@@ -29,6 +29,9 @@ locking, complete history and warning/ownership fences remain authoritative.
 CLI stage diagnostics preserve original error identity and aggregate causes.
 App failure receipts project bounded, sanitized cause/aggregate trees without
 serializing stacks or request objects; unknown cleanup retains its refusal.
+Long app-list waits retain stage progress on stderr even without verbose mode;
+JSON stdout remains terminal-only. Reported budget is an allowance, not proof
+of capacity denial or a changed deadline.
 Identical concurrent tab-custody lists share only an unfinished observation,
 with separate caller clones; completed custody state is never cached.
 Active utility operations renew tab-owner liveness every 30 seconds through

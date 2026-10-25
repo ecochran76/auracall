@@ -1,3 +1,15 @@
+## 2026-10-25 — Issue427 inventory silence
+
+Plan0459: default CLI omitted the progress observer; verbose-only control and
+real CLI/operation/adapter/file-queue fixture isolate silence in under1s. Add
+30s stderr stage/elapsed/budget reports without changing capacity/deadline rules
+or terminal-only JSON.65 focused tests, typecheck/build and scoped test lint pass.
+An uninterrupted source-native command completes30-app inventory in347.649s
+with ten progress messages and exit0. Delay cause remains unqualified; no
+performance claim or live browser/fence reset. Wake registration was rejected
+for missing host permission policy; the source probe finished during validation.
+Review/integration and installed qualification remain.
+
 ## 2026-10-25 — Resume eight-ticket native frontier
 
 User assigned one primary405 and one worker each403/408/410, with descendants

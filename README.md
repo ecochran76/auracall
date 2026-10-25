@@ -166,7 +166,11 @@ auracall --profile wsl-chrome-3 skills delete <32-hex-skill-id> \
 # Guarded ChatGPT developer-app lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 apps --target chatgpt list --json
 # The read-only list operation has a 45-second base outer deadline, extended by
-# configured backend capacity waiting. App operation failures emit bounded,
+# configured backend capacity waiting. Long list waits report the current stage,
+# elapsed time and declared budget to stderr every30seconds, including --json.
+# JSON stdout stays terminal-only. Global --verbose before apps reports each
+# stage immediately. Progress does not prove a particular cause for the wait.
+# App operation failures emit bounded,
 # sanitized diagnostics (nested Error.cause and AggregateError.errors): JSON to
 # stdout with --json, otherwise JSON to stderr; exit status remains nonzero.
 # Unknown cleanup stays unknown and non-list failures retain retrySafe=false.

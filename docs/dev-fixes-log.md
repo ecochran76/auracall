@@ -1,3 +1,13 @@
+## 2026-10-25 — Preserve app inventory progress in default mode
+
+The apps CLI discarded onProgress unless verbose was enabled, hiding identity,
+inventory and queue waits throughout a capacity-extended operation budget.
+Retain the observer and emit bounded stage/elapsed/budget diagnostics on stderr
+every30seconds for long default list calls. Keep stdout terminal JSON and stop
+the timer on completion. A real CLI/operation/adapter/file-queue fixture varies
+only verbosity and proves the silence red before repair. Do not infer the
+provider delay's cause or shorten configured admission windows from this fix.
+
 ## 2026-10-25 — Qualify generation and timestamp evidence before reuse
 
 Compare the saved browser endpoint/process fingerprint before target lookup or
