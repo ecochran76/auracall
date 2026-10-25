@@ -10,7 +10,9 @@ The CLI, HTTP and MCP registrations use the same request contract:
 auracall grok-build --action discover --runtime-profile default --json
 ```
 
-Generation requires a separate explicit confirmation and an empty root composer:
+Generation requires a separate explicit confirmation and an empty root composer.
+It acquires a new retained target and clears inherited target affinity; an
+existing draft, selected files or Connector dialog remains on its original target:
 
 ```sh
 auracall grok-build --action generate --runtime-profile default --yes \

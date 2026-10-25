@@ -108,6 +108,9 @@ export function createGrokBuildService(
 			...(request
 				? {
 						tabLifecycle: "retain-new" as const,
+						preserveActiveTab: false,
+						tabTargetId: undefined,
+						tabUrl: undefined,
 						configuredUrl: "https://grok.com/",
 						conversationId: undefined,
 						projectId: undefined,
@@ -132,7 +135,9 @@ export function createGrokBuildService(
 				(async (runtime: ChromeClient["Runtime"], input: BrowserProviderListOptions) => {
 					const { checkGrokBrowserAuthPreflight } = await import("./providers/grokAdapter.js");
 					const proof = await checkGrokBrowserAuthPreflight(runtime, input);
-					return proof.ok ? projectGrokAccountReference(proof.actualIdentity, "legacy-untagged") : null;
+					return proof.ok
+						? projectGrokAccountReference(proof.actualIdentity, "legacy-untagged")
+						: null;
 				});
 			await governor.checkWarning?.(client.Runtime);
 			const admission = await governor.begin({

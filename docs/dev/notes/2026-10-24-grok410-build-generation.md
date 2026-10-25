@@ -126,3 +126,23 @@ app/version inference occurred. Coordinator retains native authority and timing.
 
 Continuation memory disposition: forbidden; non-write receipt
 `/tmp/grok410-continuation-memory-disposition.json`, zero writes.
+
+
+## Plan0458 native continuation — fresh target affinity
+
+The first approved native attempt reached a configured-account match, then
+stopped before Send with `grok_build_preflight_failed`. An exact retained-target
+read proved the model selector was behind an existing Connector detail dialog.
+The generic Grok adapter had ignored `retain-new`; issue403 owns that repair.
+Build generation also now forces `preserveActiveTab=false` and clears inherited
+`tabTargetId`/`tabUrl`, so a configured retained target cannot defeat fresh-root
+acquisition. Existing user targets are preserved.
+
+Focused regression `generation clears inherited target affinity` first failed
+with inherited `preserveActiveTab=true`; after the source change all16 Build
+tests pass. Command: `pnpm vitest run tests/browser/grok410Build.test.ts --maxWorkers=1`.
+Private raw/source/helper-hash receipts are under the user-scoped
+`~/.auracall/private/grok/implementation-native/410-20261025` directory.
+A subsequent identity probe was refused by a live shared interaction-ledger lock
+held by an unrelated ChatGPT app-list process. No lock was removed and no Build
+Send occurred. Native generation/app/version/export acceptance remains pending.
