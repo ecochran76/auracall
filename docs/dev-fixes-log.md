@@ -26221,3 +26221,8 @@ failure, and settle that known failed effect while retaining target/journal and
 retrySafe=false. Foreign owners and uncertain transport/cleanup remain fenced.
 Causal client/service regressions failed before the correction and now pass;
 no new native installation was attempted to validate the repair.
+
+2026-10-25 — Grok Recent chooser failures retain item-dispatch attribution.
+An observation failure before the selection expression now returns optional
+`selectionDispatch: "not-dispatched"`, including cleanup failure. This does not
+settle menu effects, release unknown leases, or authorize retry.

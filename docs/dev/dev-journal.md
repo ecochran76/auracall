@@ -56726,3 +56726,8 @@ against exact source/expression hashes and the native owner ARIA chain. Supporte
 CAS settled its uncertainty and separately released the preserved lease atrev5;
 Attach/Recent menu effects/history remain, no item selection or replay authority
 is inferred. Native row metadata still awaits the corrected shared-tree probe.
+2026-10-25 — Grok403 chooser-before-selection attribution: causal public-service
+regressions cover chooser transport failure with normal and failed cleanup.
+Preserve known zero item-selection dispatch separately from unknown menu/cleanup
+effects; public unconfirmed status and target custody remain. Corrected passive
+metadata probe uses shared committed-path helper per owned host; not yet run.

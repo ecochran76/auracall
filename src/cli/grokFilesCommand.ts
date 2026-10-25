@@ -49,12 +49,13 @@ export async function runGrokFilesCommand(
 			"details" in error &&
 			(error as { details?: { effectState?: string } }).details?.effectState === "unknown";
 		const result = grokFilesFailure(unknown ? "grok_file_effect_unknown" : "grok_files_failed");
-		if (
-			unknown &&
-			error instanceof BrowserAutomationError &&
-			typeof error.details?.targetId === "string"
-		)
+		if (error instanceof BrowserAutomationError && typeof error.details?.targetId === "string")
 			result.provenance.targetId = error.details.targetId;
+		if (
+			error instanceof BrowserAutomationError &&
+			error.details?.selectionDispatch === "not-dispatched"
+		)
+			result.selectionDispatch = "not-dispatched";
 		return unknown ? { ...result, status: "unconfirmed" } : result;
 	}
 }

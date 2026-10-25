@@ -61,3 +61,12 @@ exact-ID selection coverage only. No real Send, installed-runtime adoption,
 private-file upload, deletion or publication is claimed. The primary should
 resolve any additional native Recent acceptance requirement before closing403.
 Memory disposition: forbidden — no explicit request to write memory.
+
+Recent chooser follow-up: one public selection request opened the Attach and
+Recent menus, then failed during chooser observation before reaching the item
+selection expression. Exact source-expression replay qualifies zero item dispatch;
+this is distinct from the two observed menu opener clicks. The additive public
+`selectionDispatch: "not-dispatched"` field preserves that attribution through
+cleanup errors. Overall `unconfirmed` status, retained target and unknown-effect
+fence remain intact until supported evidence reconciliation. No retry is implied.
+Native Recent row metadata and successful selection remain unqualified.
