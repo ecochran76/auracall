@@ -140,3 +140,21 @@ awaiting-human installation. The shared outcome classifier now makes incomplete
 installation actionable (`isError=true` / nonzero CLI exit) while preserving
 structured status and retained-target custody. HTTP keeps its structured body.
 Memory disposition: forbidden; no explicit user request authorizes memory writes.
+
+
+## Plan0458 native preparation repair
+
+The approved exact custom-Connector canary initially refused before Add because
+an existing endpoint could not be observed. Native inspection showed an inert
+parent Plugins dialog and an Escape-only nested detail, which the prior
+controlled fixture did not model. Cleanup now reads only its own activation
+marker from the inert parent and verifies owned Escape dismissal. It never
+activates Disconnect, Reauthenticate or tool permission controls.
+
+An explicit confirmed install can continue one recorded unsupported
+`grok_connector_install_existing_endpoint_unobserved` preparation refusal with
+`effectDispatched=false` and `retrySafe=true`. A permanent exclusive continuation
+claim fences concurrent callers and repeated attempts. All other existing
+intents remain observation-only; no journal reset/removal is provided.
+Source tests establish this behavior, including concurrent one-Add continuation;
+this does not establish OAuth/entity/catalog/grants acceptance.

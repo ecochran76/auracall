@@ -1,3 +1,13 @@
+## 2026-10-25 — Restore owned nested Connector details
+
+Grok marks the parent Plugins dialog inert while Connector details are open.
+Recover only the exact activation marker from that parent for cleanup; do not
+interact with its inert controls. Native details can omit a Close button: use
+Escape only for the proven-owned observed detail and verify disappearance.
+Keep known no-effect preparation refusals distinct from uncertain effects. One
+explicit confirmed continuation of an exactly recorded endpoint-observation
+refusal uses an exclusive persistent claim; unknown outcomes never reopen Add.
+
 ## 2026-10-25 — Qualify generation and timestamp evidence before reuse
 
 Compare the saved browser endpoint/process fingerprint before target lookup or

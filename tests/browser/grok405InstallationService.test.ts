@@ -328,3 +328,29 @@ it("keeps pending installation custody visible in Ops after a later inventory re
 		setAuracallHomeDirOverrideForTest(null);
 	}
 });
+
+it("allows one explicit confirmed continuation after a recorded unsupported no-effect preparation", async () => {
+	const f = await fixture();
+	const service = createGrokConnectorInstallationService(f.options, f.deps);
+	const original = f.f.runtime.evaluate;
+	let missingEndpoint = true;
+	f.f.runtime.evaluate = async (args) => {
+		const result = await original(args);
+		const value = result.result.value as Record<string, unknown>;
+		if (missingEndpoint && value?.state === "visible" && "endpoint" in value) value.endpoint = null;
+		return result;
+	};
+	const request = { input, expectedProviderAccountRef, confirm: true };
+	expect(await service.install(request)).toMatchObject({
+		status: "unsupported",
+		effectDispatched: false,
+		retrySafe: true,
+	});
+	expect(f.effects()).toBe(0);
+	missingEndpoint = false;
+	const outcomes = await Promise.all([service.install(request), service.install(request)]);
+	expect(outcomes.some((r) => r.effectDispatched)).toBe(true);
+	expect(f.effects()).toBe(1);
+	await service.install(request);
+	expect(f.effects()).toBe(1);
+});

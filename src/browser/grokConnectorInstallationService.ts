@@ -98,6 +98,7 @@ export function createGrokConnectorInstallationService(
 			effectDispatched: false,
 		};
 		let existing = false;
+		let explicitContinuation = false;
 		const base = (
 			status: GrokConnectorInstallationResult["status"],
 			code: string,
@@ -159,6 +160,34 @@ export function createGrokConnectorInstallationService(
 					retrySafe: false,
 				};
 		}
+		// An explicit confirmed install can continue exactly one recorded preparation
+		// refusal. Never reopen an uncertain, failed, incomplete or unjournaled effect.
+		if (
+			existing &&
+			mode === "install" &&
+			!record.effectDispatched &&
+			record.result?.status === "unsupported" &&
+			record.result.retrySafe === true &&
+			record.result.effectDispatched === false &&
+			record.result.code === "grok_connector_install_existing_endpoint_unobserved"
+		) {
+			try {
+				const claim = await fs.open(`${file}.continuation`, "wx", 0o600);
+				try {
+					await claim.writeFile(operationId);
+					await claim.sync();
+				} finally {
+					await claim.close();
+				}
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+				return {
+					...base("unconfirmed", "grok_connector_install_continuation_claimed"),
+					retrySafe: false,
+				};
+			}
+			explicitContinuation = true;
+		}
 		options.abortSignal?.throwIfAborted();
 		const connect =
 			dependencies.connect ??
@@ -188,7 +217,10 @@ export function createGrokConnectorInstallationService(
 				throw new Error("grok_connector_install_target_not_verified");
 			await governor.checkWarning?.(connection.client.Runtime);
 			const action = await governor.begin({
-				kind: mode === "install" && !existing ? "in-page-click" : "provider-read",
+				kind:
+					mode === "install" && (!existing || explicitContinuation)
+						? "in-page-click"
+						: "provider-read",
 				interactionClass: "generic",
 				source: "provider:grok:connector-installation",
 				targetId: connection.targetId,
@@ -223,7 +255,8 @@ export function createGrokConnectorInstallationService(
 					},
 				});
 				let outcome: GrokConnectorInstallationOutcome;
-				if (existing || mode === "reconcile") outcome = await client.reconcile(input);
+				if ((existing && !explicitContinuation) || mode === "reconcile")
+					outcome = await client.reconcile(input);
 				else {
 					outcome = await client.prepare(input);
 					if (mode === "install" && outcome.prepared)

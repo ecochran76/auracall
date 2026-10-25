@@ -415,8 +415,12 @@ export function createGrokConnectorClient(
             if (owners.length !== 1) return false;
             if (text(root).split(/\\n+/)[0].trim() !== ${JSON.stringify(row.name)}) return false;
             const matches = buttons(root).filter(b => /^(close|back)$/i.test(b.getAttribute('aria-label') || text(b)));
-            if (matches.length !== 1) return false;
-            matches[0].click(); return true;
+            if (matches.length === 1) { matches[0].click(); return true; }
+            if (matches.length !== 0 || root.getAttribute('data-analytics-name') !== 'connector-detail-dialog') return false;
+            // Native detail has no Close control. Dismiss only this proven-owned
+            // dialog, then verify it disappeared rather than assuming Escape worked.
+            root.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', code:'Escape', bubbles:true, cancelable:true}));
+            return new Promise(resolve => setTimeout(() => resolve(!dialogs().includes(root)), 100));
           `),
 					));
 				if (!closed)
