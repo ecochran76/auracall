@@ -56442,3 +56442,14 @@ contract to Bot visibility. Causal red/green excludes a still-mounted closed
 Settings tree and verifies saved readback actually reopens it. Unrelated field
 attributes remain active. No native #408 interaction; supported-field edit still
 awaits serialized slot and original Instructions/Model criteria remain open.
+
+### 2026-10-25 — #408 public supported-field native edit accepted
+
+Clean69e443393 public CLI made the approved one Name/Description Save on the same
+created Bot ID and returned completed. Independent account-bound Close/reopen
+reread proves saved Name/Description and preserved empty Title; target remains
+saved Settings open with no unsaved input. Failed preliminary Close-ledger flush
+is preserved and its lease was independently released/settled, not force-cleared.
+Original #408 remains open for absent separate Instructions/Model controls;
+`docs/dev/notes/2026-10-25-grok408-acceptance-decision.md` provides the concrete
+original-vs-native decision and proposed amendment, with no tracker changes.
