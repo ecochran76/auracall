@@ -15,7 +15,8 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: focused-22-typecheck-build-lint-docs-green
+    validation_status: installed-crash-recovery-http-200-process-generations-preserved
+    validation_ref: docs/dev/plans/0455-2026-10-24-desktop-transition-recovery.md
     integration_receipt: 4270f8fd3c0a4993cecff2e2f2e2abd23a61ed27
     updated_at: 2026-10-24
   - id: Plan0454
