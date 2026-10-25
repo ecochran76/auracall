@@ -1,3 +1,16 @@
+## 2026-10-25 — User-requested full Grok code review
+
+Frozen c9beb45b...dabde7caf; independent Standards/Spec reviewers, primary
+adjudication. Three P1 Spec blockers accepted: cursor-covered rows dropped by
+adapter bounding, nonempty project scopes never completing, and bounded restart
+anchor replay stalling. P2 full-rescan follow and P3 duplicated account-reference
+projection retained as nonblocking backlog. Primary provider-free reproductions
+confirm the failures. No production fixes, browser/provider actions or tracker
+mutations. Closed401/412 tracker states do not prove the affected criteria after
+this review; the whole program remains incomplete. See
+[review and reproduction evidence](notes/2026-10-25-grok-full-code-review.md).
+Memory forbidden: no explicit request to remember.
+
 ## 2026-10-25 — Grok native account proof restored
 
 Plan0453: actual target binding, bounded structured Flight identity projection and
