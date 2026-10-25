@@ -33,3 +33,21 @@ Worker413 is active from ae21c97c9 in auracall-grok-413-resume; primary owns
 integration and central records. One whole-program code-review and bounded TDD
 findings cycle remains pending full ticket completion. No review loop reset.
 Memory disposition forbidden: no explicit user memory request. No writes attempted.
+
+## Observed-content closure and remaining gates
+
+PR432 mergedfa06a1eec;413 is CLOSED after primary187-test/10-file validation,
+exact custody assertions, fresh typecheck/build and targeted lint. This joins
+412/PR430: eight children closed, eight remain, parent398 OPEN. Source custody
+is feat/grok-upgrade-integration; all worker result branches/worktrees are
+preserved and terminal. No further ready source ticket bypasses the native
+frontier:403/405/408/410 require observed binding/controls/identity/app evidence;
+406/409/411/414 retain dependencies. The expected Grok account and exact Bot
+canary authorization prompt remain pending. No native browser was launched.
+
+The whole objective remains active/incomplete. Do not close remaining tickets
+from these partial source packets, mark the goal complete, reset the renewed
+allowance, repair Wake319, enable a scheduler, or claim installed/native evidence.
+The user-requested whole-program code-review and TDD findings cycle remains
+pending ticket completion. Final memory disposition is forbidden, with machine
+non-write receipt /tmp/grok-renewed-closeout-memory-disposition.json.
