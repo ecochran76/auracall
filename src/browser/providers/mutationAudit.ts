@@ -58,7 +58,7 @@ export async function annotateClientMutationContext(
 	const targetId = resolvedTargetId?.trim() || options?.tabTargetId?.trim();
 	const authority =
 		!options?.providerTrafficGovernor && options?.providerTrafficAuthorityFactory && targetId
-			? await options.providerTrafficAuthorityFactory.acquire({ targetId })
+			? await options.providerTrafficAuthorityFactory.acquire({ targetId, borrowedLease: options.historyOwnedLease })
 			: undefined;
 	if (options?.providerTrafficRequired && !options.providerTrafficGovernor && !authority) {
 		throw new Error(

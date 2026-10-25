@@ -1,5 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and provider identity wire names are case-sensitive.
-import { createHash } from "node:crypto";
+import { projectGrokAccountReference } from "./grokAccountReference.js";
 import type { GrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
 import {
 	createGrokConnectorClient,
@@ -80,20 +80,7 @@ export function createGrokConnectorsService(
 				);
 				if (!finalIdentity.ok || finalIdentity.actualIdentity?.id !== identity.actualIdentity?.id)
 					throw new Error("grok_connector_account_not_verified");
-				const account = identity.actualIdentity;
-				const identityKey = account?.id
-					? `id:${account.id}`
-					: account?.accountId
-						? `account:${account.accountId}`
-						: account?.email
-							? `email:${account.email}`
-							: account?.handle
-								? `handle:${account.handle}`
-								: null;
-				if (identityKey)
-					result.providerAccountRef = createHash("sha256")
-						.update(`grok:${identityKey}`)
-						.digest("hex");
+				result.providerAccountRef = projectGrokAccountReference(identity.actualIdentity, "typed-v1");
 			} catch (error) {
 				await action.settle({
 					outcome: "failed",

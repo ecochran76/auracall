@@ -150,7 +150,7 @@ export async function collectGrokMirrorIndex(input: {
 		if (result.historyCoverage?.reason === "foreground-yield") state = "paused";
 		remaining -= result.items.length;
 		reads += Math.max(1, result.historyCoverage?.pages ?? 1);
-		scope.cursor = result.historyCoverage?.nextCursor ?? scope.cursor;
+		scope.cursor = result.historyCoverage ? result.historyCoverage.nextCursor : scope.cursor;
 		scope.complete =
 			result.historyCoverage?.state === "complete" || result.historyCoverage?.state === "empty";
 		// Incomplete scope must be resumed before moving to the next project.

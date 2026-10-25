@@ -11,22 +11,23 @@ import type {
 	TabLeaseClaim,
 	TabLeaseScope,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import { getCurrentTabLeaseOwnerIdentity } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
 import {
-	resolveChatgptBackendRequestsPerMinute,
+	resolveGrokBackendRequestBudgetWaitMs,
+	resolveGrokBackendRequestsPerMinute,
+	resolveGrokOperationBudgetWaitMs,
+	resolveGrokOperationsPerMinute,
+} from "../runtime/grokTrafficLimits.js";
+import {
 	resolveChatgptBackendRequestBudgetWaitMs,
+	resolveChatgptBackendRequestsPerMinute,
 	resolveChatgptInteractionsPerMinute,
 } from "../runtime/tenantExecutionLimits.js";
-import {
-	resolveGrokOperationsPerMinute,
-	resolveGrokOperationBudgetWaitMs,
-	resolveGrokBackendRequestsPerMinute,
-	resolveGrokBackendRequestBudgetWaitMs,
-} from "../runtime/grokTrafficLimits.js";
 import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
-import { probeGrokRateLimitWarning } from "./grokProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
+import { probeGrokRateLimitWarning } from "./grokProviderTraffic.js";
 import {
 	createOwnedBackendRequestAuthority,
 	validateBackendRequestLimit,
@@ -121,21 +122,56 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 		backendRequestAdmissionEnabled:
 			input.provider === "grok" ||
 			(input.provider === "chatgpt" && backendRequestLimit !== undefined),
-		async acquire({ targetId }) {
-			const operationId = `provider-traffic-${randomUUID()}`;
+		async acquire({ targetId, borrowedLease }) {
+			const operationId = borrowedLease?.claim.operationId ?? `provider-traffic-${randomUUID()}`;
 			const workloadId = `provider-client:${operationId}`;
-			const reserved = await registry.reserve({
-				scope,
-				targetId: requireValue(targetId, "target ID"),
-				workload: {
-					kind: "ephemeral",
-					operationId: input.provider === "grok" ? "grok-serialized-utility" : operationId,
-				},
-				operationId,
-				now: now().toISOString(),
-				idleTtlMs: PROVIDER_TRAFFIC_IDLE_TTL_MS,
-				absoluteTtlMs: PROVIDER_TRAFFIC_ABSOLUTE_TTL_MS,
-			});
+			if (input.provider === "grok") {
+				const legacy = (await registry.list({ scope })).find(
+					(lease) =>
+						lease.state !== "released" &&
+						!lease.exclusiveGroup &&
+						lease.workload.kind === "ephemeral" &&
+						lease.workload.operationId === "grok-serialized-utility",
+				);
+				if (legacy)
+					throw new Error("Legacy Grok utility custody must settle before new utility admission.");
+			}
+			const borrowed = borrowedLease
+				? (await registry.list({ scope, states: ["active"] })).find(
+						(lease) => lease.leaseId === borrowedLease.claim.leaseId,
+					)
+				: undefined;
+			if (
+				borrowedLease &&
+				(!borrowed ||
+					input.provider !== "grok" ||
+					borrowed.exclusiveGroup !== "grok-serialized-utility" ||
+					borrowed.targetId !== targetId ||
+					borrowed.ownerProcessId !== getCurrentTabLeaseOwnerIdentity().processId ||
+					borrowed.ownerInstanceId !== getCurrentTabLeaseOwnerIdentity().instanceId ||
+					borrowed.revision !== borrowedLease.claim.revision ||
+					borrowed.ownerOperationId !== borrowedLease.claim.operationId ||
+					Object.entries(scope).some(
+						([key, value]) => borrowedLease.scope[key as keyof TabLeaseScope] !== value,
+					))
+			)
+				throw new Error("Borrowed provider traffic lease does not match active target custody.");
+			const reserved =
+				borrowed && borrowedLease
+					? { ok: true as const, value: { lease: borrowed, claim: borrowedLease.claim } }
+					: await registry.reserve({
+							scope,
+							targetId: requireValue(targetId, "target ID"),
+							workload: {
+								kind: "ephemeral",
+								operationId: input.provider === "grok" ? "grok-serialized-utility" : operationId,
+							},
+							operationId,
+							now: now().toISOString(),
+							idleTtlMs: PROVIDER_TRAFFIC_IDLE_TTL_MS,
+							absoluteTtlMs: PROVIDER_TRAFFIC_ABSOLUTE_TTL_MS,
+							...(input.provider === "grok" ? { exclusiveGroup: "grok-serialized-utility" } : {}),
+						});
 			if (!reserved.ok) {
 				throw new Error(`Provider traffic lease reservation failed: ${reserved.conflict.kind}.`);
 			}
@@ -265,6 +301,11 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 						settlement.effectState ??
 						"settled";
 					await interactionGovernor.close({ ...settlement, effectState });
+					if (borrowedLease) {
+						if (effectState === "outcome-unknown")
+							throw new Error("Borrowed provider traffic request cleanup remains uncertain.");
+						return;
+					}
 					const used = await registry.recordMeaningfulUse({
 						claim,
 						now: now().toISOString(),

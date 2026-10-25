@@ -1,3 +1,13 @@
+## 2026-10-25 — Grok440 public cursor custody repaired
+
+Three causal reds cover sidebar crowding, supplemental search-title replacement
+and inconsistent query trimming. Qualified history rows now precede supplemental
+rows, retain matching titles and preserve existing enrichment/conflict checks.
+Public adapter→collector→disk restart/cancellation checks pass; primary59-test
+selection and final47-test rerun pass, with typecheck/scoped lint. Worker441 and
+444 commits are ready for serial integration;442 owns retained-view lifecycle
+and real-authority/serialization gates. No tracker closure or provider effect.
+
 ## 2026-10-25 — Desktop transition runtime adopted
 
 Operator authorized deployment after source acceptance. Exact canonicale1bb4dbc9
@@ -56217,3 +56227,27 @@ Accepted worker413 commits7f97ddfa2/4e08da07b; integrated as09088ea87/05fd60104.
 ## 2026-10-24 — Renewed source checkpoint:8/16 closed
 
 PR432 mergedfa06a1eec;413 CLOSED. Fresh16-child GitHub readback: closed399/400/401/402/404/407/412/413; open403/405/406/408/409/410/411/414; parent398 OPEN. All workers terminal; integration clean on merged source. Remaining frontier403/405/408/410 needs native account/target/effect authority and observed provider controls; descendants stay locked. Whole-program review/TDD pass remains pending. Goal active/incomplete; no pause or completion mutation.58min/958,809 native tokens against renewed2h/2MM allowance; memory45,964MiB available, swap78,965MiB. No Grok browser startup, provider effect, runtime installation or Wake319/shared configuration changes. Memory disposition forbidden, receipt /tmp/grok-renewed-closeout-memory-disposition.json.
+
+## 2026-10-25 — Review repair foundations validated together
+
+Integrated442 retained exact-account/query history custody as600b4465d and441
+owned-target fixture followup ea64469b7. Primary reproduced missing browser PID
+allowing target listing before refusal, then guarded custody before any target I/O.
+Twelve442 restart/lease tests, three441 project tests and four440 public cursor
+tests pass on the integrated source; joint typecheck passes.440 now exercises the
+real configured traffic authority and guarded CDP over a controlled protocol
+transport; navigation settlement is modeled, not native proof.443 is ready after
+these three prerequisites;444 retains its prior combined100-test checkpoint.
+No issue closures yet; intended-main integration and the single post-closure
+review/TDD gate remain. Original eight native-gated tickets remain open.
+
+## 2026-10-25 — Retiring target fence and final ready ticket
+
+Worker442 reproduced foreground admission after an unconfirmed target close.
+Integrated813113f1 asf543e8dcb: retiring utility leases remain exclusive fences;
+worker40-test registry/factory/public-service selection and typecheck/lint pass,
+primary joint rerun in progress.443 delegated to the completed441 worker in a
+new isolated worktree from0b8eda9af. The follow design preserves completed scope
+state, observes bounded fresh heads and distinguishes unobserved older changes
+that require explicit full sweeps. Primary99tests/12files and local build pass.
+PR447 remains draft; current-main journal merge preserves both histories.

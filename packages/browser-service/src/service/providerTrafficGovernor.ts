@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import type { TabLeaseClaim, TabLeaseScope } from "./tabLeaseRegistry.js";
 
 import type { BrowserInteractionClass, BrowserInteractionGovernor } from "./interactionGovernor.js";
 import type { ProviderWarningClassification } from "./interactionLedger.js";
@@ -107,7 +108,7 @@ export interface ProviderTrafficAuthority {
 export interface ProviderTrafficAuthorityFactory {
 	/** Request-aware factories report true before acquisition; this grants no lease or governor. */
 	readonly backendRequestAdmissionEnabled?: boolean;
-	acquire(input: { targetId: string }): Promise<ProviderTrafficAuthority>;
+	acquire(input: { targetId: string; borrowedLease?: { claim: TabLeaseClaim; scope: TabLeaseScope } }): Promise<ProviderTrafficAuthority>;
 }
 
 /** Match client authority precedence without taking or borrowing its lease. */

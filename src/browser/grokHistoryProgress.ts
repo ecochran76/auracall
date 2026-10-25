@@ -1,6 +1,6 @@
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { createHash, randomUUID } from "node:crypto";
 import { getAuracallHomeDir } from "../auracallHome.js";
 import type { GrokHistoryCoverage } from "./providers/grokHistoryInventory.js";
 export type GrokHistoryProgress = Omit<GrokHistoryCoverage, "nextCursor"> & {
@@ -8,9 +8,13 @@ export type GrokHistoryProgress = Omit<GrokHistoryCoverage, "nextCursor"> & {
 };
 const reasons = new Set([
 	"page-limit",
+	"foreground-yield",
 	"time-limit",
 	"item-limit",
 	"cursor-anchor-not-found",
+	"cursor-restart-required",
+	"cursor-rebuilding",
+	"foreground-yield",
 	"unattributed-project-rows",
 	"unknown-timestamps",
 	"loading",
