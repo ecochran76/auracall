@@ -1,6 +1,6 @@
 # Plan0460 — App inventory latency
 
-State: OPEN
+State: CLOSED
 Branch: fix/issue464-focused-inventory-read
 Target: main
 Work item: ecochran76/auracall#464
@@ -8,13 +8,15 @@ Base: 97b49ced127f6a48c72487c4df0514e6e6651538
 
 ## Current State
 
-Issue427 diagnostics are deployed. A source-native complete30-app inventory took
-347.649s; its delay cause remains unqualified. Live read-only inspection of five
-existing Apps tabs found three healthy pages and two failure pages. One main
-Plugins panel visibly says Failed to load plugins / signal timed out / Retry.
-Read-only DOM and screenshot capture took481ms on that tab. Peer tabs and browser
-were preserved. The first browser-tools invocation stalled; its owned helper
-processes were stopped, and exact-target CDP read-only inspection succeeded.
+CLOSED: PR469/42fb89512351734d36beec4e976d0fb492f72c20 is merged and the
+hash-qualified user CLI is activated. Installed native inventory completed in
+26.736s with34apps, exit0, versus the earlier321.643s/26-app installed baseline.
+All26prior entries are retained without changed metadata;8linked entries are
+added. Source and installed34-app results have identical metadata and account.
+187focused checks plus typecheck/build and lint pass. Existing API/MCP runtime
+and browser were preserved. CI excluded. The qualified cause is full-site
+navigation/request churn against the configured30/minute cap, compounded by
+avoidable ledger processing; no cap/deadline reduction or history loss was used.
 
 ## Scope and acceptance
 
@@ -240,3 +242,34 @@ Scoped lint passes. Standards has no remaining blocking findings; Spec accepts
 explicit API selection for CLI list, legacy UI behavior retained for mutations,
 fresh known identity scope, optional metadata uncertainty and no credential result.
 Installed/native delivery remains the final gate; CI remains excluded.
+
+## Installed acceptance and closure
+
+Selected merged source:42fb89512351734d36beec4e976d0fb492f72c20 (PR469), including
+ledger improvements from PR467/PR468. Installed compiled bin, CLI command,
+provider and ledger modules match the validated build byte-for-byte. CLI version
+and help smokes pass. Only the user CLI wrapper was atomically promoted; API
+PID4185922 and MCP wrapper remain unchanged.
+
+The exact installed selected-profile list command completed normally in26.736s,
+with one terminal JSON result, complete34-app inventory and stage diagnostics.
+Private comparison proves the same account, all26earlier app IDs and metadata
+unchanged,8additional linked entries, and identical source/installed34-app data.
+Source-native focused acceptance was39.866s. These are observed timings, not a
+host-independent SLA; the deterministic regression rejects unnecessary inventory
+navigation rather than relying on an absolute wall-clock assertion.
+
+Fresh OS/CDP readback retains browser PID2122493/startTicks14652453 and HTTP200
+Chrome/153.0.8010.36 metadata; installed CLI PID668369 exited. No prompt, app CRUD,
+warning clearance, browser restart or provider capacity bypass occurred. Raw
+catalogs, DOM/screenshots, network observations and runtime receipts remain under
+`~/.local/state/auracall-issue427-20261025/`, including
+`direct-installed-live-result.json`, `direct-deployment-receipt.json` and
+`final-inventory-runtime-readback.json`. No raw account/app data was published.
+
+Primary final review: Standards and Spec have no unresolved blocking findings.
+The accepted fixture lint/readability finding is remediated and affected tests
+pass. Temporary experiments remain explicitly marked in private debug storage;
+no diagnostic instrumentation, unused-summary patch or timing threshold was
+introduced into production. Plan0460 and issue464 meet the installed acceptance
+boundary. API/MCP process upgrades are not claimed by this CLI delivery.

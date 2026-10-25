@@ -56525,3 +56525,17 @@ human verification still stop it. Initial guard failure was reproduced and fixed
 with a13ms regression. Source-native read succeeds in39.866s with34apps: all26
 prior entries unchanged,8linked entries added, same account. Final checks and
 installed proof remain pending; caps and provider deadlines were not changed.
+
+## 2026-10-25 — Issue464 installed acceptance complete
+
+PR469/42fb89512 focused inventory is merged and CLI-only activation is qualified
+by exact compiled bin/command/provider/ledger hashes. Installed native command
+returns complete34-app inventory in26.736s, exit0, versus321.643s/26apps initially.
+All26prior entries remain unchanged;8linked entries are added. Source/installed
+34-app metadata and account match.187focused checks, typecheck/build, scoped lint
+and docs checks pass; primary Standards/Spec review has no unresolved blockers.
+Plan0460 is CLOSED. API PID4185922/MCP wrapper and browser PID2122493/startTicks
+14652453 are preserved; CDP is HTTP200 and the native CLI exited. No provider
+capacity/deadline change, app mutation, prompt or browser restart; CI excluded.
+Runtime/trace/catalog evidence remains private. API/MCP process upgrades are not
+part of this CLI delivery. Final Graphiti capture follows qualified closeout.

@@ -5,17 +5,18 @@ lanes:
     objective: Diagnose app inventory latency against live Apps UI
     work_items: [ecochran76/auracall#464]
     plan: docs/dev/plans/0460-2026-10-25-app-inventory-latency.md
-    plan_ref: refs/heads/fix/issue464-focused-inventory-read
+    plan_ref: refs/remotes/origin/main
     branch: fix/issue464-focused-inventory-read
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: d7e60793ba87b508f438cd8bbd07a125b0920187
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 94773974003b2324d992337ea5e2107b1da11dac
     remote_ref: refs/remotes/origin/fix/issue464-focused-inventory-read
     integration: merge
+    integration_receipt: 42fb89512351734d36beec4e976d0fb492f72c20
     dependencies: []
     overlaps: []
-    validation_status: focused-api-source-34-apps-39s-installed-pending
+    validation_status: installed-native-complete-34-apps-26s
     updated_at: 2026-10-25
   - id: issue427
     objective: Repair silent installed app inventory
