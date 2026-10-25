@@ -18,6 +18,7 @@ import {
 	hasEmptyGrokBuildRoot,
 	readGrokBuildResponseIdentity,
 	readGrokBuildPlaneSnapshot,
+	redactGrokBuildPreviewBearers,
 } from "./providers/grokBuild.js";
 
 export interface GrokBuildResult {
@@ -249,6 +250,10 @@ export function createGrokBuildService(
 							snapshot.responseId,
 						);
 						if (!identity) throw new Error("grok_build_response_identity_unobserved");
+						const plane = await readGrokBuildPlaneSnapshot(client.Runtime, {
+							conversationId: identity.conversationId,
+							responseId: snapshot.responseId,
+						});
 						result = {
 							...result,
 							...identity,
@@ -257,9 +262,21 @@ export function createGrokBuildService(
 							generation: {
 								status: "response_completed",
 								responseId: snapshot.responseId,
-								text: answer.text,
-								markdown: answer.markdown,
+								text: redactGrokBuildPreviewBearers(answer.text),
+								markdown: redactGrokBuildPreviewBearers(answer.markdown),
+								...(plane.state === "completed"
+									? { gatewayRowId: plane.gatewayRowId, uiState: "completed" as const }
+									: {}),
 							},
+							...(plane.state === "completed" && plane.previewAvailable
+								? {
+										preview: {
+											status: "available" as const,
+											url: null,
+											code: "grok_build_preview_session_required",
+										},
+									}
+								: {}),
 							effectState: "completed",
 							retrySafe: false,
 						};

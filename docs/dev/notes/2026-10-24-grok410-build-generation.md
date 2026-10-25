@@ -254,3 +254,37 @@ tests/http.grokBuild.test.ts tests/browser/grok444AccountReferences.test.ts
 strict inspect routing without generation dispatch; the native-shaped service
 tracer enters through the MCP handler. `pnpm typecheck` passes for the same source
 state. No new native inspection or installation is claimed from these checks.
+
+
+## Plan0458 native plane generation observer
+
+The causal generation tracer emits the observed plane hierarchy after one Send.
+The old main-only observer timed out and returned unknown (RED). A scoped native
+plane assistant branch now preserves the real provider response ID, native
+completed-work UI, baseline/current-response detection and retained conversation
+identity (GREEN). Existing main-based candidates keep priority and their legacy
+terminal rules. Active Stop overrides a previous Worked marker; quoted prose and
+ambiguous plane roots do not qualify. A shared native completion predicate keeps
+the retained inspector and generation observer aligned. Auth preview URLs remain
+private; public preview presence has no app/version/export authority.
+
+The controlled DOM initially lacked the platform Node constant and childNodes
+needed by the existing markdown serializer. Those intermediate harness failures
+were corrected separately and are not additional product defect reproductions.
+No second native generation, publication or download was performed.
+
+
+Final native-plane followup validation:100 focused checks pass across8files
+(Build, text, UI operation, model menu, HTTP, actions, Bots and account references).
+`pnpm typecheck` passes for the same frozen source. Targeted lint passes with the
+existing unused Input parameter warning in unchanged submit code; diff checks
+pass. A separate public regression showed that a preview auth URL quoted in
+response prose also needed redaction. Build text and markdown now remove that
+authenticated URL as well; the regression passes without exposing its bearer.
+
+The coordinator independently validated the immutable completed-effect proof and
+its raw receipt hashes, then used supported CAS plus preserved release. A
+subsequent worker control-plane read confirms the exact lease is released, effect
+settled, target preserved and no process owner. Prior unknown receipts remain
+private and attributable. This settles accepted/completed generation custody,
+not app/version/export/publication qualification. No generation was replayed.

@@ -81,3 +81,12 @@ version and exported bytes remain unqualified; a completed response or preview
 therefore still returns `partial`. `operation=inspect` and `effectState=none`
 describe this read, while `generation.uiState` reports the observed generation.
 They never authorize resending the original generation.
+
+
+Generation also observes the native Build plane when it is present outside
+`main`, using only assistant messages and the same native completed-work marker
+as inspection. Legacy main-based text handling retains its existing behavior.
+An active Stop control takes precedence over an older completed-work marker;
+ambiguous plane roots cannot supply completion. Qualified preview presence may
+be returned with the completed response, while app/version/export remain partial.
+The observation timeout never authorizes restarting a still-running generation.
