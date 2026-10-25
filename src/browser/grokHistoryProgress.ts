@@ -8,6 +8,7 @@ export type GrokHistoryProgress = Omit<GrokHistoryCoverage, "nextCursor"> & {
 };
 const reasons = new Set([
 	"page-limit",
+	"foreground-yield",
 	"time-limit",
 	"item-limit",
 	"cursor-anchor-not-found",
