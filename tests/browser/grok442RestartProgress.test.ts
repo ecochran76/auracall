@@ -213,6 +213,30 @@ function ownedHistoryFixture(
 }
 
 // SPEC3: a fresh lazy view must survive bounded public calls and service recreation.
+test("442: missing browser process provenance refuses history before target discovery or creation", async () => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "grok-442-no-browser-"));
+	setAuracallHomeDirOverrideForTest(home);
+	try {
+		const fixture = ownedHistoryFixture([{ id: "a", title: "Chat a" }]);
+		Object.assign(fixture.options.providerSessionAuthorization.context, { browserProcessId: null });
+		let targetLists = 0;
+		const list = fixture.dependencies.continuationTransport.list;
+		fixture.dependencies.continuationTransport.list = async () => {
+			targetLists++;
+			return list();
+		};
+		const result = await createGrokConversationsService(fixture.options, fixture.dependencies).list(
+			{ maxPages: 2 },
+		);
+		expect(result.coverage.state).toBe("failed");
+		expect(targetLists).toBe(0);
+		expect(fixture.targets.size).toBe(0);
+	} finally {
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
 test("442: fresh public history restarts reach discoverable older rows under the same two-page bound", async () => {
 	const home = await mkdtemp(path.join(os.tmpdir(), "grok-442-"));
 	setAuracallHomeDirOverrideForTest(home);

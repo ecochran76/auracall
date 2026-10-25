@@ -1,3 +1,12 @@
+## 2026-10-25 — Retain bounded Grok history custody
+
+Keep cursor continuation attached to an exact account/query owned history view,
+so successive bounded calls can reach older rows after service recreation.
+Rebuild a lost view incrementally; explicitly restart a missing anchor or legacy
+unowned cursor. Share active utility admission through the existing lease
+registry, retain uncertain cleanup fences, and refuse missing browser PID before
+any target I/O. Never derive complete project history from mounted sidebar rows.
+
 ## 2026-10-24 — Attribute desktop transitions before publication
 
 An empty transition directory stranded by process death blocks acquisition

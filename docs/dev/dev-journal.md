@@ -56216,3 +56216,16 @@ Accepted worker413 commits7f97ddfa2/4e08da07b; integrated as09088ea87/05fd60104.
 ## 2026-10-24 — Renewed source checkpoint:8/16 closed
 
 PR432 mergedfa06a1eec;413 CLOSED. Fresh16-child GitHub readback: closed399/400/401/402/404/407/412/413; open403/405/406/408/409/410/411/414; parent398 OPEN. All workers terminal; integration clean on merged source. Remaining frontier403/405/408/410 needs native account/target/effect authority and observed provider controls; descendants stay locked. Whole-program review/TDD pass remains pending. Goal active/incomplete; no pause or completion mutation.58min/958,809 native tokens against renewed2h/2MM allowance; memory45,964MiB available, swap78,965MiB. No Grok browser startup, provider effect, runtime installation or Wake319/shared configuration changes. Memory disposition forbidden, receipt /tmp/grok-renewed-closeout-memory-disposition.json.
+
+## 2026-10-25 — Review repair foundations validated together
+
+Integrated442 retained exact-account/query history custody as600b4465d and441
+owned-target fixture followup ea64469b7. Primary reproduced missing browser PID
+allowing target listing before refusal, then guarded custody before any target I/O.
+Twelve442 restart/lease tests, three441 project tests and four440 public cursor
+tests pass on the integrated source; joint typecheck passes.440 now exercises the
+real configured traffic authority and guarded CDP over a controlled protocol
+transport; navigation settlement is modeled, not native proof.443 is ready after
+these three prerequisites;444 retains its prior combined100-test checkpoint.
+No issue closures yet; intended-main integration and the single post-closure
+review/TDD gate remain. Original eight native-gated tickets remain open.

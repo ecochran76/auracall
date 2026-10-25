@@ -17,6 +17,20 @@ history pages/scopes and before account-file/detail inventory. A dispatched page
 retains the existing provider-call deadline; yield does not interrupt an unknown
 provider effect or authorize another browser owner.
 
+Bounded history reads retain an AuraCall-owned history view for the exact
+account, browser generation and query. Settled views can coexist, while active
+history and foreground utility work share exclusive admission. Missing browser
+process provenance refuses the read before target discovery or creation. An
+uncertain cleanup fences later utility admission until ownership is reconciled.
+
+After a process restart, a retained view continues under the same page bound. If
+the view was lost, successive bounded reads rebuild its prefix to find the saved
+anchor. A vanished anchor requests a fresh bounded sweep instead of repeating an
+unchanged cursor indefinitely. Legacy unowned cursors likewise report
+`cursor-restart-required` and clear the private continuation; retained rows are
+deduplicated during replay. Project histories use the same qualified bounded
+reader, rather than treating the mounted sidebar subset as a complete inventory.
+
 Public account-mirror metadata evidence adds `grokIndex`: visible-scope
 `phase` (`backfill` or `follow`), `state`, completed/total scope counts, retained
 row count and omissions. Public progress reports `active` while a refresh runs

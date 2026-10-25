@@ -2,33 +2,69 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, expect, test, vi } from "vitest";
-import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { setCdpCommandAdmissionResolver } from "../../packages/browser-service/src/guardedCdp.js";
+import { readBoundedConversations } from "../../src/accountMirror/chatgptMetadataCollector.js";
 import {
 	collectGrokMirrorIndex,
 	createGrokIndexCheckpointStore,
 } from "../../src/accountMirror/grokIndexBackfill.js";
-import { readBoundedConversations } from "../../src/accountMirror/chatgptMetadataCollector.js";
-import { createGrokAdapter } from "../../src/browser/providers/grokAdapter.js";
+import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
 import type { BrowserAutomationClient } from "../../src/browser/client.js";
+import { createConfiguredProviderTrafficAuthorityFactory } from "../../src/browser/configuredProviderTrafficAuthority.js";
+import { createGrokAdapter } from "../../src/browser/providers/grokAdapter.js";
 import type { BrowserProviderListOptions } from "../../src/browser/providers/types.js";
 import { historyTransportFixture } from "./grok401ConversationTransportFixture.js";
 
-const wire = vi.hoisted(() => ({ client: undefined as unknown }));
+const wire = vi.hoisted(() => ({
+	raw: undefined as unknown,
+	targets: new Map<string, string>(),
+	serial: 0,
+	activeTarget: "",
+}));
 vi.mock("chrome-remote-interface", () => ({
-	default: {
-		List: async () => [{ id: "fixture-target", type: "page", url: "https://grok.com/" }],
-		Close: async () => undefined,
-	},
+	default: Object.assign(async () => wire.raw, {
+		List: async () => Array.from(wire.targets, ([id, url]) => ({ id, type: "page", url })),
+		Close: async ({ id }: { id: string }) => {
+			wire.targets.delete(id);
+		},
+	}),
 }));
 vi.mock("../../packages/browser-service/src/chromeLifecycle.js", async (original) => ({
 	...(await original<typeof import("../../packages/browser-service/src/chromeLifecycle.js")>()),
-	connectToChromeTarget: async () => wire.client,
+	connectToChromeTarget: async ({ target }: { target: string }) => {
+		wire.activeTarget = target;
+		const { default: guarded } = await import("../../packages/browser-service/src/guardedCdp.js");
+		return guarded({ host: "localhost", port: 1, target });
+	},
+	openChromeTarget: async () => {
+		const id = `owned-root-history-${++wire.serial}`;
+		wire.targets.set(id, "about:blank");
+		return { id };
+	},
+}));
+vi.mock("../../src/browser/service/ui.js", async (original) => ({
+	...(await original<typeof import("../../src/browser/service/ui.js")>()),
+	navigateAndSettle: async (_client: unknown, input: { url: string }) => {
+		wire.targets.set(wire.activeTarget, input.url);
+		return { ok: true, url: input.url };
+	},
 }));
 
 const roots: string[] = [];
+beforeEach(async () => {
+	const home = await fs.mkdtemp(path.join(os.tmpdir(), "grok440-isolated-"));
+	roots.push(home);
+	setAuracallHomeDirOverrideForTest(home);
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect) => effect(),
+		hold: async () => ({ run: (_command, effect) => effect(), close: async () => {} }),
+	}));
+});
 afterEach(async () => {
+	setCdpCommandAdmissionResolver(undefined);
 	setAuracallHomeDirOverrideForTest(null);
+	wire.targets.clear();
 	await Promise.all(roots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })));
 });
 
@@ -49,7 +85,14 @@ async function freshPublicAdapterRead(
 	const connection = await fixture.dependencies.connect();
 	const raw = connection.client;
 	const evaluateHistory = raw.Runtime.evaluate;
-	wire.client = Object.assign(raw, {
+	wire.raw = Object.assign(raw, {
+		send: async () => {},
+		Network: {
+			enable: async () => {},
+			responseReceived: () => () => {},
+			loadingFailed: () => () => {},
+		},
+		Fetch: { enable: async () => {}, disable: async () => {}, requestPaused: () => () => {} },
 		Page: {
 			enable: async () => {},
 			bringToFront: async () => {},
@@ -103,6 +146,16 @@ async function freshPublicAdapterRead(
 		historyMaxPages: 2,
 		...scene.options,
 	};
+	options.providerTrafficAuthorityFactory = createConfiguredProviderTrafficAuthorityFactory({
+		userConfig: {
+			auracallProfile: "default",
+			services: { grok: { identity: { email: "operator@example.test" } } },
+		} as never,
+		provider: "grok",
+		managedBrowserProfile: "/fixture/grok",
+		mutationAudit: async () => {},
+		baseOptions: { ...options, interactionGovernor: { beforeInteraction: async () => {} } },
+	});
 	return readBoundedConversations(
 		{ listConversations: createGrokAdapter().listConversations } as BrowserAutomationClient,
 		null,

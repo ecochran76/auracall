@@ -49,8 +49,10 @@
       "worktree": "auracall-grok-repair-442",
       "branch": "feat/grok-repair-442-20261025",
       "base": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a",
-      "state": "running",
-      "scopeExpansion": "Existing lease registry exclusive-group and borrowed-claim factory contract needed for bounded retained-view progress; no new coordinator/provider authority"
+      "state": "integrated",
+      "scopeExpansion": "Existing lease registry exclusive-group and borrowed-claim factory contract needed for bounded retained-view progress; no new coordinator/provider authority",
+      "result": "0858f1e5341884e4243d9f3299560a7f46f16528",
+      "integratedCommit": "600b4465d"
     },
     "444": {
       "handle": "/root/repair444",
@@ -251,7 +253,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/440",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "integrated",
+      "state": "validated-on-integration",
       "scope": "review-repair",
       "finding": "SPEC1",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/440.md"
@@ -261,7 +263,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/441",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "integrated",
+      "state": "validated-on-integration",
       "scope": "review-repair",
       "finding": "SPEC2",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/441.md"
@@ -271,7 +273,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/442",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "running",
+      "state": "validated-on-integration",
       "scope": "review-repair",
       "finding": "SPEC3",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/442.md"
@@ -285,7 +287,7 @@
         441,
         442
       ],
-      "state": "pending-blockers",
+      "state": "ready",
       "scope": "review-repair",
       "finding": "SPEC4",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/443.md"
@@ -295,7 +297,7 @@
       "url": "https://github.com/ecochran76/auracall/issues/444",
       "trackerState": "OPEN",
       "blockedBy": [],
-      "state": "integrated",
+      "state": "validated-on-integration",
       "scope": "review-repair",
       "finding": "STD1",
       "body": "docs/dev/plans/0456-grok-review-repair-tickets/444.md"
@@ -364,7 +366,7 @@
   ],
   "scopeNote": "Close and validate five review repairs while retaining the complete existing program graph and its remaining native gates. Original program completion is a separate claim.",
   "progressClassification": "outcome_progress",
-  "lastCheckpoint": "440/441/444 integrated and focused100tests pass;44211 dedicatedtests green awaiting workercommit; no tracker closures",
+  "lastCheckpoint": "440/441/442 jointly validated:19 dedicated tests pass across public adapter/service/collector; joint typecheck pass.443 unblocked.444 prior100test checkpoint retained. Tracker closures await main integration.",
   "registrationMerge": {
     "pr": 445,
     "commit": "e1bb4dbc94c5d50dc4f210dbd783cbfb2bbd3b5a"
@@ -375,10 +377,10 @@
     "note": "docs/dev/notes/2026-10-25-grok-440-cursor-row-custody.md"
   },
   "lastManualObservation": {
-    "tokensUsed": 567285,
-    "timeUsedSeconds": 1616,
-    "availableMemoryMiB": 39731,
-    "swapUsedMiB": 88797
+    "tokensUsed": 824127,
+    "timeUsedSeconds": 2779,
+    "availableMemoryMiB": 41026,
+    "swapUsedMiB": 91483
   },
   "integratedCheckpoint": {
     "tip": "82ef14bf7",

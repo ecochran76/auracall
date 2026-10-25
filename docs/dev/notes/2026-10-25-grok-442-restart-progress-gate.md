@@ -56,3 +56,14 @@ Memory disposition: `forbidden`, under this worker's explicit no-memory-write bo
 - `pnpm typecheck` passed. Focused `pnpm exec biome lint` over the changed module/type/authority/collector/test paths reported no warnings or errors (9 checked paths; repository ignores remain effective). `git diff --check` passed.
 
 These are worker-reported source/controlled-boundary receipts, not primary integration or native/provider acceptance.
+
+## Primary integrated qualification
+
+Source integrated as600b4465d. Added positive browser-process custody validation
+before target discovery/creation: public-service test first failed with one
+target-list call, then passed with zero.442 now has12 passing dedicated cases.
+The primary also ran441's3 public project cases and440's4 public cursor cases
+on this combined source; all19 pass. Joint TypeScript check passes. Root440
+uses the real configured authority/registry and guarded CDP over controlled raw
+transport; physical navigation/settlement remains a modeled fixture boundary.
+No native browser, provider-effect or installed-runtime acceptance is claimed.

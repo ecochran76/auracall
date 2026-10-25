@@ -65,7 +65,14 @@ export async function acquireGrokHistoryContinuation(
 	const account = authorization?.expectation.configuredServiceAccountId;
 	const host = options.host ?? context?.devtoolsHost;
 	const port = options.port ?? context?.devtoolsPort;
-	if (!account || !context?.managedBrowserProfile || !host || !port)
+	if (
+		!account ||
+		!context?.managedBrowserProfile ||
+		!Number.isSafeInteger(context.browserProcessId) ||
+		(context.browserProcessId ?? 0) < 1 ||
+		!host ||
+		!port
+	)
 		throw new Error("Grok history continuation requires account and browser custody.");
 	// The configured traffic factory uses default for a global (unnamed) runtime.
 	const runtimeProfileId = context.auracallRuntimeProfile?.trim() || "default";
