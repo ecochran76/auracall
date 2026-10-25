@@ -1,3 +1,4 @@
+import { createGrokBotLifecycleService } from "./grokBotLifecycleService.js";
 import { createGrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
 import { createGrokFilesService } from "./grokFilesService.js";
 import { createGrokBotsService } from "./grokBotsService.js";
@@ -148,13 +149,14 @@ export async function createConfiguredGrokBotsService(
 ) {
 	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
 	const service = createGrokBotsService(options);
+	const lifecycle = createGrokBotLifecycleService(options);
 	const profile =
 		options.providerSessionAuthorization?.context.auracallRuntimeProfile ??
 		runtimeProfile ??
 		config.auracallProfile ??
 		"default";
 	async function run<
-		T extends Awaited<ReturnType<typeof service.list>> | Awaited<ReturnType<typeof service.invoke>>,
+		T extends Awaited<ReturnType<typeof service.list>> | Awaited<ReturnType<typeof service.invoke>> | Awaited<ReturnType<typeof lifecycle.run>>,
 	>(action: () => Promise<T>) {
 		try {
 			const result = await action();
@@ -178,6 +180,7 @@ export async function createConfiguredGrokBotsService(
 		}
 	}
 	return {
+		lifecycle: (request: Parameters<typeof lifecycle.run>[0]) => run(() => lifecycle.run(request)),
 		list: (source?: Parameters<typeof service.list>[0]) => run(() => service.list(source)),
 		invoke: (selector: Parameters<typeof service.invoke>[0], prompt: string) =>
 			run(() => service.invoke(selector, prompt)),

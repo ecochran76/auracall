@@ -3825,3 +3825,12 @@ or artifact byte materialization is implied by these fixtures.
 Run `pnpm vitest run tests/accountMirror/grokIndexCoverage.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/browser/grokHistoryInventory.test.ts`.
 
 Incomplete provider coverage keeps the mirror pending even when rows fit within its limit. A Grok read without coverage evidence also stays partial; explicit failed coverage fails the read instead of turning retained rows into fresh success. These fixtures establish source behavior only. They do not prove account-wide discovery, persisted row/cursor restart recovery, project/Bot scope coverage, installed behavior or a live crawl.
+
+- Grok native Bot lifecycle (#408, focused/provider-free):
+  `pnpm vitest run tests/browser/grok408BotLifecycle.test.ts tests/browser/grok407Bots.test.ts tests/browser/grok444AccountReferences.test.ts --maxWorkers=1`.
+  Sanitized controls derive from the observed New Bot/Settings structure, not
+  copied private DOM. Coverage includes animated aria-label selection, singular
+  Bot route, exact ID/readback, preserved Title, unavailable Instructions/Model
+  before mutation, and durable ambiguous Save reconciliation without replay.
+  These checks do not supply the missing native Instructions/Model controls or
+  close #408's original full criteria.

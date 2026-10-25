@@ -56471,3 +56471,14 @@ Plan0458 file-effect reconciliation: primary independently validated the composi
 
 
 Plan0458 current native frontier: one synthetic upload A is byte-verified against the actual server asset and its exact lease effect was settled/preserved through PR462, with prior uncertainty retained. No replay/B/Send. One approved Bot exists with canonical native ID; its actual settings expose Name/Title/Description and lack original Instructions/Model fields. Supported public lifecycle source is prepared without silently narrowing408. Build corrective public command is active after the unrelated live ChatGPT ledger owner exited naturally; fresh account MATCH and production fresh-target override. Connector remains before Add: native preparation exposed asynchronous detail mount and synthetic Escape cleanup weaknesses, now covered by causal source regressions and native keyboard wiring. No Connector install/OAuth or publication claimed. All eight tickets remain open; broad review/TDD counters zero.
+
+### 2026-10-25 — Plan0458 / #408 actual Bot editor
+
+Created one approved retained synthetic Bot; exact native route and Settings
+Name/Title/Description controls are now qualified. Instructions/Model controls
+are absent, so original #408 remains open and #409 stays blocked. Implementing
+public create/edit/inspect/reconcile against observed controls with account-bound
+durable intent, no duplicate dispatch and same-ID saved readback. One native
+Name/Description edit awaits serialized slot; Title/model default remain preserved.
+See `docs/dev/notes/2026-10-25-grok408-native-lifecycle.md` for private evidence
+boundaries and the corrected probe's reused-target history.
