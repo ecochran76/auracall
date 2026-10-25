@@ -1,3 +1,14 @@
+## 2026-10-25 — Desktop transition runtime adopted
+
+Operator authorized deployment after source acceptance. Exact canonicale1bb4dbc9
+matches the tested runtime source. Fresh installed gate/CLI/clipboard hashes and
+killed-child recovery pass; CLI/MCP wrappers adopted and API restarted without
+closing browser processes. All48 prior browser-related process-tree roots retain
+generations. Status200/ok=true after initial short-budget timeouts; desktops200.
+Auth, scheduler pause and background-drain posture preserved. No live lock
+cleanup, provider request or CI change. Plan0455 now records installed acceptance.
+Memory disposition: queued; processing/retrieval remain separate readbacks.
+
 ## 2026-10-25 — Approved Grok repair graph and renewed execution
 
 Plan0456: published440–444 and verified exact actor/body/state/labels. Complete
