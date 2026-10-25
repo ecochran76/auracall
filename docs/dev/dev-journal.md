@@ -56501,3 +56501,15 @@ is preserved and its lease was independently released/settled, not force-cleared
 Original #408 remains open for absent separate Instructions/Model controls;
 `docs/dev/notes/2026-10-25-grok408-acceptance-decision.md` provides the concrete
 original-vs-native decision and proposed amendment, with no tracker changes.
+
+### 2026-10-25 — Plan0458 native Connector transport binding
+
+#405 preparation now reads stable Connector IDs and transport from the actual
+committed card DTO, bound to the verified Grok account and current React root.
+Native `live` integrations legitimately have no MCP URL; only positively bound
+nonmatching rows may be excluded from MCP duplicate checks. Name collisions,
+foreign metadata and unobserved transports retain the refusal. Owned detail
+cleanup focuses the exact owned dialog before native Escape. No Add or OAuth
+has been dispatched in this slice. Focused installer/service/account tests:
+40 passed; earlier discovery selection: 36 passed; typecheck and changed-file
+Biome pass. All eight ticket gates remain open; reserved final review/TDD 0/0.

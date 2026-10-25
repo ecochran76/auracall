@@ -26137,3 +26137,12 @@ styles and rectangle remain visible. Check that explicit dialog ancestry before
 reading Settings or declaring Save closure. Do not globally hide unrelated
 controls carrying data-closed. Native-shaped fixtures protect closed inspection
 and a real same-ID Settings reopen after Save; no native Save was replayed.
+
+### 2026-10-25 — Native Grok integrations are not missing MCP endpoints
+
+Grok's installed Connector cards include account-bound `live` integrations with
+no server URL. Classify those only through their current committed card DTO,
+matching stable Connector ID, card key and verified account; never infer type
+from display name or absent URL. Preserve name conflicts and fail closed on
+foreign/unqualified metadata. Native Escape needs focus on the owned detail
+before the guarded key dispatch when Grok leaves a mounted background surface.

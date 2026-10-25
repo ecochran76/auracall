@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createGrokConnectorClient, type GrokConnectorRuntime } from "./grokConnectors.js";
 export interface GrokConnectorInstallationInput {
 	kind: "custom" | "catalog";
@@ -104,6 +104,7 @@ export function createGrokConnectorInstallationClient(
 	runtime: GrokConnectorRuntime,
 	options: {
 		providerAccountRef: string;
+		providerUserId?: string;
 		abortSignal?: AbortSignal;
 		beforeCommit?: () => Promise<void>;
 		pressEscape?: () => Promise<void>;
@@ -124,6 +125,7 @@ export function createGrokConnectorInstallationClient(
 			input.accountRef ?? null,
 		]);
 	const discovery = createGrokConnectorClient(runtime, {
+		providerUserId: options.providerUserId,
 		abortSignal: options.abortSignal,
 		pressEscape: options.pressEscape,
 	});
@@ -158,6 +160,13 @@ export function createGrokConnectorInstallationClient(
 		if (inventory.status === "failed" || inventory.coverage.reason === "row-limit")
 			return outcome(input, "unsupported", "grok_connector_install_inventory_incomplete");
 		for (const row of inventory.installed.slice(0, 10)) {
+			const native = discovery.nativeInstallationIdentity(row.id);
+			// Only account-bound committed native metadata can exclude non-MCP rows.
+			// A name collision always reaches normal conflict verification.
+			if (row.name !== input.name && native) {
+				if (native.type === "live") continue;
+				if (input.endpoint && native.endpoint !== input.endpoint) continue;
+			}
 			const detail = await discovery.inspect({ name: row.name, kind: "installed" });
 			if (!detail.endpointRef)
 				return outcome(input, "unsupported", "grok_connector_install_existing_endpoint_unobserved");

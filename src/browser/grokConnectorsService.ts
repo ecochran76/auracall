@@ -75,6 +75,7 @@ export function createGrokConnectorsService(
 				if (!identity.ok) throw new Error("grok_connector_account_not_verified");
 				result = await read(
 					createGrokConnectorClient(connection.client.Runtime, {
+						providerUserId: identity.actualIdentity?.id,
 						abortSignal: options.abortSignal,
 						pressEscape: connection.client.Input
 							? async () => {

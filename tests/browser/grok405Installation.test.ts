@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { validateGrokConnectorInstallationInput } from "../../src/browser/providers/grokConnectorInstallation.js";
+
 it("rejects credential-bearing or non-HTTPS custom endpoints before any browser work", () => {
 	for (const endpoint of [
 		"http://example.test/mcp",
@@ -18,9 +19,11 @@ it("rejects credential-bearing or non-HTTPS custom endpoints before any browser 
 		}),
 	).toEqual({ kind: "custom", name: "Example", endpoint: "https://example.test/mcp" });
 });
+
 import { runInNewContext } from "node:vm";
 import { createGrokConnectorInstallationClient } from "../../src/browser/providers/grokConnectorInstallation.js";
 import { connectorDomFixture, ConnectorFixtureNode as N } from "./grok404ConnectorDomFixture.js";
+
 function requirePrepared(
 	outcome: import("../../src/browser/providers/grokConnectorInstallation.js").GrokConnectorInstallationOutcome,
 ) {
@@ -194,4 +197,74 @@ it("keeps exact inventory ownership when the nested form makes its parent inert"
 		effectDispatched: true,
 	});
 	expect(f.effects()).toBe(1);
+});
+
+function bindNativeLive(f: ReturnType<typeof installFixture>, account = "fixture-user") {
+	const record = {
+		connectorId: "connector-native",
+		displayName: "Example",
+		type: "live",
+		serverUrl: null,
+		originScope: 3,
+		originScopeId: account,
+	};
+	const owner: { current: unknown } = { current: null };
+	const host: { tag: number; stateNode: unknown; return: unknown; sibling: unknown } = {
+		tag: 5,
+		stateNode: f.installed,
+		return: null,
+		sibling: null,
+	};
+	const card: {
+		tag: number;
+		key: string;
+		memoizedProps: unknown;
+		child: unknown;
+		return: unknown;
+		sibling: unknown;
+	} = {
+		tag: 0,
+		key: record.connectorId,
+		memoizedProps: { label: { props: { connector: record } } },
+		child: host,
+		return: null,
+		sibling: null,
+	};
+	const scope: {
+		tag: number;
+		stateNode: unknown;
+		child: unknown;
+		return: unknown;
+		sibling: unknown;
+	} = { tag: 5, stateNode: f.plugins, child: card, return: null, sibling: null };
+	const root = { tag: 3, stateNode: owner, child: scope, return: null, sibling: null };
+	owner.current = root;
+	scope.return = root;
+	card.return = scope;
+	host.return = card;
+	Object.defineProperty(f.installed, "__reactFiber$fixture", { value: host, enumerable: true });
+	f.detail.children = f.detail.children.filter((n) => !n.innerText.includes("Server URL"));
+}
+it("prepares a custom MCP beside an account-bound native integration without an MCP URL", async () => {
+	const f = installFixture();
+	bindNativeLive(f);
+	const result = await createGrokConnectorInstallationClient(f.runtime, {
+		providerAccountRef: "account-hash",
+		providerUserId: "fixture-user",
+	}).prepare(input);
+	expect(result.status).toBe("prepared");
+	expect(f.effects()).toBe(0);
+});
+it("cannot use native transport metadata to bypass a name collision or foreign account", async () => {
+	for (const collision of [true, false]) {
+		const f = installFixture();
+		bindNativeLive(f, collision ? "fixture-user" : "foreign-user");
+		const result = await createGrokConnectorInstallationClient(f.runtime, {
+			providerAccountRef: "account-hash",
+			providerUserId: "fixture-user",
+		}).prepare({ ...input, ...(collision ? { name: "Example" } : {}) });
+		expect(result.status).toBe("unsupported");
+		expect(f.effects()).toBe(0);
+		expect(f.form.hidden).toBe(true);
+	}
 });

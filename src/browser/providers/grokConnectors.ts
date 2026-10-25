@@ -1,6 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { delay } from "../utils.js";
 import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
+import { delay } from "../utils.js";
+import {
+	type GrokNativeConnectorRow,
+	observeGrokNativeConnectorRows,
+} from "./grokNativeConnectorBinding.js";
 
 /** Discovery only: none of these operations installs, invokes or authenticates. */
 export type GrokConnectorStatus = "complete" | "incomplete" | "account-gated" | "failed";
@@ -161,6 +165,7 @@ export function createGrokConnectorClient(
 	options: {
 		abortSignal?: AbortSignal;
 		maxToolExpansions?: number;
+		providerUserId?: string;
 		pressEscape?: () => Promise<void>;
 	} = {},
 ) {
@@ -210,7 +215,7 @@ export function createGrokConnectorClient(
       return input.value === value;
     `);
 	}
-	async function observe(query?: string) {
+	async function observeRaw(query?: string) {
 		if (!(await evaluate<boolean>(OPEN)))
 			return { state: "missing", rows: [], truncated: false } satisfies InventoryProbe;
 		if (query == null) {
@@ -263,6 +268,30 @@ export function createGrokConnectorClient(
 		if (!restored) throw new Error("grok_connector_search_restore_failed");
 		return result;
 	}
+	const nativeRows = new Map<string, GrokNativeConnectorRow>();
+	async function observe(query?: string) {
+		const probe = await observeRaw(query);
+		nativeRows.clear();
+		if (probe.state === "visible" && options.providerUserId) {
+			options.abortSignal?.throwIfAborted();
+			const native = await observeGrokNativeConnectorRows(runtime, {
+				providerUserId: options.providerUserId,
+				rows: probe.rows,
+			});
+			options.abortSignal?.throwIfAborted();
+			for (const binding of native) {
+				const row = probe.rows.find(
+					(row) => row.handle === binding.handle && row.kind === "installed",
+				);
+				if (row) {
+					row.providerId = binding.id;
+					nativeRows.set(binding.id, binding);
+				}
+			}
+		}
+		return probe;
+	}
+
 	function summary(row: ObservedRow): GrokConnectorSummary {
 		return { id: row.providerId || null, name: row.name, kind: row.kind };
 	}
@@ -446,7 +475,7 @@ export function createGrokConnectorClient(
             if (matches.length !== 0 || root.getAttribute('data-analytics-name') !== 'connector-detail-dialog') return false;
             // Native detail has no Close control. Dismiss only this proven-owned
             // dialog, then verify it disappeared rather than assuming Escape worked.
-            if (${Boolean(options.pressEscape)}) return 'native-escape';
+            if (${Boolean(options.pressEscape)}) { root.focus?.({preventScroll:true}); return 'native-escape'; }
             root.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', code:'Escape', keyCode:27, bubbles:true, cancelable:true}));
             return new Promise(resolve => setTimeout(() => resolve(!dialogs().includes(root)), 100));
           `),
@@ -481,6 +510,7 @@ export function createGrokConnectorClient(
 		return result;
 	}
 	return {
+		nativeInstallationIdentity: (id: string | null) => (id ? nativeRows.get(id) : undefined),
 		async inspect(selector: GrokConnectorSelector): Promise<GrokConnectorDetail> {
 			if (!selector.id && !selector.name && !selector.endpoint)
 				return detailFailure("grok_connector_selector_required");
