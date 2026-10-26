@@ -65,7 +65,7 @@ export interface GrokBuildPlaneSnapshot {
 }
 export async function readGrokBuildPlaneSnapshot(
 	runtime: ChromeClient["Runtime"],
-	request: { conversationId: string; responseId?: string },
+	request: { conversationId: string; responseId?: string; allowInertBackground?: boolean },
 ): Promise<GrokBuildPlaneSnapshot> {
 	const reply = await runtime.evaluate({
 		returnByValue: true,
@@ -75,7 +75,7 @@ export async function readGrokBuildPlaneSnapshot(
       const url = new URL(location.href);
       const id = /^\\/c\\/([^/?#]+)\\/?$/.exec(url.pathname)?.[1];
       if(url.origin!=='https://grok.com'||id!==expected.conversationId)return empty('grok_build_conversation_not_verified');
-      const visible = el => el instanceof HTMLElement && !el.closest('[aria-hidden="true"], [data-state="closed"], [data-closed=""], [data-closed="true"]') &&
+      const visible = el => el instanceof HTMLElement && !el.closest(expected.allowInertBackground?'[data-state="closed"], [data-closed=""], [data-closed="true"]':'[aria-hidden="true"], [data-state="closed"], [data-closed=""], [data-closed="true"]') &&
         window.getComputedStyle(el).display!=='none'&&window.getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().width>0&&el.getBoundingClientRect().height>0;
       const planes = Array.from(document.querySelectorAll('[data-transcript-renderer="plane"]')).filter(visible);
       if(planes.length!==1)return empty('grok_build_plane_not_verified');

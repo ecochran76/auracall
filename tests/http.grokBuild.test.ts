@@ -21,6 +21,7 @@ test("Build HTTP validates confirmation before resolving and preserves partial g
 	const inspection = { ...result, operation: "inspect" as const, effectState: "none" as const };
 	const inspect = vi.fn(async () => inspection);
 	const resolver = vi.fn(async () => ({
+		export: async () => ({ ...result, operation: "export" as const }),
 		discover: async () => result,
 		generate,
 		inspect,
@@ -65,6 +66,18 @@ test("Build HTTP validates confirmation before resolving and preserves partial g
 		});
 		expect(invalidRead.status).toBe(400);
 		expect(resolver).toHaveBeenCalledTimes(2);
+		const exported = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({
+				...selected,
+				action: "export",
+				outputDir: root,
+				acknowledgeTargetDefaultReset: true,
+			}),
+		});
+		expect(exported.status).toBe(200);
+		expect((await exported.json()).operation).toBe("export");
+		expect(generate).toHaveBeenCalledTimes(1);
 	} finally {
 		await server.close();
 		setAuracallHomeDirOverrideForTest(null);

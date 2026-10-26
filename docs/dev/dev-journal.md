@@ -56817,3 +56817,12 @@ Download preparation continues; no bytes, app/version, publication or410closure
 claimed. A separate405passive current-component check found no OAuth callback
 metadata among135inspected functions; no Add or auth-service change occurred.
 Seven scoped tickets remain open;408contract decision pending; finalreview/TDD0/0.
+
+### 2026-10-25 — #410 bounded workspace export
+
+Added a public retained-target Build export action using observed native
+More options → Download ownership, target-only private capture, explicit default
+reset consent, and separate byte/app identity evidence. No publication or
+native effect was run during implementation. Causal checks cover unsupported
+or uncertain setup, account/root guards, private output, partial downloads,
+unknown effect custody and cleanup; public native acceptance remains pending.

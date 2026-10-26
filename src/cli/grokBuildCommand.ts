@@ -11,6 +11,17 @@ const retainedId = z.string().regex(/^[A-Za-z0-9:_-]{1,200}$/);
 export const GrokBuildRequestSchema = z.discriminatedUnion("action", [
 	z
 		.object({
+			action: z.literal("export"),
+			targetId: retainedId,
+			conversationId: retainedId,
+			responseId: retainedId.optional(),
+			outputDir: z.string().min(1).max(4096),
+			acknowledgeTargetDefaultReset: z.literal(true),
+			runtimeProfile: z.string().trim().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
 			action: z.literal("inspect"),
 			targetId: retainedId,
 			conversationId: retainedId,
@@ -51,14 +62,15 @@ export async function runGrokBuildCommand(
 		return { ...grokBuildUnknown("grok_build_request_invalid"), status: "invalid" };
 	const request = parsed.data;
 	try {
+		if (request.action === "export") return await service.export(request);
 		if (request.action === "inspect") return await service.inspect(request);
 		return request.action === "discover"
 			? await service.discover()
 			: await service.generate(request);
 	} catch (error) {
 		const result = grokBuildUnknown("grok_build_request_failed");
-		if (request.action === "inspect") {
-			result.operation = "inspect";
+		if (request.action === "inspect" || request.action === "export") {
+			result.operation = request.action;
 			result.targetId = request.targetId;
 		}
 		if (request.action === "generate") {

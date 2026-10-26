@@ -90,3 +90,37 @@ An active Stop control takes precedence over an older completed-work marker;
 ambiguous plane roots cannot supply completion. Qualified preview presence may
 be returned with the completed response, while app/version/export remain partial.
 The observation timeout never authorizes restarting a still-running generation.
+
+## Retrieve a retained workspace archive
+
+`grok-build --action export --target-id <retained-target> --conversation-id <conversation> --response-id <assistant-response> --output-dir /absolute/private-directory --acknowledge-target-default-reset --json`
+
+The same `export` action is available through `POST /v1/grok/build/query` and
+`grok_build` MCP with `outputDir` and `acknowledgeTargetDefaultReset: true`.
+The output directory must already exist, belong to the current user, and have
+no group/other permission bits (for example, mode0700). Each call creates a
+private child directory and captures one native workspace ZIP, up to25MiB,
+within60seconds. It opens only the owned More options menu when needed and
+clicks its exact Download item once. It never generates, restarts, publishes,
+pushes to GitHub, executes generated code, or automatically retries.
+
+Export requires an existing configured browser and exact completed assistant
+ownership. Account, conversation, current component tree, menu control relations,
+and trusted pointer dispatch are verified. It uses the target-scoped legacy
+`Page.setDownloadBehavior` capability; unsupported capability stops before
+Download. It never changes Browser-wide download policy. Explicit consent
+accepts resetting that target policy to `default` afterward. There is no CDP
+getter proving the previous setting: this is a default reset, not restoration
+of an unknown custom override. Use a retained AuraCall-created canary target
+whose download policy you control. `exportCapture.setup`, `exportCapture.reset`,
+and `cleanupState` report separate outcomes.
+
+`artifacts.status=retrieved` includes a private local path, byte count, SHA256,
+ZIP media type, and exact target/conversation/response provenance. App/version
+IDs remain null when unobserved; a retrieved archive still returns partial
+status and a nonzero CLI exit code when app identity is unqualified. A filename,
+package version, task ID, or artifact hash is never promoted to app identity.
+A failed or uncertain Download preserves the target and returns unknown effect
+custody with `retrySafe=false`; reconcile before another effect. Partial files
+may remain in the private output directory for diagnosis. A final policy reset
+or transport-close failure is reported without discarding verified bytes.
