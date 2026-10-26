@@ -71,3 +71,5 @@ Known limitations are documented: setup before configuration, startup before
 interception, worker/peer traffic, missing network correlation, overlapping
 summed durations and unfinished admissions are not complete timing authority.
 No code-review delegation was used. No service restart or provider probe occurred.
+
+Source checkpoint: `1afa3fe44` (validated source/build; draft PR delivery).

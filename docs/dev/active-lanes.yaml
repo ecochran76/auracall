@@ -10,7 +10,7 @@ lanes:
     target: main
     plan_state: CLOSED
     custody_state: INTEGRATION_READY
-    checkpoint: ad7b34d264290b0c8e11297a25c53c096214a90a
+    checkpoint: 1afa3fe4401eb3cdf1fb0c2315c2e338ec30c4ae
     remote_ref: refs/remotes/origin/feat/browser-performance-diagnostics
     integration: merge
     dependencies: []
