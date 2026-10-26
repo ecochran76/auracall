@@ -56878,3 +56878,13 @@ archiveattribution accepted. SingleTDDpass reproduced and repaired unique-respon
 preflight/control/capture guards;62affectedchecks/4files and fulltypecheck passed.
 No nativeeffects/retry/publication/runtimeinstallation. Review/TDD1/1; further
 verification closedworld. Root405;409and414each assigned one worker/sourceprep.
+
+
+### 2026-10-26 — #405 diagnosing-bugs feedback loops
+
+One normalgoverned existing-session validation passed isValid/authRequiredtrue;
+originalflowref unchanged, noAdd/auth/toolcall. ActualinstalledOAuth registration
+in isolatedtemporarySQLite reproducibly rejects exactGrokcallback; minimized
+request remainsred, callback-only in-memory candidate makes both forms green.
+Privateconfig/rollback prepared; exactseparateserviceactivation approvalpending.
+No realconfig/restart/clientregistration/grants. #405/#406OPEN; priorreview/TDD1/1.

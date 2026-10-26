@@ -26299,3 +26299,14 @@ qualification and same response/gateway after capture. Refuse ambiguous history
 rather than label current bytes with older provenance. Preserve unknown custody
 if binding changes after input. Three causal regressions plus affected62checks
 and typecheck passed; historical inspect behavior remains available.
+
+
+### 2026-10-26 — Separate stale validation failure from OAuth compatibility
+
+The retained generic Grok failure no longer reproduced under one governed actual
+SDK validation read. Avoid treating the old created-session UI as current server
+reachability evidence. The installed OAuth registration guard independently
+rejects Grok's runtime-qualified exact callback while its ChatGPT-only allowlist
+is active. Isolated actual-code red/minimal/green checks confirm the callback-only
+candidate, without real registration or grants. Activation and human consent
+remain separate from source/configuration readiness.
