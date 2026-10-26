@@ -15,14 +15,29 @@ export async function createConfiguredGrokBuildService(
 	abortSignal?: AbortSignal,
 ): Promise<GrokBuildService> {
 	async function run(
-		kind: "discover" | "generate" | "inspect",
+		targetId: string | undefined,
 		operation: (service: GrokBuildService) => Promise<GrokBuildResult>,
 	) {
 		let profile = runtimeProfile ?? config.auracallProfile ?? "default";
 		try {
-			const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal, {
-				ensurePort: kind !== "inspect",
-			});
+			const { GrokService } = await import("./llmService/providers/grokService.js");
+			const options = targetId
+				? await GrokService.create({
+						...config,
+						auracallProfile: runtimeProfile ?? config.auracallProfile,
+					}).buildListOptions(
+						{
+							tabTargetId: targetId,
+							requireExistingTarget: true,
+							allowNavigation: false,
+							tabLifecycle: "retain",
+							abortSignal,
+						},
+						{ ensurePort: false },
+					)
+				: await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal, {
+						ensurePort: true,
+					});
 			profile = options.providerSessionAuthorization?.context.auracallRuntimeProfile ?? profile;
 			const result = await operation(createGrokBuildService(options));
 			try {
@@ -45,8 +60,9 @@ export async function createConfiguredGrokBuildService(
 		}
 	}
 	return {
-		discover: () => run("discover", (service) => service.discover()),
-		inspect: (request) => run("inspect", (service) => service.inspect(request)),
-		generate: (request) => run("generate", (service) => service.generate(request)),
+		export: (request) => run(request.targetId, (service) => service.export(request)),
+		discover: () => run(undefined, (service) => service.discover()),
+		inspect: (request) => run(request.targetId, (service) => service.inspect(request)),
+		generate: (request) => run(undefined, (service) => service.generate(request)),
 	};
 }

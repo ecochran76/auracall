@@ -56827,3 +56827,11 @@ reset-to-default acknowledged (prior override unknown); transport cleanup comple
 allfourtargetleases released/settled. No CAS, extraction, code execution,
 publication or regeneration.76byte app-env metadata lacks app/version. #410 stays
 open pending authenticidentity/publicexport;411/414 stayblocked. Review/TDD0/0.
+### 2026-10-25 — #410 bounded workspace export
+
+Added a public retained-target Build export action using observed native
+More options → Download ownership, target-only private capture, explicit default
+reset consent, and separate byte/app identity evidence. No publication or
+native effect was run during implementation. Causal checks cover unsupported
+or uncertain setup, account/root guards, private output, partial downloads,
+unknown effect custody and cleanup; public native acceptance remains pending.

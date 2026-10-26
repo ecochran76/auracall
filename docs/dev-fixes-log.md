@@ -26255,3 +26255,13 @@ An unrelated asset with an unsupported content-key shape must not prevent a
 fully qualified current asset from being selected. Omit unsupported content-key URI rows with
 explicit incomplete/visible-only coverage; never invent alternate keys or IDs.
 Duplicate IDs, foreign ownership and global current-root failures still block.
+
+### 2026-10-25 — Build export preserves unknown Download custody
+
+The native workspace Download is independent of app/version metadata. Bound
+capture to the exact owned target's Page capability and a private directory;
+never reuse Browser-global download settings or fabricate IDs from filenames.
+A rejected setup may already have changed browser state, so reset on attempted
+setup and close in a nested finally. Completed-looking files alongside partial
+files do not qualify. Download acknowledgement/capture failures must reach the
+interaction ledger as outcome-unknown, without replay.

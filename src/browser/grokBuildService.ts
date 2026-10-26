@@ -22,7 +22,7 @@ import type { BrowserProviderListOptions } from "./providers/types.js";
 import type { ChromeClient } from "./types.js";
 
 export interface GrokBuildResult {
-	operation?: "inspect";
+	operation?: "inspect" | "export";
 	status: "available" | "unavailable" | "partial" | "unknown" | "invalid";
 	code: string;
 	targetId: string | null;
@@ -40,7 +40,22 @@ export interface GrokBuildResult {
 	conversationUrl: string | null;
 	app: { id: string | null; version: string | null };
 	preview: { status: "unknown" | "available"; url: null; code?: string };
-	artifacts: { status: "unavailable"; code: string; entries: never[] };
+	artifacts: {
+		status: "unavailable" | "retrieved" | "unknown";
+		code: string;
+		entries: Array<{
+			kind: "workspace-archive";
+			localPath: string;
+			sha256: string;
+			sizeBytes: number;
+			mediaType: "application/zip";
+			provenance: GrokBuildInspectRequest & { source: "native-download-menu" };
+		}>;
+	};
+	exportCapture?: {
+		setup: "not_attempted" | "attempted" | "acknowledged";
+		reset: "not_needed" | "default_acknowledged" | "unknown";
+	};
 	publication: { requested: false; status: "unknown" };
 	cleanupState: "completed" | "unknown";
 	effectState: "none" | "completed" | "unknown";
@@ -51,7 +66,12 @@ export interface GrokBuildInspectRequest {
 	conversationId: string;
 	responseId?: string;
 }
+export interface GrokBuildExportRequest extends GrokBuildInspectRequest {
+	outputDir: string;
+	acknowledgeTargetDefaultReset: true;
+}
 export interface GrokBuildService {
+	export(request: GrokBuildExportRequest): Promise<GrokBuildResult>;
 	inspect(request: GrokBuildInspectRequest): Promise<GrokBuildResult>;
 	discover(): Promise<GrokBuildResult>;
 	generate(request: {
@@ -487,5 +507,13 @@ export function createGrokBuildService(
 		}
 		return result;
 	}
-	return { discover: () => run(), generate: (request) => run(request), inspect };
+	return {
+		discover: () => run(),
+		generate: (request) => run(request),
+		inspect,
+		export: async (request) => {
+			const { exportGrokBuild } = await import("./grokBuildExport.js");
+			return exportGrokBuild(options, dependencies, request);
+		},
+	};
 }
