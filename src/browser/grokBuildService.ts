@@ -21,7 +21,19 @@ import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
 import type { ChromeClient } from "./types.js";
 
+export interface GrokBuildMaterialization {
+	status: "indexed" | "not_materialized" | "failed";
+	itemIds: string[];
+	verifiedBytes: number;
+	coverage: {
+		scope: "selected-workspace-archive";
+		complete: false;
+		referencedFiles: "not_qualified";
+		appIdentity: "observed" | "unobserved";
+	};
+}
 export interface GrokBuildResult {
+	materialization?: GrokBuildMaterialization;
 	operation?: "inspect" | "export";
 	status: "available" | "unavailable" | "partial" | "unknown" | "invalid";
 	code: string;

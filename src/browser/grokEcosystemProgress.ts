@@ -1,6 +1,6 @@
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { createHash, randomUUID } from "node:crypto";
 import { getAuracallHomeDir } from "../auracallHome.js";
 export type GrokEcosystemSurface = "files" | "bots" | "build";
 export interface GrokEcosystemProgress {
@@ -15,6 +15,15 @@ export interface GrokEcosystemProgress {
 	hasResponseIdentity: boolean;
 	effectState: "none" | "completed" | "unknown";
 	observedAt: string;
+	materialization?: {
+		status: "indexed" | "not_materialized" | "failed";
+		indexedAssets: number;
+		verifiedBytes: number;
+		scope: "selected-workspace-archive";
+		complete: false;
+		referencedFiles: "not_qualified";
+		appIdentity: "observed" | "unobserved";
+	};
 }
 function destination(surface: GrokEcosystemSurface, profile: string) {
 	return path.join(
@@ -29,7 +38,30 @@ function destination(surface: GrokEcosystemSurface, profile: string) {
 function sanitize(value: Record<string, unknown>): GrokEcosystemProgress {
 	const count = (n: unknown) =>
 		typeof n === "number" && Number.isSafeInteger(n) && n >= 0 ? n : null;
+	const m =
+		value.materialization && typeof value.materialization === "object"
+			? (value.materialization as Record<string, unknown>)
+			: null;
 	return {
+		...(m
+			? {
+					materialization: {
+						status:
+							m.status === "indexed"
+								? ("indexed" as const)
+								: m.status === "not_materialized"
+									? ("not_materialized" as const)
+									: ("failed" as const),
+						indexedAssets: count(m.indexedAssets) ?? 0,
+						verifiedBytes: count(m.verifiedBytes) ?? 0,
+						scope: "selected-workspace-archive" as const,
+						complete: false as const,
+						referencedFiles: "not_qualified" as const,
+						appIdentity:
+							m.appIdentity === "observed" ? ("observed" as const) : ("unobserved" as const),
+					},
+				}
+			: {}),
 		status:
 			typeof value.status === "string" &&
 			[
