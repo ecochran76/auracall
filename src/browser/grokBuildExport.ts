@@ -216,6 +216,35 @@ export async function exportGrokBuild(
 			await governor.checkWarning?.(client.Runtime);
 			if ((await verify(client.Runtime, options)) !== account)
 				throw new Error("grok_build_account_changed");
+			if (click) {
+				const { ensureGrokTabVisible } = await import("./providers/grokAdapter.js");
+				await ensureGrokTabVisible(client, { timeoutMs: 2500 });
+				const observed = await client.Runtime.evaluate({
+					expression:
+						"(()=>({visibilityState:document.visibilityState??null,origin:location.origin,pathname:location.pathname}))()",
+					returnByValue: true,
+				});
+				const page = observed.result?.value as
+					| { visibilityState?: string; origin?: string; pathname?: string }
+					| undefined;
+				if (
+					observed.exceptionDetails ||
+					page?.visibilityState !== "visible" ||
+					page.origin !== "https://grok.com" ||
+					page.pathname !== `/c/${request.conversationId}` ||
+					connection.targetId !== request.targetId ||
+					governor.attribution.targetId !== request.targetId
+				)
+					throw new BrowserAutomationError("grok_build_export_visible_target_required", {
+						effectState: "pre_effect",
+						targetId: request.targetId,
+					});
+				if ((await verify(client.Runtime, options)) !== account)
+					throw new BrowserAutomationError("grok_build_account_changed", {
+						effectState: "pre_effect",
+						targetId: request.targetId,
+					});
+			}
 			const token = randomUUID(),
 				r = await client.Runtime.evaluate({
 					expression: grokBuildExportControlExpression(exact, gatewayRowId, token, action),
