@@ -65,3 +65,11 @@ Official [Grok Connector documentation](https://docs.x.ai/grok/connectors) confi
 custom MCP authentication follows entering the server URL, but did not supply the
 exact callback in this bounded discovery. Existing ChatGPT access stays outside
 this AuraCall source slice.
+
+
+A later bounded passive current-component check on the same owned failed modal
+inspected135 committed component/prop functions without finding OAuth/redirect
+metadata in that inspected set. Pre/post account proof matched and no input or
+Add occurred. This is not proof that Grok has no callback; the actual callback
+remains unqualified. No auth-service allowlist, client registration or grants
+were changed. The original failed installation remains retained, not reset.

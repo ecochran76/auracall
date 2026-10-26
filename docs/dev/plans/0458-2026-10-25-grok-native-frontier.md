@@ -94,3 +94,21 @@ external OAuth configuration changes, additional uploads or review/TDD passes.
 Current remaining scope is405/406/408/409/410/411/414. #409 still depends on408;
 403's closure does not qualify unavailable Bot controls. Parent398 stays untouched.
 Final review/TDD counters remain0/0 until all remaining tickets close.
+
+
+## Native artifact checkpoint
+
+One approved governed410Download retrieved a private1,524,948byte ZIP with291
+entries; primary independently validated integrity/account/cleanup/settled leases.
+See [artifact frontier](../notes/2026-10-25-grok410-artifact-frontier.md).
+Authentic app/version and public export remain unqualified. No extraction,
+execution, publication or generation retry;410/411/414 remain OPEN.
+
+
+## Public artifact checkpoint
+
+Source2986 publicCLI now retrieves and verifies the retained workspace archive
+with exact account/target/conversation/assistant provenance and truthful partial
+app identity. Primary validated bytes, all291entryCRCs, policy reset and cleanup.
+Original410 app/version gate remains unmet;411/414 remain blocked. No publication,
+legal consent, regeneration or installed runtime adoption is inferred.

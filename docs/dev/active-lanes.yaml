@@ -2069,12 +2069,12 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: d107e13cef6a83b76f63de9b3f268366be936a6b
+    checkpoint: 2986d5257c95b81f77bb8901daafd029b219b649
     remote_ref: refs/remotes/origin/feat/grok-native-frontier-20261025
     integration: merge
     dependencies: []
     overlaps: [grok398]
     reconciled_overlaps: [grok398]
     reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
-    validation_status: eight-open-four-dependency-ready-native-effect-packet-prepared
+    validation_status: 403-closed-seven-open-410-public-native-export-qualified-identity-gated-405-oauth-408-scope-pending
     updated_at: 2026-10-25

@@ -3463,16 +3463,18 @@ program.command('grok-bots').description('Discover/invoke Grok Bots and operate 
  });
 
 program.command('grok-build').description('Discover Grok Build mode or request one confirmed generation; app/version artifacts remain separately qualified.')
- .option('--action <discover|generate|inspect>','Operation.','discover').option('--prompt <text>','Exact generation prompt.')
- .option('--target-id <id>','Exact retained target for read-only inspection.').option('--conversation-id <id>','Exact conversation for inspection.').option('--response-id <id>','Optional exact assistant response for inspection.')
+ .option('--action <discover|generate|inspect|export>','Operation.','discover').option('--prompt <text>','Exact generation prompt.')
+ .option('--target-id <id>','Exact retained target for inspection or export.').option('--conversation-id <id>','Exact conversation for inspection or export.').option('--response-id <id>','Optional exact assistant response.')
+ .option('--output-dir <path>','Existing private0700 export directory.').option('--acknowledge-target-default-reset','Accept target download policy reset to default after export.')
  .option('--yes','Confirm one generation.').option('--timeout-ms <milliseconds>','Response observation deadline (default 120000).',Number)
  .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
  .action(async(options,command)=>{
   let result: import('../src/browser/grokBuildService.js').GrokBuildResult={...grokBuildUnknown('grok_build_request_invalid'),status:'invalid' as const};
   try {
    if(options.action!=='generate'&&(options.prompt!==undefined||options.yes||options.timeoutMs!==undefined))throw new Error('Generation inputs require --action generate.');
-   if(options.action!=='inspect'&&(options.targetId!==undefined||options.conversationId!==undefined||options.responseId!==undefined))throw new Error('Retained target inputs require --action inspect.');
-   const request=GrokBuildRequestSchema.parse(options.action==='discover'?{action:'discover',runtimeProfile:options.runtimeProfile}:options.action==='inspect'?{action:'inspect',targetId:options.targetId,conversationId:options.conversationId,responseId:options.responseId,runtimeProfile:options.runtimeProfile}:{action:options.action,prompt:options.prompt,confirmed:options.yes===true,timeoutMs:options.timeoutMs,runtimeProfile:options.runtimeProfile});
+   if(!['inspect','export'].includes(options.action)&&(options.targetId!==undefined||options.conversationId!==undefined||options.responseId!==undefined))throw new Error('Retained target inputs require --action inspect or export.');
+   if(options.action!=='export'&&(options.outputDir!==undefined||options.acknowledgeTargetDefaultReset))throw new Error('Export inputs require --action export.');
+   const request=GrokBuildRequestSchema.parse(options.action==='export'?{action:'export',targetId:options.targetId,conversationId:options.conversationId,responseId:options.responseId,outputDir:options.outputDir,acknowledgeTargetDefaultReset:options.acknowledgeTargetDefaultReset===true,runtimeProfile:options.runtimeProfile}:options.action==='discover'?{action:'discover',runtimeProfile:options.runtimeProfile}:options.action==='inspect'?{action:'inspect',targetId:options.targetId,conversationId:options.conversationId,responseId:options.responseId,runtimeProfile:options.runtimeProfile}:{action:options.action,prompt:options.prompt,confirmed:options.yes===true,timeoutMs:options.timeoutMs,runtimeProfile:options.runtimeProfile});
    result=grokBuildUnknown('grok_build_configuration_failed');
    const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
    result=await runGrokBuildCommand(request,await createConfiguredGrokBuildService(config,request.runtimeProfile));

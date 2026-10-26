@@ -56805,3 +56805,50 @@ one closing comment. Actor/target/body-change/close receipts remain private.
 Current24-node graph:17closed/sevenopen. Parent398 was not edited. #409 remains
 blocked by408; no unavailable Bot control or Build artifact gate was waived.
 The requested single final code-review/TDD pass remains reserved (0/0).
+
+### 2026-10-25 — Plan0458 / Build Download menu qualified
+
+Primary continued after403closure; PR474 merged6929b45 with the closure ledger.
+One passive410read qualified the exact active owned menu: Download enabled,
+Push to GitHub enabled; Files active and Workspace inactive. Account matched
+before/after, shared current-root/menu relation qualified, module hashes unchanged.
+Primary independently validated raw SHA b515469d62ded866e2acafa5c530876d77081121bda233cf22a5816988d56e0d.
+Download preparation continues; no bytes, app/version, publication or410closure
+claimed. A separate405passive current-component check found no OAuth callback
+metadata among135inspected functions; no Add or auth-service change occurred.
+Seven scoped tickets remain open;408contract decision pending; finalreview/TDD0/0.
+
+### 2026-10-25 — Plan0458 / native Build ZIP retrieved once
+
+One governed trusted Download from clean35057b5e2 captured1,524,948private ZIP
+bytes/291entries; SHA413df690fb50639a9b7ed3b3b83bf6c77e0e131fd8c73ebe3f0376db93745581.
+Primary validated raw result/byte hashes and account pre/post match. Target Page
+reset-to-default acknowledged (prior override unknown); transport cleanup complete,
+allfourtargetleases released/settled. No CAS, extraction, code execution,
+publication or regeneration.76byte app-env metadata lacks app/version. #410 stays
+open pending authenticidentity/publicexport;411/414 stayblocked. Review/TDD0/0.
+### 2026-10-25 — #410 bounded workspace export
+
+Added a public retained-target Build export action using observed native
+More options → Download ownership, target-only private capture, explicit default
+reset consent, and separate byte/app identity evidence. No publication or
+native effect was run during implementation. Causal checks cover unsupported
+or uncertain setup, account/root guards, private output, partial downloads,
+unknown effect custody and cleanup; public native acceptance remains pending.
+
+### 2026-10-25 — Plan0458 / public Build export accepted as partial
+
+Root integrated worker6ad/ef5/d3/dd with both journal histories preserved.
+Root56checks/4files passed on44397; final visibility repair2986 passed24affected
+checks/2files. Worker exactdd fulltypecheck accepted; runtime source matches.
+PublicCLI2986 retrieved1,524,948byte ZIP/291CRC-verifiedentries; SHA
+ eee702f30f5597cb8738aacd92929d72a4c5a08e7eb49243ded5788bfa766595.
+Primary validated private bytes/permissions/source hashes/exactCID+assistant,
+setup/reset/cleanup and14released/settled targetleases. Native result is partial:
+authentic app/version remain null, not invented from workspace or archive hashes.
+Retained failed hidden-root/unknownpointer receipts and qualified local-state CAS
+audits; no generation repeated. Existing ensureGrokTabVisible honors configured
+focus policy before trustedinput. No publication/terms acceptance/local execution.
+#405 bounded retained-flow read exposes a generic error handler, not an actual
+OAuth callback or connected account. No Add or external-auth configuration changed.
+Seven scoped tickets remain OPEN; parent398 untouched; finalreview/TDD0/0.
