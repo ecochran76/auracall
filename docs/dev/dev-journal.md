@@ -56817,3 +56817,13 @@ Download preparation continues; no bytes, app/version, publication or410closure
 claimed. A separate405passive current-component check found no OAuth callback
 metadata among135inspected functions; no Add or auth-service change occurred.
 Seven scoped tickets remain open;408contract decision pending; finalreview/TDD0/0.
+
+### 2026-10-25 — Plan0458 / native Build ZIP retrieved once
+
+One governed trusted Download from clean35057b5e2 captured1,524,948private ZIP
+bytes/291entries; SHA413df690fb50639a9b7ed3b3b83bf6c77e0e131fd8c73ebe3f0376db93745581.
+Primary validated raw result/byte hashes and account pre/post match. Target Page
+reset-to-default acknowledged (prior override unknown); transport cleanup complete,
+allfourtargetleases released/settled. No CAS, extraction, code execution,
+publication or regeneration.76byte app-env metadata lacks app/version. #410 stays
+open pending authenticidentity/publicexport;411/414 stayblocked. Review/TDD0/0.

@@ -25,9 +25,24 @@ Raw identities, DOM and private preview bearer URLs remain outside Git.
 The raw receipt filename uses an earlier source locator; its actual provenance
 records docs-only HEAD5921fef9, with runtime modules unchanged from83d527869.
 
-Next packet prepares one normal governed Download of that owned menu item with
-private byte capture, integrity and container inventory. Download has not yet
-been dispatched. No publication, GitHub push, preview restart, generated-code
-execution or additional generation is authorized by this checkpoint. #411/#414
+One normal governed trusted Download then succeeded from clean35057b5e2.
+Primary independently verified a private ZIP of1,524,948bytes with291entries,
+SHA256 `413df690fb50639a9b7ed3b3b83bf6c77e0e131fd8c73ebe3f0376db93745581`.
+The account matched before/after; target-scoped Page download setup succeeded,
+reset-to-default was acknowledged, and transport cleanup completed. CDP has no
+getter for the prior target override; restoration of an unknown override is not
+claimed. All four target leases read back released/settled, so no CAS was needed.
+
+Immutable private download proof SHA256:
+`59486f900079e990fe0c17fcb3b5bfa51f440cb81218b185f5b239a65a481f58`.
+Primary validated raw result and archive hashes, single trusted click, accounts,
+reset, cleanup and ZIP central-directory inventory. Only the76byte
+`.grok/app-env.json` was read in memory after inventory: it contains an auth flag
+and deploy.database=false, no authentic app/version identity. No extraction or
+code execution occurred. Public artifact export still needs implementation from
+these observed native semantics; native bytes alone do not satisfy that gate.
+
+No publication, GitHub push, preview restart, generated-code execution or
+additional generation occurred. #411/#414
 remain blocked by #410, and no task ID, Vite version or body hash substitutes for
 an authentic app/version identity. The final code-review/TDD passes remain0/0.
