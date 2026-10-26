@@ -46,7 +46,7 @@ export interface GrokFileDom {
 // Root is derived from the sole visible editable composer. A random marker binds
 // all later observations and the exact native file input to this same DOM node.
 const helpers = `
-const visible = el => { for(let node=el;node;node=node.parentElement)if(node.getAttribute('data-closed')!==null||node.getAttribute('data-open')==='false'||node.getAttribute('data-state')==='closed')return false; return el instanceof HTMLElement && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden'; };
+const visible = el => { for(let node=el;node;node=node.parentElement)if((['menu','dialog','listbox','tooltip'].includes(node.getAttribute('role'))||node.getAttribute('aria-modal')==='true')&&(node.getAttribute('data-closed')!==null||node.getAttribute('data-open')==='false'||node.getAttribute('data-state')==='closed'))return false; return el instanceof HTMLElement && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden'; };
 const identity = el => {
  const raw = el.getAttribute('data-file-id') || el.getAttribute('data-attachment-id');
  if (raw) return raw;

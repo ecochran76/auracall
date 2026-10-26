@@ -740,6 +740,7 @@ test.each([
 	"private-context",
 	"changed-row",
 	"foreign-input",
+	"closed-overlay",
 ] as const)("native Recent joins duplicate labels by committed asset key (%s)", async (scenario) => {
 	const f = fixture();
 	Object.assign(f.document, {
@@ -779,11 +780,12 @@ test.each([
 	rootFor(f.composer);
 	const attach = new Node(
 		"BUTTON",
-		{ "aria-label": "Attach", id: "attach", "aria-controls": "parent" },
+		{ "aria-label": "Attach", id: "attach", "aria-controls": "parent", "data-state": "closed" },
 		"Attach",
 	);
 	const parent = new Node("DIV", { role: "menu", id: "parent", "aria-labelledby": "attach" });
 	parent.hidden = true;
+	if (scenario === "closed-overlay") parent.setAttribute("data-state", "closed");
 	const recent = new Node(
 		"DIV",
 		{ role: "menuitem", id: "recent", "aria-controls": "chooser" },
@@ -882,7 +884,7 @@ test.each([
 		timeoutMs: 20,
 		pollMs: 0,
 	});
-	if (scenario === "foreign-account" || scenario === "stale-row") {
+	if (scenario === "foreign-account" || scenario === "stale-row" || scenario === "closed-overlay") {
 		await expect(client.select(ids[1])).rejects.toThrow();
 		expect(selected).not.toHaveBeenCalled();
 		return;

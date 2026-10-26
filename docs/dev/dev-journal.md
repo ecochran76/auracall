@@ -56753,3 +56753,11 @@ Grok403 input-scope correction: metadata-only recovery may inspect an unmarked
 sole native input only when its FileList is empty. A causal foreign-input fixture
 observed an unintended byte read before this guard; now it refuses without
 reading bytes, retaining unknown context. Owned marker/digest semantics remain.
+
+
+2026-10-25 — Grok403 r24 opener diagnosis: no Attach/Recent/item click occurred.
+Actual Attach is an ordinary button with data-state closed; overbroad visibility
+logic rejected it. Source now interprets closed-state attributes only on overlay
+roles/modal containers. Native-derived closed-trigger regression RED→GREEN;
+closed-menu descendants remain refused. Private immutable r25 source-expression
+proof links raw no-dispatch/empty-composer evidence; primary owns lease recovery.

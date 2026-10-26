@@ -98,3 +98,15 @@ no local-manifest agreement and no server-byte qualification. Identity/readiness
 still requires current metadata, account/source URI, same-root Submit gate and
 error/private/disabled/deleted guards. Existing native-File digest proof remains
 a separate path and upload success still requires the exact local manifest.
+
+Public Recent corrective canary r24 stopped before any opener/item click: the
+normal Attach trigger exposes `data-state=closed`, which the visibility helper
+incorrectly treated as a closed overlay. Exact frozen-source expression replay
+(r25) matches native composer binding true and Attach expression false. Final
+composer text/FileList/chips remain empty; account checks match. Native targets
+and utility uncertainty are preserved for supported primary adjudication.
+Closed-state filtering now applies to menu/dialog/listbox/tooltip/modal overlays
+and their descendants, while ordinary closed triggers remain actionable. The
+actual closed-trigger fixture fails before this correction and passes after;
+closed-overlay refusal remains covered. No successful native Recent selection
+is claimed, and no further native operation is authorized by this source fix.

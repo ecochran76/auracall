@@ -26241,3 +26241,10 @@ to the current `assets[].assetId` DTO with verified owner/content URI; repeat
 that association immediately at selection. Metadata-only attachment recovery
 provides identity/readiness without a File hash or local-manifest/server-byte
 claim. The existing native File/digest upload guard remains separate.
+
+
+2026-10-25 — Grok closed trigger state does not hide its control.
+Attach/menu triggers normally expose `data-state=closed`. Restrict closed-state
+visibility exclusion to overlay roles/modal ancestors; retain refusal of their
+closed descendants. Exact native opener-false evidence and source replay prove
+the failed canary dispatched no menu/file-selection click.
