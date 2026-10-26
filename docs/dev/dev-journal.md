@@ -56835,3 +56835,20 @@ reset consent, and separate byte/app identity evidence. No publication or
 native effect was run during implementation. Causal checks cover unsupported
 or uncertain setup, account/root guards, private output, partial downloads,
 unknown effect custody and cleanup; public native acceptance remains pending.
+
+### 2026-10-25 — Plan0458 / public Build export accepted as partial
+
+Root integrated worker6ad/ef5/d3/dd with both journal histories preserved.
+Root56checks/4files passed on44397; final visibility repair2986 passed24affected
+checks/2files. Worker exactdd fulltypecheck accepted; runtime source matches.
+PublicCLI2986 retrieved1,524,948byte ZIP/291CRC-verifiedentries; SHA
+ eee702f30f5597cb8738aacd92929d72a4c5a08e7eb49243ded5788bfa766595.
+Primary validated private bytes/permissions/source hashes/exactCID+assistant,
+setup/reset/cleanup and14released/settled targetleases. Native result is partial:
+authentic app/version remain null, not invented from workspace or archive hashes.
+Retained failed hidden-root/unknownpointer receipts and qualified local-state CAS
+audits; no generation repeated. Existing ensureGrokTabVisible honors configured
+focus policy before trustedinput. No publication/terms acceptance/local execution.
+#405 bounded retained-flow read exposes a generic error handler, not an actual
+OAuth callback or connected account. No Add or external-auth configuration changed.
+Seven scoped tickets remain OPEN; parent398 untouched; finalreview/TDD0/0.

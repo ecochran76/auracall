@@ -205,13 +205,13 @@
       "blockedBy": [
         402
       ],
-      "state": "native-artifact-retrieved-public-export-pending",
+      "state": "public-native-prepublication-qualified-identity-gated",
       "scope": "original-program",
-      "gate": "Native ZIP qualified; authentic app/version and public artifact export remain unmet. No publication or regeneration.",
+      "gate": "Public archive export qualified; authentic provider app/version identity remains unmet under original contract. No publication authorized.",
       "currentEvidence": {
         "nativeInitialGeneration": "preflight failed before Send on improperly reused target",
         "effectDispatched": true,
-        "next": "passive draft publication-control metadata qualification; bounded public export implementation from native semantics",
+        "next": "resolve prepublication identity contract or qualify actual provider identity; no blind retries or publication",
         "correctiveCommand": "active; clean3d837e9e9; fresh account match; genuine new-target policy in production",
         "nativeGeneration": "one accepted generation completed; native Worked for terminal marker and exact conversation/assistant response validated",
         "operatorSettlement": "immutable completion proof validated; supported CAS settled and released preserved target; prior uncertainty audit retained",
@@ -227,7 +227,19 @@
           "source": "35057b5e21486100c82701600e7a6c52a1406193",
           "primaryValidation": "raw result/archive hash, singletrustedclick, pre/postaccount, target reset and cleanup independently validated; 4leases released/settled"
         },
-        "acceptanceNote": "../notes/2026-10-25-grok410-artifact-frontier.md"
+        "acceptanceNote": "../notes/2026-10-25-grok410-artifact-frontier.md",
+        "publicExport": {
+          "source": "2986d5257c95b81f77bb8901daafd029b219b649",
+          "status": "partial/grok_build_export_retrieved_app_identity_unobserved",
+          "artifactStatus": "retrieved",
+          "bytes": 1524948,
+          "sha256": "eee702f30f5597cb8738aacd92929d72a4c5a08e7eb49243ded5788bfa766595",
+          "zipEntries": 291,
+          "primaryValidationSha256": "79c16116876617402bc1c3e92877982956c304d30a87cde17ab969fc088686f6",
+          "cleanup": "completed; target reset acknowledged; 14leases released/settled",
+          "appVersionQualified": false
+        },
+        "nativePublishInspection": "local dialog only: Not Published/Anyone with the link; no edits/terms/confirm; closed and physical stale-overlay state repaired separately"
       }
     },
     "411": {
@@ -415,7 +427,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "403CLOSED/mainPR4746929;7frontierOPEN;410nativeZIPqualified/publicexport+authenticidentitypending;405OAuthcallbackgate;408scopeDecisionPending;reviewTDD0.",
+  "lastCheckpoint": "403CLOSED;7frontierOPEN;410publicnativeZIPqualified/realappVersiongate;405OAuthcallbackunobserved;408scopeDecisionPending;finalreviewTDD0.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
