@@ -22,7 +22,10 @@ vi.mock("../../src/browser/providers/grokBuild.js", async (original) => ({
 vi.mock("../../src/browser/providers/mutationAudit.js", () => ({
 	resolveProviderTrafficGovernor: () => seam.governor,
 }));
-vi.mock("../../src/browser/service/ui.js", () => ({ pressButtonWithTrustedPointer: seam.click }));
+vi.mock("../../src/browser/service/ui.js", async (original) => ({
+	...(await original<object>()),
+	pressButtonWithTrustedPointer: seam.click,
+}));
 const roots: string[] = [];
 afterEach(async () => {
 	vi.useRealTimers();
@@ -38,6 +41,9 @@ async function fixture(
 		accountChanges?: boolean;
 		clickFails?: boolean;
 		moreClosed?: boolean;
+		initiallyHidden?: boolean;
+		suppressFocus?: boolean;
+		accountAfterFocus?: boolean;
 	} = {},
 ) {
 	seam.governor.begin.mockResolvedValue({ settle: vi.fn() });
@@ -46,6 +52,12 @@ async function fixture(
 	await fs.chmod(root, 0o700);
 	let directory = "",
 		accounts = 0;
+	let visibility = input.initiallyHidden ? "hidden" : "visible",
+		focused = false;
+	const bringToFront = vi.fn(async () => {
+		visibility = "visible";
+		focused = true;
+	});
 	seam.view.mockResolvedValue({
 		state: "completed",
 		responseId: "assistant",
@@ -63,21 +75,36 @@ async function fixture(
 		},
 	);
 	const close = vi.fn(async () => {}),
-		evaluate = vi.fn(async ({ expression }: { expression: string }) => ({
-			result: {
-				value: {
-					stage: input.rootFails
-						? "current-root-changed"
-						: input.moreClosed
-							? expression.includes('action="more"')
-								? "owned-more-prepared"
-								: "active-menu-relation-unqualified"
-							: "owned-menu-observed",
-					flags: { expandedOwnedTriggerCount: input.moreClosed ? 0 : 1 },
-				},
-			},
-		}));
+		evaluate = vi.fn(async ({ expression }: { expression: string }) =>
+			expression.includes("document.visibilityState")
+				? {
+						result: {
+							value: {
+								visibilityState: visibility,
+								origin: "https://grok.com",
+								pathname: "/c/conversation",
+								href: "https://grok.com/c/conversation",
+							},
+						},
+					}
+				: {
+						result: {
+							value: {
+								stage: input.rootFails
+									? "current-root-changed"
+									: input.moreClosed
+										? expression.includes('action="more"')
+											? "owned-more-prepared"
+											: "active-menu-relation-unqualified"
+										: "owned-menu-observed",
+								flags: { expandedOwnedTriggerCount: input.moreClosed ? 0 : 1 },
+							},
+						},
+					},
+		);
 	seam.click.mockImplementation(async () => {
+		if (visibility !== "visible")
+			return { ok: false, trusted: false, reason: "Matched control did not receive a click" };
 		if (input.moreClosed && input.clickFails) throw new Error("More acknowledgement lost");
 		if (input.partial) await fs.writeFile(path.join(directory, "left.crdownload"), "partial");
 		await fs.writeFile(
@@ -91,7 +118,12 @@ async function fixture(
 		return { ok: true, trusted: true };
 	});
 	const connect = vi.fn(async () => ({
-		client: { Runtime: { evaluate }, Page: { setDownloadBehavior: page }, close },
+		client: {
+			Runtime: { evaluate },
+			Page: { setDownloadBehavior: page, bringToFront },
+			close,
+			__auracallSuppressFocus: input.suppressFocus === true,
+		},
 		targetId: "target",
 	}));
 	const service = createGrokBuildService(
@@ -99,7 +131,9 @@ async function fixture(
 		{
 			connect: connect as never,
 			verifyAccount: async () =>
-				input.accountChanges && ++accounts > 2 ? "other-account" : "account",
+				(input.accountChanges && ++accounts > 2) || (input.accountAfterFocus && focused)
+					? "other-account"
+					: "account",
 		},
 	);
 	const request = {
@@ -110,7 +144,7 @@ async function fixture(
 		outputDir: root,
 		acknowledgeTargetDefaultReset: true,
 	};
-	return { service, request, root, page, close, connect };
+	return { service, request, root, page, close, connect, bringToFront };
 }
 test("public export rejects missing target default reset consent before connection", async () => {
 	const f = await fixture();
@@ -300,4 +334,36 @@ test("known More target refusal stays pre-effect without a Download or unknown f
 	expect(settle).toHaveBeenCalledWith(
 		expect.objectContaining({ outcome: "failed", effectState: "settled" }),
 	);
+});
+
+test("a hidden Grok page uses existing allowed focus precondition before native export", async () => {
+	const f = await fixture({ initiallyHidden: true });
+	expect(await runGrokBuildCommand(f.request, f.service)).toMatchObject({
+		effectState: "completed",
+		artifacts: { status: "retrieved" },
+	});
+	expect(f.bringToFront).toHaveBeenCalledOnce();
+	expect(seam.click).toHaveBeenCalledOnce();
+});
+test("suppressed focus plus hidden page refuses before pointer or Download", async () => {
+	const f = await fixture({ initiallyHidden: true, suppressFocus: true });
+	expect(await runGrokBuildCommand(f.request, f.service)).toMatchObject({
+		effectState: "none",
+		retrySafe: true,
+		artifacts: { status: "unavailable" },
+		cleanupState: "completed",
+	});
+	expect(f.bringToFront).not.toHaveBeenCalled();
+	expect(seam.click).not.toHaveBeenCalled();
+});
+
+test("account drift after allowed focus refuses before native pointer input", async () => {
+	const f = await fixture({ initiallyHidden: true, accountAfterFocus: true });
+	expect(await runGrokBuildCommand(f.request, f.service)).toMatchObject({
+		effectState: "none",
+		retrySafe: true,
+		artifacts: { status: "unavailable" },
+	});
+	expect(f.bringToFront).toHaveBeenCalledOnce();
+	expect(seam.click).not.toHaveBeenCalled();
 });

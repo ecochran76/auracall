@@ -106,7 +106,11 @@ pushes to GitHub, executes generated code, or automatically retries.
 
 Export requires an existing configured browser and exact completed assistant
 ownership. Account, conversation, current component tree, menu control relations,
-and trusted pointer dispatch are verified. It uses the target-scoped legacy
+and trusted pointer dispatch are verified. Before pointer input, export uses
+Grok's existing tab-visibility helper, honoring the configured focus suppression
+policy. A page still hidden afterward is refused before pointer input; export
+never overrides hidden-window policy. Account, route and current control
+ownership are rechecked after allowed focus. It uses the target-scoped legacy
 `Page.setDownloadBehavior` capability; unsupported capability stops before
 Download. It never changes Browser-wide download policy. Explicit consent
 accepts resetting that target policy to `default` afterward. There is no CDP
