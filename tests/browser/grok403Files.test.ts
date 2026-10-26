@@ -741,6 +741,9 @@ test.each([
 	"changed-row",
 	"foreign-input",
 	"closed-overlay",
+	"partial-unrelated",
+	"ambiguous-row",
+	"foreign-owner",
 ] as const)("native Recent joins duplicate labels by committed asset key (%s)", async (scenario) => {
 	const f = fixture();
 	Object.assign(f.document, {
@@ -759,6 +762,15 @@ test.each([
 		fileSource: "SELF_UPLOAD_FILE_SOURCE",
 		isDeleted: false,
 	}));
+	if (scenario === "partial-unrelated")
+		assets.push({
+			...assets[0],
+			assetId: "22222222-3333-4444-5555-666666666666",
+			rootAssetId: "22222222-3333-4444-5555-666666666666",
+			key: "unsupported-synthetic-key",
+		});
+	if (scenario === "ambiguous-row") assets.push({ ...assets[0] });
+	if (scenario === "foreign-owner") assets[0].ownerUserId = "foreign";
 	type Fiber = {
 		tag?: number;
 		key?: string;
@@ -884,19 +896,37 @@ test.each([
 		timeoutMs: 20,
 		pollMs: 0,
 	});
-	if (scenario === "foreign-account" || scenario === "stale-row" || scenario === "closed-overlay") {
+	if (
+		scenario === "stale-row" ||
+		scenario === "closed-overlay" ||
+		scenario === "ambiguous-row" ||
+		scenario === "foreign-owner"
+	) {
 		await expect(client.select(ids[1])).rejects.toThrow();
 		expect(selected).not.toHaveBeenCalled();
 		return;
 	}
+	if (scenario === "partial-unrelated") {
+		const inventory = await client.recent();
+		expect(inventory).toMatchObject({
+			status: "incomplete",
+			code: "grok_recent_partial",
+			coverage: { scope: "visible-recent", complete: false },
+		});
+		expect(inventory.files.map((f) => f.id)).toEqual(ids);
+		parent.hidden = true;
+		chooser.hidden = true;
+	}
 	const result = await client.select(ids[1]);
-	if (scenario === "changed-row") {
+	if (scenario === "changed-row" || scenario === "foreign-account") {
 		expect(result.status).toBe("failed");
 		expect(selected).not.toHaveBeenCalled();
 		return;
 	}
 	expect(selected).toHaveBeenCalledExactlyOnceWith(ids[1]);
-	expect(result.status).toBe(scenario === "ready" ? "complete" : "unconfirmed");
+	expect(result.status).toBe(
+		scenario === "ready" || scenario === "partial-unrelated" ? "complete" : "unconfirmed",
+	);
 	expect(result.files).toEqual(
 		scenario === "foreign-context" || scenario === "foreign-input"
 			? []
@@ -904,7 +934,7 @@ test.each([
 					{
 						id: ids[1],
 						name: "same.txt",
-						state: scenario === "ready" ? "ready" : "unknown",
+						state: scenario === "ready" || scenario === "partial-unrelated" ? "ready" : "unknown",
 						sourceBinding: "native-metadata",
 						sourceAgreement: "observed-native",
 					},

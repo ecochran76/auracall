@@ -56761,3 +56761,12 @@ logic rejected it. Source now interprets closed-state attributes only on overlay
 roles/modal containers. Native-derived closed-trigger regression RED→GREEN;
 closed-menu descendants remain refused. Private immutable r25 source-expression
 proof links raw no-dispatch/empty-composer evidence; primary owns lease recovery.
+
+
+2026-10-25 — Grok403 partial Recent inventory correction: boolean-only native
+census proves requested B passes all predicates; four unrelated rows fail only
+the existing key-URI guard. Omit unsupported content-key URI rows with explicit partial status
+and coverage instead of blocking supported assets. Duplicate-ID/global ownership
+and committed-root guards remain fail closed; selection rechecks its exact ID.
+Causal unsupported-key regression RED→GREEN; old open chooser preserved. One
+fresh empty-root canary requires primary grant after source validation/recovery.

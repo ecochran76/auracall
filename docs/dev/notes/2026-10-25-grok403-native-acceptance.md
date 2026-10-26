@@ -110,3 +110,19 @@ and their descendants, while ordinary closed triggers remain actionable. The
 actual closed-trigger fixture fails before this correction and passes after;
 closed-overlay refusal remains covered. No successful native Recent selection
 is claimed, and no further native operation is authorized by this source fix.
+
+The r26 continuation opened Attach/Recent but dispatched no item selection;
+positive final FileList/chip/text counts remain zero. Immutable r28 links the
+source-expression proof and raw receipts, retaining observed menu effects.
+The authorized r29 boolean-only census qualifies the global owners/current
+roots and the requested B row. Four unrelated rows reject only the existing
+content-key URI predicate. No unrelated metadata values or contents were returned.
+
+Recent inventory now omits rows with unsupported content-key URIs with explicit `incomplete` status,
+`grok_recent_partial` code and visible-only partial coverage. It does not infer
+an alternative URI or identity. Unique supported rows retain their current
+key/DTO/account/URI qualification immediately before click; duplicate IDs, foreign
+asset ownership, current-root or traversal failures still block. A native-derived
+unsupported-key fixture fails before this correction and passes with explicit
+partial inventory plus exact supported-ID selection. One fresh empty-root canary
+remains pending; old open menus and target are preserved without cleanup/replay.

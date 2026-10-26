@@ -24,7 +24,7 @@ const nativeRecentFiles = (root,userId) => {
  if(!currentHost(root)||!currentHost(menus.attach)||!currentHost(menus.recent)||!currentHost(chooser))return null;
  const rows=Array.from(chooser.querySelectorAll('[role="menuitem"]')).filter(visible);
  if(!rows.length||rows.length>100)return null;
- const result=[],ids=new Set();
+ const result=[],ids=new Set();let partial=false;
  for(const row of rows){
   const proof=currentHost(row);if(!proof)return null;
   const keys=new Set();const candidates=[];
@@ -40,10 +40,12 @@ const nativeRecentFiles = (root,userId) => {
   }
   if(candidates.length!==1)return null;
   const asset=candidates[0],id=asset.assetId;
-  if(typeof id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id)||ids.has(id)||asset.ownerUserId!==userId||asset.key!=='users/'+userId+'/'+id+'/content'||asset.fileSource!=='SELF_UPLOAD_FILE_SOURCE'||asset.isDeleted!==false||typeof asset.name!=='string'||!asset.name||typeof asset.mimeType!=='string'||typeof asset.sizeBytes!=='number'||!Number.isSafeInteger(asset.sizeBytes)||asset.sizeBytes<0||!(row.innerText||'').includes(asset.name))return null;
-  ids.add(id);result.push({row,file:{id,name:asset.name,state:'unknown'}});
+  if(typeof id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id)||asset.ownerUserId!==userId||ids.has(id)||asset.fileSource!=='SELF_UPLOAD_FILE_SOURCE'||asset.isDeleted!==false||typeof asset.name!=='string'||!asset.name||typeof asset.mimeType!=='string'||typeof asset.sizeBytes!=='number'||!Number.isSafeInteger(asset.sizeBytes)||asset.sizeBytes<0||!(row.innerText||'').includes(asset.name))return null;
+  ids.add(id);
+  if(asset.key!=='users/'+userId+'/'+id+'/content'){partial=true;continue;}
+  result.push({row,file:{id,name:asset.name,state:'unknown'}});
  }
  if(proofs.some(p=>p.owner.current!==p.current))return null;
- return {chooser,rows:result};
+ return {chooser,rows:result,partial};
 };
 `;

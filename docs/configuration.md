@@ -1310,7 +1310,11 @@ operator-authorized POST `/v1/grok/files/query`. Bodies use `action`, optional
 `runtimeProfile`, and either `id` for selection or `paths` for explicit local
 uploads. Recent selections require an exact unique provider file ID and explicit
 readiness in the same composer/project context. A duplicate basename is not an
-identity selector. Local upload hashes readable source bytes before dispatch.
+identity selector. Native Recent rows with unsupported content-key URIs are omitted with
+`status: incomplete`, `code: grok_recent_partial` and partial visible-only
+coverage; a supported row can still be selected by its exact provider ID.
+Duplicate-ID ambiguity, foreign ownership and global current-root failures block
+selection. Local upload hashes readable source bytes before dispatch.
 The native attachment component can bind the same selected File object and digest
 to its observed provider metadata ID, with matching account/source URI. These
 files report `sourceBinding: native-file-object`, `sourceSha256`, and

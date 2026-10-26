@@ -26248,3 +26248,10 @@ Attach/menu triggers normally expose `data-state=closed`. Restrict closed-state
 visibility exclusion to overlay roles/modal ancestors; retain refusal of their
 closed descendants. Exact native opener-false evidence and source replay prove
 the failed canary dispatched no menu/file-selection click.
+
+
+2026-10-25 — Grok Recent unsupported rows make inventory partial.
+An unrelated asset with an unsupported content-key shape must not prevent a
+fully qualified current asset from being selected. Omit unsupported content-key URI rows with
+explicit incomplete/visible-only coverage; never invent alternate keys or IDs.
+Duplicate IDs, foreign ownership and global current-root failures still block.

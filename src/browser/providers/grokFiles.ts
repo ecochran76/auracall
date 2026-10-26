@@ -297,7 +297,9 @@ export function createGrokFileClient(
 		const deadline = Date.now() + (options.timeoutMs ?? 10_000);
 		let chooserOpened = false;
 		for (let attempt = 0; attempt < 1000; attempt++) {
-			const result = await evaluate<GrokComposerFile[] | null>(`
+			const result = await evaluate<
+				GrokComposerFile[] | { files: GrokComposerFile[]; partial: boolean } | null
+			>(`
         const root=${rootExpression()};if(!root)return null;
         const owned=ownedRecentMenus(root);if(hasNativeRecentAuthority(root)&&!owned)return null;
         const menus = owned ? [owned.parent] : Array.from(document.querySelectorAll('[role="menu"]')).filter(visible);
@@ -307,7 +309,7 @@ export function createGrokFileClient(
           entries[0].click(); return [];
         }
         const native=nativeRecentFiles(root,${JSON.stringify(options.providerUserId ?? null)});
-        if(native)return native.rows.map(r=>r.file);
+        if(native)return {files:native.rows.map(r=>r.file),partial:native.partial};
         if(owned)return null;
         const choices = menus.filter(menu => fileNodes(menu).length > 0 || menu.getAttribute('aria-label') === 'Recent files');
         if (choices.length !== 1) return null;
@@ -315,12 +317,14 @@ export function createGrokFileClient(
         return fileNodes(choices[0]).map(file);`);
 			if (result && chooserOpened) {
 				const base = await context();
-				const ids = result.map((f) => f.id);
+				const files = Array.isArray(result) ? result : result.files;
+				const partial = !Array.isArray(result) && result.partial;
+				const ids = files.map((f) => f.id);
 				return {
 					...base,
-					files: result,
-					status: ids.some((id, i) => ids.indexOf(id) !== i) ? "incomplete" : "complete",
-					code: "grok_recent_visible",
+					files,
+					status: partial || ids.some((id, i) => ids.indexOf(id) !== i) ? "incomplete" : "complete",
+					code: partial ? "grok_recent_partial" : "grok_recent_visible",
 					coverage: { scope: "visible-recent", complete: false },
 				};
 			}
