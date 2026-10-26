@@ -56888,3 +56888,12 @@ in isolatedtemporarySQLite reproducibly rejects exactGrokcallback; minimized
 request remainsred, callback-only in-memory candidate makes both forms green.
 Privateconfig/rollback prepared; exactseparateserviceactivation approvalpending.
 No realconfig/restart/clientregistration/grants. #405/#406OPEN; priorreview/TDD1/1.
+
+
+### 2026-10-26 — Approved Grok callback activation verified
+
+User explicitly approved the exact callback addition and OAuth-service restart.
+Hash-guarded candidate applied; freshPID1349156 active/running, both publicdiscovery
+endpoints200. Installed registrationloop withoutcandidate nowPASS using deployed
+config/temporarySQLite. ExistingChatGPTcallback/grants preserved; no realclient,
+consent, mailboxgrant or repeatAdd. #405/#406remainOPEN for actualOAuth/readback.

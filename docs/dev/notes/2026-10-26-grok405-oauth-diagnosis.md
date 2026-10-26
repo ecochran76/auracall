@@ -1,6 +1,6 @@
 # #405 OAuth diagnosis — callback activation prepared
 
-State: OPEN; service activation pending operator approval, end-to-end OAuth not
+State: OPEN; approved callback activation verified, end-to-end OAuth not
 qualified. This follows the diagnosing-bugs feedback-loop procedure; the previous
 checkpoint review/TDD counts remain1/1 and were not reset or invoked again.
 
@@ -70,3 +70,18 @@ subsequent gates. #405/#406 remain OPEN.
 No production instrumentation was added. Temporary harnesses are confined to
 explicit debug paths. No root-cause claim is made for the earlier transient
 validation failure; the confirmed defect is missing callback compatibility.
+
+
+## Approved activation readback
+
+The operator explicitly approved activation. The hash-guarded atomic change
+installed candidate SHA256ea63df296245c4752bd8ec288434e75a18139b687f3a6c181545f6297454b0a0
+and restarted only `mail-receipts-external-oauth.service`. Fresh process PID1349156
+is active/running. Public authorization-server and protected-resource discovery
+both returned200 with expected issuer/resource. The original installed-code loop
+without `--candidate` now passes, using deployed configuration and temporary
+SQLite. Existing ChatGPT callback remains preserved. Private activation-result
+receipt and original rollback configuration remain in the prepared directory.
+No OAuth consent, real client registration, mailbox grant, second Add or connected
+account readback occurred. The confirmed callback blocker is fixed; #405/#406
+remain OPEN until the real Grok OAuth journey is qualified.
