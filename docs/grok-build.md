@@ -128,3 +128,11 @@ An unconfirmed More-menu or Download action preserves the target and returns unk
 custody with `retrySafe=false`; reconcile before another effect, including when Download was never dispatched. Known preflight refusals remain pre-effect. Partial files
 may remain in the private output directory for diagnosis. A final policy reset
 or transport-close failure is reported without discarding verified bytes.
+
+
+Workspace export currently requires a single observed assistant response in the
+conversation. An explicit response ID must match it. Multiple assistant turns
+cannot establish which snapshot the current workspace Download represents, so
+export refuses them; selecting an older response does not establish that binding.
+If response/gateway ownership changes during capture, bytes are not reported as
+an attributed artifact and the outcome remains unknown without automatic retry.

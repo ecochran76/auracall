@@ -112,3 +112,14 @@ with exact account/target/conversation/assistant provenance and truthful partial
 app identity. Primary validated bytes, all291entryCRCs, policy reset and cleanup.
 Original410 app/version gate remains unmet;411/414 remain blocked. No publication,
 legal consent, regeneration or installed runtime adoption is inferred.
+
+
+## 2026-10-26 approved checkpoint amendment
+
+User accepted the exact #408/#410 Option B recommendations and moved the single
+review to this checkpoint. #408/#410 are closed; #477 preserves missing separate
+Bot Instructions/Model defaults, and #411 preserves authentic publication identity.
+#403 remains closed. Five original scoped children remain open. #409/#414 have one
+worker each preparing source without new native effects; root retains #405.
+Review/TDD counters are1/1, not reset by this amendment. See
+[checkpoint adjudication](../notes/2026-10-26-grok-checkpoint-review.md).
