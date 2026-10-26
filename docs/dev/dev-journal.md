@@ -56770,3 +56770,11 @@ and coverage instead of blocking supported assets. Duplicate-ID/global ownership
 and committed-root guards remain fail closed; selection rechecks its exact ID.
 Causal unsupported-key regression RED→GREEN; old open chooser preserved. One
 fresh empty-root canary requires primary grant after source validation/recovery.
+
+2026-10-25 — Grok403 final native Recent acceptance packet: r30 on clean source 659d
+created a new empty owned root and selected known B exactly once. Public result
+complete/grok_files_ready, one ready B, native-metadata/observed-native without SHA;
+Native FileList 0/editor 0/chip 1, same account and enabled Submit before close. Five
+qualified inventory rows plus explicit partial coverage; no extra upload/Send.
+Immutable r31 links raw receipts, source manifest and separate A/B byte proofs.
+Worker native slot released; primary owns independent validation/issue closure.

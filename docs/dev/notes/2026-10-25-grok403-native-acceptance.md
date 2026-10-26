@@ -1,128 +1,104 @@
-# Grok #403 — source and native upload acceptance packet
+# Grok #403 — source and native acceptance packet
 
-State: ACCEPTANCE_PACKET_READY. Primary owns final acceptance and tracker closure.
+State: ACCEPTANCE_PACKET_READY. Primary owns independent validation and tracker closure.
 Work: [#403](https://github.com/ecochran76/auracall/issues/403),
 [Plan0458](../plans/0458-2026-10-25-grok-native-frontier.md).
 
 ## Qualified execution
 
-Native source was frozen at `53cbfbb7a4dd6fc1ccd4f7edbe0b299515970dde`.
-Each receipt records actual source/dirty state and helper hashes. Root-owned dirty
-changes were CLI registration and documentation, not the File implementation.
-The primary must verify intended-main File modules against that frozen source.
+The two approved synthetic uploads used source `53cbfbb7a4dd6fc1ccd4f7edbe0b299515970dde`.
+The final public Recent selection used clean source
+`659d71362f3595c788f30c7a17af01fdfd1418e7`. Receipts record actual source/dirty
+state, helper hashes and runtime generation; the final composite hashes seven
+owning source modules against their Git blobs. These are configured source CLI
+function/service/native-transport results, not installed-runtime adoption or
+compiled-executable acceptance. No account identifiers or asset URLs appear here.
 
-Two approved synthetic uploads were performed, each on a distinct genuinely new,
-empty owned root composer in configured `default/grok`. Both files were named
-`same.txt`, both were104bytes, and their bytes and provider metadata IDs differed.
-Configured account proof matched before/after; no account identifiers or asset
-URLs are reproduced here. Both targets and the original claims remain retained.
-No Send or upload replay occurred; the approved two-upload allowance is exhausted.
+A and B were uploaded once each to distinct genuinely new empty root composers
+in configured `default/grok`. Both files were named `same.txt`, both were 104 bytes,
+and their bytes and provider metadata IDs differed. Exact native File object,
+digest, verified account URI and provider ID qualified each upload. Each exact
+provider preview returned server HTTP 200 and its expected bytes. CDP omitted the
+upload request body, so no wire-body digest is claimed. Observed response schema
+was `{uploadId, fileMetadata}`; upload-operation ID and provider file ID differ.
 
-A initially remained unconfirmed. Its exact native File object, digest, provider
-metadata and server-rendered bytes were subsequently reconciled without replay;
-the uncertainty history and supported settlement audit remain intact. After the
-readiness repair, the public source command function returned complete/ready for
-A context with `sourceAgreement: observed-native`. B's single public source upload
-returned complete/`grok_files_ready` with `sourceAgreement: local-manifest`.
+A's initial unknown outcome was reconciled without replay through supported
+settlement, preserving prior uncertainty. Its public context subsequently
+reported ready with `sourceAgreement: observed-native`. B's single public upload
+reported complete/`grok_files_ready` and `sourceAgreement: local-manifest`.
 
-Actual committed renderer and composer evidence qualified readiness: valid
-metadata suppresses phase-based loading presentation, and the same form's native
-Submit handler and aria-disabled state follow committed `isQueryable`. A's
-file-only composer was queryable with an empty editor. No button was submitted.
+The final r30 Recent canary created one new empty owned root with no menus,
+dialogs, editor text, native input files or attachment chips. Current committed
+row keys joined uniquely to account-scoped `assets[].assetId` metadata. Four
+unrelated rows with unsupported content-key URI shapes were omitted as explicit
+partial inventory; the known B row passed every predicate. Selection recomputed
+its exact key/DTO/account/URI join immediately before its one item evaluation.
+That evaluation returned true once; the public result was complete/
+`grok_files_ready` with exactly B ready. Before close: same account, zero native
+input files, zero editor text, one attachment chip and enabled same-form Submit.
+
+This result is `sourceBinding: native-metadata`, `sourceAgreement: observed-native`,
+with no `sourceSha256`. Here agreement describes native metadata association only;
+interpret it with `sourceBinding`. It establishes identity/readiness, not a File
+digest, local-manifest agreement or fresh server-byte qualification. Original
+A/B byte proofs remain separate. A sole unmarked input is eligible only when
+empty; nonempty inputs require the owned retained marker before byte observation.
+
+Readiness follows proven current metadata and the same form's committed
+`isQueryable` plus enabled native Submit control. Phase labels alone do not
+establish readiness. Missing/error/private/disabled/deleted gates remain non-ready.
+No Submit was clicked. Total uploads remain two of two; no additional upload,
+file injection during Recent, Send or upload replay occurred. Owned targets and
+previous uncertainty/menu effects remain preserved.
 
 ## Original criteria
 
 | Criterion | Source evidence | Native evidence |
 | --- | --- | --- |
-| Duplicate basenames cannot establish attachment identity. | Same native File object, SHA256/length, verified account URI and metadata ID; wrong bytes/account/File and conflicting props rejected. Recent selection fixture uses a unique provider ID. | A and B share basename/length, differ in digest and provider ID; each actual provider preview contains its exact104bytes. |
-| Ready/error/progress states come from the exact composer; missing confirmation fails visibly. | Committed-root/host proof, root consistency, same-form native Submit eligibility; false/stale/prose/other-form/disabled/private/deleted gates remain non-ready. Error/progress and lost-context fixtures remain fail-closed. | Actual committed render/submit predicate captured; A context and B upload report ready. Phase alone was not used as readiness. |
-| Selected project/file context and limits are explicit; no silent proceed-anyway path. | Bound composer, provenance and input limits; project drift, native selection mismatch and error fixtures reject continuation. | Root scope, sole file, empty composer, file-input state and same account/target/generation qualified before each upload. No project mutation or native limit fault injection. |
-| Public wrapper outcomes and artifact provenance remain coherent under governed requests. | CLI/MCP configured-authority fixtures, missing-governor refusal, unknown cleanup custody, normal prompt attachment preparation and account-drift guard. | Actual public command function used configured service/native transport. B emitted one completed HTTP200 upload response with matching `fileMetadata.fileMetadataId`; exact Open attachment returned server200 and matching preview digest. CDP omitted request body bytes, so no wire-body digest is claimed. |
-| Validate source/installed/live distinctions; update operator docs and decision traceability. | Source commits `be8cfc177`, `ba399fa6c`, `dfc064364`, `3aaa7c958`, `f716e2a6c`; configuration, journal and fixes log updated in the same slices. | Native evidence is tied to frozen source53cb, not an installed-runtime replacement or compiled executable acceptance. |
+| Duplicate basenames cannot establish attachment identity. | Exact native File/digest/account metadata join; wrong bytes/account/File and conflicting props rejected. Recent uses current row key plus unique asset ID, revalidated at click. | Same-name/length A and B have distinct hashes and IDs; server previews match each. Recent selected exactly B despite duplicate labels. |
+| Ready/error/progress states come from the exact composer; missing confirmation fails visibly. | Shared committed-root/unique-host proof and bounded traversal; same-form Submit eligibility; stale/false/private/disabled/error gates remain non-ready. | A context, B upload and final Recent B selection report ready. Native render/submit contract and enabled same-form control qualify readiness; no phase-only inference. |
+| Selected project/file context and limits are explicit; no silent proceed-anyway path. | Bound composer/provenance/input limits; project drift and mismatch fixtures reject continuation. Unsupported Recent URI rows report incomplete/partial coverage; ambiguity, foreign ownership and global root failures block. | Exact account/target/generation and empty root qualified before uploads/selection. Final selection has one known file and empty editor. No project mutation or native limit fault injection. |
+| Public wrapper outcomes and artifact provenance remain coherent under governed requests. | CLI/MCP configured-authority fixtures, missing-governor refusal, unknown cleanup/dispatch attribution, prompt attachment preparation and account-drift guard. | Actual configured public command function/service performs upload/context/Recent selection. Immutable linked receipts retain source, account, dispatch, server-byte and before-close evidence. |
+| Validate public behavior with source/installed/live distinctions; update operator docs and decision traceability. | Configuration, journal, fixes log and this packet updated with source slices. Final partial-inventory source is `659d71362`. | Upload source `53cb` and final Recent source `659d` are recorded separately. No installed replacement, compiled executable or live Send acceptance is claimed. |
 
-Focused validation: `pnpm vitest run tests/browser/grok403Files.test.ts tests/browser/grokProviderSessionBinding.test.ts --maxWorkers=1` —38tests passed. Full typecheck and targeted Biome/diff checks passed on the worker source; primary integration validation remains separate.
+Focused validation: 56 tests across `grok403Files`, `grokCommittedReact` and
+`grokProviderSessionBinding` passed; final 12 Recent cases passed after the strict
+URI-only refinement. Final full typecheck, targeted Biome and diff checks passed.
+Primary integrated validation remains independently owned.
 
-## Evidence locators and limits
+## Evidence and retained correction history
 
-Private immutable receipts are under
+Immutable private receipts live under
 `~/.auracall/private/grok/implementation-native/plan0458-403/`:
 
-- `canary-a-public-native-ready-v4.json` — SHA256 `83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca`.
-- `canary-b-native-acceptance-composite-r14.json` — SHA256 `c01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1`.
+- A ready: `canary-a-public-native-ready-v4.json`, SHA256 `83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca`.
+- A bytes: `canary-a-upload-accepted-byte-proof-v2.json`, SHA256 `11913a7680c49eb873961911f59f350f17708f8b73ba8ecc558ce0afb3672807`.
+- B upload/bytes: `canary-b-native-acceptance-composite-r14.json`, SHA256 `c01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1`.
+- Final Recent: `canary-recent-selection-acceptance-r31.json`, SHA256 `86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315`.
 
-These composites link the raw account, source, dispatch, before-close, native
-response and exact server-byte receipts by hash. B's wire response schema was
-observed as `{uploadId, fileMetadata}`; upload-operation ID and provider file ID
-remain distinct. Ordinary configured utility cleanup completed and no Grok lease
-remained unreleased after the canaries.
+The final composite links the raw r30 claim, target, result and before-close
+receipts, prior upload proofs, boolean guard census and exact source manifest.
+Primary must independently validate those hashes and current admission/cleanup
+state before accepting and closing #403. The worker does not close the issue.
 
-Native Recent item selection remains unqualified; the first public attempt
-opened its owned chooser and failed before item dispatch. That path currently
-has provider-free exact-ID selection coverage only. No real Send, installed-runtime adoption,
-private-file upload, deletion or publication is claimed. The primary should
-resolve any additional native Recent acceptance requirement before closing403.
+Earlier Recent attempts remain attributable history:
+
+- r15 opened owned menus but no item selection. Exact source-expression replay
+  qualified zero item dispatch; `selectionDispatch: not-dispatched` survives
+  cleanup uncertainty. r20 then qualified depth exhaustion, leading to the shared
+  512-depth/20,000-node helper with retained exhaustion/current-root guards.
+- r23 proved each row key's unique asset DTO join. r24 stopped before any opener:
+  a normal closed Attach trigger was mistaken for a closed overlay. r25 exact
+  source replay proved no opener/item dispatch. The causal fixture qualified the
+  overlay-only visibility correction, retaining closed-overlay refusal.
+- r26 opened menus but no item selection. r27/r28 exact source/native proof
+  preserved those menu effects. r29 returned only boolean guard failures:
+  requested B passed; four unrelated rows failed only content-key URI checks.
+  The bounded partial-inventory correction preserved all other original guards.
+
+Primary independently validated and reconciled the earlier no-item outcomes
+through supported CAS, retaining uncertainty audit and targets. Their open-menu
+state was preserved; final r30 used a new empty root. No evidence was deleted or
+replayed to erase an earlier result.
+
 Memory disposition: forbidden — no explicit request to write memory.
-
-Recent chooser follow-up: one public selection request opened the Attach and
-Recent menus, then failed during chooser observation before reaching the item
-selection expression. Exact source-expression replay qualifies zero item dispatch;
-this is distinct from the two observed menu opener clicks. The additive public
-`selectionDispatch: "not-dispatched"` field preserves that attribution through
-cleanup errors. Overall `unconfirmed` status, retained target and unknown-effect
-fence remain intact until supported evidence reconciliation. No retry is implied.
-Native Recent row metadata and successful selection remain unqualified.
-
-Passive guard-attribution read r20 proves the retained Recent subtree exceeds
-the prior 256-depth bound: form/Attach each found its unique host, but another
-current branch reached depth 256; Recent trigger/chooser/rows exhausted ancestry
-at 256. No failed-root props established metadata. The shared observer now permits
-512 ancestry/topology depth with the same 20,000-node budget, exact scope host,
-unique-host and stable-current checks. File and Connector readers use that same
-helper. A deep portal plus unrelated deep branch regression fails before this
-correction and passes after; ancestry, topology and node-budget exhaustion still
-return unavailable. This is source qualification, not native Recent acceptance.
-
-Recent schema qualification: passive r23 proved each synthetic row's committed
-React key joins uniquely to `assets[].assetId` in its current list ancestor.
-The observed renderer uses that same key and invokes attachment with that asset
-DTO. The source parser now validates owned Attach/Recent ARIA relationships,
-current row topology, unique asset ID, verified account owner/content URI and
-non-deleted self-upload metadata. Selection repeats this qualification immediately
-before clicking the exact ID, so cached row position or annotation cannot select
-a replacement asset. Actual successful native Recent selection remains unrun.
-
-The metadata-only composer path reports `sourceBinding: native-metadata` with
-`sourceAgreement: observed-native`. Here agreement means native metadata
-association only; interpret it with `sourceBinding`. It has no `sourceSha256`,
-no local-manifest agreement and no server-byte qualification. Identity/readiness
-still requires current metadata, account/source URI, same-root Submit gate and
-error/private/disabled/deleted guards. Existing native-File digest proof remains
-a separate path and upload success still requires the exact local manifest.
-
-Public Recent corrective canary r24 stopped before any opener/item click: the
-normal Attach trigger exposes `data-state=closed`, which the visibility helper
-incorrectly treated as a closed overlay. Exact frozen-source expression replay
-(r25) matches native composer binding true and Attach expression false. Final
-composer text/FileList/chips remain empty; account checks match. Native targets
-and utility uncertainty are preserved for supported primary adjudication.
-Closed-state filtering now applies to menu/dialog/listbox/tooltip/modal overlays
-and their descendants, while ordinary closed triggers remain actionable. The
-actual closed-trigger fixture fails before this correction and passes after;
-closed-overlay refusal remains covered. No successful native Recent selection
-is claimed, and no further native operation is authorized by this source fix.
-
-The r26 continuation opened Attach/Recent but dispatched no item selection;
-positive final FileList/chip/text counts remain zero. Immutable r28 links the
-source-expression proof and raw receipts, retaining observed menu effects.
-The authorized r29 boolean-only census qualifies the global owners/current
-roots and the requested B row. Four unrelated rows reject only the existing
-content-key URI predicate. No unrelated metadata values or contents were returned.
-
-Recent inventory now omits rows with unsupported content-key URIs with explicit `incomplete` status,
-`grok_recent_partial` code and visible-only partial coverage. It does not infer
-an alternative URI or identity. Unique supported rows retain their current
-key/DTO/account/URI qualification immediately before click; duplicate IDs, foreign
-asset ownership, current-root or traversal failures still block. A native-derived
-unsupported-key fixture fails before this correction and passes with explicit
-partial inventory plus exact supported-ID selection. One fresh empty-root canary
-remains pending; old open menus and target are preserved without cleanup/replay.
