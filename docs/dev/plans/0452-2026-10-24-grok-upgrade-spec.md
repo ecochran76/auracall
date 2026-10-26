@@ -111,10 +111,15 @@ responsive and make waits, limits, warnings, coverage and outcome custody visibl
   MCP installation, authentication continuation, scopes/tools and explicit
   selection/invocation. Scope grants must be observed; server advertisements are
   not grants. Never log credentials, OAuth tokens or authenticated payloads.
-- Bot operations cover inventory, invocation, creation and editing. Required
-  configuration comprises name/description/instructions, model defaults,
-  Connectors/tool permissions, Skills and knowledge sources. Unsupported provider
-  controls are explicit results; they do not satisfy the capability's live gate.
+- Bot operations cover inventory, invocation, creation and editing. Under the
+  operator-approved 2026-10-26 Option B split, #408 covers the observed native
+  Name, optional Title and Description lifecycle with exact same-ID saved
+  readback. Separate Instructions and Model defaults remain required and OPEN
+  in #477; Description is not Instructions, and no model-change request is not
+  proof of configuring a model default. #409 separately owns Connectors/tool
+  permissions, Skills and knowledge sources. Unsupported provider controls are
+  explicit results; they do not satisfy the affected capability's live gate.
+  Closing amended #408 does not close #477 or parent #398.
 - Build generation, local archive retrieval and native publication remain separate
   stages. Prepublication evidence binds the exact provider account, conversation,
   assistant and current native workspace snapshot; unobserved app/version identity
