@@ -26278,3 +26278,13 @@ gateway rows can change after reload while the saved assistant ID remains stable
 Root source2986 native public export passed after causal visibility guards; root
 24affected checks and worker fulltypecheck passed. Private receipts preserve the
 failed attempts, operator adjudication and fresh archive integrity proof.
+
+
+### 2026-10-25 — Qualify Connector failure stage from the retained session
+
+A generic connection error can conceal a created-but-unvalidated native session.
+Read the exact owned flow's tracked session and current SDK/caller contract before
+attributing failure to OAuth. An exact observed callback is a configuration
+prerequisite, not evidence that authentication began. Preserve failed pending
+flows whose cleanup abandons sessions; operator passive reads must never invoke
+SDK business methods outside normal provider governance.

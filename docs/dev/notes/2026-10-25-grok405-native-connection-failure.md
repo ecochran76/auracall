@@ -73,3 +73,45 @@ metadata in that inspected set. Pre/post account proof matched and no input or
 Add occurred. This is not proof that Grok has no callback; the actual callback
 remains unqualified. No auth-service allowlist, client registration or grants
 were changed. The original failed installation remains retained, not reset.
+
+
+## Retained native session and validation stage
+
+A later bounded passive inspection qualified the actual failed flow's tracked
+session, rather than searching unrelated callbacks. Its native session has a
+nonempty Connector ID, the exact approved name and MCP endpoint, and scope ID
+matching the observed account. Its step remains `created`; this is a pending
+creation session, not an installed/authenticated Connector or accepted catalog.
+The same flow still reports `Checking authentication…` and the generic failure.
+No tracked popup remains. Pre/post configured-account proofs match.
+
+Untruncated native SDK and caller source separate creation, server validation,
+authentication and tool discovery. The caller tracks the validated session before
+starting authentication. The retained `created` step therefore places this failure
+before validation advanced, without identifying the backend cause. The observed
+client constructs its redirect as `${GROK_COM_URL}/connectors-oauth-exchange-code/`;
+current runtime configuration independently qualifies `GROK_COM_URL` as
+`https://grok.com`. The exact callback is therefore
+`https://grok.com/connectors-oauth-exchange-code/`. Missing external allowlisting
+remains a later prerequisite, not the demonstrated cause of this validation-stage
+failure. No authorization URL, registration, grant or tool call was requested.
+
+The native flow's cleanup can abandon a pending creation session. Preserve the
+failed modal and its original session; do not close it merely to clear the error,
+repeat Add, or replace the journal. The next bounded diagnostic must use normal
+provider governance if it invokes an SDK/RPC; passive operator inspection does
+not authorize business methods. A server-validation result alone cannot qualify
+installation, authentication or a connected remote account.
+
+Private evidence suffixes under the existing receipt prefix are
+`owned-failure-session-refs-r6.json`, `owned-mcp-sdk-source-r7.json`,
+`owned-mcp-flow-functions-r8.json` and `owned-flow-context-r10.json`.
+Actual Connector/account identifiers and raw component state remain outside Git.
+
+
+Receipt SHA256, in the same order:
+
+- `dbdd2caa9dfe1316e4314652b023919b9db5037fb871701fc1e807d4d8f3d069`
+- `1a7e19b58b61f24245bcc30c5398e361bcd1c1fc31920024618442527231c5d2`
+- `b08f591bb6a4a8649688d7416ac88ce893812385cd0e5f51f603df17ce8c4de7`
+- `dd3cc2fc1f82e0d5e6087e4ca614617e31a2f89c8227a6c73d47d66eb1d6da78`

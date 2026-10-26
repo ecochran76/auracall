@@ -56852,3 +56852,16 @@ focus policy before trustedinput. No publication/terms acceptance/local executio
 #405 bounded retained-flow read exposes a generic error handler, not an actual
 OAuth callback or connected account. No Add or external-auth configuration changed.
 Seven scoped tickets remain OPEN; parent398 untouched; finalreview/TDD0/0.
+
+
+### 2026-10-25 — Plan0458 / merged export and retained Connector validation stage
+
+PR475 merged as055d690d9; integration branch fast-forwarded and pushed to main's
+current tree. #403 is closed; seven scoped children remain open and parent398 is
+untouched. Native #405 session metadata qualifies an existing `created` session
+for the exact approved endpoint/account. Actual SDK/caller source and retained
+pending message place failure before validation advanced. Runtime config qualifies
+Grok's exact OAuth callback; missing external allowlisting remains a later
+prerequisite, not a proven cause. No Add, authentication call, external config or
+service process changed. Preserve the failed flow because cleanup can abandon its
+session. #408/#410 contract decisions remain pending; final review/TDD0/0.
