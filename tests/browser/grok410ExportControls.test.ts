@@ -26,6 +26,7 @@ class Element {
 		return { width: 100, height: 30 };
 	}
 	closest(selector: string): Element | null {
+		if (selector === "[inert]" && "inert" in this.attributes) return this;
 		if (selector.includes("aria-hidden") && this.attributes["aria-hidden"] === "true") return this;
 		if (selector === '[id^="response-"]') return response;
 		if (selector === "[data-plane-row]") return row;
@@ -53,10 +54,15 @@ function observe(
 		closedMenu?: boolean;
 		closedTriggers?: boolean;
 		inert?: boolean;
+		triggerInert?: boolean;
+		menuInert?: boolean;
 	} = {},
 ) {
 	plane.children = [message];
 	plane.attributes["aria-hidden"] = input.inert === false ? "false" : "true";
+	download.attributes = { role: "menuitem" };
+	download.parentElement = menu;
+	menu.parentElement = input.menuInert ? new Element({ inert: "" }) : null;
 	menu.children = [download];
 	menu.attributes["aria-labelledby"] = input.unlabelled ? "other" : "active-trigger";
 	menu.attributes["data-state"] = input.closedMenu ? "closed" : "open";
@@ -75,6 +81,7 @@ function observe(
 			"aria-hidden": "true",
 			"data-state": "closed",
 		});
+	active.parentElement = input.triggerInert ? new Element({ inert: "" }) : null;
 	const owner: { current: unknown } = { current: null };
 	const root: any = { tag: 3, stateNode: owner, return: null },
 		header: any = {
@@ -154,4 +161,21 @@ test.each([
 	download.attributes = { role: "menuitem" };
 	expect(observe(input).value.menuOwnershipQualified).not.toBe(true);
 	expect(download.getAttribute("data-auracall-build-download")).toBeNull();
+});
+
+test("an inert-only ancestor prevents preparing a closed More trigger", () => {
+	const { value, active } = observe({ closedTriggers: true, triggerInert: true });
+	expect(value.stage).not.toBe("owned-more-prepared");
+	expect(active.getAttribute("data-auracall-build-download")).toBeNull();
+});
+test("an inert-only ancestor prevents activating an otherwise owned Download menu", () => {
+	const { value, download } = observe({ menuInert: true });
+	expect(value.menuOwnershipQualified).not.toBe(true);
+	expect(download.getAttribute("data-auracall-build-download")).toBeNull();
+});
+test("an inert expanded trigger still owns its active non-inert portal menu", () => {
+	expect(observe({ triggerInert: true }).value).toMatchObject({
+		stage: "owned-menu-observed",
+		menuOwnershipQualified: true,
+	});
 });
