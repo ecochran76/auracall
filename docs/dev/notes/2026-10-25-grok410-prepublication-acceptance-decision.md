@@ -1,7 +1,9 @@
 # #410 prepublication acceptance decision
 
-State: OPEN — explicit operator decision required. No issue criteria, dependency
-or governing specification has been amended by this proposal.
+State: APPROVED — Option B explicitly accepted by the operator on2026-10-26.
+The exact issue/specification amendments below are authorized. #410 closure
+requires qualified evidence and fresh forge readback; #411 retains the authentic
+provider identity obligation. No publication or other native effect is authorized.
 
 [Native evidence](2026-10-25-grok410-artifact-frontier.md) now qualifies one Build
 generation and public workspace archive retrieval. The current public result is
@@ -77,3 +79,31 @@ Replace the Build architecture bullet with:
 No new follow-up is needed for this stage split: #411 already owns publication
 and would retain the missing identity requirement. #414 becomes dependency-ready
 only after approved #410 criteria are actually met and its closure is read back.
+
+
+## Approved acceptance qualification
+
+The six amended #410 criteria are satisfied by the original retained generation,
+source/public acceptance and immutable native receipts documented in
+[the artifact frontier](2026-10-25-grok410-artifact-frontier.md). Build entitlement
+and controls were observed before the one approved generation. Preview, native
+completion and local bytes remain separate states; preview expiry does not erase
+completion or a qualified archive. Public source CLI export on clean
+`2986d5257c95b81f77bb8901daafd029b219b649` returned partial identity with a
+retrieved archive and completed effect/cleanup. Primary verified1,524,948bytes,
+291ZIP entries and every entry CRC, exact account/target/conversation/assistant
+and the freshly observed post-rehydration gateway. Archive SHA256:
+`eee702f30f5597cb8738aacd92929d72a4c5a08e7eb49243ded5788bfa766595`;
+primary validation SHA256:
+`79c16116876617402bc1c3e92877982956c304d30a87cde17ab969fc088686f6`.
+
+Source tests qualify CLI/schema/API/MCP contracts; native public CLI acceptance
+is separately qualified. No installed-runtime upgrade or installed acceptance is
+claimed. Explicit null/partial app/version identity, no implicit publication,
+unknown-effect custody and prior failed receipts are preserved. The amended
+#411 and Plan0452 retain the still-unmet genuine provider identity gate.
+No #398 mutation, publication, deployment, generation, legal consent, provider
+grant or native action occurs in this acceptance routing change.
+
+Forge amendment/closure readback is pending in this checkpoint; exact issue
+idempotency markers and existing dependency text are preserved.
