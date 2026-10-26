@@ -155,6 +155,7 @@ export async function exportGrokBuild(
 		providerTrafficRequired: true,
 	});
 	const client = connection.client as ChromeClient;
+	let uncertainUiEffect = false;
 	let attempted = false,
 		setupAttempted = false;
 	const page = client.Page as unknown as {
@@ -228,12 +229,30 @@ export async function exportGrokBuild(
 			if (state?.stage !== (action === "more" ? "owned-more-prepared" : "owned-menu-observed"))
 				throw new Error("grok_build_export_control_unqualified");
 			if (action === "download") attempted = true;
-			const c = await pressButtonWithTrustedPointer(client, {
-				selector: `[data-auracall-build-download="${token}"]`,
-				requireVisible: true,
-				timeoutMs: 2500,
-			});
-			if (!c.ok || !c.trusted) throw new Error("grok_build_export_dispatch_unconfirmed");
+			try {
+				const c = await pressButtonWithTrustedPointer(client, {
+					selector: `[data-auracall-build-download="${token}"]`,
+					requireVisible: true,
+					timeoutMs: 2500,
+				});
+				if (!c.ok && c.reason === "Trusted pointer button target not found") {
+					if (action === "download") attempted = false;
+					throw new BrowserAutomationError("grok_build_export_control_unavailable", {
+						effectState: "pre_effect",
+						targetId: request.targetId,
+					});
+				}
+				if (!c.ok || !c.trusted) throw new Error("grok_build_export_dispatch_unconfirmed");
+			} catch (error) {
+				if (error instanceof BrowserAutomationError && error.details?.effectState === "pre_effect")
+					throw error;
+				uncertainUiEffect = true;
+				throw new BrowserAutomationError(
+					"grok_build_export_ui_outcome_unknown",
+					{ effectState: "unknown", targetId: request.targetId },
+					error,
+				);
+			}
 			return state;
 		};
 		if (!setDownloadPolicy) throw new Error("grok_build_target_download_unsupported");
@@ -306,11 +325,13 @@ export async function exportGrokBuild(
 			status: unsupported ? "unavailable" : "unknown",
 			code: attempted
 				? "grok_build_export_outcome_unknown"
-				: unsupported
-					? "grok_build_target_download_unsupported"
-					: "grok_build_export_preflight_failed",
-			effectState: attempted ? "unknown" : "none",
-			retrySafe: !attempted,
+				: uncertainUiEffect
+					? "grok_build_export_ui_outcome_unknown"
+					: unsupported
+						? "grok_build_target_download_unsupported"
+						: "grok_build_export_preflight_failed",
+			effectState: attempted || uncertainUiEffect ? "unknown" : "none",
+			retrySafe: !attempted && !uncertainUiEffect,
 			artifacts:
 				result.artifacts.status === "retrieved"
 					? result.artifacts

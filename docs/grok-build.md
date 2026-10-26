@@ -120,7 +120,7 @@ ZIP media type, and exact target/conversation/response provenance. App/version
 IDs remain null when unobserved; a retrieved archive still returns partial
 status and a nonzero CLI exit code when app identity is unqualified. A filename,
 package version, task ID, or artifact hash is never promoted to app identity.
-A failed or uncertain Download preserves the target and returns unknown effect
-custody with `retrySafe=false`; reconcile before another effect. Partial files
+An unconfirmed More-menu or Download action preserves the target and returns unknown effect
+custody with `retrySafe=false`; reconcile before another effect, including when Download was never dispatched. Known preflight refusals remain pre-effect. Partial files
 may remain in the private output directory for diagnosis. A final policy reset
 or transport-close failure is reported without discarding verified bytes.

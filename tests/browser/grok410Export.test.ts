@@ -37,6 +37,7 @@ async function fixture(
 		partial?: boolean;
 		accountChanges?: boolean;
 		clickFails?: boolean;
+		moreClosed?: boolean;
 	} = {},
 ) {
 	seam.governor.begin.mockResolvedValue({ settle: vi.fn() });
@@ -62,15 +63,22 @@ async function fixture(
 		},
 	);
 	const close = vi.fn(async () => {}),
-		evaluate = vi.fn(async () => ({
+		evaluate = vi.fn(async ({ expression }: { expression: string }) => ({
 			result: {
 				value: {
-					stage: input.rootFails ? "current-root-changed" : "owned-menu-observed",
-					flags: { expandedOwnedTriggerCount: 1 },
+					stage: input.rootFails
+						? "current-root-changed"
+						: input.moreClosed
+							? expression.includes('action="more"')
+								? "owned-more-prepared"
+								: "active-menu-relation-unqualified"
+							: "owned-menu-observed",
+					flags: { expandedOwnedTriggerCount: input.moreClosed ? 0 : 1 },
 				},
 			},
 		}));
 	seam.click.mockImplementation(async () => {
+		if (input.moreClosed && input.clickFails) throw new Error("More acknowledgement lost");
 		if (input.partial) await fs.writeFile(path.join(directory, "left.crdownload"), "partial");
 		await fs.writeFile(
 			path.join(directory, "workspace.zip"),
@@ -247,4 +255,49 @@ test("MCP export validates consent before service resolution and dispatches only
 	const accepted = { ...request, acknowledgeTargetDefaultReset: true };
 	expect((await handler(accepted)).structuredContent.operation).toBe("export");
 	expect(exported).toHaveBeenCalledWith(accepted);
+});
+
+test("lost More acknowledgement preserves unknown UI custody with zero Download attempts", async () => {
+	const f = await fixture({ moreClosed: true, clickFails: true });
+	const settle = vi.fn();
+	seam.governor.begin.mockResolvedValue({ settle });
+	const r = await runGrokBuildCommand(f.request, f.service);
+	expect(r).toMatchObject({
+		effectState: "unknown",
+		retrySafe: false,
+		artifacts: { status: "unavailable" },
+		cleanupState: "completed",
+	});
+	expect(seam.click).toHaveBeenCalledOnce();
+	expect(seam.governor.begin).toHaveBeenCalledWith(
+		expect.objectContaining({ source: "provider:grok:build-export-more" }),
+	);
+	expect(seam.governor.begin).not.toHaveBeenCalledWith(
+		expect.objectContaining({ source: "provider:grok:build-export-download" }),
+	);
+	expect(settle).toHaveBeenCalledWith(
+		expect.objectContaining({ outcome: "failed", effectState: "outcome-unknown" }),
+	);
+});
+
+test("known More target refusal stays pre-effect without a Download or unknown fence", async () => {
+	const f = await fixture({ moreClosed: true });
+	const settle = vi.fn();
+	seam.governor.begin.mockResolvedValue({ settle });
+	seam.click.mockResolvedValueOnce({
+		ok: false,
+		reason: "Trusted pointer button target not found",
+	});
+	expect(await runGrokBuildCommand(f.request, f.service)).toMatchObject({
+		effectState: "none",
+		retrySafe: true,
+		artifacts: { status: "unavailable" },
+	});
+	expect(seam.click).toHaveBeenCalledOnce();
+	expect(seam.governor.begin).not.toHaveBeenCalledWith(
+		expect.objectContaining({ source: "provider:grok:build-export-download" }),
+	);
+	expect(settle).toHaveBeenCalledWith(
+		expect.objectContaining({ outcome: "failed", effectState: "settled" }),
+	);
 });
