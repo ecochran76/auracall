@@ -8,7 +8,7 @@ Base: ad7b34d264290b0c8e11297a25c53c096214a90a
 
 ## Current State
 
-Source implementation and acceptance are complete. Opt-in reporting uses existing app-list stages and owned Fetch/Network callbacks, with no extra protocol commands. Serialized work; no delegation. Existing issue464 remains closed. Integration and installed/live acceptance are separate from this source slice.
+Source implementation and acceptance are complete. Opt-in reporting uses existing app-list stages and owned Fetch/Network callbacks, with no extra protocol commands. Serialized work; no delegation. Existing issue464 remains closed. User-authorized deployment continuation is now accepted: PR479 merged, CLI activated and installed native reporting verified. API and MCP activation remain outside this CLI change.
 
 ## Scope and seams
 
@@ -73,3 +73,31 @@ summed durations and unfinished admissions are not complete timing authority.
 No code-review delegation was used. No service restart or provider probe occurred.
 
 Source checkpoint: `1afa3fe44` (validated source/build; draft PR delivery).
+
+
+## Deployment continuation — 2026-10-26
+
+User explicitly requested merge and deployment after source review. PR479 merged
+at `b2ecae89a641650877160a482d7aff461c871697`. Its source tree matches the validated
+published checkpoint. Staged a separate runtime package; compiled bin, report
+collector, owned admission, response observer and CLI operation modules match
+validated build hashes. Installed help advertises `--performance`, then the
+user CLI wrapper was atomically promoted. Version remains0.1.1; source/hash
+receipts identify this build. Existing API/MCP runtimes were preserved.
+
+One installed native `apps list --json --performance` completed normally in
+26.601s with complete34-app inventory and exactly one terminal stdout JSON plus
+one performance stderr report. The report observed two owned connections and43
+backend interception observations:2installed,1linked,40other;2responses,41failures
+before an observed response,0unresolved. Admission timing reports34attempts,
+3admitted,31rejected,0pending. These are interception observations, not globally
+unique provider requests or proof of dispatch; sums overlap and include local
+work. Output retained no raw URL/header/body/account/target identifiers in the
+performance report. Raw inventory stdout stays in private user state.
+
+Fresh process/CDP readback retains the browser process generation, HTTP200 and
+active API process. MCP wrapper bytes are unchanged and the owned CLI exited.
+Private receipts: `~/.local/state/auracall-plan0461-20261026/activation.json`,
+`installed-live-result.json`, `installed-performance-report.json` and
+`deployment-readback.json`. No CI was run; no service/browser restart or
+capacity/deadline change was used. Plan0461 is CLOSED with installed CLI acceptance.
