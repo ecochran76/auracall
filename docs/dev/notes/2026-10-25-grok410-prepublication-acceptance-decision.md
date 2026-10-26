@@ -1,6 +1,6 @@
 # #410 prepublication acceptance decision
 
-State: APPROVED — Option B explicitly accepted by the operator on2026-10-26.
+State: ACCEPTED — Option B explicitly approved; #410 closed with fresh forge readback on2026-10-26.
 The exact issue/specification amendments below are authorized. #410 closure
 requires qualified evidence and fresh forge readback; #411 retains the authentic
 provider identity obligation. No publication or other native effect is authorized.
@@ -105,5 +105,31 @@ unknown-effect custody and prior failed receipts are preserved. The amended
 No #398 mutation, publication, deployment, generation, legal consent, provider
 grant or native action occurs in this acceptance routing change.
 
-Forge amendment/closure readback is pending in this checkpoint; exact issue
-idempotency markers and existing dependency text are preserved.
+## Forge amendment and closure readback
+
+Fresh github.com preflight confirmed actor `ecochran76`, ADMIN permission on `ecochran76/auracall`, Issues enabled,
+non-archived repository and the existing steipete/oracle fork parent. No issue
+forms or local contribution/security files were present; the optional GitHub
+community-profile endpoint returned404. #402 read back CLOSED.
+
+[The qualification comment](https://github.com/ecochran76/auracall/issues/410#issuecomment-6413732972)
+records the evidence and its source/installed/native distinctions.
+[#410](https://github.com/ecochran76/auracall/issues/410) read back CLOSED
+(completed) at `2026-10-26T10:25:08Z` with all six amended criteria checked.
+[#411](https://github.com/ecochran76/auracall/issues/411) read back OPEN,
+with all five criteria unchecked and the missing genuine identity obligation
+explicit. Its dependency text still names #410; no parent or dependency edge
+was silently rewritten. #414 is dependency-ready for its own remaining gates,
+not accepted or closed by this change.
+
+Exact amended bodies read back byte-for-byte; original idempotency markers
+remain intact. Body SHA256 values:
+- #410: `b3a67f1f6349cfc6314207a81c5902a06fab70347db97c401b7774590e8970e1`
+- #411: `f305bd00455f9572e2d884c9d02202777724004e974717ee97f55483448af3cd`
+
+The source decision/specification checkpoint `63d8324da` was committed and
+pushed before closure. Detailed forge receipts remain in the authorized local
+session directory `/tmp/grok410-optionb-20261026`; immutable final receipt SHA256
+`3fdb616db0e38ac2d522c097eb92d99a97084c143cb04d536fbbfdd26c3bea60`. Public forge readbacks and the qualification comment are the durable
+external provenance. No #398 mutation, publication, deployment, new generation,
+native action or final code-review/TDD skill pass occurred.
