@@ -78,9 +78,9 @@
       "blockedBy": [
         402
       ],
-      "state": "native-partial",
+      "state": "native-qualified-awaiting-main-and-tracker-close",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "gate": "Original criteria qualified in source/native public wrapper; integrate final source and close tracker with verified readback.",
       "currentEvidence": {
         "sourceRepairPr": 459,
         "freshTargetLifecycle": "fixed and regression tested",
@@ -88,16 +88,16 @@
         "outcome": "A accepted, exact server bytes verified and public context now complete/ready; no replay/Send",
         "effectOutcome": "accepted server asset; exact104-byte SHA verified",
         "readiness": "qualified public context ready at53cbfbb7a; immutableproof83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca; primary validation passed",
-        "sourceCandidate": [
-          "f583f57d0",
-          "c6f578622",
-          "daafc133e"
-        ],
+        "sourceCandidate": "659d71362",
         "operatorSettlement": "PR462 supported CAS and preserved-release; prior uncertainty audit retained",
         "nativeB": "one public upload complete/ready/local-manifest; distinct native ID; actual server104bytes/hash verified; primary validation passed",
         "nativeBCompositeSha256": "c01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1",
-        "recentSelection": "source fixture qualified; native exact-B recent selection packet being prepared; no additional upload or Send",
-        "acceptance": "two-upload native evidence qualified; Recent native gate retained before closure"
+        "recentSelection": "qualified; prior no-selection uncertainties audited-settled with known menu effects preserved",
+        "acceptance": "two-upload native evidence qualified; Recent native gate retained before closure",
+        "nativeRecent": "one configured public exact-B selection completed/ready; metadata-only association, no sourceSHA/local-manifest or fresh-byte claim",
+        "nativeRecentCompositeSha256": "86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315",
+        "primaryValidation": "raw hashes,7sourceGitblobs,exactB/partialinventory/oneclick/emptyFileList/onechip/submitgate and settled leases validated; samebrowser/target retained",
+        "acceptanceNote": "../notes/2026-10-25-grok403-native-acceptance.md"
       }
     },
     "404": {
@@ -128,7 +128,11 @@
         "nativePreparation": "current source a180c902f reached exact custom form; account match before/after; restored without Add",
         "nativeContinuation": "one Add dispatched; provider Custom Connector reports Connection failed; exact target and original unsent @ preserved",
         "custody": "terminal provider failure/account/target immutable proof validated; supportedCAS rev3\u2192settledrev4\u2192released/preservedrev5; uncertainty audit retained; no replay",
-        "acceptance": "original criteria unmet; no Connector ID, OAuth grant or tool catalog qualified"
+        "acceptance": "original criteria unmet; no Connector ID, OAuth grant or tool catalog qualified",
+        "terminalFailureReportingPr": 472,
+        "terminalFailureReportingMerge": "31199d880173f92287f3bd1939c90d442dd3aa89",
+        "externalOAuthBoundary": "active config only ChatGPT callback; installed OAuth code enforces exact redirect allowlist; actual Grok callback unobserved; no external service/grant edits",
+        "ownedErrorMetadata": "bounded same-account current-root read qualified but no exact callback/error detail obtained; no further effects"
       }
     },
     "406": {
@@ -207,7 +211,10 @@
         "correctiveCommand": "active; clean3d837e9e9; fresh account match; genuine new-target policy in production",
         "nativeGeneration": "one accepted generation completed; native Worked for terminal marker and exact conversation/assistant response validated",
         "operatorSettlement": "immutable completion proof validated; supported CAS settled and released preserved target; prior uncertainty audit retained",
-        "artifactIdentity": "app/version/export unqualified; no publication"
+        "artifactIdentity": "app/version/export still unqualified; no publication/download/restart/newgeneration",
+        "nativeFilesInspection": "one Files and one More trusted click; Files active/Workspace inactive; no file inventory",
+        "nativePreview": "unavailable/preview-expired; Restart enabled but not clicked",
+        "nativeMore": "post-click qualification incomplete; fresh lease snapshot released/settled, no invented CAS; structured readonly probe prepared"
       }
     },
     "411": {
@@ -395,7 +402,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "Merged main ce91367d1 through244871611; 324focused/20files andtypecheckpass;53importregressionspass;bothuploads2/2verified;403Recentnativepending;405terminalfailureCASreleased/noRetry;408scopeDecisionPending;410completed/appVersionExportPending;all8open;reviewTDD0.",
+  "lastCheckpoint": "Main PR471 a74 andPR472 31199; code659/currentdocs c692;403nativebothuploads+Recentqualified/primaryvalidated/main-and-closepending;405OAuthcallbackgate;408scopeDecisionPending;410workspaceInactive/appVersionExportPending;all8trackerOPEN;reviewTDD0.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
@@ -412,6 +419,7 @@
     "connectorAdd": "one continuation dispatch; provider Connection failed; no retry",
     "build": "one generation accepted and completed; immutable proof/CAS retained; artifact provenance still unqualified",
     "publication": "not dispatched",
-    "mailSend": "not dispatched"
+    "mailSend": "not dispatched",
+    "recentFileSelection": "one exactB item click; ready/native-metadata/observed-native/noSHA; no upload/Send"
   }
 }

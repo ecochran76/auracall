@@ -56778,3 +56778,20 @@ Native FileList 0/editor 0/chip 1, same account and enabled Submit before close.
 qualified inventory rows plus explicit partial coverage; no extra upload/Send.
 Immutable r31 links raw receipts, source manifest and separate A/B byte proofs.
 Worker native slot released; primary owns independent validation/issue closure.
+
+### 2026-10-25 — Plan0458 / #403 native Recent qualified
+
+Primary validated r31 composite86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315:
+all raw links and7source Git blobs at659d71362; actual partial visible inventory
+has5qualified rows and exactlyone B; one item evaluation returns true; public
+result complete/grok_files_ready for B, native-metadata/observed-native with no
+SHA/local-manifest/fresh-byte claim. Final FileList0/chip1/editor0 and submit gate
+are positive. Original2uploads remain the separate byte proofs; no extra upload
+or Send. Fresh registry reads show both owned target leases released/settled;
+control-plane census verifies same PID/start generation and retained root target.
+
+Primary final presubmit56checks/3files pass on the runtime source; final worker
+typecheck accepted. Docs-only c692f4b88 carries the criterion mapping; no runtime
+source changed after native659. Main integration and #403 close/readback are
+next. #405 external OAuth callback boundary, #408 original scope decision and
+#410 inactive workspace/app-version/export remain open. Review/TDD counters0/0.

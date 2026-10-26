@@ -57,8 +57,9 @@ or old-goal reset is inferred from this ordinary execution request.
 ## Native checkpoint — 2026-10-25
 
 Both same-basename files are publicly ready with distinct IDs and exact server
-bytes verified; the two-upload cap is consumed. Native recent-file selection
-remains a separate pending check before403 closure. One Bot Create
+bytes verified; the two-upload cap is consumed. One native public Recent selection
+of exact B is now ready with metadata-only provenance. Primary validated its proof
+and settled cleanup; final main integration and tracker close are next for403. One Bot Create
 and one supported-field public Save/readback are verified, but original
 Instructions/Model criteria remain unmet; a concrete scope split awaits user
 response. One Build generation completed and was reconciled with its retained
@@ -71,3 +72,16 @@ release, without replay authority. #405/406 remain open. See the
 [native failure note](../notes/2026-10-25-grok405-native-connection-failure.md).
 
 All eight issues remain open at this checkpoint. Final review/TDD counters0/0.
+
+
+## Bounded Recent correction packet
+
+Native observation showed unrelated Recent assets use unsupported content-key
+URI shapes. One boolean-only current-root/owner census isolated that predicate;
+no unrelated contents were returned. The bounded correction omits those rows
+with explicit partial inventory, retaining all other identity/account/root and
+ambiguity guards. Its single fresh-root canary qualified exact B selection and
+readiness without another upload or Send. Primary validated immutable proof
+86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315.
+This local reframe did not amend acceptance criteria or grant publication,
+external OAuth configuration changes, additional uploads or review/TDD passes.
