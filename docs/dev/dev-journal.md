@@ -56897,3 +56897,15 @@ Hash-guarded candidate applied; freshPID1349156 active/running, both publicdisco
 endpoints200. Installed registrationloop withoutcandidate nowPASS using deployed
 config/temporarySQLite. ExistingChatGPTcallback/grants preserved; no realclient,
 consent, mailboxgrant or repeatAdd. #405/#406remainOPEN for actualOAuth/readback.
+
+
+### 2026-10-26 — #405 original Connector reaches real Cooper sign-in
+
+User directedproceed. PriorGrokprocessgone; configuredmanagedbrowser reopened,
+accountmatched. Newgallery/nativeSDK shapesqualified; failedmetadata-only read
+settled/releasedbyindependentproof/CAS (auditretained). OriginalConnectorID reused:
+validationpassed; popup-first correction preceded one actualauthURLrequest, which
+completed andopenedAuthelia login. ExactGrokcallback/S256/read-send-write request
+qualified; noAdd/replacement/journalreset/credentials/grants. Nativewaittimedout,
+loginpopupretained. Humanusername/password sign-in is actualremaininggate;
+#405/#406OPEN, noautoauthretry. Receiptsprivate/oauth-resume-20261026.

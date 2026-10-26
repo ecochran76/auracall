@@ -85,3 +85,46 @@ receipt and original rollback configuration remain in the prepared directory.
 No OAuth consent, real client registration, mailbox grant, second Add or connected
 account readback occurred. The confirmed callback blocker is fixed; #405/#406
 remain OPEN until the real Grok OAuth journey is qualified.
+
+
+## Original Connector OAuth resumed — human sign-in boundary
+
+After the operator directed proceeding, fresh runtime census found the prior
+Grok process and transient modal gone. Configured managed browser profile
+`default/grok` was reopened; new native identity matched the configured account.
+The current gallery reader returned incomplete visible inventory. Bounded current
+React data inspection did not find the canary among the gallery models; that was
+not treated as proof the server record was absent. Original installation journal
+and one-Add continuation record were retained unchanged.
+
+Native UI/source discovery qualified the new Custom Connector preparation form
+and its current SDK imports. One metadata-only probe failed because previous
+long export names/context shape no longer matched the new minified module.
+An independent account-bound read qualified the failure; immutable proof and
+supported registry CAS settled/released its failed-read lease, preserving audit.
+No SDK business method or Input ran in that failed metadata probe. A local Custom
+form-opening attempt was requalified with a distinct marker after a hit-test
+failure; this was UI preparation only, with no Add or typed fields.
+
+The original provider Connector ID was then used directly through normal
+configured provider governance. First native validation succeeded but popup
+creation was blocked after the asynchronous wait, before any auth-URL request.
+The bounded corrective attempt focused the target and opened the native blank
+popup synchronously first. Validation again succeeded, and Grok returned an
+actual authentication URL and OAuth cookie for the original Connector. Both
+backend requests completed. No new Connector was created or journal reset.
+
+The popup reached `https://cooper-auth.ecochran.dyndns.org/` with title
+`Login - Authelia`, username/password fields and a SIGN IN button. Its return URL
+points to Mail Receipts `/authorize`, with the exact approved Grok callback,
+S256 PKCE, response type `code`, and requested `read send write` scopes. These are
+requested permissions, not granted authority. No credentials, cookie, client ID,
+state, challenge or raw authorization URL enter this repository.
+
+The native180-second wait ended with OAuthTimeoutError while the login popup
+remained open. No sign-in, approval or connected-account acceptance was claimed.
+Human sign-in is now the precise remaining boundary; do not replay authentication
+merely because the listener timed out. Reconcile native/server state after the
+human completes the existing page before any new flow. #405/#406 remain OPEN.
+Private readbacks and curated hashed manifest are under
+`~/.auracall/private/grok/implementation-native/oauth-resume-20261026/`.
