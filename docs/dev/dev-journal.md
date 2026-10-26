@@ -56805,3 +56805,15 @@ one closing comment. Actor/target/body-change/close receipts remain private.
 Current24-node graph:17closed/sevenopen. Parent398 was not edited. #409 remains
 blocked by408; no unavailable Bot control or Build artifact gate was waived.
 The requested single final code-review/TDD pass remains reserved (0/0).
+
+### 2026-10-25 — Plan0458 / Build Download menu qualified
+
+Primary continued after403closure; PR474 merged6929b45 with the closure ledger.
+One passive410read qualified the exact active owned menu: Download enabled,
+Push to GitHub enabled; Files active and Workspace inactive. Account matched
+before/after, shared current-root/menu relation qualified, module hashes unchanged.
+Primary independently validated raw SHA b515469d62ded866e2acafa5c530876d77081121bda233cf22a5816988d56e0d.
+Download preparation continues; no bytes, app/version, publication or410closure
+claimed. A separate405passive current-component check found no OAuth callback
+metadata among135inspected functions; no Add or auth-service change occurred.
+Seven scoped tickets remain open;408contract decision pending; finalreview/TDD0/0.
