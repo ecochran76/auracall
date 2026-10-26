@@ -56888,3 +56888,11 @@ admission-boundary checks after adding diagnostic assertions. Typecheck/build,
 scoped lint, docs and compiled help pass. Earlier Grok timeout passed isolated
 and complete reruns without changed budgets. Source-only checkpoint; CI and
 installed/live activation excluded. Primary Standards/Spec review has no blocker.
+
+## 2026-10-26 — Plan0461 deployed
+
+PR479 merged at b2ecae89a. CLI-only runtime activated after five compiled module
+hashes and help matched the validated build. One installed native read completed
+34apps in26.601s, with one performance stderr report and terminal-only stdout.
+Fresh OS/CDP readback preserved browser generation, active API process and MCP
+wrapper; command process exited. CI excluded. Plan/lane closed and integrated.
