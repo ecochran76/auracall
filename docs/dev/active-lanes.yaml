@@ -1,6 +1,22 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: P461
+    objective: Expose request churn and stage timing during opt-in app inventory
+    work_items: [Plan0461]
+    plan: docs/dev/plans/0461-2026-10-26-browser-performance-diagnostics.md
+    plan_ref: refs/heads/feat/browser-performance-diagnostics
+    branch: feat/browser-performance-diagnostics
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATION_READY
+    checkpoint: ad7b34d264290b0c8e11297a25c53c096214a90a
+    remote_ref: refs/remotes/origin/feat/browser-performance-diagnostics
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: source-161-checks-build-help-pass
+    updated_at: 2026-10-26
   - id: issue464
     objective: Diagnose app inventory latency against live Apps UI
     work_items: [ecochran76/auracall#464]

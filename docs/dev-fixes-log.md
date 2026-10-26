@@ -26299,3 +26299,16 @@ qualification and same response/gateway after capture. Refuse ambiguous history
 rather than label current bytes with older provenance. Preserve unknown custody
 if binding changes after input. Three causal regressions plus affected62checks
 and typecheck passed; historical inspect behavior remains available.
+
+
+## 2026-10-26 — Observe app-list request churn during the first baseline
+
+Plan0461 adds opt-in `apps list --performance` on the existing owned admission
+path. A sanitized bounded aggregate report combines stage durations, installed /
+linked / background request observations, response timing and admission timing.
+It emits on stderr even on command failure; normal stdout and existing authority
+remain intact. Real admission fixture proves thirteen requests and their observed
+responses/failure reach the report without extra protocol commands. Explicit
+coverage and unresolved counts prevent partial observations from implying complete
+browser traffic or known request outcomes. Admission timing includes governor
+processing, so it must not be called pure quota delay.
