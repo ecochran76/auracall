@@ -93,8 +93,22 @@ export function summarizeGrokBuildDiagnostics(result: GrokBuildResult) {
 		status: result.status,
 		code: result.code,
 		complete: false,
-		count: null,
-		ready: null,
+		count: result.materialization?.itemIds.length ?? null,
+		ready: result.materialization
+			? result.materialization.status === "indexed"
+				? result.materialization.itemIds.length
+				: 0
+			: null,
+		...(result.materialization
+			? {
+					materialization: {
+						status: result.materialization.status,
+						indexedAssets: result.materialization.itemIds.length,
+						verifiedBytes: result.materialization.verifiedBytes,
+						...result.materialization.coverage,
+					},
+				}
+			: {}),
 		hasProviderAccountIdentity: result.providerAccountRef !== null,
 		hasConversationIdentity: result.conversationId !== null,
 		hasResponseIdentity: result.generation.responseId !== null,
