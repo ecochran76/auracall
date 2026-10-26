@@ -1,3 +1,4 @@
+import { BrowserPerformanceDiagnostics } from "../../src/browser/browserPerformanceDiagnostics.js";
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import { expect, it, vi } from 'vitest';
 import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import { formatChatgptDeveloperAppListFailure, runChatgptDeveloperAppOperationForCli } from '../../src/cli/chatgptDeveloperAppsCommand.js';
 
-it.each([false, true])('reports a pending app-list stage with verbose=%s while keeping JSON stdout terminal-only', async (verbose) => {
+it.each([{ verbose: false, performance: false }, { verbose: true, performance: false }, { verbose: false, performance: true }, { verbose: true, performance: true }])('reports pending app-list stages with %j while keeping JSON stdout terminal-only', async ({ verbose, performance }) => {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-app-wait-'));
   const source = await fs.readFile('bin/auracall.ts', 'utf8');
   const ast = ts.createSourceFile('auracall.ts', source, ts.ScriptTarget.Latest, true);
@@ -20,7 +21,10 @@ it.each([false, true])('reports a pending app-list stage with verbose=%s while k
   const readingIdentity = new Promise<void>(resolve => { entered = resolve; });
   const userConfig = { services: { chatgpt: { backendRequestBudgetWaitMs: 600000 } } };
   const deps = {
-    path, program: { opts: () => ({ json: true, verbose }) },
+    path,
+    // biome-ignore lint/style/useNamingConvention: Extracted CLI action resolves its imported constructor by name.
+    BrowserPerformanceDiagnostics,
+    program: { opts: () => ({ json: true, verbose, performance }) },
     resolveConfig: async () => userConfig,
     getAuracallHomeDir: () => home,
     resolveManagedProfileDirForUserConfig: () => path.join(home, 'managed-browser'),
@@ -57,6 +61,14 @@ it.each([false, true])('reports a pending app-list stage with verbose=%s while k
       await running;
       expect(output).toHaveLength(1);
       expect(JSON.parse(output[0])).toMatchObject({ action: 'list', status: 'failed', stage: 'identity' });
+      const reports = diagnostics.filter(line => line.startsWith('[browser-performance] '));
+      expect(reports).toHaveLength(performance ? 1 : 0);
+      if (performance) {
+        const report = JSON.parse(reports[0].slice('[browser-performance] '.length));
+        expect(report.stages).toContainEqual(expect.objectContaining({ stage: 'identity', durationMs: expect.any(Number) }));
+        expect(report.backendRequests.total).toBe(0);
+        expect(JSON.stringify(report)).not.toContain(home);
+      }
       const diagnosticCount = diagnostics.length;
       await vi.advanceTimersByTimeAsync(30000);
       expect(diagnostics).toHaveLength(diagnosticCount);

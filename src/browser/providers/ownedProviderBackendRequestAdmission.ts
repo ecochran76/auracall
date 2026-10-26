@@ -1,3 +1,4 @@
+import { currentBrowserPerformanceDiagnostics } from "../browserPerformanceDiagnostics.js";
 import { createHash, randomUUID } from "node:crypto";
 import type Protocol from "devtools-protocol";
 import {
@@ -20,6 +21,7 @@ export async function attachOwnedProviderBackendRequestAdmission(
 	if (!admit || !governor.attribution.targetId)
 		throw new Error("Owned backend request admission is unavailable.");
 	const provider = governor.attribution.provider;
+	const diagnostic = provider === "chatgpt" ? currentBrowserPerformanceDiagnostics() : undefined;
 	const patterns =
 		provider === "grok"
 			? ["https://grok.com/rest/*"]
@@ -50,6 +52,7 @@ export async function attachOwnedProviderBackendRequestAdmission(
 		: undefined;
 	const cancelledNativeRequests = new Set<string>();
 	const nativeFailure = (event: Protocol.Network.LoadingFailedEvent) => {
+		diagnostic?.failure(event.requestId, client);
 		if (event.canceled !== true) return;
 		cancelledNativeRequests.add(event.requestId);
 		for (const controller of nativeRequests.get(event.requestId) ?? [])
@@ -93,6 +96,7 @@ export async function attachOwnedProviderBackendRequestAdmission(
 			);
 		const existing = requests.get(event.requestId);
 		if (existing) return existing;
+		diagnostic?.request(event.networkId ?? event.requestId, event.request.url, client);
 		const nativeCancellation = new AbortController();
 		const requestSignal = AbortSignal.any([cancellation.signal, nativeCancellation.signal]);
 		if (event.frameId) {
@@ -135,10 +139,12 @@ export async function attachOwnedProviderBackendRequestAdmission(
 						]),
 					)
 					.digest("hex")}`;
+				const finishAdmission = diagnostic?.admission();
 				try {
 					await admit(
 						key,
 						async () => {
+							finishAdmission?.("admitted");
 							try {
 								await withCdpCommandTimeout(
 									client,
@@ -160,6 +166,7 @@ export async function attachOwnedProviderBackendRequestAdmission(
 						client.Runtime,
 					);
 				} catch (error) {
+          finishAdmission?.("rejected");
 					if (!(error instanceof ProviderBackendRequestCancelledBeforeDispatchError))
 						failures.push(error);
 					await failPausedRequest(
@@ -245,6 +252,7 @@ export async function attachOwnedProviderBackendRequestAdmission(
 		await client.Fetch.enable({
 			patterns: patterns.map((urlPattern) => ({ urlPattern, requestStage: "Request" })),
 		});
+    diagnostic?.attached(client);
 	} catch (error) {
 		try {
 			await dispose();

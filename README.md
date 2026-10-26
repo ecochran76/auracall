@@ -2733,3 +2733,12 @@ reconnects. Input remains blocked during the change, and AuraCall resumes
 automation only after control-grant revocation is confirmed.
 
 Open the AuraCall root URL to reach the console, then select **Desktops** to open the browser client. Console, operator dashboard and desktop client share AuraCall's glowing halo favicon.
+
+### App-list performance diagnostics
+
+Run `auracall apps list --json --performance` to include one
+`[browser-performance] {…}` aggregate JSON line on stderr at command completion,
+including operation failure after configuration resolves. Normal inventory or failure JSON stays on stdout.
+The flag is off by default and adds no provider requests or admission bypass.
+See [the browser debugging guide](docs/dev/browser-service-tools.md#app-list-performance-diagnostics)
+for timing and coverage interpretation.

@@ -56878,3 +56878,13 @@ archiveattribution accepted. SingleTDDpass reproduced and repaired unique-respon
 preflight/control/capture guards;62affectedchecks/4files and fulltypecheck passed.
 No nativeeffects/retry/publication/runtimeinstallation. Review/TDD1/1; further
 verification closedworld. Root405;409and414each assigned one worker/sourceprep.
+
+## 2026-10-26 — Plan0461
+
+Building opt-in app-list performance diagnostics from the issue464 retrospective. First seam: sanitized aggregate report under deterministic protocol/time fixtures. No live provider run or CI.
+
+Plan0461 source acceptance: 161 selected tests pass, plus four overlapping
+admission-boundary checks after adding diagnostic assertions. Typecheck/build,
+scoped lint, docs and compiled help pass. Earlier Grok timeout passed isolated
+and complete reruns without changed budgets. Source-only checkpoint; CI and
+installed/live activation excluded. Primary Standards/Spec review has no blocker.

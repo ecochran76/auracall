@@ -1,3 +1,4 @@
+import { currentBrowserPerformanceDiagnostics } from "../browserPerformanceDiagnostics.js";
 import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type {
@@ -87,6 +88,7 @@ export async function annotateClientMutationContext(
 	await extendedClient.__auracallResponseObserver?.dispose();
 	extendedClient.__auracallResponseObserver = undefined;
 	const governor = extendedClient.__auracallProviderTrafficGovernor;
+	const diagnostic = governor?.attribution.provider === "chatgpt" ? currentBrowserPerformanceDiagnostics() : undefined;
 	let observer: { dispose(): Promise<void> } | undefined;
 	let backendObserver: { dispose(): Promise<void> } | undefined;
 	if ((governor?.attribution.provider === "chatgpt" || governor?.attribution.provider === "grok") && governor.attribution.targetId) {
@@ -94,7 +96,8 @@ export async function annotateClientMutationContext(
 			const pending = new Set<Promise<void>>();
 			let failure: unknown;
 			let disposed = false;
-			const handler = (event: { response: { url: string; status: number } }) => {
+			const handler = (event: { requestId?: string; response: { url: string; status: number } }) => {
+        if (!disposed && event.requestId) diagnostic?.response(event.requestId, client);
 				if (disposed || event.response.status !== 429) return Promise.resolve();
 				const task =
 					governor
