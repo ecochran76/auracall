@@ -56865,3 +56865,16 @@ Grok's exact OAuth callback; missing external allowlisting remains a later
 prerequisite, not a proven cause. No Add, authentication call, external config or
 service process changed. Preserve the failed flow because cleanup can abandon its
 session. #408/#410 contract decisions remain pending; final review/TDD0/0.
+
+
+### 2026-10-26 — Approved ticket splits and checkpoint review/TDD
+
+User accepted exact OptionB408/410 splits and requested reviewnow. Workers amended
+and verified408/410 CLOSED;477OPEN preserves Instructions/Model;411OPEN retains
+provideridentity/publication acceptance. Root reconciled adjacent Plan0452 conflict
+by preserving both approved Bot and Build paragraphs; parent398 untouched.
+One review pinned d107e13…331951d: Standards0hardfindings, SpecS1blocking oldassistant
+archiveattribution accepted. SingleTDDpass reproduced and repaired unique-response
+preflight/control/capture guards;62affectedchecks/4files and fulltypecheck passed.
+No nativeeffects/retry/publication/runtimeinstallation. Review/TDD1/1; further
+verification closedworld. Root405;409and414each assigned one worker/sourceprep.

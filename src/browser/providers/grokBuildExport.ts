@@ -19,6 +19,7 @@ export function grokBuildExportControlExpression(
   const ownedPlanes=allPlanes.filter(p=>Array.from(p.querySelectorAll('[data-testid="assistant-message"]')).some(el=>el.closest('[id^="response-"]')?.getAttribute('id')===${JSON.stringify(request.responseId)}&&el.closest('[data-plane-row]')?.getAttribute('data-plane-row')===${JSON.stringify(gatewayRowId)}));
   result.flags.planeCount=allPlanes.length;result.flags.ownedPlaneCount=ownedPlanes.length;if(ownedPlanes.length!==1)return finish('background-plane-unqualified');const plane=ownedPlanes[0];
   result.flags.backgroundMayBeInert=true;
+  if(plane.querySelectorAll('[data-testid="assistant-message"]').length!==1)return finish('workspace-response-ambiguous');
   ${GROK_COMMITTED_REACT_PATH}
   const qualify=el=>{const key=Object.keys(el).find(k=>k.startsWith('__reactFiber$'));return key?committedPath(el[key],el,el):null;};
   const buttons=Array.from(document.querySelectorAll('button[aria-label="More options"][aria-haspopup="menu"]')).filter(el=>!plane.contains(el));result.flags.moreTriggerCount=buttons.length;

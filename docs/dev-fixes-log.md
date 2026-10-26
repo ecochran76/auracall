@@ -26288,3 +26288,14 @@ attributing failure to OAuth. An exact observed callback is a configuration
 prerequisite, not evidence that authentication began. Preserve failed pending
 flows whose cleanup abandons sessions; operator passive reads must never invoke
 SDK business methods outside normal provider governance.
+
+
+### 2026-10-26 — Bind Build exports without filtering away ambiguity
+
+A selected response still mounted in a conversation does not establish which
+workspace a native Download exports. Before export, require a unique assistant
+and match an explicit requested ID; recheck uniqueness during native-control
+qualification and same response/gateway after capture. Refuse ambiguous history
+rather than label current bytes with older provenance. Preserve unknown custody
+if binding changes after input. Three causal regressions plus affected62checks
+and typecheck passed; historical inspect behavior remains available.

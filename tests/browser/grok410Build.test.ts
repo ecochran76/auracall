@@ -1,4 +1,7 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and DOM platform names are case-sensitive.
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { createContext, runInContext } from "node:vm";
 import { expect, test } from "vitest";
 import { readGrokAssistantSnapshotForRuntime } from "../../src/browser/actions/grok.js";
@@ -170,6 +173,7 @@ function buildFixture({
 		closedStop = false,
 		duplicatePlane = false,
 		previewBearerInProse = false,
+		newerAssistant = false,
 	} = {}) => {
 		location.href = "https://grok.com/c/conversation-generated";
 		const userMessage = new Node("div", "Synthetic timer request", {
@@ -193,7 +197,16 @@ function buildFixture({
 		]);
 		const response = new Node("div", "", { id: "response-created" }, [message]);
 		const row = new Node("div", "", { "data-plane-row": "gateway:assistant" }, [response]);
-		const plane = new Node("div", "", { "data-transcript-renderer": "plane" }, [userRow, row]);
+		const later = row.cloneNode(true);
+		later.attributes["data-plane-row"] = "gateway:newer";
+		const laterResponse = later.querySelector('[id^="response-"]');
+		if (!laterResponse) throw new Error("fixture response missing");
+		laterResponse.attributes.id = "response-newer";
+		const plane = new Node("div", "", { "data-transcript-renderer": "plane" }, [
+			userRow,
+			row,
+			...(newerAssistant ? [later] : []),
+		]);
 		const frame = new Node("iframe", "", {
 			src: "https://sample.grok-sandbox.com/__grok-preview/auth?token=SECRET_PREVIEW_BEARER",
 			title: "Preview",
@@ -778,4 +791,28 @@ test("Build inspection redacts an authenticated preview URL quoted in generated 
 	);
 	expect(result.generation.status).toBe("response_completed");
 	expect(JSON.stringify(result)).not.toContain("SECRET_PREVIEW_BEARER");
+});
+
+test("export refuses an older assistant when the conversation has another workspace response", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane({ newerAssistant: true });
+	const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "grok410-response-binding-"));
+	try {
+		await fs.chmod(outputDir, 0o700);
+		const result = await fixture.service.export({
+			targetId: "build-target",
+			conversationId: "conversation-generated",
+			responseId: "response-created",
+			outputDir,
+			acknowledgeTargetDefaultReset: true,
+		});
+		expect(result).toMatchObject({
+			generation: { responseId: null },
+			artifacts: { status: "unavailable", entries: [] },
+			effectState: "none",
+			exportCapture: { setup: "not_attempted" },
+		});
+	} finally {
+		await fs.rm(outputDir, { recursive: true, force: true });
+	}
 });

@@ -367,3 +367,23 @@ test("account drift after allowed focus refuses before native pointer input", as
 	expect(f.bringToFront).toHaveBeenCalledOnce();
 	expect(seam.click).not.toHaveBeenCalled();
 });
+
+test("export withholds archive attribution when the response changes during capture", async () => {
+	const f = await fixture();
+	const initial = await seam.view();
+	seam.view
+		.mockResolvedValueOnce(initial)
+		.mockResolvedValue({
+			...initial,
+			responseId: "other-assistant",
+			gatewayRowId: "gateway:other",
+		});
+	const result = await runGrokBuildCommand(f.request, f.service);
+	expect(result).toMatchObject({
+		status: "unknown",
+		effectState: "unknown",
+		retrySafe: false,
+		artifacts: { status: "unknown", entries: [] },
+		cleanupState: "completed",
+	});
+});

@@ -36,7 +36,7 @@ class Element {
 		return this === other || this.children.some((c) => c.contains(other));
 	}
 	querySelectorAll(selector: string) {
-		if (selector.includes("assistant-message")) return this === plane ? [message] : [];
+		if (selector.includes("assistant-message")) return this === plane ? this.children : [];
 		if (selector.includes("menuitem")) return this === menu ? [download] : [];
 		return [];
 	}
@@ -56,9 +56,10 @@ function observe(
 		inert?: boolean;
 		triggerInert?: boolean;
 		menuInert?: boolean;
+		secondAssistant?: boolean;
 	} = {},
 ) {
-	plane.children = [message];
+	plane.children = [message, ...(input.secondAssistant ? [new Element()] : [])];
 	plane.attributes["aria-hidden"] = input.inert === false ? "false" : "true";
 	download.attributes = { role: "menuitem" };
 	download.parentElement = menu;
@@ -178,4 +179,10 @@ test("an inert expanded trigger still owns its active non-inert portal menu", ()
 		stage: "owned-menu-observed",
 		menuOwnershipQualified: true,
 	});
+});
+
+test("Download refuses a second assistant even while the selected response remains mounted", () => {
+	const { value, download } = observe({ secondAssistant: true });
+	expect(value.stage).toBe("workspace-response-ambiguous");
+	expect(download.getAttribute("data-auracall-build-download")).toBeNull();
 });

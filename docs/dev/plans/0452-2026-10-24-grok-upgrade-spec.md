@@ -77,7 +77,7 @@ responsive and make waits, limits, warnings, coverage and outcome custody visibl
 25. As an operator, I want Bot instructions, model, Connectors/tools, Skills and knowledge configured when supported, so that the Bot has the requested capabilities.
 26. As an operator, I want unavailable Bot settings reported explicitly, so that unsupported configuration is never silently discarded.
 27. As an operator, I want Build app generation and artifact retrieval, so that I can inspect and retain the generated result.
-28. As an operator, I want explicit Grok-native app publication bound to an app/version, so that the published URL corresponds to the result I selected.
+28. As an operator, I want explicit Grok-native publication of a selected Build output, with first-publication identity qualified on readback and existing published versions selected by their actual provider identity, so that the published URL corresponds to the output I approved.
 29. As an operator, I want account-wide backfill followed by incremental follow, so that older history is not permanently omitted.
 30. As an operator, I want durable cursor, phase and partial coverage readback, so that interruption and restart do not reset or misreport work.
 31. As an operator, I want chat content and referenced file/artifact bytes locally verified, so that discovered metadata is not mistaken for successful materialization.
@@ -111,14 +111,23 @@ responsive and make waits, limits, warnings, coverage and outcome custody visibl
   MCP installation, authentication continuation, scopes/tools and explicit
   selection/invocation. Scope grants must be observed; server advertisements are
   not grants. Never log credentials, OAuth tokens or authenticated payloads.
-- Bot operations cover inventory, invocation, creation and editing. Required
-  configuration comprises name/description/instructions, model defaults,
-  Connectors/tool permissions, Skills and knowledge sources. Unsupported provider
-  controls are explicit results; they do not satisfy the capability's live gate.
-- Build app generation, local artifact retrieval and native publication remain
-  separate stages with app/version/conversation provenance. Publication requires
-  explicit selection of a concrete version; report the provider-observed URL and
-  availability. No external hosting deployment is introduced.
+- Bot operations cover inventory, invocation, creation and editing. Under the
+  operator-approved 2026-10-26 Option B split, #408 covers the observed native
+  Name, optional Title and Description lifecycle with exact same-ID saved
+  readback. Separate Instructions and Model defaults remain required and OPEN
+  in #477; Description is not Instructions, and no model-change request is not
+  proof of configuring a model default. #409 separately owns Connectors/tool
+  permissions, Skills and knowledge sources. Unsupported provider controls are
+  explicit results; they do not satisfy the affected capability's live gate.
+  Closing amended #408 does not close #477 or parent #398.
+- Build generation, local archive retrieval and native publication remain separate
+  stages. Prepublication evidence binds the exact provider account, conversation,
+  assistant and current native workspace snapshot; unobserved app/version identity
+  remains explicit. First publication requires a concrete selected-output packet
+  and fresh reliable snapshot binding, then genuine provider app/version and URL
+  readback. Existing published versions require actual provider identity selection
+  before dispatch. Missing identity never satisfies its live gate. No external
+  hosting deployment is introduced.
 - Live-follow performs bounded resumable account-wide backfill then incremental
   follow. Include project/Bot chats when discoverable, expose omissions/coverage,
   honor foreground priority and preserve cursor/phase/accounting across yield

@@ -26,7 +26,9 @@
   "workers": {
     "403": "feat/grok403-native-20261025",
     "408": "feat/grok-408-native-20261025",
-    "410": "feat/grok410-native-20261025"
+    "410": "feat/grok410-native-20261025",
+    "409": "ticket408",
+    "414": "ticket410"
   },
   "nodes": {
     "399": {
@@ -161,15 +163,15 @@
       "scope": "original-program"
     },
     "408": {
-      "title": "Grok: Create and edit Bot instructions and model defaults",
+      "title": "Grok: Create and edit native Bot settings",
       "url": "https://github.com/ecochran76/auracall/issues/408",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [
         407
       ],
-      "state": "native-partial",
+      "state": "validated-approved-split",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "gate": "Closed supported lifecycle; missing Instructions/Model remain OPEN under477.",
       "currentEvidence": {
         "nativeCreate": "one confirmed; actual canonical Bot route/ID",
         "editorFields": [
@@ -195,23 +197,23 @@
         404,
         408
       ],
-      "state": "blocked-dependencies",
+      "state": "assigned-source-preparation",
       "scope": "original-program"
     },
     "410": {
       "title": "Grok: Generate Build apps and retrieve their artifacts",
       "url": "https://github.com/ecochran76/auracall/issues/410",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [
         402
       ],
-      "state": "public-native-prepublication-qualified-identity-gated",
+      "state": "validated-approved-split",
       "scope": "original-program",
-      "gate": "Public archive export qualified; authentic provider app/version identity remains unmet under original contract. No publication authorized.",
+      "gate": "Closed approved prepublication acceptance; authentic app/version and publication remain required under411.",
       "currentEvidence": {
         "nativeInitialGeneration": "preflight failed before Send on improperly reused target",
         "effectDispatched": true,
-        "next": "resolve prepublication identity contract or qualify actual provider identity; no blind retries or publication",
+        "next": "Closed approved prepublication contract; identity required411; checkpointS1guard repaired source, no native rerun.",
         "correctiveCommand": "active; clean3d837e9e9; fresh account match; genuine new-target policy in production",
         "nativeGeneration": "one accepted generation completed; native Worked for terminal marker and exact conversation/assistant response validated",
         "operatorSettlement": "immutable completion proof validated; supported CAS settled and released preserved target; prior uncertainty audit retained",
@@ -286,7 +288,7 @@
         410,
         413
       ],
-      "state": "blocked-dependencies",
+      "state": "assigned-source-preparation",
       "scope": "original-program"
     },
     "440": {
@@ -405,14 +407,25 @@
       ],
       "mergeCommit": "e55567f9cb4ebf28e6625180ffb311b7eb97bcd4",
       "pr": 455
+    },
+    "477": {
+      "title": "Grok: qualify separate Bot Instructions and Model defaults",
+      "url": "https://github.com/ecochran76/auracall/issues/477",
+      "trackerState": "OPEN",
+      "scope": "approved-preserved-followup",
+      "state": "native-controls-unavailable",
+      "blockedBy": []
     }
   },
   "reviewControl": {
-    "broadReviews": 0,
-    "postReviewTddPasses": 0,
-    "reviewAfterAllTicketsClosed": true,
+    "broadReviews": 1,
+    "postReviewTddPasses": 1,
+    "reviewAfterAllTicketsClosed": false,
     "proposedFixedBase": "d107e13cef6a83b76f63de9b3f268366be936a6b",
-    "fixedBaseUserConfirmed": true
+    "fixedBaseUserConfirmed": true,
+    "checkpointAuthority": "User requested checkpoint review and accepted recommendations 2026-10-26",
+    "reviewHead": "331951dda32e231f7c990c129ffabcd34225d178",
+    "report": "../notes/2026-10-26-grok-checkpoint-review.md"
   },
   "executionControl": {
     "scopeAuthority": "User requested closing remaining graph with one primary and one worker per other unblocked ticket.",
@@ -427,7 +440,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "403CLOSED;7frontierOPEN;410publicnativeZIPqualified/realappVersiongate;405OAuthcallbackunobserved;408scopeDecisionPending;finalreviewTDD0.",
+  "lastCheckpoint": "403/408/410 CLOSED;5original scopedtickets OPEN plus477preservedfollowup; checkpointreview1/TDD1; S1responsebindingrepair;409/414assigned.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
@@ -442,7 +455,7 @@
     "botCreate": "one confirmed; canonical native entity retained",
     "botEditSave": "one public same-ID Save; independent fresh readback verified",
     "connectorAdd": "one continuation dispatch; provider Connection failed; no retry",
-    "build": "one generation accepted and completed; immutable proof/CAS retained; artifact provenance still unqualified",
+    "build": "one generation completed; public archive retrieved with verified bytes; no publication; identity obligation preserved in411",
     "publication": "not dispatched",
     "mailSend": "not dispatched",
     "recentFileSelection": "one exactB item click; ready/native-metadata/observed-native/noSHA; no upload/Send"

@@ -189,10 +189,14 @@ export async function exportGrokBuild(
 		if (!account) throw new Error("grok_build_account_not_verified");
 		const view = await readGrokBuildPlaneSnapshot(client.Runtime, {
 			conversationId: request.conversationId,
-			responseId: request.responseId,
 			allowInertBackground: true,
 		});
-		if (view.state !== "completed" || !view.responseId || !view.gatewayRowId)
+		if (
+			view.state !== "completed" ||
+			!view.responseId ||
+			!view.gatewayRowId ||
+			(request.responseId !== undefined && request.responseId !== view.responseId)
+		)
 			throw new Error("grok_build_completed_assistant_required");
 		result = {
 			...result,
@@ -309,6 +313,16 @@ export async function exportGrokBuild(
 				try {
 					await control("download", true);
 					const artifact = await captureGrokBuildArchive(directory, options.abortSignal);
+					const after = await readGrokBuildPlaneSnapshot(client.Runtime, {
+						conversationId: request.conversationId,
+						allowInertBackground: true,
+					});
+					if (
+						after.state !== "completed" ||
+						after.responseId !== responseId ||
+						after.gatewayRowId !== gatewayRowId
+					)
+						throw new Error("grok_build_export_response_binding_changed");
 					if ((await verify(client.Runtime, options)) !== account)
 						throw new Error("grok_build_account_changed");
 					result = {
