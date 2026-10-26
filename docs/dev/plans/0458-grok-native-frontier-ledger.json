@@ -74,13 +74,13 @@
     "403": {
       "title": "Grok: Use exact composer attachments and recent files",
       "url": "https://github.com/ecochran76/auracall/issues/403",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [
         402
       ],
-      "state": "native-qualified-awaiting-main-and-tracker-close",
+      "state": "validated-source-native",
       "scope": "original-program",
-      "gate": "Original criteria qualified in source/native public wrapper; integrate final source and close tracker with verified readback.",
+      "gate": "All five original criteria checked; main integration and GitHub completed closure read back.",
       "currentEvidence": {
         "sourceRepairPr": 459,
         "freshTargetLifecycle": "fixed and regression tested",
@@ -97,7 +97,11 @@
         "nativeRecent": "one configured public exact-B selection completed/ready; metadata-only association, no sourceSHA/local-manifest or fresh-byte claim",
         "nativeRecentCompositeSha256": "86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315",
         "primaryValidation": "raw hashes,7sourceGitblobs,exactB/partialinventory/oneclick/emptyFileList/onechip/submitgate and settled leases validated; samebrowser/target retained",
-        "acceptanceNote": "../notes/2026-10-25-grok403-native-acceptance.md"
+        "acceptanceNote": "../notes/2026-10-25-grok403-native-acceptance.md",
+        "integrationPr": 473,
+        "integrationMerge": "83d527869021559df8b03cfdd858f5e3cd197c35",
+        "closedAt": "2026-10-26T00:59:04Z",
+        "trackerReadback": "CLOSED/COMPLETED;fivecriteria checked;oneclosingcomment;wording unchanged"
       }
     },
     "404": {
@@ -402,7 +406,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "Main PR471 a74 andPR472 31199; code659/currentdocs c692;403nativebothuploads+Recentqualified/primaryvalidated/main-and-closepending;405OAuthcallbackgate;408scopeDecisionPending;410workspaceInactive/appVersionExportPending;all8trackerOPEN;reviewTDD0.",
+  "lastCheckpoint": "403CLOSED/mainPR47383d/nativebothuploads+Recentqualified;7frontierOPEN;405externalOAuthcallbackgate;408scopeDecisionPending;410workspaceInactive/exportunqualified;reviewTDD0.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",

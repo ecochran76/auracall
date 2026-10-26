@@ -12,7 +12,7 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 
 User requested the remaining eight tickets be closed, with one primary ticket
 and one worker per other unblocked ticket, followed by one code-review/TDD pass.
-Current24-node graph has16closed/eightopen. Primary405; workers403/408/410.
+Current24-node graph has17closed/sevenopen after403 acceptance. Primary405; workers403/408/410.
 406 depends405;409 depends403/408 (404closed);411/414 depend410 (413closed).
 Registration started at d107e13ce and preserved both journal histories.
 Main advanced independently through ce91367d1 and was merged as244871611,
@@ -59,7 +59,8 @@ or old-goal reset is inferred from this ordinary execution request.
 Both same-basename files are publicly ready with distinct IDs and exact server
 bytes verified; the two-upload cap is consumed. One native public Recent selection
 of exact B is now ready with metadata-only provenance. Primary validated its proof
-and settled cleanup; final main integration and tracker close are next for403. One Bot Create
+and settled cleanup. PR473 merged as83d527869;403 is now CLOSED/COMPLETED
+with allfive original criteria checked and closure read back. One Bot Create
 and one supported-field public Save/readback are verified, but original
 Instructions/Model criteria remain unmet; a concrete scope split awaits user
 response. One Build generation completed and was reconciled with its retained
@@ -85,3 +86,11 @@ readiness without another upload or Send. Primary validated immutable proof
 86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315.
 This local reframe did not amend acceptance criteria or grant publication,
 external OAuth configuration changes, additional uploads or review/TDD passes.
+
+
+## Tracker checkpoint
+
+#403 closed as completed at2026-10-26T00:59:04Z after PR473 main integration.
+Current remaining scope is405/406/408/409/410/411/414. #409 still depends on408;
+403's closure does not qualify unavailable Bot controls. Parent398 stays untouched.
+Final review/TDD counters remain0/0 until all remaining tickets close.
