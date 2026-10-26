@@ -56726,3 +56726,72 @@ against exact source/expression hashes and the native owner ARIA chain. Supporte
 CAS settled its uncertainty and separately released the preserved lease atrev5;
 Attach/Recent menu effects/history remain, no item selection or replay authority
 is inferred. Native row metadata still awaits the corrected shared-tree probe.
+2026-10-25 — Grok403 chooser-before-selection attribution: causal public-service
+regressions cover chooser transport failure with normal and failed cleanup.
+Preserve known zero item-selection dispatch separately from unknown menu/cleanup
+effects; public unconfirmed status and target custody remain. Corrected passive
+metadata probe uses shared committed-path helper per owned host; not yet run.
+
+
+2026-10-25 — Grok403 committed portal bound correction: r20 distinguishes
+256-depth exhaustion from ownership mismatch. Shared committed-path ancestry and
+topology now bound at 512; 20,000-node limit/current-root/unique-host/scope checks
+remain fail closed. File binding imports shared helper. Native-derived deep portal
+regression observed RED before correction; exhaustion coverage retained. No native
+Recent row DTO or selection acceptance claimed; next passive read requires slot.
+
+
+2026-10-25 — Grok403 Recent parser/source recovery: r23 committed row keys join
+known synthetic IDs to the observed account-scoped asset DTO. Add owned ARIA
+chooser parsing and repeat current key/DTO/account qualification at selection.
+Metadata-only composer context carries no source digest or local-manifest proof;
+readiness retains the actual Submit gate. Public duplicate-name fixture selects
+the exact ID without upload; foreign/stale/reused rows and non-ready metadata
+remain refused/incomplete. No native selection repeated during source work.
+
+Grok403 input-scope correction: metadata-only recovery may inspect an unmarked
+sole native input only when its FileList is empty. A causal foreign-input fixture
+observed an unintended byte read before this guard; now it refuses without
+reading bytes, retaining unknown context. Owned marker/digest semantics remain.
+
+
+2026-10-25 — Grok403 r24 opener diagnosis: no Attach/Recent/item click occurred.
+Actual Attach is an ordinary button with data-state closed; overbroad visibility
+logic rejected it. Source now interprets closed-state attributes only on overlay
+roles/modal containers. Native-derived closed-trigger regression RED→GREEN;
+closed-menu descendants remain refused. Private immutable r25 source-expression
+proof links raw no-dispatch/empty-composer evidence; primary owns lease recovery.
+
+
+2026-10-25 — Grok403 partial Recent inventory correction: boolean-only native
+census proves requested B passes all predicates; four unrelated rows fail only
+the existing key-URI guard. Omit unsupported content-key URI rows with explicit partial status
+and coverage instead of blocking supported assets. Duplicate-ID/global ownership
+and committed-root guards remain fail closed; selection rechecks its exact ID.
+Causal unsupported-key regression RED→GREEN; old open chooser preserved. One
+fresh empty-root canary requires primary grant after source validation/recovery.
+
+2026-10-25 — Grok403 final native Recent acceptance packet: r30 on clean source 659d
+created a new empty owned root and selected known B exactly once. Public result
+complete/grok_files_ready, one ready B, native-metadata/observed-native without SHA;
+Native FileList 0/editor 0/chip 1, same account and enabled Submit before close. Five
+qualified inventory rows plus explicit partial coverage; no extra upload/Send.
+Immutable r31 links raw receipts, source manifest and separate A/B byte proofs.
+Worker native slot released; primary owns independent validation/issue closure.
+
+### 2026-10-25 — Plan0458 / #403 native Recent qualified
+
+Primary validated r31 composite86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315:
+all raw links and7source Git blobs at659d71362; actual partial visible inventory
+has5qualified rows and exactlyone B; one item evaluation returns true; public
+result complete/grok_files_ready for B, native-metadata/observed-native with no
+SHA/local-manifest/fresh-byte claim. Final FileList0/chip1/editor0 and submit gate
+are positive. Original2uploads remain the separate byte proofs; no extra upload
+or Send. Fresh registry reads show both owned target leases released/settled;
+control-plane census verifies same PID/start generation and retained root target.
+
+Primary final presubmit56checks/3files pass on the runtime source; final worker
+typecheck accepted. Docs-only c692f4b88 carries the criterion mapping; no runtime
+source changed after native659. Main integration and #403 close/readback are
+next. #405 external OAuth callback boundary, #408 original scope decision and
+#410 inactive workspace/app-version/export remain open. Review/TDD counters0/0.

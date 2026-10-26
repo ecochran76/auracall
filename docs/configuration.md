@@ -1310,14 +1310,27 @@ operator-authorized POST `/v1/grok/files/query`. Bodies use `action`, optional
 `runtimeProfile`, and either `id` for selection or `paths` for explicit local
 uploads. Recent selections require an exact unique provider file ID and explicit
 readiness in the same composer/project context. A duplicate basename is not an
-identity selector. Local upload hashes readable source bytes before dispatch.
+identity selector. Native Recent rows with unsupported content-key URIs are omitted with
+`status: incomplete`, `code: grok_recent_partial` and partial visible-only
+coverage; a supported row can still be selected by its exact provider ID.
+Duplicate-ID ambiguity, foreign ownership and global current-root failures block
+selection. Local upload hashes readable source bytes before dispatch.
 The native attachment component can bind the same selected File object and digest
 to its observed provider metadata ID, with matching account/source URI. These
 files report `sourceBinding: native-file-object`, `sourceSha256`, and
 `sourceAgreement: local-manifest`. Context reads can recover the retained native
 File/metadata relationship after a process restart without another upload; they
 report `sourceAgreement: observed-native`, which does not assert agreement with
-a caller's local path. Metadata and phases come only from the proven committed
+a caller's local path. Recent files also use committed menu-item keys joined to
+account-scoped native asset metadata, with the key/DTO/account relationship
+revalidated immediately before item selection. A context attachment without a
+selected native File can report `sourceBinding: native-metadata` and
+`sourceAgreement: observed-native`; in this case the agreement describes only
+native metadata association. Interpret it with `sourceBinding`: this branch
+provides identity/readiness only, has no `sourceSha256`, and establishes neither
+local-manifest agreement nor server-byte qualification. A sole unmarked input
+is eligible only with an empty FileList; a nonempty input still requires the
+retained owned marker before byte observation. Metadata and phases come only from the proven committed
 React tree, with root consistency checked across digest observation. Ready
 requires the same form's committed `isQueryable` gate plus an explicitly enabled
 native Submit control and valid metadata without error/private/disabled/deleted

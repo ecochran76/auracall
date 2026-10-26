@@ -4,7 +4,7 @@
 export const GROK_COMMITTED_REACT_PATH = `
       const committedPath = (seed, button, scopeRoot) => {
         let top = seed; const ascending = new Set();
-        for (let depth = 0; top?.return && depth < 256; depth++) {
+        for (let depth = 0; top?.return && depth < 512; depth++) {
           if (ascending.has(top)) return null;
           ascending.add(top); top = top.return;
         }
@@ -15,7 +15,7 @@ export const GROK_COMMITTED_REACT_PATH = `
         let budget = 20000;
         while (stack.length && budget-- > 0) {
           const {fiber,path} = stack.pop();
-          if (!fiber || seen.has(fiber) || path.length >= 256) return null;
+          if (!fiber || seen.has(fiber) || path.length >= 512) return null;
           seen.add(fiber); const next = [...path,fiber];
           if (fiber.stateNode === button) matches.push(next);
           if (fiber.sibling) stack.push({fiber:fiber.sibling,path});

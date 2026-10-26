@@ -5,16 +5,18 @@ import path from "node:path";
 import { BrowserAutomationError } from "../../oracle/errors.js";
 import { delay } from "../utils.js";
 import { observeGrokNativeFileBinding } from "./grokNativeFileBinding.js";
+import { GROK_NATIVE_RECENT_FILES } from "./grokNativeRecentFiles.js";
 
 export interface GrokComposerFile {
 	id: string;
 	name: string;
 	state: "ready" | "progress" | "error" | "unknown";
 	sourceSha256?: string;
-	sourceBinding?: "native-file-object";
+	sourceBinding?: "native-file-object" | "native-metadata";
 	sourceAgreement?: "local-manifest" | "observed-native";
 }
 export interface GrokFilesResult {
+	selectionDispatch?: "not-dispatched" | "dispatched" | "unknown";
 	status: "complete" | "incomplete" | "failed" | "unconfirmed";
 	code: string;
 	providerAccountRef: string | null;
@@ -44,7 +46,7 @@ export interface GrokFileDom {
 // Root is derived from the sole visible editable composer. A random marker binds
 // all later observations and the exact native file input to this same DOM node.
 const helpers = `
-const visible = el => el instanceof HTMLElement && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden';
+const visible = el => { for(let node=el;node;node=node.parentElement)if((['menu','dialog','listbox','tooltip'].includes(node.getAttribute('role'))||node.getAttribute('aria-modal')==='true')&&(node.getAttribute('data-closed')!==null||node.getAttribute('data-open')==='false'||node.getAttribute('data-state')==='closed'))return false; return el instanceof HTMLElement && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0 && window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden'; };
 const identity = el => {
  const raw = el.getAttribute('data-file-id') || el.getAttribute('data-attachment-id');
  if (raw) return raw;
@@ -54,6 +56,7 @@ const identity = el => {
  return match ? match[1] : null;
 };
 const fileNodes = root => Array.from(root.querySelectorAll('[data-file-id], [data-attachment-id], a[href]')).filter(el => visible(el) && identity(el));
+${GROK_NATIVE_RECENT_FILES}
 const file = el => {
  const state = (el.getAttribute('data-state') || el.getAttribute('data-status') || '').toLowerCase();
  const text = el.innerText || el.textContent || '';
@@ -294,25 +297,34 @@ export function createGrokFileClient(
 		const deadline = Date.now() + (options.timeoutMs ?? 10_000);
 		let chooserOpened = false;
 		for (let attempt = 0; attempt < 1000; attempt++) {
-			const result = await evaluate<GrokComposerFile[] | null>(`
-        const menus = Array.from(document.querySelectorAll('[role="menu"]')).filter(visible);
+			const result = await evaluate<
+				GrokComposerFile[] | { files: GrokComposerFile[]; partial: boolean } | null
+			>(`
+        const root=${rootExpression()};if(!root)return null;
+        const owned=ownedRecentMenus(root);if(hasNativeRecentAuthority(root)&&!owned)return null;
+        const menus = owned ? [owned.parent] : Array.from(document.querySelectorAll('[role="menu"]')).filter(visible);
         if (!${chooserOpened}) {
           const entries = menus.flatMap(menu => Array.from(menu.querySelectorAll('[role="menuitem"], button'))).filter(el => visible(el) && /^Recent files$/i.test((el.innerText || '').trim()));
           if (entries.length !== 1) return null;
           entries[0].click(); return [];
         }
+        const native=nativeRecentFiles(root,${JSON.stringify(options.providerUserId ?? null)});
+        if(native)return {files:native.rows.map(r=>r.file),partial:native.partial};
+        if(owned)return null;
         const choices = menus.filter(menu => fileNodes(menu).length > 0 || menu.getAttribute('aria-label') === 'Recent files');
         if (choices.length !== 1) return null;
         choices[0].setAttribute('data-auracall-recent-composer', ${JSON.stringify(composerId)});
         return fileNodes(choices[0]).map(file);`);
 			if (result && chooserOpened) {
 				const base = await context();
-				const ids = result.map((f) => f.id);
+				const files = Array.isArray(result) ? result : result.files;
+				const partial = !Array.isArray(result) && result.partial;
+				const ids = files.map((f) => f.id);
 				return {
 					...base,
-					files: result,
-					status: ids.some((id, i) => ids.indexOf(id) !== i) ? "incomplete" : "complete",
-					code: "grok_recent_visible",
+					files,
+					status: partial || ids.some((id, i) => ids.indexOf(id) !== i) ? "incomplete" : "complete",
+					code: partial ? "grok_recent_partial" : "grok_recent_visible",
 					coverage: { scope: "visible-recent", complete: false },
 				};
 			}
@@ -323,12 +335,21 @@ export function createGrokFileClient(
 		throw new Error("grok_files_observation_budget_exhausted");
 	}
 	async function select(id: string): Promise<GrokFilesResult> {
-		const inventory = await recent();
+		let inventory: GrokFilesResult;
+		try {
+			inventory = await recent();
+		} catch (error) {
+			throw new BrowserAutomationError(
+				"Grok chooser observation failed before file item selection.",
+				{ stage: "grok-file-chooser", effectState: "unknown", selectionDispatch: "not-dispatched" },
+				error,
+			);
+		}
 		if (!id.trim() || inventory.files.filter((f) => f.id === id).length !== 1)
 			return { ...inventory, status: "failed", code: "grok_recent_identity_not_unique" };
 		try {
 			const clicked = await evaluate<boolean>(
-				`const menus = Array.from(document.querySelectorAll('[data-auracall-recent-composer="${composerId}"]')).filter(visible); if (menus.length !== 1) return false; const choices = fileNodes(menus[0]).filter(el => identity(el) === ${JSON.stringify(id)}); if (choices.length !== 1 || choices[0].getAttribute('aria-disabled') === 'true') return false; choices[0].click(); return true;`,
+				`const root=${rootExpression()};if(!root)return false;const native=nativeRecentFiles(root,${JSON.stringify(options.providerUserId ?? null)});if(native){const matches=native.rows.filter(r=>r.file.id===${JSON.stringify(id)});if(matches.length!==1||matches[0].row.getAttribute('aria-disabled')==='true'||matches[0].row.getAttribute('data-disabled')!==null)return false;matches[0].row.click();return true;}if(hasNativeRecentAuthority(root))return false;const menus = Array.from(document.querySelectorAll('[data-auracall-recent-composer="${composerId}"]')).filter(visible); if (menus.length !== 1) return false; const choices = fileNodes(menus[0]).filter(el => identity(el) === ${JSON.stringify(id)}); if (choices.length !== 1 || choices[0].getAttribute('aria-disabled') === 'true') return false; choices[0].click(); return true;`,
 			);
 			if (!clicked)
 				return { ...inventory, status: "failed", code: "grok_recent_selection_not_verified" };

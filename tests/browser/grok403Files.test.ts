@@ -685,3 +685,261 @@ test.each([
 		code: "grok_file_native_context_unconfirmed",
 	});
 }, 15000);
+
+test.each([
+	false,
+	true,
+])("chooser observation fails before item selection even if cleanup fails (%s)", async (cleanupFails) => {
+	const f = fixture();
+	const attach = new Node("BUTTON", { "aria-label": "Attach" }, "Attach");
+	attach.onClick = () => {
+		throw new Error("chooser observation transport unavailable");
+	};
+	f.composer.append(attach);
+	const closeTarget = vi.fn(async () => {});
+	const settle = vi.fn(async () => {});
+	const close = vi.fn(async () => {
+		if (cleanupFails) throw new AggregateError([new Error("cleanup unavailable")]);
+	});
+	const service = createGrokFilesService(fixtureConnectorServiceOptions(), {
+		connect: async () => ({
+			client: {
+				Runtime: f.runtime,
+				DOM: f.dom,
+				close,
+				__auracallProviderTrafficGovernor: {
+					attribution: { provider: "grok", targetId: "fixture-target" },
+					admitBackendRequest: async () => {},
+					begin: async () => ({ settle }),
+				},
+			},
+			targetId: "fixture-target",
+			shouldClose: true,
+			host: "localhost",
+			port: 1,
+		}),
+		closeTarget,
+	});
+	const result = await runGrokFilesCommand({ action: "select", id: "known-b" }, service);
+	expect(result).toMatchObject({
+		status: "unconfirmed",
+		selectionDispatch: "not-dispatched",
+		provenance: { targetId: "fixture-target" },
+	});
+	expect(f.dom.setFileInputFiles).not.toHaveBeenCalled();
+	expect(closeTarget).not.toHaveBeenCalled();
+	expect(close).toHaveBeenCalledOnce();
+});
+
+test.each([
+	"ready",
+	"foreign-account",
+	"stale-row",
+	"pending-submit",
+	"foreign-context",
+	"private-context",
+	"changed-row",
+	"foreign-input",
+	"closed-overlay",
+	"partial-unrelated",
+	"ambiguous-row",
+	"foreign-owner",
+] as const)("native Recent joins duplicate labels by committed asset key (%s)", async (scenario) => {
+	const f = fixture();
+	Object.assign(f.document, {
+		getElementById: (id: string) =>
+			f.document.querySelectorAll("[id]").find((n) => n.getAttribute("id") === id) ?? null,
+	});
+	const ids = ["aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "11111111-2222-3333-4444-555555555555"];
+	const assets = ids.map((assetId) => ({
+		assetId,
+		rootAssetId: assetId,
+		name: "same.txt",
+		mimeType: "text/plain",
+		sizeBytes: 104,
+		key: `users/${scenario === "foreign-account" ? "foreign" : "user-1"}/${assetId}/content`,
+		ownerUserId: "user-1",
+		fileSource: "SELF_UPLOAD_FILE_SOURCE",
+		isDeleted: false,
+	}));
+	if (scenario === "partial-unrelated")
+		assets.push({
+			...assets[0],
+			assetId: "22222222-3333-4444-5555-666666666666",
+			rootAssetId: "22222222-3333-4444-5555-666666666666",
+			key: "unsupported-synthetic-key",
+		});
+	if (scenario === "ambiguous-row") assets.push({ ...assets[0] });
+	if (scenario === "foreign-owner") assets[0].ownerUserId = "foreign";
+	type Fiber = {
+		tag?: number;
+		key?: string;
+		stateNode?: unknown;
+		memoizedProps?: Record<string, unknown>;
+		return: Fiber | null;
+		child?: Fiber;
+		sibling?: Fiber;
+	};
+	const rootFor = (node: Node, child?: Fiber) => {
+		const owner: { current: Fiber | null } = { current: null };
+		const root: Fiber = { tag: 3, stateNode: owner, return: null };
+		const host: Fiber = { stateNode: node, return: root, child };
+		root.child = host;
+		owner.current = root;
+		Object.assign(node, { __reactFiberFixture: host });
+		return { owner, root, host };
+	};
+	rootFor(f.composer);
+	const attach = new Node(
+		"BUTTON",
+		{ "aria-label": "Attach", id: "attach", "aria-controls": "parent", "data-state": "closed" },
+		"Attach",
+	);
+	const parent = new Node("DIV", { role: "menu", id: "parent", "aria-labelledby": "attach" });
+	parent.hidden = true;
+	if (scenario === "closed-overlay") parent.setAttribute("data-state", "closed");
+	const recent = new Node(
+		"DIV",
+		{ role: "menuitem", id: "recent", "aria-controls": "chooser" },
+		"Recent files",
+	);
+	const chooser = new Node("DIV", { role: "menu", id: "chooser", "aria-labelledby": "recent" });
+	chooser.hidden = true;
+	attach.onClick = () => {
+		parent.hidden = false;
+	};
+	recent.onClick = () => {
+		chooser.hidden = false;
+	};
+	parent.append(recent);
+	f.composer.append(attach);
+	f.body.append(parent, chooser);
+	rootFor(attach);
+	rootFor(recent);
+	const selected = vi.fn();
+	const readUnknownBytes = vi.fn(async () => Uint8Array.of(1).buffer);
+	let previous: Fiber | undefined;
+	const list: Fiber = { memoizedProps: { assets }, return: null };
+	const chooserTree = rootFor(chooser, list);
+	list.return = chooserTree.host;
+	const keyedRows = new Map<string, Fiber>();
+	for (const asset of assets) {
+		const row = new Node("DIV", { role: "menuitem" }, "same.txt");
+		chooser.append(row);
+		const keyed: Fiber = { key: asset.assetId, return: list };
+		keyedRows.set(asset.assetId, keyed);
+		const host: Fiber = { stateNode: row, return: keyed };
+		keyed.child = host;
+		if (previous) previous.sibling = keyed;
+		else list.child = keyed;
+		previous = keyed;
+		Object.assign(row, { __reactFiberFixture: host });
+		row.onClick = () => {
+			selected(asset.assetId);
+			if (scenario === "foreign-input")
+				f.input.files = [
+					Object.assign({ name: "unknown.txt", size: 1 }, { arrayBuffer: readUnknownBytes }),
+				];
+			parent.hidden = true;
+			chooser.hidden = true;
+			const button = new Node("BUTTON", { "aria-label": "Open attachment" }, "same.txt");
+			const submit = new Node("BUTTON", {
+				"data-testid": "chat-submit",
+				type: "submit",
+				"aria-disabled": scenario === "pending-submit" ? "true" : "false",
+			});
+			const chip: Fiber = {
+				stateNode: button,
+				memoizedProps: {
+					metadata: {
+						fileMetadataId: asset.assetId,
+						fileName: asset.name,
+						fileMimeType: asset.mimeType,
+						fileSource: asset.fileSource,
+						fileUri:
+							scenario === "foreign-context" ? `users/foreign/${asset.assetId}/content` : asset.key,
+					},
+					phase: "processing",
+					isPrivate: scenario === "private-context",
+				},
+				return: null,
+			};
+			const gate: Fiber = {
+				stateNode: submit,
+				memoizedProps: { isQueryable: scenario !== "pending-submit" },
+				return: null,
+			};
+			chip.sibling = gate;
+			const form = rootFor(f.composer, chip);
+			chip.return = form.host;
+			gate.return = form.host;
+			Object.assign(button, { __reactFiberFixture: chip });
+			Object.assign(submit, { __reactFiberFixture: gate });
+			f.composer.append(button, submit);
+		};
+	}
+	if (scenario === "stale-row")
+		chooserTree.owner.current = { tag: 3, stateNode: chooserTree.owner, return: null };
+	if (scenario === "changed-row") {
+		const evaluate = f.runtime.evaluate.getMockImplementation();
+		if (!evaluate) throw new Error("fixture evaluator required");
+		f.runtime.evaluate.mockImplementation(async (input) => {
+			if (input.expression.includes("const matches=native.rows.filter")) {
+				const row = keyedRows.get(ids[1]);
+				if (row) row.key = ids[0];
+			}
+			return evaluate(input);
+		});
+	}
+	const client = createGrokFileClient(f.runtime, {
+		providerUserId: "user-1",
+		timeoutMs: 20,
+		pollMs: 0,
+	});
+	if (
+		scenario === "stale-row" ||
+		scenario === "closed-overlay" ||
+		scenario === "ambiguous-row" ||
+		scenario === "foreign-owner"
+	) {
+		await expect(client.select(ids[1])).rejects.toThrow();
+		expect(selected).not.toHaveBeenCalled();
+		return;
+	}
+	if (scenario === "partial-unrelated") {
+		const inventory = await client.recent();
+		expect(inventory).toMatchObject({
+			status: "incomplete",
+			code: "grok_recent_partial",
+			coverage: { scope: "visible-recent", complete: false },
+		});
+		expect(inventory.files.map((f) => f.id)).toEqual(ids);
+		parent.hidden = true;
+		chooser.hidden = true;
+	}
+	const result = await client.select(ids[1]);
+	if (scenario === "changed-row" || scenario === "foreign-account") {
+		expect(result.status).toBe("failed");
+		expect(selected).not.toHaveBeenCalled();
+		return;
+	}
+	expect(selected).toHaveBeenCalledExactlyOnceWith(ids[1]);
+	expect(result.status).toBe(
+		scenario === "ready" || scenario === "partial-unrelated" ? "complete" : "unconfirmed",
+	);
+	expect(result.files).toEqual(
+		scenario === "foreign-context" || scenario === "foreign-input"
+			? []
+			: [
+					{
+						id: ids[1],
+						name: "same.txt",
+						state: scenario === "ready" || scenario === "partial-unrelated" ? "ready" : "unknown",
+						sourceBinding: "native-metadata",
+						sourceAgreement: "observed-native",
+					},
+				],
+	);
+	expect(readUnknownBytes).not.toHaveBeenCalled();
+	expect(f.dom.setFileInputFiles).not.toHaveBeenCalled();
+});

@@ -26221,3 +26221,37 @@ failure, and settle that known failed effect while retaining target/journal and
 retrySafe=false. Foreign owners and uncertain transport/cleanup remain fenced.
 Causal client/service regressions failed before the correction and now pass;
 no new native installation was attempted to validate the repair.
+
+2026-10-25 — Grok Recent chooser failures retain item-dispatch attribution.
+An observation failure before the selection expression now returns optional
+`selectionDispatch: "not-dispatched"`, including cleanup failure. This does not
+settle menu effects, release unknown leases, or authorize retry.
+
+
+2026-10-25 — Grok committed React readers share bounded deep-portal traversal.
+Actual Recent portals exceeded 256 ancestry; even a found composer host was
+rejected by a later branch reaching the topology cap. Raise both caps to 512,
+retain 20,000-node budget and all current-root/scope/unique-host checks, and reuse
+the same helper for File/Connector observation. Exhaustion remains unavailable.
+
+
+2026-10-25 — Grok Recent identity comes from current asset keys, not DOM labels.
+Actual Recent rows lack upload-shaped DOM IDs. Join the committed menu-item key
+to the current `assets[].assetId` DTO with verified owner/content URI; repeat
+that association immediately at selection. Metadata-only attachment recovery
+provides identity/readiness without a File hash or local-manifest/server-byte
+claim. The existing native File/digest upload guard remains separate.
+
+
+2026-10-25 — Grok closed trigger state does not hide its control.
+Attach/menu triggers normally expose `data-state=closed`. Restrict closed-state
+visibility exclusion to overlay roles/modal ancestors; retain refusal of their
+closed descendants. Exact native opener-false evidence and source replay prove
+the failed canary dispatched no menu/file-selection click.
+
+
+2026-10-25 — Grok Recent unsupported rows make inventory partial.
+An unrelated asset with an unsupported content-key shape must not prevent a
+fully qualified current asset from being selected. Omit unsupported content-key URI rows with
+explicit incomplete/visible-only coverage; never invent alternate keys or IDs.
+Duplicate IDs, foreign ownership and global current-root failures still block.
