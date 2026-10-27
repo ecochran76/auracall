@@ -1,3 +1,5 @@
+Active bounded developer-app utility diagnosis: [Plan0462](docs/dev/plans/0462-2026-10-26-developer-app-selection-deadline.md), issue427follow-up. Read-only selection deadline regression reproduces on installed947739740and current main; no live cause or runtime acceptance claim.
+
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
 
 - Completed P89: [Plan0404](docs/dev/plans/0404-2026-10-10-demand-driven-desktop-pool.md) implements automatic rail Wake, configurable native capacity and guarded shrink; PR270 installed with maximum10, five occupied desktops and one ready spare;14 original routes preserved.

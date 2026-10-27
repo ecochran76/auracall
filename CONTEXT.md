@@ -6,6 +6,9 @@ Developer-app inventory diagnostics retain browser resolution, utility/interacti
 admission, identity, attachment, inventory, Developer mode, navigation restoration
 and cleanup stages. Queue admission precedes the operation and has its own bound.
 The effective inventory deadline includes configured backend capacity waiting.
+Read-only developer-app selection uses the same bounded inventory envelope and
+abort/cleanup contract; submitted ChatGPT response collection keeps its separate
+browser deadline.
 For UI-driven lifecycle observation, a visible main-page account-load failure ends observation with
 `developer_app_account_load_error`. A visible Plugins load failure ends the read
 with `developer_app_inventory_load_error`; sidebar/hidden text is not failure evidence.
@@ -37,7 +40,8 @@ locking, complete history and warning/ownership fences remain authoritative.
 CLI stage diagnostics preserve original error identity and aggregate causes.
 App failure receipts project bounded, sanitized cause/aggregate trees without
 serializing stacks or request objects; unknown cleanup retains its refusal.
-Long app-list waits retain stage progress on stderr even without verbose mode;
+Long app-list, read-only selection and in-place refresh waits retain stage
+progress on stderr even without verbose mode;
 JSON stdout remains terminal-only. Reported budget is an allowance, not proof
 of capacity denial or a changed deadline.
 Identical concurrent tab-custody lists share only an unfinished observation,

@@ -2095,3 +2095,18 @@ lanes:
     reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
     validation_status: 403-closed-seven-open-410-public-native-export-qualified-identity-gated-405-oauth-408-scope-pending
     updated_at: 2026-10-25
+
+  - id: P462
+    objective: Bound read-only app selection and expose utility wait stages
+    owner: primary
+    work_items: [ecochran76/auracall#427]
+    plan: docs/dev/plans/0462-2026-10-26-developer-app-selection-deadline.md
+    plan_ref: refs/heads/fix/issue427-app-terminal-errors
+    branch: fix/issue427-app-terminal-errors
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    dependencies: []
+    overlaps: []
+    validation_status: source-qualified-95tests-typecheck-compile-lint-installed-diagnostic-pending
+    updated_at: 2026-10-26

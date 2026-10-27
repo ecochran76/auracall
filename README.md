@@ -198,6 +198,10 @@ auracall --profile wsl-chrome-3 apps --target chatgpt test Corel33t \
 # allow-once may select a one-time `Allow`, while
 # always-allow refuses to downgrade persistent consent. Installed acceptance
 # requires a user runtime containing that repair.
+# Read-only app selection has a 45-second base inventory deadline plus configured
+# backend-capacity waiting. It does not submit a prompt. Non-verbose list, selection
+# and refresh-tools waits emit stage/elapsed/budget progress on stderr every30seconds;
+# --json stdout remains terminal-only. Submitted response collection stays separate.
 # Developer-app tests preserve the active Chat model (`modelStrategy=current`);
 # a separately resolved `--model` value is not proof that the UI switched.
 # The per-run request uses fresh-root Chat and removes inherited composer-tool,
@@ -229,7 +233,8 @@ auracall --profile wsl-chrome-3 apps --target chatgpt refresh-tools Corel33t \
 # JSON returns catalog.toolCount, toolNames and SHA-256 under outcome.
 # Human approval returns awaiting-human; uncertain activation/catalog/identity
 # returns unconfirmed. Both are nonzero and never auto-consent or repeat Refresh tools.
-# The operation has a 90-second ceiling, including inventory qualification.
+# Refresh tools has a 90-second base deadline plus configured backend-capacity
+# waiting. A caller cutoff shorter than this effective deadline does not prove a hang.
 # --yes authorizes refresh only, never new permissions or prompt submission.
 # Replacement remains a separate, destructive operation:
 auracall --profile wsl-chrome-3 apps --target chatgpt refresh Corel33t \

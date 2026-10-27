@@ -1,3 +1,37 @@
+## 2026-10-26 — Source qualified; installed diagnostic pending
+
+All95focused tests, typecheck, TypeScript compile and scoped lint pass. No temporary
+DEBUGinstrumentation introduced. Read-only installed947739740probe PID1865739
+started2026-10-27T02:21:17Z,0prompts/0refreshes, outer bound1300s including queue.
+Latest stage inventory after identity+attachment; original underlying await remains
+unqualified. Read ~/.auracall/diagnostics/issue427-20261026/probe-status.json and
+bounded stderr stage lines next turn; preserve unknown cleanup/no retry on cutoff.
+Do not equate this old-runtime diagnostic with installed acceptance of the patch.
+
+## 2026-10-26 — Issue427 source diagnosis and regression repair
+
+Primary isolated lane, Plan0462. Read-only selection missing outer deadline and
+abort controller reproduced twice on947739740and once on current main; list
+control passed and immediate cleanup rules out cleanup as necessary to that repro.
+After the minimum guard change,48CLIchecks pass. Existing actual CLI-action
+harness then showed2new failures for non-verbose selection/refresh: heartbeat
+silence and lost identity-stage error attribution. Extending the existing reporter
+and preserving original errors with stage metadata yields95focused checks passed.
+Typecheck, TypeScript compile and scoped lint run file-backed under build/issue427.
+No browser/account/warning/prompt/runtime changes; original live refresh stall is
+not attributed. The caller's240sbound is shorter than its690sallowance.
+
+## 2026-10-26 — Issue427 utility diagnosis, primary
+
+Isolated worktree fix/issue427-app-terminal-errors, installed-source947739740then
+fast-forwarded to current maince1408024. Original Grok docs checkout untouched.
+One-command loop: pnpm exec vitest run tests/cli/developerAppSelectionDeadline.test.ts.
+Installed and current-main reports show list control PASS, read-only test FAIL:
+expected staged timeout remains undefined after10msdeadline/100msvirtual time.
+Adapter close is immediate and no backend wait config is needed to reproduce.
+Prior progress-callback probe passed (not the silent CLI stderr seam). Evidence
+build/issue427/{selection-red,minimized-red,main-red}.json. No live/browser effects.
+
 ## 2026-10-25 — Grok #403 two-file native acceptance packet
 
 Both approved same-basename104byte synthetic uploads are retained with distinct

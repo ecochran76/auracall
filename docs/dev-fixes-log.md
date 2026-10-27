@@ -1,3 +1,20 @@
+## 2026-10-26 — Bound read-only app selection and expose utility wait stages
+
+Issue427follow-up source diagnosis: a stalled inventory returned a staged timeout
+for list but remained unbounded for read-only test selection on installed947739740
+and current maince1408024. The selection path was excluded from both outer deadline
+and abort-controller construction. Minimal source regression goes red before the
+fix; list is the unchanged control and adapter cleanup is immediate.
+
+Actual CLI-action replay also reproduced silent non-verbose selection/refresh
+waits and terminal identity errors mislabeled queue-admission. The heartbeat and
+error-stage retention were incorrectly limited to list. Extend existing controls
+to read-only selection/in-place refresh without bounding submitted responses or
+changing configured capacity allowance. An observed180/240second external cutoff
+is not proof of a refresh deadlock: with600000msconfigured waiting, effective
+selection/refresh limits are645000/690000ms after queue admission. Actual live
+stalled-await/cleanup attribution remains unproven. No provider/live activation.
+
 ## 2026-10-25 — Closed Grok overlays can retain layout geometry
 
 BaseUI dialog nodes may retain display, visibility, opacity and nonzero geometry

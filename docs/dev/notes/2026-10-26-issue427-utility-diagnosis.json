@@ -1,0 +1,116 @@
+{
+  "state": "SOURCE_QUALIFIED_LIVE_DIAGNOSTIC_PENDING",
+  "plan": "0462",
+  "installed_commit": "94773974003b2324d992337ea5e2107b1da11dac",
+  "base_commit": "ce1408024",
+  "original_observations": {
+    "selection_outer_cutoff_seconds": 180,
+    "refresh_outer_cutoff_seconds": 240,
+    "stdout_bytes": 0,
+    "stderr_bytes": 0,
+    "inner_stalled_await": "not captured; unqualified"
+  },
+  "feedback_loop": "pnpm exec vitest run tests/cli/developerAppSelectionDeadline.test.ts",
+  "negative_control": {
+    "command": "pnpm exec vitest run tests/cli/developerAppSelectionProgress.test.ts",
+    "result": "passed; internal progress callback already works; original scratch test replaced by retained deadline regression"
+  },
+  "red_runs": [
+    {
+      "artifact": "build/issue427/selection-red.json",
+      "tests": 1,
+      "failed": 1
+    },
+    {
+      "artifact": "build/issue427/minimized-red.json",
+      "tests": 2,
+      "failed": 1
+    },
+    {
+      "artifact": "build/issue427/main-red.json",
+      "tests": 2,
+      "failed": 1
+    },
+    {
+      "artifact": "build/issue427/waiting-red.json",
+      "tests": 6,
+      "failed": 2
+    }
+  ],
+  "hypotheses": [
+    {
+      "rank": 1,
+      "prediction": "Same hung external inventory is bounded for list but not read-only test; adding only outer fence/abort coverage resolves regression",
+      "verdict": "confirmed on installed source and current main"
+    },
+    {
+      "rank": 2,
+      "prediction": "If cleanup is necessary to the reproducer, immediate cleanup removes failure",
+      "verdict": "rejected as necessary cause; reproducer still fails with immediate close"
+    },
+    {
+      "rank": 3,
+      "prediction": "If configured capacity allowance explains the refresh wait, effective bound exceeds the caller cutoff",
+      "verdict": "source accounting confirmed:690sallowed versus240souter cutoff. Actual live wait reason not yet established."
+    }
+  ],
+  "source_fixes": [
+    "Apply existing inventory outer deadline and abort/cleanup to read-only app selection; submitted responses keep separate browser deadline",
+    "Existing non-verbose30second stderr heartbeat covers read-only selection and in-place refresh; JSON stdout stays terminal-only",
+    "Preserve generic original error identity while retaining stage for non-list failures"
+  ],
+  "checks": {
+    "focused": {
+      "command": "pnpm exec vitest run tests/cli/developerAppWaitingDiagnostics.test.ts tests/cli/developerAppSelectionDeadline.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/cli/developerAppFailureDiagnostics.test.ts tests/cli/developerAppTerminalExit.test.ts tests/browser/chatgptDeveloperAppRefreshTools.test.ts",
+      "tests": 95,
+      "failed": 0,
+      "report": "build/issue427/waiting-green.json"
+    },
+    "typecheck": {
+      "exit": 0,
+      "log": "build/issue427/typecheck.log"
+    },
+    "compile": {
+      "exit": 0,
+      "log": "build/issue427/compile.log"
+    },
+    "lint": {
+      "exit": 0,
+      "log": "build/issue427/lint.log",
+      "scope": "3fileschecked; bin excluded by existing Biome configuration, verified through actual CLI-action tests and TypeScript compile"
+    }
+  },
+  "live_probe": {
+    "purpose": "Identify original installed wait stage only; source repair not activated",
+    "status": "~/.auracall/diagnostics/issue427-20261026/probe-status.json",
+    "pid": 1865739,
+    "max_prompts": 0,
+    "catalog_refresh": false,
+    "runtime_install": false,
+    "outer_bound_seconds": 1300,
+    "retry_allowed": false
+  },
+  "limits": [
+    "Underlying cause of original refresh/selection live awaits not attributed by the source regression alone",
+    "No installed repair or live repair acceptance claimed",
+    "No account, warning, custody or browser lifecycle state was reset"
+  ],
+  "source_sha256": {
+    "bin/auracall.ts": "616500d43243eb15f9eab0a876c3956c3c82bb494842098f948b93fd69ca4190",
+    "src/cli/chatgptDeveloperAppsCommand.ts": "f69d929c9aa2f9fc5082e4a3cd2766b5311947b049bd0d9f5f69158dbf6eacf8",
+    "tests/cli/developerAppSelectionDeadline.test.ts": "f932b61f116768130637f18e75b6e846d1db9f34b23918dda032ad789b656f1b",
+    "tests/cli/developerAppWaitingDiagnostics.test.ts": "6fd7f477335f1e080b7af779d45046e253d32ee75859af041758dc18364f87c1"
+  },
+  "compiled_installed_predicate_verified": true,
+  "original_source_scenario_rerun": {
+    "seam": "Actual CLI action extracted/transpiled unchanged from bin/auracall.ts; real dispatcher/operation/adapter, external identity boundary pinned",
+    "result": "Selection and refresh produce staged stderr heartbeat while waiting; identity failure produces exactly one terminal JSON stdout with identity stage.",
+    "passed_cases": 6,
+    "live_installed_repair_rerun": false
+  },
+  "cleanup": {
+    "temporary_debug_logs_added": false,
+    "scratch_progress_probe_retained_as_artifact_only": true,
+    "regression_tests_retained": true
+  }
+}
