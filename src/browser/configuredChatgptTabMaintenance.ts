@@ -269,64 +269,73 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 			).length;
 			const lostLeases = await runtime.registry.list({ scope, states: ["lost"] });
 			for (const lostLease of lostLeases) {
-				let target: { url?: string } | undefined;
-				if (endpoint) {
-					const targets = await listTargets(endpoint.port, endpoint.host);
-					target = targets.find((candidate) => {
-						const record = candidate as { id?: string; targetId?: string };
-						return (record.targetId ?? record.id) === lostLease.targetId;
-					}) as { url?: string } | undefined;
-				}
-				if (!target) {
-					const released = await runtime.registry.releaseLost({
-						leaseId: lostLease.leaseId,
-						expectedRevision: lostLease.revision,
-						now: (input.now ?? (() => new Date()))().toISOString(),
-						disposition: "already-missing",
-					});
-					if (released.ok) summary.restartMissingReleasedCount += 1;
-					else summary.deferredScopeCount += 1;
-					continue;
-				}
-				const nowMs = (input.now ?? (() => new Date()))().getTime();
-				const expired =
-					nowMs >= Date.parse(lostLease.idleExpiresAt) ||
-					nowMs >= Date.parse(lostLease.absoluteExpiresAt);
-				if (expired && endpoint && !isTabLeaseTtlExempt(lostLease)) {
-					await requireInactiveChatgptTab(endpoint, lostLease.targetId, deps.probeActivity);
-					const reason = nowMs >= Date.parse(lostLease.absoluteExpiresAt) ? "absolute-expired" : "idle-expired";
-					await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "close-requested", lease: lostLease, reason, endpoint, observedAt: new Date(nowMs).toISOString() });
-					let stillLive: boolean;
-					try {
-						await closeTarget(endpoint.host, endpoint.port, lostLease.targetId, () => undefined);
-						const remainingTargets = await listTargets(endpoint.port, endpoint.host);
-						stillLive = remainingTargets.some((candidate) => {
+				try {
+					let target: { url?: string } | undefined;
+					if (endpoint) {
+						const targets = await listTargets(endpoint.port, endpoint.host);
+						target = targets.find((candidate) => {
 							const record = candidate as { id?: string; targetId?: string };
 							return (record.targetId ?? record.id) === lostLease.targetId;
-						});
-					} catch (error) {
-						await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "retirement-finished", lease: lostLease, reason, endpoint, observedAt: (input.now ?? (() => new Date()))().toISOString(), disposition: "deferred", detail: error instanceof Error ? error.message : String(error) });
-						throw error;
+						}) as { url?: string } | undefined;
 					}
-					if (!stillLive) {
+					if (!target) {
 						const released = await runtime.registry.releaseLost({
 							leaseId: lostLease.leaseId,
 							expectedRevision: lostLease.revision,
-							now: new Date(nowMs).toISOString(),
-							disposition: "closed",
+							now: (input.now ?? (() => new Date()))().toISOString(),
+							disposition: "already-missing",
 						});
-						await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "retirement-finished", lease: lostLease, reason, endpoint, observedAt: (input.now ?? (() => new Date()))().toISOString(), disposition: released.ok ? "closed" : "deferred", targetDisposition: "closed", detail: released.ok ? undefined : released.conflict.kind });
-						if (released.ok) summary.closedCount += 1;
+						if (released.ok) summary.restartMissingReleasedCount += 1;
 						else summary.deferredScopeCount += 1;
 						continue;
 					}
-					await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "retirement-finished", lease: lostLease, reason, endpoint, observedAt: (input.now ?? (() => new Date()))().toISOString(), disposition: "preserved", targetDisposition: "preserved", detail: "target-still-live-after-close" });
-					if (!chatgptTargetMatchesLease(lostLease, { url: target.url ?? "" })) {
-						summary.restartIdentityMismatchCount += 1;
-						continue;
+					const nowMs = (input.now ?? (() => new Date()))().getTime();
+					const expired =
+						nowMs >= Date.parse(lostLease.idleExpiresAt) ||
+						nowMs >= Date.parse(lostLease.absoluteExpiresAt);
+					if (expired && endpoint && !isTabLeaseTtlExempt(lostLease)) {
+						await requireInactiveChatgptTab(endpoint, lostLease.targetId, deps.probeActivity);
+						const reason = nowMs >= Date.parse(lostLease.absoluteExpiresAt) ? "absolute-expired" : "idle-expired";
+						await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "close-requested", lease: lostLease, reason, endpoint, observedAt: new Date(nowMs).toISOString() });
+						let stillLive: boolean;
+						try {
+							await closeTarget(endpoint.host, endpoint.port, lostLease.targetId, () => undefined);
+							const remainingTargets = await listTargets(endpoint.port, endpoint.host);
+							stillLive = remainingTargets.some((candidate) => {
+								const record = candidate as { id?: string; targetId?: string };
+								return (record.targetId ?? record.id) === lostLease.targetId;
+							});
+						} catch (error) {
+							await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "retirement-finished", lease: lostLease, reason, endpoint, observedAt: (input.now ?? (() => new Date()))().toISOString(), disposition: "deferred", detail: error instanceof Error ? error.message : String(error) });
+							throw error;
+						}
+						if (!stillLive) {
+							const released = await runtime.registry.releaseLost({
+								leaseId: lostLease.leaseId,
+								expectedRevision: lostLease.revision,
+								now: new Date(nowMs).toISOString(),
+								disposition: "closed",
+							});
+							await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "retirement-finished", lease: lostLease, reason, endpoint, observedAt: (input.now ?? (() => new Date()))().toISOString(), disposition: released.ok ? "closed" : "deferred", targetDisposition: "closed", detail: released.ok ? undefined : released.conflict.kind });
+							if (released.ok) summary.closedCount += 1;
+							else summary.deferredScopeCount += 1;
+							continue;
+						}
+						await recordTabLeaseRetirementAudit(runtime.retirementAudit, { phase: "retirement-finished", lease: lostLease, reason, endpoint, observedAt: (input.now ?? (() => new Date()))().toISOString(), disposition: "preserved", targetDisposition: "preserved", detail: "target-still-live-after-close" });
+						if (!chatgptTargetMatchesLease(lostLease, { url: target.url ?? "" })) {
+							summary.restartIdentityMismatchCount += 1;
+							continue;
+						}
 					}
+					summary.restartPreservedCount += 1;
+				} catch (error) {
+					// A preserved lost target must not starve other expired tabs in this scope.
+					summary.restartPreservedCount += 1;
+					summary.errors.push({
+						runtimeProfileId,
+						message: error instanceof Error ? error.message : String(error),
+					});
 				}
-				summary.restartPreservedCount += 1;
 			}
 			const outcomes = await retireExpiredChatgptTabLeases({
 				retireAllExpiredPages: true,

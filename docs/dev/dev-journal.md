@@ -56930,3 +56930,7 @@ hashes and help matched the validated build. One installed native read completed
 34apps in26.601s, with one performance stderr report and terminal-only stdout.
 Fresh OS/CDP readback preserved browser generation, active API process and MCP
 wrapper; command process exited. CI excluded. Plan/lane closed and integrated.
+
+## 2026-10-26 — Plan0463 dormant tab TTL
+
+Read-only tab/lease census and activity probes complete. Building real configured-maintenance regression for independent cleanup despite a preserved lost tab. No tabs closed; deferred issue377 remains deferred.

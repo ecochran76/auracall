@@ -3878,3 +3878,9 @@ acceptance remain separate receipts.
   drives the actual owned admission and response/failure listeners through a fake
   CDP boundary, preserving request continuation and cleanup. Installed/live
   traffic coverage is separate; these commands contact no provider.
+
+- Independent TTL cleanup after a lost-tab deferral (Plan0463):
+  `pnpm vitest run tests/browser/activeChatRetirement.test.ts tests/browser/configuredChatgptTabMaintenance.test.ts tests/browser-service/tabLeaseRetirement.test.ts --maxWorkers=1`.
+  Real configured maintenance with the public registry proves an active/unknown
+  expired lost tab remains open while a separate inactive expired tab closes.
+  Existing ownership, endpoint, audit and active-response controls remain covered.
