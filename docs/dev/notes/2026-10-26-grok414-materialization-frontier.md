@@ -63,3 +63,24 @@ Detailed local logs: `/tmp/grok414-affected.log` and
 `/tmp/grok414-bridge-red.log`, `/tmp/grok414-corrupt-asset-red.log` and
 `/tmp/grok414-scope-red.log`. This selected evidence does not qualify the
 remaining referenced-file transfer or Grok history budget/foreground native gate.
+
+## 2026-10-27 integration and exact retained-byte acceptance
+
+Root integrated worker source as e5b3707fc. Primary32affected tests and full
+typecheck passed; worker independently reran67tests/7files and typecheck.
+The worker then exercised the exact original public receipt/ZIP under its
+immutable primary proof in an isolated private archive index, through actual
+MCP search/item/asset lookup plus asset/reuse services. A second OS process
+recovered the queued job, reused its ID and completed already_materialized.
+Foreground gate entered once; zero provider/network attempts, no extraction or
+execution, original ZIP unchanged. Operational archive store and installed runtime
+are untouched. Root checked evidence hashes; execution was delegated.
+
+Private directory: `410-20261025/grok414-isolated-EsStBC` under the established
+user-scoped Grok implementation evidence root. Retain receipt SHA256
+`df8a46d13aafd10771097878328d0d4ef6bfaa1323f89ecebb3bf6972a961282`;
+restart receipt SHA256
+`d865e4da5df37c276f31ba018e5d07bbc7e76299249c811672a293dd22767701`.
+#414 remains OPEN: referenced-file retrieval and actual Grok history budget /
+foreground-resume coverage are still unmet. This packet adds selected-archive
+acceptance only; app/version remains unobserved. No new broad review/TDD pass.

@@ -299,8 +299,20 @@
         410,
         413
       ],
-      "state": "assigned-source-preparation",
-      "scope": "original-program"
+      "state": "selected-archive-qualified-original-criteria-open",
+      "scope": "original-program",
+      "gate": "Referenced-file retrieval and actual Grok history budget/foreground-resume evidence remain unqualified.",
+      "materializationEvidence": {
+        "integrationCommit": "e5b3707fcb444106948777ada0a3cb5309fa95ac",
+        "primaryTests": 32,
+        "workerTests": 67,
+        "isolatedRetainedArchiveAcceptance": "PASS",
+        "separateProcessQueuedJobRestart": "PASS",
+        "providerCalls": 0,
+        "operationalArchiveStoreChanged": false,
+        "referencedFiles": "not_qualified",
+        "appIdentity": "unobserved"
+      }
     },
     "440": {
       "title": "Grok: Preserve cursor-covered Grok rows through public discovery and mirror checkpoints",
