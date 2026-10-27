@@ -136,3 +136,11 @@ cannot establish which snapshot the current workspace Download represents, so
 export refuses them; selecting an older response does not establish that binding.
 If response/gateway ownership changes during capture, bytes are not reported as
 an attributed artifact and the outcome remains unknown without automatic retry.
+
+Configured exports also report `materialization`: verified retained workspace
+archives are indexed in the existing run archive, with local archive item IDs
+and selected-scope byte counts. The existing public archive/job interfaces can
+reuse those bytes without another provider download. Missing or changed bytes
+are unavailable rather than silently rehashed or re-exported. See
+[Grok materialization](grok-materialization.md) for coverage limits and the
+still-unqualified referenced-file retrieval gate.

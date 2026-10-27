@@ -1,3 +1,4 @@
+import {grokBuildArchiveProvenance,verifyGrokBuildArchiveItem} from "./grokBuildArchiveBridge.js";
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -88,6 +89,50 @@ export function createArchiveMaterializationService(
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} was not found.`, 404);
       }
       const item = detail.item;
+      if (item.provider === 'grok' && item.metadata.grokBuildArchive) {
+        const valid = Boolean(grokBuildArchiveProvenance(item)) && await verifyGrokBuildArchiveItem(item);
+        if (valid) {
+          return {
+            object: 'run_archive_item_materialization',
+            generatedAt: now().toISOString(),
+            status: 'already_materialized',
+            item,
+            file: {
+              id: item.id,
+              name: item.fileName ?? item.title ?? item.id,
+              localPath: item.localPath,
+              remoteUrl: null,
+              mimeType: item.mimeType,
+              size: readNumber(item.metadata.fileSizeBytes),
+            },
+            message: 'Retained Grok workspace snapshot independently verified; no provider download.',
+          };
+        }
+        const { asset: _asset, ...links } = item.links;
+        const unavailable = {
+          ...item,
+          status: 'unavailable',
+          fileAvailable: false,
+          links,
+          metadata: {
+            ...item.metadata,
+            materialization: {
+              status: 'unavailable',
+              source: 'grok-archive-integrity-check',
+              reason: 'retained_bytes_unqualified',
+            },
+          },
+        };
+        await indexStore.upsertItems([unavailable], { updatedAt: now().toISOString() });
+        return {
+          object: 'run_archive_item_materialization',
+          generatedAt: now().toISOString(),
+          status: 'skipped',
+          item: unavailable,
+          file: null,
+          message: 'Retained Grok bytes are missing or fail the original receipt; no automatic provider download or checksum replacement.',
+        };
+      }
       if (!force && item.fileAvailable === true && item.localPath) {
         return {
           object: 'run_archive_item_materialization',
@@ -305,6 +350,10 @@ async function findReusableArchiveAsset(
 }
 
 function archiveItemsShareProviderArtifact(left: RunArchiveItem, right: RunArchiveItem): boolean {
+  // A native Build receipt is reusable only by its exact archive-item identity
+  // and retained checksum above, never through generic filename/URI fallback.
+  if ((left.provider === 'grok' && left.metadata.grokBuildArchive) ||
+      (right.provider === 'grok' && right.metadata.grokBuildArchive)) return false;
   const leftUri = normalizeComparableString(left.uri);
   const rightUri = normalizeComparableString(right.uri);
   if (leftUri && rightUri && leftUri === rightUri) {

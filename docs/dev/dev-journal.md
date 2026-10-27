@@ -1,3 +1,11 @@
+## 2026-10-27 — #414 selected archive accepted, wider criteria open
+
+Integrated verified worker bridge; primary32focused tests/typecheck passed.
+Delegated isolated exact-original-ZIP acceptance passed through actual archive
+handlers/services and a separate-process durable job restart, zero provider calls.
+Operational store untouched. Referenced-file/history-resume criteria remain open.
+See414materialization frontier for evidence hashes and scope.
+
 ## 2026-10-27 — #405 closed; #406 packet preparation
 
 PR484 merged4e02b33e8; GitHub405CLOSED read back. Public source reconciliation

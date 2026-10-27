@@ -39,7 +39,14 @@ export async function createConfiguredGrokBuildService(
 						ensurePort: true,
 					});
 			profile = options.providerSessionAuthorization?.context.auracallRuntimeProfile ?? profile;
-			const result = await operation(createGrokBuildService(options));
+			let result = await operation(createGrokBuildService(options));
+			if (result.operation === "export") {
+				const { retainGrokBuildArchive } = await import("../runtime/grokBuildArchiveBridge.js");
+				result = {
+					...result,
+					materialization: await retainGrokBuildArchive({ result, runtimeProfile: profile }),
+				};
+			}
 			try {
 				await recordGrokEcosystemProgress("build", profile, summarizeGrokBuildDiagnostics(result));
 			} catch {
