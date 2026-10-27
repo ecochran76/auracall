@@ -1,12 +1,16 @@
 # Plan0462 — Connector approval pending (#377)
 
-State: OPEN
+State: PLANNED
 Branch: fix/issue377-tool-approval
 Target: main
 Work item: ecochran76/auracall#377
 Base: ce140802491bbc5801b283853bae132f6eb8b90f
 
 ## Current State
+
+DEFERRED at the operator's request. Resume when the issue recurs with a captured
+failing card or the original conversation becomes available. No further
+investigation or live retry is scheduled; existing evidence stays preserved.
 
 Current source and installed reconstructed-UI replays pass; no trustworthy historical red exists. Both response wait call
 sites already supply the approval handler. Retained original session confirms

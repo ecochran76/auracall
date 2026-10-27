@@ -56909,3 +56909,5 @@ has no approval observations; three retained ChatGPT tabs have no approval
 controls. Ledger preserves two429 observations and73backend reservations in one
 overlapping operation, with no endpoint/session linkage proof. Exact conversation
 URL requested. No production repair or provider effect; issue remains open.
+
+Issue377 deferred at the operator's request. Plan0462 is PLANNED with paused-ref custody; evidence is preserved. Resume only with recurrence evidence or original conversation access. No further investigation or live retry scheduled.
