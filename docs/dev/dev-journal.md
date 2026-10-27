@@ -56896,3 +56896,16 @@ hashes and help matched the validated build. One installed native read completed
 34apps in26.601s, with one performance stderr report and terminal-only stdout.
 Fresh OS/CDP readback preserved browser generation, active API process and MCP
 wrapper; command process exited. CI excluded. Plan/lane closed and integrated.
+
+## 2026-10-26 — Issue377 diagnosis
+
+Plan0462 owns a provider-free approval/response replay and read-only original-run
+reconciliation. No prompt, approval click or warning clearance. Original session
+has policy/timeout evidence but no approval observations or model log output.
+
+Issue377 evidence checkpoint: real source and installed response/approval replay
+both pass reconstructed reported UI; no historical DOM/red. Original session
+has no approval observations; three retained ChatGPT tabs have no approval
+controls. Ledger preserves two429 observations and73backend reservations in one
+overlapping operation, with no endpoint/session linkage proof. Exact conversation
+URL requested. No production repair or provider effect; issue remains open.

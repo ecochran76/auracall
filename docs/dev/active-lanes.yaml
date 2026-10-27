@@ -1,6 +1,23 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: issue377
+    objective: Diagnose pending one-time connector approval without new effects
+    work_items: [ecochran76/auracall#377]
+    plan: docs/dev/plans/0462-2026-10-26-connector-approval-pending.md
+    plan_ref: refs/heads/fix/issue377-tool-approval
+    branch: fix/issue377-tool-approval
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: ce140802491bbc5801b283853bae132f6eb8b90f
+    remote_ref: refs/remotes/origin/fix/issue377-tool-approval
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: reconstructed-source-and-installed-green-no-historical-red
+    blocker: Original conversation URL or timestamped failing DOM/request trace is missing
+    updated_at: 2026-10-26
   - id: P461
     objective: Expose request churn and stage timing during opt-in app inventory
     work_items: [Plan0461]
