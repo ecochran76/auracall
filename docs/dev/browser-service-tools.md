@@ -999,3 +999,12 @@ beyond this bound; `trackingLimitReached` marks incomplete outcome/timing tracki
 `unresolved` includes missing/canceled/redirected or uncorrelated observations and
 must not be treated as proof of a still-running request. The report freezes at
 command completion; late events cannot rewrite it.
+
+## Independent dormant-tab retirement
+
+Configured ChatGPT maintenance preserves tabs whose provider activity is active
+or unknown. That per-tab deferral must allow other expired, verified inactive
+tabs in the same browser profile to retire during the same pass. A lost lease's
+inspection/retirement error is reported independently; endpoint/scope resolution
+failures still defer the scope. TTL cleanup applies to the configured AuraCall
+managed runtime, not to Agent Browser or other browsers sharing the desktop.

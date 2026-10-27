@@ -26312,3 +26312,13 @@ responses/failure reach the report without extra protocol commands. Explicit
 coverage and unresolved counts prevent partial observations from implying complete
 browser traffic or known request outcomes. Admission timing includes governor
 processing, so it must not be called pure quota delay.
+
+## 2026-10-26 — Isolate lost-tab TTL deferrals
+
+A preserved active/unknown lost tab threw out of the per-profile maintenance
+loop, starving later expired lost and idle tabs. Catch and report each lost
+lease's deferral independently, retaining inactivity checks, audit admission,
+close confirmation and ownership fences. A two-tab public-maintenance regression
+was red (both tabs retained), then green (only the inactive expired tab closes).
+Other browser runtimes have their own cleanup authority; their tabs are not
+included merely because they share the desktop. Plan0463 tracks native acceptance.
