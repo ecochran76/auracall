@@ -123,3 +123,11 @@ Bot Instructions/Model defaults, and #411 preserves authentic publication identi
 worker each preparing source without new native effects; root retains #405.
 Review/TDD counters are1/1, not reset by this amendment. See
 [checkpoint adjudication](../notes/2026-10-26-grok-checkpoint-review.md).
+
+## 2026-10-27 #405 public reconciliation acceptance
+
+Original Connector OAuth/grants/catalog and public original-journal reconciliation
+are qualified, with62tools and zero new Add/tool invocations. Source45cf4482d
+preserves operation/input/fences and records verified target recovery. Main
+integration/tracker close pending;406 is next after closure. See the OAuth
+diagnosis acceptance mapping. Parent398 remains untouched; review/TDD1/1.

@@ -23,7 +23,7 @@ export async function resolveGrokReadSessionOptions(
 	config: ResolvedUserConfig,
 	runtimeProfile?: string,
 	abortSignal?: AbortSignal,
-	sessionOptions: { ensurePort?: boolean } = {},
+	sessionOptions: { ensurePort?: boolean; tabTargetId?: string } = {},
 ) {
 	const selectedId = runtimeProfile ?? config.auracallProfile;
 	if (
@@ -37,7 +37,10 @@ export async function resolveGrokReadSessionOptions(
 		provider: "grok",
 	}) as ResolvedUserConfig;
 	return GrokService.create(selected).buildListOptions(
-		{ abortSignal },
+		{
+			abortSignal,
+			...(sessionOptions.tabTargetId ? { tabTargetId: sessionOptions.tabTargetId } : {}),
+		},
 		{ ensurePort: sessionOptions.ensurePort !== false },
 	);
 }
@@ -48,7 +51,13 @@ export async function createConfiguredGrokConnectorsService(
 ) {
 	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
 	const service = createGrokConnectorsService(options);
-	const installation = createGrokConnectorInstallationService(options);
+	const installation = createGrokConnectorInstallationService(options, {
+		resolveReconciliationOptions: (targetId) =>
+			resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal, {
+				ensurePort: false,
+				tabTargetId: targetId,
+			}),
+	});
 	const profile =
 		options.providerSessionAuthorization?.context.auracallRuntimeProfile ??
 		runtimeProfile ??

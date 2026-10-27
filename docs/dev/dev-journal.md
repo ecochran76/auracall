@@ -1,3 +1,13 @@
+## 2026-10-27 — Grok #405 exact-ID reconciliation implementation
+
+Native evidence qualified the original enabled, authenticated MCP Connector and
+62 tools while the visible gallery omitted its card. Added a selected-ID metadata
+reader with actor/entity/endpoint/tool binding and no tool execution. Explicit
+replacement-target reconciliation preserves original journal input, operation ID
+and Add fence; target history changes only after verified success. Focused
+regressions cover omitted cards and original-journal recovery without another Add.
+Live public acceptance and tracker closure remain pending.
+
 ## 2026-10-25 — Grok #403 two-file native acceptance packet
 
 Both approved same-basename104byte synthetic uploads are retained with distinct
@@ -56878,6 +56888,49 @@ archiveattribution accepted. SingleTDDpass reproduced and repaired unique-respon
 preflight/control/capture guards;62affectedchecks/4files and fulltypecheck passed.
 No nativeeffects/retry/publication/runtimeinstallation. Review/TDD1/1; further
 verification closedworld. Root405;409and414each assigned one worker/sourceprep.
+
+
+### 2026-10-26 — #405 diagnosing-bugs feedback loops
+
+One normalgoverned existing-session validation passed isValid/authRequiredtrue;
+originalflowref unchanged, noAdd/auth/toolcall. ActualinstalledOAuth registration
+in isolatedtemporarySQLite reproducibly rejects exactGrokcallback; minimized
+request remainsred, callback-only in-memory candidate makes both forms green.
+Privateconfig/rollback prepared; exactseparateserviceactivation approvalpending.
+No realconfig/restart/clientregistration/grants. #405/#406OPEN; priorreview/TDD1/1.
+
+
+### 2026-10-26 — Approved Grok callback activation verified
+
+User explicitly approved the exact callback addition and OAuth-service restart.
+Hash-guarded candidate applied; freshPID1349156 active/running, both publicdiscovery
+endpoints200. Installed registrationloop withoutcandidate nowPASS using deployed
+config/temporarySQLite. ExistingChatGPTcallback/grants preserved; no realclient,
+consent, mailboxgrant or repeatAdd. #405/#406remainOPEN for actualOAuth/readback.
+
+
+### 2026-10-26 — #405 original Connector reaches real Cooper sign-in
+
+User directedproceed. PriorGrokprocessgone; configuredmanagedbrowser reopened,
+accountmatched. Newgallery/nativeSDK shapesqualified; failedmetadata-only read
+settled/releasedbyindependentproof/CAS (auditretained). OriginalConnectorID reused:
+validationpassed; popup-first correction preceded one actualauthURLrequest, which
+completed andopenedAuthelia login. ExactGrokcallback/S256/read-send-write request
+qualified; noAdd/replacement/journalreset/credentials/grants. Nativewaittimedout,
+loginpopupretained. Humanusername/password sign-in is actualremaininggate;
+#405/#406OPEN, noautoauthretry. Receiptsprivate/oauth-resume-20261026.
+
+
+### 2026-10-26 — Cooper skill completes original Connector OAuth
+
+Explicitskillinvocation provided correctCooperagentlogin; bothsigninsaccepted,
+no rejectedretry/cookieharvest/policychange. Expired3600secondGrokcookie replaced
+by onefreshsameIDflow; exactcallback/resource/S256/accountpolicy verified before
+one trustedApprove. GrokOAuthsuccesspage +nativeSDKauthenticatedsuccess verified.
+One originalIDcatalogRPC returned62allowedtools; no toolinvocation or mailsend.
+Cleananonymousauthorization302Cooper persists. Publicvisibleinventory remains
+incomplete/noexactmatch afterqualifiedrefetch;405/406remainOPEN pendingpublic
+reconciliation repair, originaljournal preserved. Privateimmutableproof retained.
 
 ## 2026-10-26 — Plan0461
 

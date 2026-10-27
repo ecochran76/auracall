@@ -210,8 +210,48 @@ export function createGrokConnectorInstallationClient(
 	}
 	async function reconcile(
 		raw: GrokConnectorInstallationInput,
+		knownConnectorId?: string,
 	): Promise<GrokConnectorInstallationOutcome> {
 		const input = validateGrokConnectorInstallationInput(raw);
+		if (knownConnectorId) {
+			const detail = await discovery.inspect({
+				id: knownConnectorId,
+				name: input.name,
+				endpoint: input.endpoint,
+				kind: "installed",
+			});
+			const exact =
+				input.kind === "custom" &&
+				(!input.connectorId || input.connectorId === knownConnectorId) &&
+				detail.status === "complete" &&
+				detail.auth === "connected" &&
+				detail.coverage.complete &&
+				detail.connector?.id === knownConnectorId &&
+				detail.endpoint === input.endpoint &&
+				(!input.accountRef || input.accountRef === detail.accountRef);
+			return {
+				...outcome(
+					input,
+					exact ? "already-connected" : "unconfirmed",
+					exact
+						? "grok_connector_install_existing_exact"
+						: "grok_connector_install_existing_identity_conflict",
+				),
+				...(exact && detail.connector
+					? {
+							connector: {
+								id: detail.connector.id,
+								name: detail.connector.name,
+								endpoint: detail.endpoint,
+								accountRef: detail.accountRef,
+								tools: detail.tools,
+								grantedScopes: [],
+								grantedScopesObserved: false,
+							},
+						}
+					: {}),
+			};
+		}
 		// Human OAuth is observational only. No OAuth links, consent or reauthenticate clicks.
 		const human = await evaluate<boolean>(
 			expr(

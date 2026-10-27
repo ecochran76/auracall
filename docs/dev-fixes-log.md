@@ -1,3 +1,11 @@
+## 2026-10-27 — An omitted Grok gallery card is not an absent Connector
+
+Use the actual selected-ID MCP metadata protocol to qualify an existing record.
+Bind personal actor scope, exact entity, safe endpoint and every returned tool;
+never infer remote account or OAuth grants from provider identity or tool scope.
+Browser-loss recovery must preserve installation input and replay fences and
+record verified target history, rather than reset the journal or repeat Add.
+
 ## 2026-10-25 — Closed Grok overlays can retain layout geometry
 
 BaseUI dialog nodes may retain display, visibility, opacity and nonzero geometry
@@ -26300,6 +26308,29 @@ rather than label current bytes with older provenance. Preserve unknown custody
 if binding changes after input. Three causal regressions plus affected62checks
 and typecheck passed; historical inspect behavior remains available.
 
+
+### 2026-10-26 — Separate stale validation failure from OAuth compatibility
+
+The retained generic Grok failure no longer reproduced under one governed actual
+SDK validation read. Avoid treating the old created-session UI as current server
+reachability evidence. The installed OAuth registration guard independently
+rejects Grok's runtime-qualified exact callback while its ChatGPT-only allowlist
+is active. Isolated actual-code red/minimal/green checks confirm the callback-only
+candidate, without real registration or grants. Activation and human consent
+remain separate from source/configuration readiness.
+
+
+### 2026-10-26 — Use realm-specific agent login before requiring human sign-in
+
+The Cooper ingress skill explicitly authorizes existing agent credentials for
+requested service acceptance. Select the Cooper file for cooper-auth, authenticate
+once and verify app policy; do not infer that a login form requires a human when
+this configured agent path exists. A sign-in establishes ingress identity, while
+Mail Receipts approval remains bound to its existing exact account/scope policy.
+Native OAuth cookies expire independently of the external login session. Fresh
+same-ID authentication after a qualified expired/unapproved flow completed the
+Grok callback and62tool catalog read without another Add. Public inventory and
+installation-journal reconciliation remain separate acceptance boundaries.
 
 ## 2026-10-26 — Observe app-list request churn during the first baseline
 

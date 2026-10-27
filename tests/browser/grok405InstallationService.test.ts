@@ -445,3 +445,113 @@ it("settles an owned terminal connection failure while retaining target and repl
 	});
 	expect(f.effects()).toBe(1);
 });
+
+it("reconciles an original journal on an explicitly verified replacement target without another Add", async () => {
+	const { readFile } = await import("node:fs/promises");
+	const { runInNewContext } = await import("node:vm");
+	const f = await fixture();
+	const original = await createGrokConnectorInstallationService(f.options, f.deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	const id = "connector_11111111-1111-4111-8111-111111111111";
+	const requests: string[] = [];
+	const runtime = {
+		evaluate: async (args: {
+			expression: string;
+			returnByValue: boolean;
+			awaitPromise?: boolean;
+		}) => {
+			if (!args.expression.includes("/rest/connectors/get")) return f.f.runtime.evaluate(args);
+			return {
+				result: {
+					value: await runInNewContext(args.expression, {
+						location: { origin: "https://grok.com" },
+						URL,
+						AbortController,
+						setTimeout,
+						clearTimeout,
+						fetch: async (url: string) => {
+							requests.push(url);
+							return {
+								ok: true,
+								text: async () =>
+									JSON.stringify(
+										url.endsWith("/get")
+											? {
+													connector: {
+														connectorId: id,
+														name: input.name,
+														scope: "CONNECTOR_SCOPE_USER",
+														scopeId: "fixture-user",
+														connectorType: "CONNECTOR_TYPE_MCP",
+														hasValidOauthTokens: true,
+														connectorConfig: {
+															mcpConfig: {
+																isEnabled: true,
+																requiresOauth: true,
+																serverUrl: input.endpoint,
+															},
+														},
+													},
+												}
+											: {
+													mcpTools: [],
+													connectorIdsNeedingReauth: [],
+													connectorsNeedingReauth: [],
+												},
+									),
+							};
+						},
+					}),
+				},
+			};
+		},
+	};
+	const service = createGrokConnectorInstallationService(f.options, {
+		...f.deps,
+		resolveReconciliationOptions: async (targetId) => ({ ...f.options, tabTargetId: targetId }),
+		connect: async (options) => {
+			expect(options.tabTargetId).toBe("replacement-target");
+			const connection = await f.deps.connect();
+			return {
+				...connection,
+				targetId: "replacement-target",
+				client: {
+					...connection.client,
+					Runtime: runtime,
+					__auracallProviderTrafficGovernor: {
+						...connection.client.__auracallProviderTrafficGovernor,
+						attribution: { provider: "grok", targetId: "replacement-target" },
+					},
+				},
+			};
+		},
+	});
+	const result = await service.reconcile({
+		input,
+		expectedProviderAccountRef,
+		reconciliationTarget: { targetId: "replacement-target", connectorId: id },
+	});
+	expect(result).toMatchObject({
+		status: "already-connected",
+		operationId: original.operationId,
+		effectDispatched: true,
+		targetId: "replacement-target",
+	});
+	const journal = JSON.parse(
+		await readFile(path.join(f.root, `${original.operationId}.json`), "utf8"),
+	);
+	expect(journal.input).toEqual(input);
+	expect(journal.effectDispatched).toBe(true);
+	expect(journal.reconciliations).toEqual([
+		expect.objectContaining({
+			previousTargetId: "fixture-target",
+			targetId: "replacement-target",
+			connectorId: id,
+		}),
+	]);
+	expect(f.effects()).toBe(1);
+	expect(requests).toHaveLength(2);
+});
