@@ -1,7 +1,7 @@
 # #405 OAuth diagnosis — callback activation prepared
 
-State: OPEN; approved callback activation verified, end-to-end OAuth not
-qualified. This follows the diagnosing-bugs feedback-loop procedure; the previous
+State: OPEN; OAuth and native tool catalog qualified; public installation
+reconciliation/readback remains incomplete. This follows the diagnosing-bugs feedback-loop procedure; the previous
 checkpoint review/TDD counts remain1/1 and were not reset or invoked again.
 
 ## Live validation feedback
@@ -128,3 +128,41 @@ merely because the listener timed out. Reconcile native/server state after the
 human completes the existing page before any new flow. #405/#406 remain OPEN.
 Private readbacks and curated hashed manifest are under
 `~/.auracall/private/grok/implementation-native/oauth-resume-20261026/`.
+
+
+## Cooper skill continuation — OAuth and tool catalog qualified
+
+The operator explicitly invoked the Cooper ingress skill and its independent
+agent logon authority. The existing Cooper credential was read only inside the
+login process via the canonical private file; no password, credential hash,
+cookie, hidden CSRF value or screenshot was recorded. Both attempted Cooper
+sign-ins succeeded; there was no rejected-login retry or other-realm fallback.
+No ingress policy, account, credentials or grants configuration was changed.
+
+The first sign-in reached Mail Receipts authorization. Its requested permissions
+matched the existing configured agent policy: two accounts, read/write on both,
+send on one. The old Grok OAuth cookie's native helper has a3600second lifetime
+and that exchange had expired while waiting. A fresh same-Connector OAuth exchange
+was started after qualifying the old unapproved prompt and completed sign-in.
+Its exact callback/resource/S256/scope parameters and account/permission summary
+were checked before one trusted Approve. No new or unexpected scope was added.
+
+The popup reached Grok `/connectors-oauth-success`; the still-running native SDK
+returned authenticated success. One subsequent native catalog RPC for the exact
+original Connector ID/account/endpoint completed and returned62allowed tool
+entries, including account/read/draft/send surfaces. These are catalog and grant
+observations, not tool execution or proof that every tool is permitted for every
+account. No Mail Receipts tool was invoked and no mail was sent.
+
+A separate clean HTTP context without cookies still redirected authorization to
+Cooper Authelia (302), preserving anonymous denial and the expected realm.
+No renderer/inventory/deployment checks were necessary for this login-only slice;
+no ingress inventory or container configuration changed.
+
+Private immutable `oauth-qualified-proof.json` under the existing resume directory
+binds the successful login/approval/native-auth/catalog receipts by SHA256.
+The last public visible-inventory read still reports incomplete coverage with no
+exact match, even after one qualified native gallery refetch. Do not equate this
+readback gap with failed OAuth, silently reset the installation journal or close
+#405. Original target/browser replacement and public reconciliation remain the
+next bounded acceptance repair; #406 remains blocked until #405 closure.

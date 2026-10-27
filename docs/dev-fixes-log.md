@@ -26310,3 +26310,16 @@ rejects Grok's runtime-qualified exact callback while its ChatGPT-only allowlist
 is active. Isolated actual-code red/minimal/green checks confirm the callback-only
 candidate, without real registration or grants. Activation and human consent
 remain separate from source/configuration readiness.
+
+
+### 2026-10-26 — Use realm-specific agent login before requiring human sign-in
+
+The Cooper ingress skill explicitly authorizes existing agent credentials for
+requested service acceptance. Select the Cooper file for cooper-auth, authenticate
+once and verify app policy; do not infer that a login form requires a human when
+this configured agent path exists. A sign-in establishes ingress identity, while
+Mail Receipts approval remains bound to its existing exact account/scope policy.
+Native OAuth cookies expire independently of the external login session. Fresh
+same-ID authentication after a qualified expired/unapproved flow completed the
+Grok callback and62tool catalog read without another Add. Public inventory and
+installation-journal reconciliation remain separate acceptance boundaries.
