@@ -59,3 +59,5 @@ DOM/protocol capture. Read-only local cache search returned zero matching rows.
 Awaiting operator locator; no further probe is justified without new evidence.
 Issue remains open. Diagnostics are preserved as an unintegrated evidence
 checkpoint; production and installed code remain unchanged by this packet.
+
+Evidence checkpoint: `3e01906d76e853f2e7110e05bae20adc50abd69c` (docs only, no qualified repair).

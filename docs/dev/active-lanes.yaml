@@ -10,7 +10,7 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: ce140802491bbc5801b283853bae132f6eb8b90f
+    checkpoint: 3e01906d76e853f2e7110e05bae20adc50abd69c
     remote_ref: refs/remotes/origin/fix/issue377-tool-approval
     integration: merge
     dependencies: []
