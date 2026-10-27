@@ -1,3 +1,11 @@
+## 2026-10-27 — An omitted Grok gallery card is not an absent Connector
+
+Use the actual selected-ID MCP metadata protocol to qualify an existing record.
+Bind personal actor scope, exact entity, safe endpoint and every returned tool;
+never infer remote account or OAuth grants from provider identity or tool scope.
+Browser-loss recovery must preserve installation input and replay fences and
+record verified target history, rather than reset the journal or repeat Add.
+
 ## 2026-10-25 — Closed Grok overlays can retain layout geometry
 
 BaseUI dialog nodes may retain display, visibility, opacity and nonzero geometry

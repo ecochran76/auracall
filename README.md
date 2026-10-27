@@ -2733,3 +2733,18 @@ reconnects. Input remains blocked during the change, and AuraCall resumes
 automation only after control-grant revocation is confirmed.
 
 Open the AuraCall root URL to reach the console, then select **Desktops** to open the browser client. Console, operator dashboard and desktop client share AuraCall's glowing halo favicon.
+
+### Grok Connector reconciliation after browser loss
+
+`grok-connectors --action inspect --id <observed-connector-id>` can read an exact
+personal MCP Connector and its tool metadata even when the visible gallery omits it.
+This does not invoke a tool or establish the remote account identity or granted scopes.
+
+For an existing installation journal whose browser target disappeared, use
+`--action reconcile --reconcile-target <current-target-id> --reconcile-connector
+<original-connector-id>` with the original name, endpoint and expected provider
+account. The API/MCP equivalent is `reconciliationTarget: {targetId, connectorId}`.
+Keep the original installation input unchanged. This path verifies configured
+browser/account custody, performs metadata reads, preserves the operation ID and
+Add fence, and records target history only after exact successful reconciliation.
+It does not repeat Add or OAuth. A supplied connected-account selector remains strict.

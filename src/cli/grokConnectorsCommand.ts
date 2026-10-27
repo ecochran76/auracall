@@ -68,6 +68,13 @@ export const GrokConnectorsRequestSchema = z.discriminatedUnion("action", [
 	z
 		.object({
 			action: z.literal("reconcile"),
+			reconciliationTarget: z
+				.object({
+					targetId: z.string().regex(/^[A-Za-z0-9-]{1,512}$/),
+					connectorId: z.string().regex(/^connector_[0-9a-f-]{36}$/i),
+				})
+				.strict()
+				.optional(),
 			input: GrokConnectorInstallationInputSchema,
 			expectedProviderAccountRef: z.string().regex(/^[a-f0-9]{64}$/),
 			runtimeProfile: z.string().min(1).max(200).optional(),

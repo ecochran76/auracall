@@ -22,6 +22,7 @@ export interface GrokConnectorInstallationRequest {
 	input: GrokConnectorInstallationInput;
 	expectedProviderAccountRef: string;
 	confirm?: boolean;
+	reconciliationTarget?: { targetId: string; connectorId: string };
 }
 export interface GrokConnectorInstallationResult extends GrokConnectorInstallationOutcome {
 	operationId: string;
@@ -34,6 +35,13 @@ export interface GrokConnectorInstallationService {
 	reconcile(request: GrokConnectorInstallationRequest): Promise<GrokConnectorInstallationResult>;
 }
 interface Journal {
+	reconciliations?: {
+		previousTargetId: string;
+		targetId: string;
+		connectorId: string;
+		verifiedAt: string;
+		previousResult?: GrokConnectorInstallationResult;
+	}[];
 	version: 1;
 	operationId: string;
 	input: GrokConnectorInstallationInput;
@@ -45,6 +53,7 @@ interface Journal {
 }
 export interface GrokConnectorInstallationDependencies extends GrokConnectorServiceDependencies {
 	journalDirectory?: string;
+	resolveReconciliationOptions?: (targetId: string) => Promise<BrowserProviderListOptions>;
 }
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 /** One exclusive durable intent per account/profile/input. Existing intents are
@@ -78,6 +87,15 @@ export function createGrokConnectorInstallationService(
 	): Promise<GrokConnectorInstallationResult> {
 		options.abortSignal?.throwIfAborted();
 		const input = validateGrokConnectorInstallationInput(request.input);
+		const recovery = request.reconciliationTarget;
+		if (
+			recovery &&
+			(mode !== "reconcile" ||
+				input.kind !== "custom" ||
+				!/^[A-Za-z0-9-]{1,512}$/.test(recovery.targetId) ||
+				!/^connector_[0-9a-f-]{36}$/i.test(recovery.connectorId))
+		)
+			throw new Error("grok_connector_reconciliation_target_invalid");
 		if (!/^[a-f0-9]{64}$/.test(request.expectedProviderAccountRef))
 			throw new Error("grok_connector_install_provider_account_required");
 		if (mode === "install" && request.confirm !== true)
@@ -201,10 +219,19 @@ export function createGrokConnectorInstallationService(
 		let dispatched = false;
 		let result: GrokConnectorInstallationResult | undefined;
 		try {
+			const sessionOptions = recovery
+				? await dependencies.resolveReconciliationOptions?.(recovery.targetId)
+				: options;
+			if (!sessionOptions || (recovery && sessionOptions.tabTargetId !== recovery.targetId))
+				throw new Error("grok_connector_reconciliation_options_required");
 			connection = await connect({
-				...options,
+				...sessionOptions,
 				providerTrafficRequired: true,
-				...(record.targetId ? { tabTargetId: record.targetId } : {}),
+				...(recovery
+					? { tabTargetId: recovery.targetId }
+					: record.targetId
+						? { tabTargetId: record.targetId }
+						: {}),
 			});
 			const activeConnection = connection;
 			const governor = resolveProviderTrafficGovernor(connection.client);
@@ -213,7 +240,8 @@ export function createGrokConnectorInstallationService(
 			if (
 				!connection.targetId ||
 				governor.attribution.targetId !== connection.targetId ||
-				(record.targetId && record.targetId !== connection.targetId)
+				((recovery?.targetId ?? record.targetId) &&
+					(recovery?.targetId ?? record.targetId) !== connection.targetId)
 			)
 				throw new Error("grok_connector_install_target_not_verified");
 			await governor.checkWarning?.(connection.client.Runtime);
@@ -232,7 +260,7 @@ export function createGrokConnectorInstallationService(
 				const verify = async () => {
 					const proof = await checkGrokBrowserAuthPreflight(
 						activeConnection.client.Runtime as ChromeClient["Runtime"],
-						options,
+						sessionOptions,
 					);
 					if (
 						!proof.ok ||
@@ -243,7 +271,8 @@ export function createGrokConnectorInstallationService(
 					return proof.actualIdentity?.id;
 				};
 				const providerUserId = await verify();
-				record.targetId = connection.targetId;
+				const previousTargetId = record.targetId;
+				if (!recovery) record.targetId = connection.targetId;
 				const client = createGrokConnectorInstallationClient(connection.client.Runtime, {
 					providerAccountRef: request.expectedProviderAccountRef,
 					providerUserId,
@@ -275,13 +304,26 @@ export function createGrokConnectorInstallationService(
 				});
 				let outcome: GrokConnectorInstallationOutcome;
 				if ((existing && !explicitContinuation) || mode === "reconcile")
-					outcome = await client.reconcile(input);
+					outcome = await client.reconcile(input, recovery?.connectorId);
 				else {
 					outcome = await client.prepare(input);
 					if (mode === "install" && outcome.prepared)
 						outcome = await client.commit(outcome.prepared);
 				}
 				await verify();
+				if (recovery && outcome.status === "already-connected" && previousTargetId) {
+					record.reconciliations = [
+						...(record.reconciliations ?? []),
+						{
+							previousTargetId,
+							targetId: connection.targetId,
+							connectorId: recovery.connectorId,
+							verifiedAt: new Date().toISOString(),
+							previousResult: record.result,
+						},
+					];
+					record.targetId = connection.targetId;
+				}
 				record.effectDispatched = existing
 					? record.effectDispatched || outcome.effectDispatched
 					: outcome.effectDispatched;
@@ -307,6 +349,7 @@ export function createGrokConnectorInstallationService(
 					effectState:
 						record.effectDispatched &&
 						result.status !== "completed" &&
+						result.status !== "already-connected" &&
 						!(
 							result.status === "failed" &&
 							result.code === "grok_connector_install_connection_failed"

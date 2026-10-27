@@ -1,3 +1,4 @@
+import { readGrokNativeConnectorDetail } from "./grokNativeConnectorDetail.js";
 import { createHash, randomUUID } from "node:crypto";
 import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
 import { delay } from "../utils.js";
@@ -515,6 +516,18 @@ export function createGrokConnectorClient(
 			if (!selector.id && !selector.name && !selector.endpoint)
 				return detailFailure("grok_connector_selector_required");
 			try {
+				if (
+					selector.id &&
+					/^connector_[0-9a-f-]{36}$/i.test(selector.id) &&
+					options.providerUserId &&
+					selector.kind !== "catalog"
+				)
+					return await readGrokNativeConnectorDetail(
+						runtime,
+						selector,
+						options.providerUserId,
+						options.abortSignal,
+					);
 				const probe = await observe();
 				if (probe.state !== "visible")
 					return detailFailure(

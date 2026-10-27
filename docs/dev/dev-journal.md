@@ -1,3 +1,13 @@
+## 2026-10-27 — Grok #405 exact-ID reconciliation implementation
+
+Native evidence qualified the original enabled, authenticated MCP Connector and
+62 tools while the visible gallery omitted its card. Added a selected-ID metadata
+reader with actor/entity/endpoint/tool binding and no tool execution. Explicit
+replacement-target reconciliation preserves original journal input, operation ID
+and Add fence; target history changes only after verified success. Focused
+regressions cover omitted cards and original-journal recovery without another Add.
+Live public acceptance and tracker closure remain pending.
+
 ## 2026-10-25 — Grok #403 two-file native acceptance packet
 
 Both approved same-basename104byte synthetic uploads are retained with distinct
