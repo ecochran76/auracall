@@ -5,17 +5,18 @@ lanes:
     objective: Restore independent TTL cleanup of dormant tabs
     work_items: [Plan0463]
     plan: docs/dev/plans/0463-2026-10-26-dormant-tab-ttl.md
-    plan_ref: refs/heads/fix/dormant-tab-ttl
+    plan_ref: refs/remotes/origin/main
     branch: fix/dormant-tab-ttl
     target: main
-    plan_state: OPEN
-    custody_state: ACTIVE_WORKTREE
-    checkpoint: ce140802491bbc5801b283853bae132f6eb8b90f
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 67eb6bd073d03eeaa6f86c80b68f5f0cf94c1493
     remote_ref: refs/remotes/origin/fix/dormant-tab-ttl
     integration: merge
+    integration_receipt: c59dfcd5a15aa0e4b494345cce09de897239c959
     dependencies: []
     overlaps: []
-    validation_status: constructing-expired-tab-regression
+    validation_status: installed-periodic-4-to-2-tabs-uncertain-preserved
     updated_at: 2026-10-26
   - id: P461
     objective: Expose request churn and stage timing during opt-in app inventory
