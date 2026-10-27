@@ -51,6 +51,13 @@ export function registerGrokConnectorsTool(
 					.regex(/^[a-f0-9]{64}$/)
 					.optional(),
 				confirm: z.literal(true).optional(),
+				reconciliationTarget: z
+					.object({
+						targetId: z.string().regex(/^[A-Za-z0-9-]{1,512}$/),
+						connectorId: z.string().regex(/^connector_[0-9a-f-]{36}$/i),
+					})
+					.strict()
+					.optional(),
 				query: z.string().max(200).optional(),
 				selector: z
 					.object({

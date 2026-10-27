@@ -1,3 +1,11 @@
+## 2026-10-27 — #405 closed; #406 packet preparation
+
+PR484 merged4e02b33e8; GitHub405CLOSED read back. Public source reconciliation
+returned already-connected with62tools and preserved original operation/input/Add
+fence. Parent398OPEN. MCP registration now advertises the same recovery object
+as the handler/API/CLI; its actual registration schema is regression tested.
+406 requires concrete acceptance-data/effect preparation before live execution.
+
 ## 2026-10-27 — Grok #405 exact-ID reconciliation implementation
 
 Native evidence qualified the original enabled, authenticated MCP Connector and

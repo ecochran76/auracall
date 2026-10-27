@@ -111,3 +111,23 @@ it("limits target recovery to public reconciliation requests", async () => {
 		GrokConnectorsRequestSchema.safeParse({ ...common, action: "install", confirm: true }).success,
 	).toBe(false);
 });
+
+it("advertises target recovery in the actual MCP tool schema", async () => {
+	const { registerGrokConnectorsTool } = await import("../../src/mcp/tools/grokConnectors.js");
+	let schema: Record<string, { parse: (value: unknown) => unknown }> | undefined;
+	const server = {
+		registerTool: (_name: string, definition: { inputSchema: typeof schema }) => {
+			schema = definition.inputSchema;
+		},
+	};
+	registerGrokConnectorsTool(
+		server as unknown as Parameters<typeof registerGrokConnectorsTool>[0],
+		async () => {
+			throw new Error("not invoked");
+		},
+	);
+	expect(schema?.reconciliationTarget.parse({ targetId: "replacement", connectorId: id })).toEqual({
+		targetId: "replacement",
+		connectorId: id,
+	});
+});

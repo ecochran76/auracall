@@ -1,6 +1,6 @@
 # #405 OAuth diagnosis — callback activation prepared
 
-State: acceptance qualified; tracker closure pending main integration. OAuth,
+State: CLOSED after PR484 integration and verified GitHub readback. OAuth,
 native tool catalog and public original-journal reconciliation are verified. This follows the diagnosing-bugs feedback-loop procedure; the previous
 checkpoint review/TDD counts remain1/1 and were not reset or invoked again.
 
@@ -200,3 +200,8 @@ Private public receipt: `public-reconciliation-1793135870009.json`, SHA-256
 `0396f99ed47be410e6e45167fad3b9140bf4f3e26ff823f3df04b0633b25f81b`. Private originals, OAuth approval/catalog proof and journal-before backup
 remain under the user-scoped OAuth resume evidence directory. Parent398 is
 untouched; review/TDD counts remain1/1.
+
+PR484 merged at4e02b33e82cd3d8ca9549df488d45a0592cfd074; #405 CLOSED
+at2026-10-27T21:20:05Z, read back from GitHub. Parent398 remains OPEN.
+The MCP registration schema now also advertises explicit target recovery, with
+a registration-boundary regression; handler/API/CLI all retain strict validation.

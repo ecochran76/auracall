@@ -119,13 +119,13 @@
     "405": {
       "title": "Grok: Install and authenticate exact custom MCP Connectors",
       "url": "https://github.com/ecochran76/auracall/issues/405",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [
         404
       ],
-      "state": "source-native-public-acceptance-qualified",
+      "state": "validated-source-native-public",
       "scope": "original-program",
-      "gate": "Main integration and tracker closure pending; OAuth/actual grants/native catalog/public original-journal reconciliation qualified.",
+      "gate": "PR484 merged4e02b33e82cd3d8ca9549df488d45a0592cfd074; tracker CLOSED read back2026-10-27T21:20:05Z.",
       "currentEvidence": {
         "sourceRepairPr": 459,
         "sourceRepairMerge": "6a712f57d7000e4d49da650695b9814080dca4ed",
@@ -147,7 +147,9 @@
         "newAddCalls": 0,
         "journalReset": false,
         "remoteAccountAndScopesEvidence": "actual Cooper approval; public reader does not synthesize accountRef or grants",
-        "note": "../notes/2026-10-26-grok405-oauth-diagnosis.md"
+        "note": "../notes/2026-10-26-grok405-oauth-diagnosis.md",
+        "pr": 484,
+        "mergeCommit": "4e02b33e82cd3d8ca9549df488d45a0592cfd074"
       }
     },
     "406": {
@@ -158,7 +160,7 @@
         402,
         405
       ],
-      "state": "blocked-dependencies",
+      "state": "ready-exact-live-packet-preparation",
       "scope": "original-program"
     },
     "407": {
