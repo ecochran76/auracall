@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { BrowserPerformanceDiagnostics } from "../src/browser/browserPerformanceDiagnostics.js";
 import { GrokBuildRequestSchema, runGrokBuildCommand } from "../src/cli/grokBuildCommand.js";
 import { createConfiguredGrokBuildService } from "../src/browser/configuredGrokBuild.js";
 import { grokBuildUnknown } from "../src/browser/grokBuildService.js";
@@ -5598,6 +5599,8 @@ async function runChatgptDeveloperAppsCliAction(
     lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
   });
   const input = buildInput(commandOptions);
+  const performanceDiagnostic = input.action === "list" && commandOptions.performance ? new BrowserPerformanceDiagnostics() : undefined;
+  performanceDiagnostic?.stage("queue-admission");
   let acquired: Awaited<ReturnType<typeof dispatcher.acquireQueued>> | undefined;
   let receiptEmitted = false;
   let waitingStage = 'queue-admission';
@@ -5622,6 +5625,7 @@ async function runChatgptDeveloperAppsCliAction(
       throw new Error(formatBrowserOperationBusyResult(acquired));
     }
     const result = await runChatgptDeveloperAppOperationForCli(userConfig, input, {
+      performanceDiagnostics: performanceDiagnostic,
       browserOperationOwned: true,
       onProgress: (progress) => {
         waitingStage = progress.stage;
@@ -5645,7 +5649,11 @@ async function runChatgptDeveloperAppsCliAction(
     receiptEmitted = true;
   } finally {
     clearInterval(waitingReporter);
-    if (acquired?.acquired) await acquired.release();
+    try {
+      if (acquired?.acquired) await acquired.release();
+    } finally {
+      if (performanceDiagnostic) console.error(`[browser-performance] ${JSON.stringify(performanceDiagnostic.finish())}`);
+    }
     if (receiptEmitted) await exitAfterCompletedBrowserUtilityCommand();
   }
 }
@@ -5832,6 +5840,7 @@ const appsCommand = program
 appsCommand
   .command('list')
   .description('List installed apps, connection state, and Developer mode without mutation.')
+  .option('--performance', 'Emit sanitized request and stage timing diagnostics on stderr.', false)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async function (this: Command) {
     await runChatgptDeveloperAppsCliAction(this, () => ({ action: 'list' }));

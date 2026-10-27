@@ -2748,3 +2748,12 @@ Keep the original installation input unchanged. This path verifies configured
 browser/account custody, performs metadata reads, preserves the operation ID and
 Add fence, and records target history only after exact successful reconciliation.
 It does not repeat Add or OAuth. A supplied connected-account selector remains strict.
+
+### App-list performance diagnostics
+
+Run `auracall apps list --json --performance` to include one
+`[browser-performance] {…}` aggregate JSON line on stderr at command completion,
+including operation failure after configuration resolves. Normal inventory or failure JSON stays on stdout.
+The flag is off by default and adds no provider requests or admission bypass.
+See [the browser debugging guide](docs/dev/browser-service-tools.md#app-list-performance-diagnostics)
+for timing and coverage interpretation.

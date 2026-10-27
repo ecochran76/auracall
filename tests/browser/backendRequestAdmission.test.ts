@@ -1,3 +1,4 @@
+import { BrowserPerformanceDiagnostics, withBrowserPerformanceDiagnostics } from "../../src/browser/browserPerformanceDiagnostics.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -302,6 +303,7 @@ test.each([
 	"active-action",
 	"mixed-failure",
 ])("owned backend denial releases only known custody; mode=%s", async (mode) => {
+	const diagnostic = new BrowserPerformanceDiagnostics();
 	const pendingAction = mode === "active-action";
 	const mixedFailure = mode === "mixed-failure";
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-request-admission-"));
@@ -337,12 +339,12 @@ test.each([
 				mutationAudit: async () => undefined,
 				baseOptions: {},
 			});
-			await annotateClientMutationContext(
+			await withBrowserPerformanceDiagnostics(diagnostic, () => annotateClientMutationContext(
 				client,
 				{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
 				"provider:chatgpt",
 				`target-${index}`,
-			);
+			));
 		}
 		expect(fixture.clients[0].handler).toBeTypeOf("function");
 		const firstHandler = fixture.clients[0].handler;
@@ -428,6 +430,11 @@ test.each([
 				? { state: "idle", effectState: "outcome-unknown" }
 				: { state: "released", effectState: "none" },
 		);
+    expect(diagnostic.finish()).toMatchObject({
+      observedConnections: 2,
+      backendRequests: { total: mixedFailure ? 3 : 2 },
+      admission: { attempted: mixedFailure ? 3 : 2, admitted: mixedFailure ? 2 : 1, rejected: 1, pending: 0 },
+    });
 		for (let index = 0; index < 2; index++) {
 			expect(fixture.clients[index].handler).toBeUndefined();
 			const gate = new DesktopControlGate(`fixture-${45130 + index}`);
@@ -1707,6 +1714,8 @@ test.each([
 });
 
 test("owned native-style backend burst drains before transport close", async () => {
+	let diagnosticNow = 0;
+  const diagnostic = new BrowserPerformanceDiagnostics(() => diagnosticNow);
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-request-burst-"));
 	setAuracallHomeDirOverrideForTest(home);
 	fixture.clients.length = 0;
@@ -1739,24 +1748,34 @@ test("owned native-style backend burst drains before transport close", async () 
 			mutationAudit: async () => undefined,
 			baseOptions: {},
 		});
-		await annotateClientMutationContext(
-			client,
+		const observedClient = client;
+		await withBrowserPerformanceDiagnostics(diagnostic, () => annotateClientMutationContext(
+			observedClient,
 			{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
 			"provider:chatgpt",
 			"burst-target",
-		);
+		));
 		const state = fixture.clients[0];
 		if (!state.handler) throw new Error("Missing interceptor");
 		const requests = Array.from({ length: 13 }, (_, id) =>
 			state.handler?.({
 				requestId: `burst-${id}`,
+        networkId: `network-${id}`,
 				request: { url: "https://chatgpt.com/backend-api/conversations" },
 			}),
 		);
 		await Promise.all(requests);
+    diagnosticNow = 10;
+    for (let id = 0; id < 12; id++) await state.responseHandler?.({ requestId: `network-${id}`, response: { url: "https://chatgpt.com/backend-api/conversations", status: 200 } });
+    state.loadingFailedHandler?.({ requestId: "network-12", canceled: false });
 		await client.close();
 		client = undefined;
 		expect(state.requests).toHaveLength(13);
+    expect(diagnostic.finish()).toMatchObject({
+      observedConnections: 1,
+      backendRequests: { total: 13, responses: 12, failed: 1, unresolved: 0, responseMs: { total: 120, max: 10 }, routes: { installed: 0, linked: 0, other: 13 } },
+      admission: { attempted: 13, admitted: 13, rejected: 0, pending: 0 },
+    });
 		const human = await gate.takeControl("human");
 		await gate.releaseControl(human.token, "human");
 	} finally {

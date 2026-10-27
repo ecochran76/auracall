@@ -959,3 +959,52 @@ and marks the effect settled. It does not release or close the target, confer a
 new claim, establish file readiness, or authorize replay. Normal acquisition and
 `releasePreserved` still reject unreconciled unknown effects. A later preserved
 release is separate from provider acceptance and must retain the source receipt.
+
+## App-list performance diagnostics
+
+For a slow successful app inventory, collect `auracall apps list --json --performance`
+on the first authorized baseline run. This observes that same command; no second
+probe, browser restart or extra provider request is needed. The single
+`[browser-performance]` JSON line is emitted on stderr after command cleanup,
+including failures after configuration resolves; inventory/failure stdout remains unchanged.
+Elapsed timing begins at queue admission, after configuration resolution. Diagnostics are
+opt-in and do not change caps, deadlines, authority or settlement.
+
+The report contains elapsed/stage durations, observed owned-connection count,
+backend request counts grouped as `installed`, `linked` and `other`, response /
+failed-before-response counts, unresolved outcomes, and admission counts/timing.
+All stage names and route groups are allowlisted. Headers, bodies, URLs, request
+IDs, target IDs and account values are absent from the report. This sanitization
+applies to the performance report, not the inventory JSON itself.
+
+Coverage is `owned-backend-interception-after-attachment`: only backend Fetch
+pauses on the command's governed ChatGPT connections are counted. Traffic before
+attachment, other tabs, workers and ungoverned connections are outside coverage.
+Zero `observedConnections` means no such interception was established, not proof
+of an idle browser. Repeated connections can observe the same underlying request;
+counts describe interception observations rather than globally unique requests.
+
+`responseMs` measures pause-to-response-headers time, including admission delay;
+it is not body download time or pure provider latency. A later body failure does
+not retract an observed response. `admission.durationMs` and `maxMs` cover completed
+attempts from governor invocation to admission/rejection; they include local
+governor work and capacity waits, exclude the preceding desktop-control hold,
+and are not pure quota waiting. `admitted` means the governor invoked the
+continuation, not proof of a successful network dispatch. Concurrent duration
+sums can exceed elapsed time. Pending admissions remain explicit at closure.
+Stage durations aggregate repeated visits to each stage.
+
+At most 1,000 unresolved requests retain timing correlation. Counters continue
+beyond this bound; `trackingLimitReached` marks incomplete outcome/timing tracking.
+`unresolved` includes missing/canceled/redirected or uncorrelated observations and
+must not be treated as proof of a still-running request. The report freezes at
+command completion; late events cannot rewrite it.
+
+## Independent dormant-tab retirement
+
+Configured ChatGPT maintenance preserves tabs whose provider activity is active
+or unknown. That per-tab deferral must allow other expired, verified inactive
+tabs in the same browser profile to retire during the same pass. A lost lease's
+inspection/retirement error is reported independently; endpoint/scope resolution
+failures still defer the scope. TTL cleanup applies to the configured AuraCall
+managed runtime, not to Agent Browser or other browsers sharing the desktop.

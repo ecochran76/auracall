@@ -26331,3 +26331,25 @@ Native OAuth cookies expire independently of the external login session. Fresh
 same-ID authentication after a qualified expired/unapproved flow completed the
 Grok callback and62tool catalog read without another Add. Public inventory and
 installation-journal reconciliation remain separate acceptance boundaries.
+
+## 2026-10-26 — Observe app-list request churn during the first baseline
+
+Plan0461 adds opt-in `apps list --performance` on the existing owned admission
+path. A sanitized bounded aggregate report combines stage durations, installed /
+linked / background request observations, response timing and admission timing.
+It emits on stderr even on command failure; normal stdout and existing authority
+remain intact. Real admission fixture proves thirteen requests and their observed
+responses/failure reach the report without extra protocol commands. Explicit
+coverage and unresolved counts prevent partial observations from implying complete
+browser traffic or known request outcomes. Admission timing includes governor
+processing, so it must not be called pure quota delay.
+
+## 2026-10-26 — Isolate lost-tab TTL deferrals
+
+A preserved active/unknown lost tab threw out of the per-profile maintenance
+loop, starving later expired lost and idle tabs. Catch and report each lost
+lease's deferral independently, retaining inactivity checks, audit admission,
+close confirmation and ownership fences. A two-tab public-maintenance regression
+was red (both tabs retained), then green (only the inactive expired tab closes).
+Other browser runtimes have their own cleanup authority; their tabs are not
+included merely because they share the desktop. Plan0463 tracks native acceptance.

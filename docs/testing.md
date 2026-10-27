@@ -3868,3 +3868,19 @@ session, HTTP/malformed inventory, optional linked failure, generic UI retry,
 provider rate limits and human verification. No extra inventory navigation or
 browser credentials may appear in returned data. Source-native and installed
 acceptance remain separate receipts.
+
+
+- Opt-in app-list performance report (Plan0461, provider-free):
+  `pnpm vitest run tests/browser/browserPerformanceDiagnostics.test.ts tests/cli/developerAppWaitingDiagnostics.test.ts --maxWorkers=1`
+  proves aggregate churn/timing, redaction by allowlisting, bounded incomplete
+  tracking, frozen reports, opt-in stderr-only reporting and failure output.
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'owned native-style backend burst' --maxWorkers=1`
+  drives the actual owned admission and response/failure listeners through a fake
+  CDP boundary, preserving request continuation and cleanup. Installed/live
+  traffic coverage is separate; these commands contact no provider.
+
+- Independent TTL cleanup after a lost-tab deferral (Plan0463):
+  `pnpm vitest run tests/browser/activeChatRetirement.test.ts tests/browser/configuredChatgptTabMaintenance.test.ts tests/browser-service/tabLeaseRetirement.test.ts --maxWorkers=1`.
+  Real configured maintenance with the public registry proves an active/unknown
+  expired lost tab remains open while a separate inactive expired tab closes.
+  Existing ownership, endpoint, audit and active-response controls remain covered.

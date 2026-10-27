@@ -123,9 +123,9 @@
       "blockedBy": [
         404
       ],
-      "state": "assigned-preparation",
+      "state": "source-native-public-acceptance-qualified",
       "scope": "original-program",
-      "gate": "Existing native contract/effect-acceptance boundary retained; no newly authorized provider mutations.",
+      "gate": "Main integration and tracker closure pending; OAuth/actual grants/native catalog/public original-journal reconciliation qualified.",
       "currentEvidence": {
         "sourceRepairPr": 459,
         "sourceRepairMerge": "6a712f57d7000e4d49da650695b9814080dca4ed",
@@ -139,6 +139,15 @@
         "terminalFailureReportingMerge": "31199d880173f92287f3bd1939c90d442dd3aa89",
         "externalOAuthBoundary": "active config only ChatGPT callback; installed OAuth code enforces exact redirect allowlist; actual Grok callback unobserved; no external service/grant edits",
         "ownedErrorMetadata": "bounded same-account current-root read qualified but no exact callback/error detail obtained; no further effects"
+      },
+      "reconciliationEvidence": {
+        "sourceCommit": "45cf4482d",
+        "status": "already-connected",
+        "tools": 62,
+        "newAddCalls": 0,
+        "journalReset": false,
+        "remoteAccountAndScopesEvidence": "actual Cooper approval; public reader does not synthesize accountRef or grants",
+        "note": "../notes/2026-10-26-grok405-oauth-diagnosis.md"
       }
     },
     "406": {

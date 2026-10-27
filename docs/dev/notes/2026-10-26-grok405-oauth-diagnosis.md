@@ -1,7 +1,7 @@
 # #405 OAuth diagnosis — callback activation prepared
 
-State: OPEN; OAuth and native tool catalog qualified; public installation
-reconciliation/readback remains incomplete. This follows the diagnosing-bugs feedback-loop procedure; the previous
+State: acceptance qualified; tracker closure pending main integration. OAuth,
+native tool catalog and public original-journal reconciliation are verified. This follows the diagnosing-bugs feedback-loop procedure; the previous
 checkpoint review/TDD counts remain1/1 and were not reset or invoked again.
 
 ## Live validation feedback
@@ -166,3 +166,37 @@ exact match, even after one qualified native gallery refetch. Do not equate this
 readback gap with failed OAuth, silently reset the installation journal or close
 #405. Original target/browser replacement and public reconciliation remain the
 next bounded acceptance repair; #406 remains blocked until #405 closure.
+
+## 2026-10-27 public original-journal acceptance
+
+Source45cf4482d adds an exact selected-ID personal MCP metadata reader and
+explicit read-only replacement-target reconciliation. The original enabled
+Connector exists with valid OAuth tokens even though its gallery card is omitted.
+Public configured inspection and reconciliation returned `already-connected`,
+exact endpoint/entity/provider-account agreement and all62tools. No new Add,
+OAuth, tool invocation, mailbox read or mail send occurred. The original
+operation ID and immutable installation input remain; the journal preserves its
+historical result and appends verified target-change provenance. Its permanent
+continuation fence remains intact.
+
+Acceptance mapping:
+
+- Input validation, provider account custody and one-Add fencing: source tests
+  and original native installation; no duplicate installation during recovery.
+- Human continuation and actual scopes: earlier Cooper agent approval matched
+  the existing two-account policy (read/write both, send one), followed by native
+  OAuth success. Metadata advertisements are not used as grant evidence.
+- Readback: exact original entity, endpoint and provider account plus62native
+  tools, independently followed by public inspection and terminal reconciliation.
+  Remote account/grants remain sourced from the actual approval evidence; public
+  `accountRef:null` and `grantedScopesObserved:false` are truthful limitations.
+- Unconfirmed outcome recovery: public reconciliation preserves original input,
+  operation ID, Add fence and prior journal result; no retry/disconnect/replacement.
+- Source/live distinction: executed repository source against the configured
+  managed browser. No installed AuraCall runtime adoption or package release
+  is claimed. Focused58tests and full typecheck passed before source commit.
+
+Private public receipt: `public-reconciliation-1793135870009.json`, SHA-256
+`0396f99ed47be410e6e45167fad3b9140bf4f3e26ff823f3df04b0633b25f81b`. Private originals, OAuth approval/catalog proof and journal-before backup
+remain under the user-scoped OAuth resume evidence directory. Parent398 is
+untouched; review/TDD counts remain1/1.

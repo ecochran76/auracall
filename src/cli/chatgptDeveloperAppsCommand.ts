@@ -1,3 +1,4 @@
+import { type BrowserPerformanceDiagnostics, withBrowserPerformanceDiagnostics } from "../browser/browserPerformanceDiagnostics.js";
 import type { DeveloperAppSubmissionEvidence } from "../browser/chatgptDeveloperAppSubmission.js";
 import { BrowserAutomationClient } from "../browser/client.js";
 import { hasUnknownOwnedRequestCleanup } from "../browser/ownedBackendRequestAuthority.js";
@@ -176,6 +177,7 @@ type ChatgptDeveloperAppCliAdapter = ChatgptDeveloperAppAdapter & {
 };
 
 export interface ChatgptDeveloperAppCliDependencies {
+  performanceDiagnostics?: BrowserPerformanceDiagnostics;
 	onProgress?: (progress: { stage: DeveloperAppStage; timeoutMs?: number }) => void;
 	browserOperationOwned?: boolean;
 	listTimeoutMs?: number;
@@ -461,10 +463,21 @@ async function executeChatgptDeveloperAppOperationWithState(
 	throw new Error("Unsupported ChatGPT developer-app action.");
 }
 
-export async function runChatgptDeveloperAppOperationForCli(
-	userConfig: ResolvedUserConfig,
-	input: ChatgptDeveloperAppOperationInput,
-	dependencies: ChatgptDeveloperAppCliDependencies = {},
+export function runChatgptDeveloperAppOperationForCli(
+  userConfig: ResolvedUserConfig,
+  input: ChatgptDeveloperAppOperationInput,
+  dependencies: ChatgptDeveloperAppCliDependencies = {},
+): Promise<ChatgptDeveloperAppOperationResult> {
+  const operation = () => runChatgptDeveloperAppOperationWithDiagnostics(userConfig, input, dependencies);
+  return dependencies.performanceDiagnostics
+    ? withBrowserPerformanceDiagnostics(dependencies.performanceDiagnostics, operation)
+    : operation();
+}
+
+async function runChatgptDeveloperAppOperationWithDiagnostics(
+  userConfig: ResolvedUserConfig,
+  input: ChatgptDeveloperAppOperationInput,
+  dependencies: ChatgptDeveloperAppCliDependencies,
 ): Promise<ChatgptDeveloperAppOperationResult> {
 	const createBrowser = dependencies.createBrowser ?? BrowserAutomationClient.fromConfig;
 	const createAdapter = dependencies.createAdapter ?? createChatgptDeveloperAppBrowserAdapter;
@@ -480,6 +493,7 @@ export async function runChatgptDeveloperAppOperationForCli(
 	let operationFailure: unknown;
 	const reportStage = (nextStage: DeveloperAppStage) => {
 		stage = nextStage;
+		dependencies.performanceDiagnostics?.stage(stage);
 		dependencies.onProgress?.({ stage });
 	};
 	const operation = async () => {
@@ -591,6 +605,7 @@ export async function runChatgptDeveloperAppOperationForCli(
 					userConfig.auracallProfile ?? "default",
 				),
 		);
+		dependencies.performanceDiagnostics?.stage(stage);
 		dependencies.onProgress?.({ stage, timeoutMs });
 		return await withChatgptDeveloperAppDeadline(
 			operation(),

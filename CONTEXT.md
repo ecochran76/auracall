@@ -258,3 +258,11 @@ operations/commits invalidate it; metadata failure after a successful commit
 only discards reuse. The append-only encoded event prefix belongs to that exact
 loaded state and is discarded when peer state is reloaded. Every snapshot still
 contains full records, warnings and events, with public reads returning copies.
+
+
+App-list performance observation is explicit (`apps list --performance`), scoped
+to the command's governed ChatGPT connections after backend interception attaches.
+Its sanitized aggregate stderr report preserves terminal inventory stdout and
+never changes admission or ownership. Counts are observations with explicit
+unresolved/coverage limits; admission duration includes local governor overhead.
+See `docs/dev/browser-service-tools.md#app-list-performance-diagnostics`.

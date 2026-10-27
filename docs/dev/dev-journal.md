@@ -56931,3 +56931,33 @@ One originalIDcatalogRPC returned62allowedtools; no toolinvocation or mailsend.
 Cleananonymousauthorization302Cooper persists. Publicvisibleinventory remains
 incomplete/noexactmatch afterqualifiedrefetch;405/406remainOPEN pendingpublic
 reconciliation repair, originaljournal preserved. Privateimmutableproof retained.
+
+## 2026-10-26 — Plan0461
+
+Building opt-in app-list performance diagnostics from the issue464 retrospective. First seam: sanitized aggregate report under deterministic protocol/time fixtures. No live provider run or CI.
+
+Plan0461 source acceptance: 161 selected tests pass, plus four overlapping
+admission-boundary checks after adding diagnostic assertions. Typecheck/build,
+scoped lint, docs and compiled help pass. Earlier Grok timeout passed isolated
+and complete reruns without changed budgets. Source-only checkpoint; CI and
+installed/live activation excluded. Primary Standards/Spec review has no blocker.
+
+## 2026-10-26 — Plan0461 deployed
+
+PR479 merged at b2ecae89a. CLI-only runtime activated after five compiled module
+hashes and help matched the validated build. One installed native read completed
+34apps in26.601s, with one performance stderr report and terminal-only stdout.
+Fresh OS/CDP readback preserved browser generation, active API process and MCP
+wrapper; command process exited. CI excluded. Plan/lane closed and integrated.
+
+## 2026-10-26 — Plan0463 dormant tab TTL
+
+Read-only tab/lease census and activity probes complete. Building real configured-maintenance regression for independent cleanup despite a preserved lost tab. No tabs closed; deferred issue377 remains deferred.
+
+Plan0463 accepted:31source checks plus typecheck/build/lint/docs pass. PR482
+merged c59dfcd5a. Hash-qualified CLI/API runtime activated after quiescing local
+drain; all browser generations preserved. Real periodic maintenance closed2
+inactive expired AuraCall tabs (4→2) and preserved2unknown tabs; no manual close.
+HTTP200 status retains23paused completions,0running/0queued, scheduler paused,
+drain restored idle/unpaused. The17Agent Browser pages remain a separate runtime
+scope. MCP wrapper unchanged; CI excluded. Plan/lane CLOSED and INTEGRATED.
