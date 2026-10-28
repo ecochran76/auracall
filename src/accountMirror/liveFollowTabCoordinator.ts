@@ -1,7 +1,6 @@
 import { withProcessTabAcquisition } from "../../packages/browser-service/src/service/processTabAcquisition.js";
 import type { ProviderTrafficGovernor } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import {
-	registerUnownedBrowserTabDeadlines,
 	releaseAbsentBrowserTabLeases,
 	UNOWNED_TAB_WORKLOAD_PREFIX,
 } from "../../packages/browser-service/src/service/tabInventory.js";
@@ -483,12 +482,6 @@ async function selectExistingTarget(
 				throw new Error(`Existing target deadline transfer failed: ${released.conflict.kind}.`);
 		}
 	}
-	await registerUnownedBrowserTabDeadlines({
-		registry: input.registry,
-		scope: input.scope,
-		now: input.now,
-		targets: targets.filter((target) => target.targetId !== selected?.targetId),
-	});
 	return selected;
 }
 
@@ -506,12 +499,6 @@ async function prepareColdStartTarget(
 		}
 		if (!input.listTargets)
 			throw new Error("Owned cold startup requires a physical target census.");
-		await registerUnownedBrowserTabDeadlines({
-			registry: input.registry,
-			scope: input.scope,
-			now: input.now,
-			targets: await input.listTargets(endpoint),
-		});
 		return { target: null };
 	}
 	if (!input.listTargets) return { target: null };

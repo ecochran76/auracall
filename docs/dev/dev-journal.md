@@ -1,3 +1,13 @@
+## 2026-10-28 — Plan0464 independent TTL ownership execution
+
+Primary owns AuraCall490 on fix/ttl-ownership-integration from00a45bd0bf7d;
+one delegated worker owns Agent Browser490 on its separate integration branch.
+AuraCall491 has native blocking relationships to both repairs. Public maintenance
+ownership regression and legacy idle/lost/retiring cases were red, then green.
+62 focused checks pass. Source typecheck/lint and installed acceptance are being
+qualified; no source or tracker closure is claimed yet. One post-closure broad
+review and one bounded findings-TDD phase are reserved. CI excluded.
+
 ## 2026-10-28 — PR489 merged;406closed
 
 PR489 merged as07bcf31b5; GitHub406isCLOSED/COMPLETED at12:14:03Z.

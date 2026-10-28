@@ -44,6 +44,9 @@ test.each([
 				probeActivity: async () => activity,
 			} as never,
 		});
+	const reserved=await registry.reserve({scope:{runtimeProfileId:"fixture",managedBrowserProfile:"/fixture/chatgpt",service:"chatgpt",tenantKey:"service-account:chatgpt:account-id=fixture"},targetId:"active-chat",workload:{kind:"conversation",conversationId:"fixture"},operationId:"fixture-owned",now,idleTtlMs:300_000,absoluteTtlMs:300_000,targetFingerprint:"https://chatgpt.com/c/fixture"});
+	if (!reserved.ok) throw new Error("fixture reservation failed");
+	await registry.idle({claim:reserved.value.claim,now,effectState:"settled"});
 	await run();
 	if (state === "lost") {
 		const lease = (await registry.list())[0];
