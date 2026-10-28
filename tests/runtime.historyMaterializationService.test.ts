@@ -20,6 +20,7 @@ import {
 import {
 	classifyHistoryMaterializationEntryRecoverability,
 	createHistoryMaterializationService,
+	projectHistoryMaterializationJobForMonitoring,
 	createHistoryMaterializationTrafficOptions,
 	formatHistoryMaterializationFailureReason,
 	type HistoryAccountLibraryListInput,
@@ -106,6 +107,98 @@ describe("history materialization service", () => {
 					(attempt) => attempt.budgetBefore.assetsRemaining,
 				),
 			).toEqual([2, 1]);
+		} finally {
+			await fs.rm(home, { recursive: true, force: true });
+		}
+	});
+
+	it("retains the completed Grok materialization cursor when the next selected conversation is interrupted", async () => {
+		const home = await fs.mkdtemp(path.join(os.tmpdir(), "grok414-cursor-"));
+		setAuracallHomeDirOverrideForTest(home);
+		let scheduled: (() => Promise<void>) | undefined;
+		let observedDuringWork: unknown;
+		let recoveredDuringWork = 0;
+		let jobId = "";
+		const restarted = createHistoryMaterializationService({
+			config: {},
+			schedule: () => undefined,
+		});
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: async () => ({ ...buildReconciliationCatalog([]), entries: [] }),
+				readItem: async () => null,
+			},
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: async (target) => {
+				if (target.conversationId === "second") {
+					observedDuringWork = (await restarted.readJob(jobId))?.materializationCursor;
+					recoveredDuringWork = await restarted.recoverInterruptedJobs();
+					throw new Error("provider interrupted after completed first conversation");
+				}
+				const result = buildNoMaterializableHistoryResult(target);
+				return {
+					...result,
+					status: "materialized",
+					entries: [
+						{
+							...result.entries[1]!,
+							status: "materialized",
+							providerId: "retained-file",
+							localPath: "/fixture/retained",
+							size: 7,
+						},
+					],
+					metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+				};
+			},
+		});
+		try {
+			const created = await service.createJob({
+				provider: "grok",
+				reconcile: true,
+				conversationIds: ["first", "second", "third"],
+				assetKinds: ["files"],
+				maxItems: 3,
+			});
+			jobId = created.job.id;
+			if (!scheduled) throw new Error("Expected scheduled reconciliation");
+			await scheduled();
+			const expected = {
+				version: 1,
+				resumePolicy: "explicit_request_required",
+				budgetScope: "completed_attempts_only",
+				inFlight: { conversationId: "second", index: 1, budgetBefore: { assetsRemaining: 2 } },
+				remainingConversationIds: ["second", "third"],
+				budget: { targetLimit: 3, targetsConsumed: 1, assetsRemaining: 2 },
+				attempts: [
+					expect.objectContaining({ target: expect.objectContaining({ conversationId: "first" }) }),
+				],
+			};
+			expect(observedDuringWork).toMatchObject(expected);
+			expect((await restarted.readJob(jobId))?.materializationCursor).toMatchObject(expected);
+			expect(recoveredDuringWork).toBe(1);
+			const recovered = await restarted.readJob(jobId);
+			expect(recovered).toMatchObject({
+				status: "failed",
+				error: {
+					message:
+						"History materialization job was interrupted before this AuraCall API process started.",
+				},
+			});
+			if (!recovered) throw new Error("Expected recovered durable job");
+			expect(
+				projectHistoryMaterializationJobForMonitoring(recovered).materializationCursor,
+			).toMatchObject({
+				completedAttemptCount: 1,
+				remainingConversationCount: 2,
+				attempts: [],
+				remainingConversationIds: null,
+				inFlight: { conversationId: "second" },
+			});
+			expect(await restarted.recoverInterruptedJobs()).toBe(0);
 		} finally {
 			await fs.rm(home, { recursive: true, force: true });
 		}
