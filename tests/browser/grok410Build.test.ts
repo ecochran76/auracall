@@ -308,6 +308,25 @@ function buildFixture({
 		inputs: () => inputs,
 		selections: () => selections,
 		seedPlane,
+		setInactiveWorkspace: () => {
+			const button = new Button("", { "aria-label": "File tree" });
+			Object.assign(button, {
+				__reactFiber$fixture: {
+					memoizedProps: {},
+					return: {
+						memoizedProps: { tree: [], status: "inactive", dirStatus: new Map() },
+						return: {
+							memoizedProps: { fs: { fsKey: "conversation:conversation-generated" } },
+							return: {
+								memoizedProps: { conversationId: "conversation-generated", view: "document" },
+							},
+						},
+					},
+				},
+			});
+			button.parentElement = document;
+			document.children.push(button);
+		},
 		addNativeFile: () => {
 			const input = Object.assign(new Node("input", "", { type: "file" }), {
 				files: [{ name: "existing.txt" }],
@@ -811,6 +830,50 @@ test("export refuses an older assistant when the conversation has another worksp
 			artifacts: { status: "unavailable", entries: [] },
 			effectState: "none",
 			exportCapture: { setup: "not_attempted" },
+		});
+	} finally {
+		await fs.rm(outputDir, { recursive: true, force: true });
+	}
+});
+
+test("public inspection reports the selected native workspace inactive despite its completed assistant", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane();
+	fixture.setInactiveWorkspace();
+	const result = await fixture.service.inspect({
+		targetId: "build-target",
+		conversationId: "conversation-generated",
+	});
+	expect(result).toMatchObject({
+		status: "unavailable",
+		code: "grok_build_workspace_inactive",
+		generation: { status: "response_completed" },
+		preview: { status: "unknown" },
+		effectState: "none",
+		cleanupState: "completed",
+	});
+});
+
+test("public export refuses the current inactive workspace before capture or download dispatch", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane();
+	fixture.setInactiveWorkspace();
+	const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "grok-inactive-"));
+	await fs.chmod(outputDir, 0o700);
+	try {
+		const result = await fixture.service.export({
+			targetId: "build-target",
+			conversationId: "conversation-generated",
+			outputDir,
+			acknowledgeTargetDefaultReset: true,
+		});
+		expect(result).toMatchObject({
+			status: "unavailable",
+			code: "grok_build_workspace_inactive",
+			effectState: "none",
+			exportCapture: { setup: "not_attempted", reset: "not_needed" },
+			artifacts: { status: "unavailable", entries: [] },
+			cleanupState: "completed",
 		});
 	} finally {
 		await fs.rm(outputDir, { recursive: true, force: true });
