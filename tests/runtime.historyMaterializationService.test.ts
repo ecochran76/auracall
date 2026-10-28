@@ -41,6 +41,76 @@ import {
 } from "../src/runtime/historyMaterializationService.js";
 
 describe("history materialization service", () => {
+	it("preserves the Grok selected frontier transfer budget across conversations", async () => {
+		const home = await fs.mkdtemp(path.join(os.tmpdir(), "grok414-budget-"));
+		setAuracallHomeDirOverrideForTest(home);
+		let scheduled: (() => Promise<void>) | undefined;
+		const budgets: Array<number | null | undefined> = [];
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: async () => ({ ...buildReconciliationCatalog([]), entries: [] }),
+				readItem: async () => null,
+			},
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: async (target, request) => {
+				budgets.push(request.maxItems);
+				const result = buildNoMaterializableHistoryResult(target);
+				const entry = result.entries[1];
+				if (!entry) throw new Error("Missing fixture file entry");
+				return {
+					...result,
+					status: "materialized",
+					entries: [
+						{
+							...entry,
+							status: "materialized",
+							providerId: "observed-file",
+							localPath: "/fixture/retained",
+							size: 7,
+						},
+					],
+					metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+				};
+			},
+		});
+		try {
+			const created = await service.createJob({
+				provider: "grok",
+				runtimeProfile: "default",
+				reconcile: true,
+				conversationIds: ["observed-one", "observed-two", "observed-three"],
+				assetKinds: ["files"],
+				maxItems: 2,
+			});
+			if (!scheduled) throw new Error("Expected scheduled Grok reconciliation");
+			await scheduled();
+			expect(budgets).toEqual([2, 1]);
+			// Reading through a new service proves durable progress, independently of
+			// the first service's in-memory scheduler and provider callbacks.
+			const restarted = createHistoryMaterializationService({
+				config: {},
+				schedule: () => undefined,
+			});
+			expect((await restarted.readJob(created.job.id))?.result?.selectedFrontier).toEqual({
+				attemptedConversationIds: ["observed-one", "observed-two"],
+				unattemptedConversationIds: ["observed-three"],
+				providerHistoryComplete: false,
+				assetCoverage: "unknown",
+				budget: { targetLimit: 2, targetsConsumed: 2, assetsRemaining: 0 },
+			});
+			expect(
+				(await service.readJob(created.job.id))?.result?.attempts?.map(
+					(attempt) => attempt.budgetBefore.assetsRemaining,
+				),
+			).toEqual([2, 1]);
+		} finally {
+			await fs.rm(home, { recursive: true, force: true });
+		}
+	});
+
 	afterEach(() => {
 		setAuracallHomeDirOverrideForTest(null);
 	});
