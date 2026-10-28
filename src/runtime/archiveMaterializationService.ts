@@ -1,3 +1,4 @@
+import { verifyGrokWorkspaceArchiveItem } from './grokWorkspaceArchive.js';
 import {grokBuildArchiveProvenance,verifyGrokBuildArchiveItem} from "./grokBuildArchiveBridge.js";
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -89,8 +90,9 @@ export function createArchiveMaterializationService(
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} was not found.`, 404);
       }
       const item = detail.item;
-      if (item.provider === 'grok' && item.metadata.grokBuildArchive) {
-        const valid = Boolean(grokBuildArchiveProvenance(item)) && await verifyGrokBuildArchiveItem(item);
+      const workspaceFile = item.provider === 'grok' && Boolean(item.metadata.grokWorkspaceFile);
+      if (item.provider === 'grok' && (item.metadata.grokBuildArchive || (workspaceFile && (item.localPath || item.checksumSha256)))) {
+        const valid = workspaceFile ? await verifyGrokWorkspaceArchiveItem(item) : Boolean(grokBuildArchiveProvenance(item)) && await verifyGrokBuildArchiveItem(item);
         if (valid) {
           return {
             object: 'run_archive_item_materialization',
@@ -153,7 +155,7 @@ export function createArchiveMaterializationService(
       if (item.kind !== 'generated_artifact') {
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} is ${item.kind}; only generated_artifact materialization is supported.`);
       }
-      const existingMaterializedAsset = force ? null : await findExistingMaterializedItemAsset(item);
+      const existingMaterializedAsset = force || workspaceFile ? null : await findExistingMaterializedItemAsset(item);
       if (existingMaterializedAsset) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, existingMaterializedAsset, materializedAt);
@@ -170,7 +172,7 @@ export function createArchiveMaterializationService(
           message: 'Archive item linked to an existing materialized file in its archive directory.',
         };
       }
-      const cachedConversationAsset = force ? null : await findCachedConversationAttachmentAsset(item);
+      const cachedConversationAsset = force || workspaceFile ? null : await findCachedConversationAttachmentAsset(item);
       if (cachedConversationAsset) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, cachedConversationAsset, materializedAt);
@@ -187,7 +189,7 @@ export function createArchiveMaterializationService(
           message: 'Archive item linked to an existing provider conversation attachment cache file.',
         };
       }
-      const reusable = force ? null : await findReusableArchiveAsset(runArchiveService, item);
+      const reusable = force || workspaceFile ? null : await findReusableArchiveAsset(runArchiveService, item);
       if (reusable) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, reusable, materializedAt);

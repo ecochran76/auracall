@@ -1,3 +1,5 @@
+import { readGrokWorkspaceFile, materializeGrokWorkspaceFile } from './grokWorkspaceFile.js';
+import { projectGrokAccountReference } from '../grokAccountReference.js';
 import { boundObservedGrokContext } from './grokContext.js';
 import { withCdpCommandAbortSignal } from "../../../packages/browser-service/src/guardedCdp.js";
 import { collectGrokHistoryInventory, buildGrokHistoryPageExpression, buildGrokChatsOpenerExpression, type GrokHistoryPage } from "./grokHistoryInventory.js";
@@ -7,7 +9,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { hasProviderBackendRequestAdmission } from '../../../packages/browser-service/src/service/providerTrafficGovernor.js';
 import CDP from '../cdp.js';
-import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
+import type { Project, Conversation, ConversationContext, FileRef, ConversationArtifact } from './domain.js';
 import type {
   BrowserProvider,
   BrowserProviderListOptions,
@@ -3366,6 +3368,35 @@ async function readGrokDiscoveryWithAdmission<T>(
   return value;
 }
 
+async function withGrokWorkspaceConnection<T>(
+ options: BrowserProviderListOptions | undefined,
+ targetId: string | undefined,
+ work: (runtime: ChromeClient['Runtime'], scope: {targetId:string;providerAccountRef:string;verifyPrincipal:()=>Promise<boolean>})=>Promise<T>,
+):Promise<T>{
+ if(!targetId)throw new Error('Grok workspace reads require the exact existing browser target.');
+ options?.abortSignal?.throwIfAborted();
+ const connection=await connectToGrokTab({...options,tabTargetId:targetId,allowNavigation:false,providerTrafficRequired:true});
+ let action: Awaited<ReturnType<NonNullable<ReturnType<typeof resolveProviderTrafficGovernor>>['begin']>>|undefined;
+ let failure:unknown;
+ try{
+  const governor=resolveProviderTrafficGovernor(connection.client);
+  if(!governor||governor.attribution.provider!=='grok'||governor.attribution.targetId!==targetId)throw new Error('Grok workspace read requires exact provider traffic authority.');
+  await governor.checkWarning?.(connection.client.Runtime);
+  action=await governor.begin({kind:'provider-read',interactionClass:'generic',source:'provider:grok:workspace-file-read',targetId,abortSignal:options?.abortSignal});
+  const before=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
+  const providerAccountRef=projectGrokAccountReference(before.actualIdentity);
+  if(!providerAccountRef)throw new Error('Grok workspace account identity is unqualified.');
+  return await work(connection.client.Runtime,{targetId,providerAccountRef,verifyPrincipal:async()=>{
+   options?.abortSignal?.throwIfAborted();
+   const after=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
+   return projectGrokAccountReference(after.actualIdentity)===providerAccountRef;
+  }});
+ }catch(error){failure=error;throw error;}finally{
+  try{await action?.settle({outcome:failure?'failed':'succeeded',probeContext:connection.client.Runtime,...(failure?{error:failure instanceof Error?failure.message:'Grok workspace read failed'}:{})});}
+  finally{await connection.client.close();}
+ }
+}
+
 export function createGrokAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
@@ -3403,6 +3434,8 @@ export function createGrokAdapter(): Pick<
   | 'getProjectInstructions'
   | 'readConversationContext'
   | 'listConversationFiles'
+  | 'readActiveConversationArtifacts'
+  | 'materializeConversationArtifact'
   | 'listAccountFiles'
   | 'uploadAccountFiles'
   | 'deleteAccountFile'
@@ -5770,6 +5803,22 @@ export function createGrokAdapter(): Pick<
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
       }
+    },
+
+    async readActiveConversationArtifacts(conversationId:string,options?:BrowserProviderListOptions):Promise<ConversationArtifact[]>{
+      return withGrokWorkspaceConnection(options,options?.tabTargetId,async(runtime,scope)=>{
+        const observed=await readGrokWorkspaceFile(runtime,conversationId);
+        if(!await scope.verifyPrincipal())throw new Error('Grok workspace account changed during discovery.');
+        return [{id:observed.filePath,title:observed.fileName,kind:'generated',metadata:{grokWorkspaceFile:{version:1,...observed,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,identityKind:'native-file-path',coverage:{scope:'selected-workspace-file',complete:false}}}}];
+      });
+    },
+    async materializeConversationArtifact(conversationId:string,artifact:ConversationArtifact,destDir:string,_projectId?:string,options?:BrowserProviderListOptions):Promise<FileRef|null>{
+      const selected=artifact.metadata?.grokWorkspaceFile as {targetId?:string;providerAccountRef?:string}|undefined;
+      if(!selected)throw new Error('Grok artifact lacks a qualified native workspace selection.');
+      return withGrokWorkspaceConnection(options,options?.tabTargetId??selected.targetId,async(runtime,scope)=>{
+        if(selected.providerAccountRef!==scope.providerAccountRef)throw new Error('Grok artifact belongs to another provider account.');
+        return materializeGrokWorkspaceFile(runtime,{conversationId,artifact,destDir,...scope});
+      });
     },
 
     async listConversationFiles(
