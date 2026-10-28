@@ -1374,6 +1374,18 @@ preserved. The exact retained target must already display the selected Bot.
 Saved readback reopens that same Bot's Settings after Save. No Bot invocation,
 Connector grant, deletion, or publication is included in lifecycle configuration.
 
+`resources` takes the same exact selector, target and account fields as `inspect`.
+It opens only that Bot's Settings and observes Connector/tool, Skill and knowledge
+configuration controls. Results explicitly scope observations to
+`resources.scope: "exact-bot-settings"`: missing controls are `unavailable` on
+that editor; a resource section/control whose persistent semantics are unqualified
+is `unknown`. This does not prove provider-wide absence or account gating.
+`choices` and `granted` remain `null` until exact persistent identities can be
+qualified. A global Plugins catalog, a listed service or a conversation attachment
+is never reported as a saved Bot grant/source. Wrong Bot/account or ambiguous
+Settings remains unknown. No resource grant or configuration write is supported;
+those acceptance gates stay open.
+
 Mutations return an `operationId` and keep a private account-bound intent journal.
 Repeat calls observe the original target instead of dispatching again, including
 across process or runtime-profile changes. For an uncertain outcome use
