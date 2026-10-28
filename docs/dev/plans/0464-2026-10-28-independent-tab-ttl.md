@@ -82,3 +82,23 @@ Raw harness predicate demanded immediate closedCount1 and returned false; the
 separate reconciled receipt qualifies actual target absence/audit/release without
 rewriting raw evidence. AuraCall490 closed from this qualified candidate;491 still
 blocked on Agent Browser490. No broad review has run.
+
+## Reboot continuation reconciliation
+
+On the operator's continuation, the host boot changed and the selected AuraCall
+wrapper had been replaced by an older mode-capture diagnostic runtime. Its five
+ownership modules exactly matched the pre-fix runtime. Prepared a separate
+composite prefix preserving every other installed package file and replacing only
+those five source-qualified modules. This is a component-qualified hotfix, not a
+claim that the entire mode-capture runtime derives from one source revision.
+Read-only version/import checks passed. Quiescent API activation restored the
+ownership fix while retaining mode-capture diagnostics and unchanged23paused
+completion metrics. Current browser identities were refreshed; no old PID/port
+was reused. Source/candidate acceptance remains recorded separately from this
+post-reboot selected-runtime reconciliation.
+
+Agent Browser worker recovered the exact abandoned sealed-build claim after
+proving its pre-reboot owner gone. Interrupted receipts remain preserved. Source
+83888301 has396model tests and exact real-effects red/green evidence; native
+host and sealed production-shaped gates remain pending. No new build was started
+blindly and no unrelated runtime was restarted.
