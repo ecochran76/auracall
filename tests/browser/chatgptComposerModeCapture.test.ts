@@ -30,9 +30,9 @@ test("mode failure retains a private bounded control receipt without page conten
 					},
 				},
 			});
-		await expect(ensureChatgptComposerMode({ evaluate } as never, "chat", vi.fn())).rejects.toThrow(
-			"Unable to find the ChatGPT Chat mode control.",
-		);
+		await expect(
+			ensureChatgptComposerMode({ evaluate } as never, "chat", vi.fn<(message: string) => void>()),
+		).rejects.toThrow("Unable to find the ChatGPT Chat mode control.");
 		const directory = path.join(home, "diagnostics", "composer-mode");
 		const names = await fs.readdir(directory);
 		expect(names).toHaveLength(1);
