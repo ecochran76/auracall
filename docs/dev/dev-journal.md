@@ -7,8 +7,9 @@ one exact draft, empty recipients and revision1→2, with no Send. The read stag
 also performed a web search, recorded explicitly instead of accepting assistant
 claims. Public native trace, no-replay custody, later-response binding and Ops
 persistence are implemented.409 has no native Bot resource controls;411 current
-workspace is inactive;414 referenced bytes remain unqualified. All tracker states
-remain OPEN pending the appropriate full acceptance/main gates. See the batch
+workspace is inactive;414 referenced bytes remain unqualified. DraftPR489 is published;406 and the remaining409/411/414 stayOPEN pending
+their distinct review/main or native-capability gates. Graphiti disposition is
+forbidden:no memory write requested; a private non-write receipt is retained. See the batch
 note for private evidence hash, failures, tests and review status.
 
 ## 2026-10-27 — Parallel source integration and one review/remediation round

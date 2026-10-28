@@ -59,3 +59,17 @@ at that checkpoint. Final root focused selection passed225tests/12files in45.08s
 typecheck, scoped lint and diff checks passed. The single consolidated review
 is pending the requested fixed-baseline choice. No review/remediation round has
 been consumed for this phase.
+
+## Published checkpoint
+
+Draft PR:https://github.com/ecochran76/auracall/pull/489. Source791f857b7 is
+pushed and mergeable against main4a3d63d18; review is pending the requested
+baseline choice. Frozen source read-only reconciliation returned the same
+original draft operation and response with zero new submissions/tool calls.
+Private proof SHA256:c003371c4f98214951832675369178cfe1fe020cd01f5243da91deb29d76ea86.
+225focused tests,7public-surface tests, typecheck and scoped lint passed.
+Tracker406 checkpoint is issuecomment6461306532; it and parent398 remainOPEN.
+
+Graphiti memory disposition:`forbidden`:no user request authorizes a memory
+write. Non-write receipt retained privately as
+`oauth-resume-20261026/graphiti-closeout-20261028.json`; zero Graphiti writes.

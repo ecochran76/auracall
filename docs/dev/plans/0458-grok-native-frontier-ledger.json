@@ -480,8 +480,14 @@
       "base": "4a3d63d1845e97b8f5d954b6b555919141cf93ad",
       "broadReviews": 0,
       "postReviewTddPasses": 0,
-      "state": "native406 journey validated; final source validation, fixed review baseline and main integration pending",
-      "historicalCountersPreserved": true
+      "state": "published-draft-pr489; user review-baseline choice pending",
+      "historicalCountersPreserved": true,
+      "pr": "https://github.com/ecochran76/auracall/pull/489",
+      "validatedSourceHead": "791f857b7645f7cfed56181cc9f10f2c66feb0e4",
+      "finalFocusedTests": 225,
+      "publicSurfaceTests": 7,
+      "sourceChecks": "PASS typecheck/scoped lint; no installed adoption",
+      "memoryDisposition": "forbidden; no user request for a memory write"
     }
   },
   "executionControl": {
