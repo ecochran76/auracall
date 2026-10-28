@@ -5,7 +5,7 @@ import { getAuracallHomeDir } from "../auracallHome.js";
 import type { GrokConnectorStatus } from "./providers/grokConnectors.js";
 import type { GrokConnectorInstallationOutcome } from "./providers/grokConnectorInstallation.js";
 export interface GrokConnectorProgress {
-	status: GrokConnectorStatus | GrokConnectorInstallationOutcome["status"];
+	status: GrokConnectorStatus | GrokConnectorInstallationOutcome["status"] | "blocked";
 	code: string;
 	scope: string;
 	complete: boolean;
@@ -19,19 +19,23 @@ export interface GrokConnectorProgress {
 	effectDispatched?: boolean;
 	retrySafe?: boolean;
 	observedAt: string;
+	invocation?: Pick<
+		GrokConnectorProgress,
+		"status" | "code" | "effectDispatched" | "retrySafe" | "observedAt"
+	>;
 	installation?: Pick<
 		GrokConnectorProgress,
 		"status" | "code" | "effectDispatched" | "retrySafe" | "observedAt"
 	>;
 }
-function destination(profile: string, installation = false) {
+function destination(profile: string, installation = false, invocation = false) {
 	return path.join(
 		getAuracallHomeDir(),
 		"cache",
 		"providers",
 		"grok",
 		"__runtime__",
-		`${installation ? "connector-installation" : "connectors"}-progress-${createHash("sha256").update(profile).digest("hex")}.json`,
+		`${invocation ? "connector-invocation" : installation ? "connector-installation" : "connectors"}-progress-${createHash("sha256").update(profile).digest("hex")}.json`,
 	);
 }
 function sanitize(
@@ -40,6 +44,7 @@ function sanitize(
 	const count = (n: number | null) => (Number.isSafeInteger(n) && Number(n) >= 0 ? n : null);
 	return {
 		status: [
+			"blocked",
 			"complete",
 			"incomplete",
 			"account-gated",
@@ -55,11 +60,13 @@ function sanitize(
 			: "failed",
 		code: /^[a-z_]{1,100}$/.test(value.code) ? value.code : "grok_connector_discovery_failed",
 		scope:
-			value.scope === "installation"
-				? "installation"
-				: value.scope === "detail"
-					? "detail"
-					: "visible",
+			value.scope === "invocation"
+				? "invocation"
+				: value.scope === "installation"
+					? "installation"
+					: value.scope === "detail"
+						? "detail"
+						: "visible",
 		effectDispatched: value.effectDispatched === true,
 		retrySafe: value.retrySafe === true,
 		complete: value.complete === true,
@@ -84,7 +91,7 @@ export async function recordGrokConnectorProgress(
 	profile: string,
 	value: Omit<GrokConnectorProgress, "observedAt">,
 ) {
-	const file = destination(profile, value.scope === "installation"),
+	const file = destination(profile, value.scope === "installation", value.scope === "invocation"),
 		temporary = `${file}.${randomUUID()}.tmp`;
 	await fs.mkdir(path.dirname(file), { recursive: true });
 	try {
@@ -97,26 +104,36 @@ export async function recordGrokConnectorProgress(
 export async function readGrokConnectorProgress(
 	profile: string,
 ): Promise<GrokConnectorProgress | undefined> {
-	async function read(installation: boolean): Promise<GrokConnectorProgress | undefined> {
+	async function read(
+		installation: boolean,
+		invocation = false,
+	): Promise<GrokConnectorProgress | undefined> {
 		try {
-			return sanitize(JSON.parse(await fs.readFile(destination(profile, installation), "utf8")));
+			return sanitize(
+				JSON.parse(await fs.readFile(destination(profile, installation, invocation), "utf8")),
+			);
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
 			throw error;
 		}
 	}
-	const [inventory, installation] = await Promise.all([read(false), read(true)]);
-	const current = inventory ?? installation;
+	const [inventory, installation, invocation] = await Promise.all([
+		read(false),
+		read(true),
+		read(false, true),
+	]);
+	const current = inventory ?? installation ?? invocation;
 	if (!current) return undefined;
-	if (!installation) return current;
+	const custody = (value: GrokConnectorProgress) => ({
+		status: value.status,
+		code: value.code,
+		effectDispatched: value.effectDispatched,
+		retrySafe: value.retrySafe,
+		observedAt: value.observedAt,
+	});
 	return {
 		...current,
-		installation: {
-			status: installation.status,
-			code: installation.code,
-			effectDispatched: installation.effectDispatched,
-			retrySafe: installation.retrySafe,
-			observedAt: installation.observedAt,
-		},
+		...(installation ? { installation: custody(installation) } : {}),
+		...(invocation ? { invocation: custody(invocation) } : {}),
 	};
 }

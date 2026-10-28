@@ -1,3 +1,4 @@
+import type { GrokConnectorInvocationResult } from "../browser/grokConnectorInvocationService.js";
 import { z } from "zod";
 import type { GrokConnectorInstallationResult } from "../browser/grokConnectorInstallationService.js";
 import { validateGrokConnectorInstallationInput } from "../browser/providers/grokConnectorInstallation.js";
@@ -44,6 +45,23 @@ export const GrokConnectorInstallationInputSchema = z
 export const GrokConnectorsRequestSchema = z.discriminatedUnion("action", [
 	z
 		.object({
+			action: z.literal("invoke"),
+			targetId: z.string().regex(/^[A-Za-z0-9-]{1,512}$/),
+			selector: z
+				.object({
+					id: z.string().min(1).max(200),
+					name: z.string().min(1).max(200),
+					endpoint: z.string().url().max(4096),
+				})
+				.strict(),
+			prompt: z.string().trim().min(1).max(100000),
+			expectedProviderAccountRef: z.string().regex(/^[a-f0-9]{64}$/),
+			confirm: z.literal(true),
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
 			action: z.literal("list"),
 			query: z.string().max(200).optional(),
 			runtimeProfile: z.string().min(1).max(200).optional(),
@@ -85,7 +103,8 @@ export type GrokConnectorsRequest = z.infer<typeof GrokConnectorsRequestSchema>;
 export type GrokConnectorsResult =
 	| GrokConnectorInventory
 	| GrokConnectorDetail
-	| GrokConnectorInstallationResult;
+	| GrokConnectorInstallationResult
+	| GrokConnectorInvocationResult;
 export type GrokConnectorsServiceResolver = (
 	request: GrokConnectorsRequest,
 ) => Promise<GrokConnectorsService> | GrokConnectorsService;
@@ -99,6 +118,10 @@ export async function runGrokConnectorsCommand(
 		const request = GrokConnectorsRequestSchema.parse(input);
 		if (request.action === "list") return await service.list(request.query);
 		if (request.action === "inspect") return await service.inspect(request.selector);
+		if (request.action === "invoke") {
+			if (!service.invoke) throw new Error("grok_connector_invocation_service_unavailable");
+			return await service.invoke(request);
+		}
 		const operation = service[request.action];
 		if (!operation) throw new Error("grok_connector_install_service_unavailable");
 		return await operation(request);
@@ -121,7 +144,12 @@ export function summarizeGrokConnectorDiagnostics(result: GrokConnectorsResult) 
 		status: result.status,
 		code: result.code,
 		hasProviderAccountIdentity: result.providerAccountRef !== null,
-		scope: "coverage" in result ? result.coverage.scope : "installation",
+		scope:
+			"coverage" in result
+				? result.coverage.scope
+				: "toolTrace" in result
+					? "invocation"
+					: "installation",
 		complete: "coverage" in result ? result.coverage.complete : result.status === "completed",
 		installed: "installed" in result ? result.installed.length : null,
 		catalog: "catalog" in result ? result.catalog.length : null,
@@ -129,7 +157,10 @@ export function summarizeGrokConnectorDiagnostics(result: GrokConnectorsResult) 
 		auth: "auth" in result ? result.auth : null,
 		hasEndpointIdentity: "endpointRef" in result ? result.endpointRef !== null : false,
 		hasAccountIdentity: "accountRef" in result ? result.accountRef !== null : false,
-		effectDispatched: "effectDispatched" in result ? result.effectDispatched : false,
+		effectDispatched:
+			"effectDispatched" in result
+				? result.effectDispatched
+				: "effectState" in result && result.effectState === "unknown",
 		retrySafe: "retrySafe" in result ? result.retrySafe : true,
 	};
 }

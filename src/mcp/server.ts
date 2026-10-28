@@ -157,7 +157,7 @@ export async function startMcpServer(): Promise<void> {
   );
 
   registerGrokConversationsTool(server,request=>createConfiguredGrokConversationsService(services.resolvedUserConfig,request.runtimeProfile));
-  registerGrokConnectorsTool(server, request => createConfiguredGrokConnectorsService(services.resolvedUserConfig,request.runtimeProfile));
+  registerGrokConnectorsTool(server, request => createConfiguredGrokConnectorsService(services.resolvedUserConfig,request.runtimeProfile,undefined,request.action==='invoke'?request.targetId:undefined));
   registerGrokFilesTool(server,request=>createConfiguredGrokFilesService(services.resolvedUserConfig,request.runtimeProfile));
   registerGrokBotsTool(server,request=>createConfiguredGrokBotsService(services.resolvedUserConfig,request.runtimeProfile));
   registerGrokBuildTool(server,request=>createConfiguredGrokBuildService(services.resolvedUserConfig,request.runtimeProfile));

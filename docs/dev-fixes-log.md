@@ -26385,3 +26385,25 @@ close confirmation and ownership fences. A two-tab public-maintenance regression
 was red (both tabs retained), then green (only the inactive expired tab closes).
 Other browser runtimes have their own cleanup authority; their tabs are not
 included merely because they share the desktop. Plan0463 tracks native acceptance.
+
+## 2026-10-28 — Preserve materialization progress and current Build readiness
+
+Materialization now checkpoints completed receipts, remaining budgets and the
+in-flight attempt before provider work; interruption preserves unknown custody
+without replay. MCP retains the durable cursor while monitoring uses a bounded
+projection. Native Build overflow visibility was historical `everReady`; the
+exact current Files owner was `inactive`. Inspect/export now respect that
+current state instead of implying a usable snapshot or revision. Bot Settings
+inspection similarly distinguishes global Plugins from absent persistent grants.
+
+## 2026-10-28 — Fence Connector invocation and read native tool evidence
+
+A durable exact-intent fence precedes through-Grok submit; restart observes the
+retained target without replay. Native committed tool cards, not assistant prose,
+supply tool arguments/results and reveal additional tool activity. Reconciliation
+rejects later response substitution and preserves operation custody across
+transport cleanup/open failures. Ops stores invocation custody separately from
+inventory. Reuse the already resolved exact-target authority instead of resolving
+it twice; classify the empty contenteditable newline as an empty draft while
+preserving meaningful existing text. The native offline canary verified revision
+protected edit and exact readback without Send.

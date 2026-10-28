@@ -3884,3 +3884,26 @@ acceptance remain separate receipts.
   Real configured maintenance with the public registry proves an active/unknown
   expired lost tab remains open while a separate inactive expired tab closes.
   Existing ownership, endpoint, audit and active-response controls remain covered.
+
+### Grok invocation, inactive Build state and materialization restart
+
+`grok-connectors --action invoke --target-id <retained-target> --id <observed-id>
+--name <exact-name> --endpoint <exact-https-mcp-url> --expected-provider-account
+<typed-account-reference> --prompt <exact-prompt> --yes` submits through Grok
+once after exact account, endpoint and enabled native composer-row checks.
+CLI, HTTP and `grok_connectors` use the same invocation request. It does not
+enable disabled Connectors or substitute another service. The private durable
+intent fence is written before submit; repeating an uncertain request observes
+its retained target without another submission. Assistant text is returned as
+unconfirmed until native tool/result attribution is qualified. Sending mail is
+a distinct effect and is not part of the acceptance read/draft canary.
+
+Exact current Files state `inactive` makes Build inspection unavailable and
+blocks export before capture/control activation. Historical overflow visibility
+is not current workspace readiness; no automatic revival occurs.
+
+Grok history materialization persists completed attempt receipts, remaining
+budgets and an in-flight checkpoint before provider work. Restart retains
+completed progress and unknown in-flight custody; an explicit new request is
+required and unknown work is never automatically replayed. Monitoring exposes
+a bounded cursor summary; full receipts remain on the job/MCP result.

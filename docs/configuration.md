@@ -1288,6 +1288,21 @@ without endpoint, target or account details. Built-in catalog installation remai
 stable identity are observed. The current source path does not prove saved
 entity/account/grants or satisfy ticket #405's installed/live acceptance gate.
 
+Grok Connector invocation is a separate explicit `action: "invoke"` on the same
+CLI, HTTP and MCP operation. Supply `targetId`, an exact `selector` containing
+`id`, `name` and `endpoint`, `prompt`, `expectedProviderAccountRef` and
+`confirm: true`. CLI uses `--target-id`, `--id`, `--name`, `--endpoint`,
+`--prompt`, `--expected-provider-account` and `--yes`. The selected enabled
+native composer row must match the current committed provider ID; AuraCall
+never toggles unrelated or disabled Connectors to satisfy selection. Existing
+composer drafts are preserved. A private durable intent fence precedes submit;
+repeating that exact request only observes its retained target. Assistant text
+alone returns `unconfirmed` with `toolTrace: null` and `retrySafe: false`,
+because it cannot establish that the selected Connector executed a tool. Native
+settled MCP cards populate `toolTrace` with actual arguments/results for the
+current retained response; additional tool activity is explicit. Business custody
+remains unconfirmed until the journey evidence is independently validated.
+
 Grok Chats inventory has a structured read path: `auracall grok-conversations
 --limit 100 --max-pages 20 --json`, MCP `grok_conversations`, and operator-authorized
 POST `/v1/grok/conversations/query`. Request fields: `runtimeProfile`, `projectId`,

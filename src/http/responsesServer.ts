@@ -3928,12 +3928,12 @@ export async function createResponsesHttpServer(
                 let request: import("../cli/grokConnectorsCommand.js").GrokConnectorsRequest;
                 try {request=GrokConnectorsRequestSchema.parse(JSON.parse((await readRequestBody(req))||"{}"));}
                 catch {sendJson(res,400,{error:{message:"Invalid Grok Connector discovery request.",type:"invalid_request_error"}});return;}
-                const configuredResolver=deps.grokConnectorsServiceResolver ?? (resolvedUserConfig ? (request: import("../cli/grokConnectorsCommand.js").GrokConnectorsRequest)=>createConfiguredGrokConnectorsService(resolvedUserConfig,request.runtimeProfile) : undefined);
+                const configuredResolver=deps.grokConnectorsServiceResolver ?? (resolvedUserConfig ? (request: import("../cli/grokConnectorsCommand.js").GrokConnectorsRequest)=>createConfiguredGrokConnectorsService(resolvedUserConfig,request.runtimeProfile,undefined,request.action==='invoke'?request.targetId:undefined) : undefined);
                 if(!configuredResolver){sendJson(res,503,{error:{message:"Grok discovery requires configured runtime authority.",type:"configuration_error"}});return;}
                 const finish=beginForegroundAuraCallWork();
                 const cancellation=new AbortController();const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once("close",onClose);
                 try {
-                    const service=deps.grokConnectorsServiceResolver ? await configuredResolver(request) : await createConfiguredGrokConnectorsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    const service=deps.grokConnectorsServiceResolver ? await configuredResolver(request) : await createConfiguredGrokConnectorsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal,request.action==='invoke'?request.targetId:undefined);
                     sendJson(res,200,await runGrokConnectorsCommand(request,service));return;
                 } catch {sendJson(res,200,grokConnectorsFailureResult());return;} finally {res.removeListener("close",onClose);finish();}
             }

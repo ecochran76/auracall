@@ -42,10 +42,15 @@ export function registerGrokConnectorsTool(
 		{
 			title: "Manage Grok Connectors",
 			description:
-				"List/inspect Grok Connectors, explicitly install an exact custom MCP endpoint, or reconcile its retained target. Install requires confirm=true and exact provider account hash. OAuth/consent remains human; never automatically retries an uncertain install.",
+				"List/inspect Grok Connectors, explicitly install an exact custom MCP endpoint, reconcile its retained target, or invoke through an exact enabled Connector in a retained composer. Install/invoke require confirm=true and exact provider account hash. Invocation has a durable no-replay fence and remains unconfirmed without native tool/result attribution. OAuth/consent remains human; never automatically retries an uncertain install.",
 			inputSchema: {
-				action: z.enum(["list", "inspect", "install", "reconcile"]),
+				action: z.enum(["list", "inspect", "install", "reconcile", "invoke"]),
 				input: GrokConnectorInstallationInputSchema.optional(),
+				targetId: z
+					.string()
+					.regex(/^[A-Za-z0-9-]{1,512}$/)
+					.optional(),
+				prompt: z.string().min(1).max(100000).optional(),
 				expectedProviderAccountRef: z
 					.string()
 					.regex(/^[a-f0-9]{64}$/)

@@ -1,3 +1,16 @@
+## 2026-10-28 — Native406 journey verified; integration and review pending
+
+Root406 and independent409/411/414 source work are integrated from main4a3d63d18.
+One actual through-Grok accounts call and one retained offline draft journey are
+verified from native tool cards. Draft create/read/CAS-edit/readback retained
+one exact draft, empty recipients and revision1→2, with no Send. The read stage
+also performed a web search, recorded explicitly instead of accepting assistant
+claims. Public native trace, no-replay custody, later-response binding and Ops
+persistence are implemented.409 has no native Bot resource controls;411 current
+workspace is inactive;414 referenced bytes remain unqualified. All tracker states
+remain OPEN pending the appropriate full acceptance/main gates. See the batch
+note for private evidence hash, failures, tests and review status.
+
 ## 2026-10-27 — Parallel source integration and one review/remediation round
 
 Root Connector title/search identity repairs, independent409resource observation

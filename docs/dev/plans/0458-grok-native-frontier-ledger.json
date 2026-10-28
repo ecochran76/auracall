@@ -2,8 +2,8 @@
   "version": 1,
   "state": "OPEN",
   "plan": "0458-2026-10-25-grok-native-frontier.md",
-  "integrationBranch": "feat/grok406-invocation-20261027",
-  "integrationBase": "d107e13cef6a83b76f63de9b3f268366be936a6b",
+  "integrationBranch": "feat/grok406-spec-20261028",
+  "integrationBase": "4a3d63d1845e97b8f5d954b6b555919141cf93ad",
   "parent": 398,
   "parentMutationAuthorized": false,
   "scopeTickets": [
@@ -22,14 +22,14 @@
     408,
     410
   ],
-  "primaryTicket": 405,
+  "primaryTicket": 406,
   "workers": {
     "403": "feat/grok403-native-20261025",
     "408": "feat/grok-408-native-20261025",
     "410": "feat/grok410-native-20261025",
-    "409": "feat/grok409-resources-20261027",
-    "414": "feat/grok414-files-20261027",
-    "411": "feat/grok411-publish-20261027"
+    "409": "feat/grok409-spec-20261028",
+    "414": "feat/grok414-spec-20261028",
+    "411": "feat/grok411-spec-20261028"
   },
   "nodes": {
     "399": {
@@ -161,9 +161,17 @@
         402,
         405
       ],
-      "state": "implementing-exact-composer-selection",
+      "state": "native-journey-validated-pending-review-main",
       "scope": "original-program",
-      "gate": "Exact-root public metadata now yields original Connector ID; composer selection and actual through-Grok read/offline-draft qualification remain open."
+      "gate": "Exact-root public metadata now yields original Connector ID; composer selection and actual through-Grok read/offline-draft qualification remain open.",
+      "nativeValidation": {
+        "note": "../notes/2026-10-28-grok-ticket-implementation.md",
+        "sha256": "ab9e751847dfe46f7f9cb09668cc96ca7a4d94fd487a89e32b23b9faba3527df",
+        "sourcePublicLive": true,
+        "installedAdoption": false,
+        "draftRetained": true,
+        "sendCalls": 0
+      }
     },
     "407": {
       "title": "Grok: Discover and invoke existing Grok Bots",
@@ -466,6 +474,14 @@
       "acceptedFinding": "S1 P2 guarded-attempt accounting; repaired by public-seam RED/GREEN",
       "finalFocusedTests": 208,
       "sourceChecks": "PASS; full typecheck and scoped lint; no installed adoption"
+    },
+    "implementationBatch20261028": {
+      "authority": "User requested implement-spec using TDD, root one ticket and independent worker per other unblocked ticket, one consolidated review and findings remediation",
+      "base": "4a3d63d1845e97b8f5d954b6b555919141cf93ad",
+      "broadReviews": 0,
+      "postReviewTddPasses": 0,
+      "state": "native406 journey validated; final source validation, fixed review baseline and main integration pending",
+      "historicalCountersPreserved": true
     }
   },
   "executionControl": {
@@ -481,7 +497,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "403/408/410 CLOSED;5original scopedtickets OPEN plus477preservedfollowup; checkpointreview1/TDD1; S1responsebindingrepair;409/414assigned.",
+  "lastCheckpoint": "2026-10-28 native406 actual read plus offline CAS draft journey verified;409/411/414 remain native-capability gated",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",

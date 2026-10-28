@@ -1,3 +1,10 @@
+import path from "node:path";
+import { getAuracallHomeDir } from "../auracallHome.js";
+import {
+	createGrokConnectorInvocationService,
+	type GrokConnectorInvocationRequest,
+} from "./grokConnectorInvocationService.js";
+import { openGrokConnectorInvocationBrowser } from "./grokConnectorInvocationBrowser.js";
 import { grokBotsFailureResult, summarizeGrokBotDiagnostics } from "../cli/grokBotsCommand.js";
 import {
 	grokConnectorsFailureResult,
@@ -48,9 +55,28 @@ export async function createConfiguredGrokConnectorsService(
 	config: ResolvedUserConfig,
 	runtimeProfile?: string,
 	abortSignal?: AbortSignal,
+	targetId?: string,
 ) {
-	const options = await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal);
+	const options = await resolveGrokReadSessionOptions(
+		config,
+		runtimeProfile,
+		abortSignal,
+		targetId ? { ensurePort: false, tabTargetId: targetId } : {},
+	);
 	const service = createGrokConnectorsService(options);
+	const invocation = createGrokConnectorInvocationService({
+		directory: path.join(getAuracallHomeDir(), "private", "grok", "connector-invocations"),
+		open: async (request) =>
+			openGrokConnectorInvocationBrowser(
+				targetId === request.targetId
+					? options
+					: await resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal, {
+							ensurePort: false,
+							tabTargetId: request.targetId,
+						}),
+				request,
+			),
+	});
 	const installation = createGrokConnectorInstallationService(options, {
 		resolveReconciliationOptions: (targetId) =>
 			resolveGrokReadSessionOptions(config, runtimeProfile, abortSignal, {
@@ -67,7 +93,8 @@ export async function createConfiguredGrokConnectorsService(
 		T extends
 			| Awaited<ReturnType<typeof service.list>>
 			| Awaited<ReturnType<typeof service.inspect>>
-			| Awaited<ReturnType<typeof installation.install>>,
+			| Awaited<ReturnType<typeof installation.install>>
+			| Awaited<ReturnType<typeof invocation.invoke>>,
 	>(action: () => Promise<T>): Promise<T> {
 		try {
 			const result = await action();
@@ -90,6 +117,8 @@ export async function createConfiguredGrokConnectorsService(
 		}
 	}
 	return {
+		invoke: (request: GrokConnectorInvocationRequest) =>
+			read(() => invocation.invoke({ ...request, runtimeProfile: profile })),
 		list: (query?: string) => read(() => service.list(query)),
 		inspect: (selector: Parameters<typeof service.inspect>[0]) =>
 			read(() => service.inspect(selector)),
