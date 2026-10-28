@@ -156,12 +156,12 @@
     "406": {
       "title": "Grok: Invoke Connectors and qualify Mail Receipts through Grok",
       "url": "https://github.com/ecochran76/auracall/issues/406",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [
         402,
         405
       ],
-      "state": "native-journey-and-review-remediation-validated-pending-main",
+      "state": "validated-main-integrated",
       "scope": "original-program",
       "gate": "Exact-root public metadata now yields original Connector ID; composer selection and actual through-Grok read/offline-draft qualification remain open.",
       "nativeValidation": {
@@ -171,7 +171,10 @@
         "installedAdoption": false,
         "draftRetained": true,
         "sendCalls": 0
-      }
+      },
+      "closedAt": "2026-10-28T12:14:03Z",
+      "integrationCommit": "07bcf31b5faa89fe8b387bc95d744afc302dbc05",
+      "integrationPR": "https://github.com/ecochran76/auracall/pull/489"
     },
     "407": {
       "title": "Grok: Discover and invoke existing Grok Bots",
@@ -480,7 +483,7 @@
       "base": "4a3d63d1845e97b8f5d954b6b555919141cf93ad",
       "broadReviews": 1,
       "postReviewTddPasses": 1,
-      "state": "closed-world verified; merge ready",
+      "state": "complete: PR489 merged and406closed;409/411/414 remain native-gated",
       "historicalCountersPreserved": true,
       "pr": "https://github.com/ecochran76/auracall/pull/489",
       "validatedSourceHead": "a3f670bd2c02033afa5e7caf515d45354834a3a3",
@@ -500,7 +503,10 @@
       "closedWorldOnly": true,
       "originalImplementationFocusedTests": 225,
       "closedWorldVerification": "PASS Standards/Spec at a3f670bd2; Spec independent9checks",
-      "postReviewNativeReadOnlyProof": "5b4c7335a8ff94bd0740bcaf18a928101a42cf8f5a56ece02d632d13788a13ba"
+      "postReviewNativeReadOnlyProof": "5b4c7335a8ff94bd0740bcaf18a928101a42cf8f5a56ece02d632d13788a13ba",
+      "mainMergeCommit": "07bcf31b5faa89fe8b387bc95d744afc302dbc05",
+      "closedTicket": 406,
+      "closedAt": "2026-10-28T12:14:03Z"
     }
   },
   "executionControl": {
@@ -516,7 +522,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "2026-10-28 native406 actual read plus offline CAS draft journey verified;409/411/414 remain native-capability gated",
+  "lastCheckpoint": "2026-10-28 PR489 merged07bcf31b5;406CLOSED/COMPLETED with six criteria checked;409/411/414 remain OPEN; parent398 untouched",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",

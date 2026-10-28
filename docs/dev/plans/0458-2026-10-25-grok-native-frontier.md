@@ -10,6 +10,19 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## Current State
 
+### 2026-10-28 main checkpoint
+
+PR489 merged07bcf31b5. Scoped403/405/406/408/410 areCLOSED;409/411/414 remainOPEN.
+406 native account read and retained offline create/read/CAS-edit/readback are
+verified; no Send occurred. One review and one findings-TDD phase repaired three
+uniqueP2defects;268focused tests and typecheck pass. See the
+[review and closure report](../notes/2026-10-28-grok489-review.md).
+409 lacks native persistent resource controls;411 workspace is inactive;
+414 referenced-file bytes lack a qualified active native filesystem protocol.
+Parent398 and the separate477native-capability gate remain open and untouched.
+
+### Initial registration (historical)
+
 User requested the remaining eight tickets be closed, with one primary ticket
 and one worker per other unblocked ticket, followed by one code-review/TDD pass.
 Current24-node graph has17closed/sevenopen after403 acceptance. Primary405; workers403/408/410.
