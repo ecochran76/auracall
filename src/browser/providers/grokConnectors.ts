@@ -229,7 +229,7 @@ export function createGrokConnectorClient(
 				await delay(25);
 				probe = await evaluate<InventoryProbe>(INVENTORY);
 			}
-			return probe;
+			return await bindNativeRows(probe);
 		}
 		const searchValue = expression(`
       const root = plugins();
@@ -249,7 +249,7 @@ export function createGrokConnectorClient(
 		try {
 			if (!(await evaluate<boolean>(setSearch(query))))
 				throw new Error("grok_connector_search_not_verified");
-			result = await evaluate<InventoryProbe>(INVENTORY);
+			result = await bindNativeRows(await evaluate<InventoryProbe>(INVENTORY));
 		} catch (error) {
 			primaryFailure = error;
 			throw error;
@@ -274,8 +274,10 @@ export function createGrokConnectorClient(
 	}
 	const nativeRows = new Map<string, GrokNativeConnectorRow>();
 	async function observe(query?: string) {
-		const probe = await observeRaw(query);
 		nativeRows.clear();
+		return observeRaw(query);
+	}
+	async function bindNativeRows(probe: InventoryProbe) {
 		if (probe.state === "visible" && options.providerUserId) {
 			options.abortSignal?.throwIfAborted();
 			const native = await observeGrokNativeConnectorRows(runtime, {

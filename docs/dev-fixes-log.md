@@ -1,3 +1,18 @@
+## 2026-10-27 — Bind searched Connector identities before restoring the view
+
+Search cleanup can re-render card metadata. Bind exact committed account-scoped
+identity while the observed search view is still owned; then restore the caller's
+view. Binding after restoration discarded otherwise valid selected identities.
+A public client regression observed null instead of the genuine ID before the fix.
+
+## 2026-10-27 — Share transfer allowance across selected conversations
+
+Explicit conversation IDs must decrement the same remaining transfer allowance
+after each attempt as broad reconciliation. Otherwise two selected conversations
+each receive the full allowance. A public durable-job regression observed[2,2]
+instead of remaining allowances[2,1]. Retain attempted/unattempted frontier as an
+observation, without implying a provider cursor or automatic crash continuation.
+
 ## 2026-10-27 — Native Connector text avatars are not names
 
 Custom MCP cards can render an avatar initial before the title. First-line text

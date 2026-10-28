@@ -2,7 +2,7 @@
   "version": 1,
   "state": "OPEN",
   "plan": "0458-2026-10-25-grok-native-frontier.md",
-  "integrationBranch": "feat/grok-native-frontier-20261025",
+  "integrationBranch": "feat/grok406-invocation-20261027",
   "integrationBase": "d107e13cef6a83b76f63de9b3f268366be936a6b",
   "parent": 398,
   "parentMutationAuthorized": false,
@@ -27,8 +27,9 @@
     "403": "feat/grok403-native-20261025",
     "408": "feat/grok-408-native-20261025",
     "410": "feat/grok410-native-20261025",
-    "409": "ticket408",
-    "414": "ticket410"
+    "409": "feat/grok409-resources-20261027",
+    "414": "feat/grok414-files-20261027",
+    "411": "feat/grok411-publish-20261027"
   },
   "nodes": {
     "399": {
@@ -160,7 +161,7 @@
         402,
         405
       ],
-      "state": "ready-exact-live-packet-preparation",
+      "state": "implementing-exact-composer-selection",
       "scope": "original-program"
     },
     "407": {
@@ -208,7 +209,7 @@
         404,
         408
       ],
-      "state": "assigned-source-preparation",
+      "state": "public-resource-observation-implemented-native-editor-unknown",
       "scope": "original-program"
     },
     "410": {
@@ -299,7 +300,7 @@
         410,
         413
       ],
-      "state": "selected-archive-qualified-original-criteria-open",
+      "state": "selected-frontier-budget-progress-implemented-native-bytes-open",
       "scope": "original-program",
       "gate": "Referenced-file retrieval and actual Grok history budget/foreground-resume evidence remain unqualified.",
       "materializationEvidence": {
@@ -448,7 +449,15 @@
     "fixedBaseUserConfirmed": true,
     "checkpointAuthority": "User requested checkpoint review and accepted recommendations 2026-10-26",
     "reviewHead": "331951dda32e231f7c990c129ffabcd34225d178",
-    "report": "../notes/2026-10-26-grok-checkpoint-review.md"
+    "report": "../notes/2026-10-26-grok-checkpoint-review.md",
+    "implementationBatch20261027": {
+      "authority": "User explicitly renewed implementation TDD, one code-review round and one findings-TDD round",
+      "base": "5d332eef076f0cd32cb9049a82c8ae53ebdd6771",
+      "baselineChoiceAsked": true,
+      "broadReviews": 0,
+      "postReviewTddPasses": 0,
+      "report": "../notes/2026-10-27-grok-ticket-implementation-batch.md"
+    }
   },
   "executionControl": {
     "scopeAuthority": "User requested closing remaining graph with one primary and one worker per other unblocked ticket.",

@@ -43,3 +43,34 @@ label qualification corrects inventory, revalidation and provider-ID binding.
 GREEN: four affected suites54tests; full typecheck PASS. Native evidence private
 `oauth-resume-20261026/picker-1793153728568.json`; no prompt/tool invocation.
 This repairs a406 selection prerequisite, not invocation/live-draft acceptance.
+
+## Root406 second tracer: bind before restoring gallery state
+
+Actual stable native binding returned the exact owned row, while public filtered
+inventory returned its name with no ID. The public reader restored a different
+search view before binding native identity. A public client test simulated that
+render boundary: RED expected connector-native, received null. Bind the observed
+rows before restoration; preserve cleanup and strict committed/account guards.
+Exact RED/GREEN: `pnpm exec vitest run tests/browser/grok405NativeConnectorBinding.test.ts`.
+GREEN with Connector inventory:30tests/2files; full typecheck PASS. A separate
+foreign-scope hypothesis was disproved by actual native records; its speculative
+test was discarded, not shipped.
+
+## Independent lane evidence
+
+- implement409: sourceee7169d9a; exact Settings resource observation through existing
+  CLI/API/MCP,16focused checks/typecheck. Current native owned-Bot route/account
+  qualifies, but header/editor does not render: publicunknown/effectnone. No
+  persistence/grant/control-absence acceptance or ticket closure.
+- implement414: source197eaa9bc; two public-seam RED/GREEN cycles fix selected
+  transfer budget and retain exact attempted/unattempted frontier.136focused
+  checks/typecheck. Native byte retrieval and crash continuation remain distinct.
+- implement411: no source change; bounded read restored an actual Files panel
+  from the original selected assistant. Genuine workspace revision/publication
+  identity stays unqualified. The final combined metadata window exceeded90s by
+  8.125s during the requested follow-on read; record the breach, do not reset it.
+  No publication/export/download/generation or tool replay occurred.
+
+Primary integrated409/414 and verified206affected checks/12files plus typecheck
+before the second root tracer; its two affected suites/typecheck then passed.
+Native/private raw identities remain outside Git. Parent398 untouched.

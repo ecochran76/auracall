@@ -1,7 +1,7 @@
 # Plan0458 — remaining Grok native frontier
 
 State: OPEN
-Branch: feat/grok-native-frontier-20261025
+Branch: feat/grok406-invocation-20261027
 Target: main
 Owner: ecochran76
 Base: d107e13cef6a83b76f63de9b3f268366be936a6b
@@ -131,3 +131,12 @@ are qualified, with62tools and zero new Add/tool invocations. Source45cf4482d
 preserves operation/input/fences and records verified target recovery. Main
 integration/tracker close pending;406 is next after closure. See the OAuth
 diagnosis acceptance mapping. Parent398 remains untouched; review/TDD1/1.
+
+## 2026-10-27 renewed implementation batch
+
+User requested TDD implementation and a new subsequent one-round code review plus
+one TDD findings pass. Historical checkpoint1/1 remains unchanged; this explicitly
+requested batch tracks separate0/1 review and0/1 findings counters. Root406;
+independent409/411/414 workers, each bounded to one ticket. Integration branch
+feat/grok406-invocation-20261027 starts atmain5d332eef0.477remains native blocked.
+See [batch seams/evidence](../notes/2026-10-27-grok-ticket-implementation-batch.md).

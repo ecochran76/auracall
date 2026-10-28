@@ -90,3 +90,18 @@ it("retains native Connector identity when a text avatar precedes its title", as
 		}),
 	).toEqual([{ handle: "row-0", id: "connector-native", type: "live", endpoint: null }]);
 });
+
+it("binds the searched Connector identity before restoring a different gallery view", async () => {
+	const { createGrokConnectorClient } = await import(
+		"../../src/browser/providers/grokConnectors.js"
+	);
+	const { f, record } = fixture();
+	f.search.onInput = () => {
+		if (f.search.value === "") record.originScopeId = "different-view-owner";
+	};
+	const client = createGrokConnectorClient(f.runtime, { providerUserId: "fixture-user" });
+	expect((await client.list("Example")).installed).toEqual([
+		{ id: "connector-native", name: "Example", kind: "installed" },
+	]);
+	expect(f.search.value).toBe("");
+});
