@@ -1,3 +1,18 @@
+## 2026-10-28 — Renewed411/409/414 implementation checkpoint
+
+Root411 implements explicit CLI/HTTP/MCP native Publish-controls inspection;
+the actual committed controller is idle/not_published, native button enabled,
+dialog dismissal verified and account/response continuity retained. The overall
+Build result remains workspace_inactive. Selected414 file bytes/archive receipt
+source is integrated, but actual discovery refused current inactive/no-URL file
+state before capture; no bytes are accepted. The tooltip hypothesis was disproven
+for Filetree and no speculative fix was made. Worker409's exact committed editor
+has only text/avatar fields and no persistent resource editing contract.
+91 focused tests/8files, full typecheck and changed-unit lint pass; source CLI
+help exposes the flag. No installed adoption, regeneration, publication or new
+tracker closure. Review/findings-TDD reserved for a completed validated batch.
+Parent398 and477 untouched. Memory disposition:forbidden; no user memory request.
+
 ## 2026-10-28 — PR489 merged;406closed
 
 PR489 merged as07bcf31b5; GitHub406isCLOSED/COMPLETED at12:14:03Z.

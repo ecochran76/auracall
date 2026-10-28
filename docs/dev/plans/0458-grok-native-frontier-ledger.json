@@ -2,8 +2,8 @@
   "version": 1,
   "state": "OPEN",
   "plan": "0458-2026-10-25-grok-native-frontier.md",
-  "integrationBranch": "feat/grok406-spec-20261028",
-  "integrationBase": "4a3d63d1845e97b8f5d954b6b555919141cf93ad",
+  "integrationBranch": "feat/grok411-spec-20261028-r2",
+  "integrationBase": "00a45bd0bf7df36845ba100aec2a2ddf97e72f33",
   "parent": 398,
   "parentMutationAuthorized": false,
   "scopeTickets": [
@@ -22,14 +22,13 @@
     408,
     410
   ],
-  "primaryTicket": 406,
+  "primaryTicket": 411,
   "workers": {
     "403": "feat/grok403-native-20261025",
     "408": "feat/grok-408-native-20261025",
     "410": "feat/grok410-native-20261025",
-    "409": "feat/grok409-spec-20261028",
-    "414": "feat/grok414-spec-20261028",
-    "411": "feat/grok411-spec-20261028"
+    "409": "feat/grok409-spec-20261028-r2",
+    "414": "feat/grok414-spec-20261028-r2"
   },
   "nodes": {
     "399": {
@@ -221,9 +220,9 @@
         404,
         408
       ],
-      "state": "public-resource-observation-implemented-native-editor-unknown",
+      "state": "blocked-native-capability",
       "scope": "original-program",
-      "gate": "Public resource observation implemented; current exact owned Bot route/account valid but native header/editor absent from bounded read, so grants/persistence unknown."
+      "gate": "Exact committed Bot editor exposes only text/avatar fields; no Connector/Skill/source resource identity or persistent editing contract is observed."
     },
     "410": {
       "title": "Grok: Generate Build apps and retrieve their artifacts",
@@ -276,9 +275,9 @@
       "blockedBy": [
         410
       ],
-      "state": "blocked-dependencies",
+      "state": "implemented-controls-read-native-snapshot-blocked",
       "scope": "original-program",
-      "gate": "Original selected assistant file panel observed; current workspace revision/archive association and genuine publication app/version remain unqualified. No publication."
+      "gate": "Public explicit publication-controls read observed and dismissed the native idle/unpublished controller; current workspace inactive. Fresh attributable archive-to-publish binding, actual publication approval, dispatch/reconciliation and genuine provider app/version readback remain unmet."
     },
     "412": {
       "title": "Grok: Backfill Grok conversation indexes and follow changes",
@@ -314,9 +313,9 @@
         410,
         413
       ],
-      "state": "selected-frontier-budget-progress-implemented-native-bytes-open",
+      "state": "implemented-selected-file-native-inactive",
       "scope": "original-program",
-      "gate": "Selected transfer accounting/frontier progress implemented; referenced-file retrieval and actual history crash/foreground continuation remain unqualified.",
+      "gate": "Selected native workspace-file adapter and retained archive receipt integration are committed; current selected viewer has no assetUrl and isWorkspaceInactive=true. Actual byte capture, conversation-bound uploaded references and broader history acceptance remain unmet.",
       "materializationEvidence": {
         "integrationCommit": "e5b3707fcb444106948777ada0a3cb5309fa95ac",
         "primaryTests": 32,
@@ -507,6 +506,25 @@
       "mainMergeCommit": "07bcf31b5faa89fe8b387bc95d744afc302dbc05",
       "closedTicket": 406,
       "closedAt": "2026-10-28T12:14:03Z"
+    },
+    "implementationBatch20261028r2": {
+      "authority": "User renewed implement-spec TDD delegation and one completed-batch review/findings round",
+      "base": "00a45bd0bf7df36845ba100aec2a2ddf97e72f33",
+      "broadReviews": 0,
+      "postReviewTddPasses": 0,
+      "state": "source checkpoint validated; native snapshot gates remain open; review and findings TDD reserved until completed ticket batch",
+      "focusedTests": 91,
+      "focusedFiles": 8,
+      "typecheck": "PASS",
+      "installedValidation": "not run",
+      "newTrackerClosures": 0,
+      "selectedFileIntegratedCommits": [
+        "d4ed8851e",
+        "ae5d52f6d"
+      ],
+      "nativePublicationControls": "observed idle/not_published; exact account and response retained; dialog dismissal verified; overall workspace_inactive",
+      "nativeSelectedFileCapture": "one actual discovery failed before bytes; current inactive query state confirmed, no retry",
+      "botConfiguration": "committed DTO and exact editor source observed; resource contract absent; no source change"
     }
   },
   "executionControl": {

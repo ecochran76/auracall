@@ -1,3 +1,11 @@
+## 2026-10-28 — Separate native publishing controls from workspace readiness
+
+A visible Publish button and an old READY file tree do not prove current file
+bytes or a publishable snapshot. Read the committed native publication controller
+only through an explicit reversible dialog inspection, verify dismissal, and
+retain the inactive workspace result independently. Proposed names, deployment
+objects and archive hashes do not establish genuine app/version identity.
+
 ## 2026-10-27 — Account for guarded attempts before stopping the frontier
 
 A provider guard stops later work but does not erase the attempt already made.

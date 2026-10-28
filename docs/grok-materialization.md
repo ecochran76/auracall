@@ -100,3 +100,20 @@ absent. A genuine conversation-scoped file path, revision and byte-read protocol
 remain unqualified, so #414 remains open beyond the source cursor and retained
 workspace-archive portions. Source tests, installed runtime checks and native
 acceptance remain separate gates.
+
+## Selected native workspace files
+
+The source adapter can expose an actually selected generated workspace file as
+an artifact and retain its bytes with account/conversation/fsKey/full-path and
+dataURL fingerprint provenance. It accepts only current committed ready-tree
+membership and a loaded native data URL, then rechecks ownership/cache state
+after hashing. The archive materializer verifies retained byte size and checksum;
+same-size tampering is a failure, including forced reads. Credentialized asset
+URLs are never returned. Unobserved revision/app/version fields remain null.
+
+This is selected-file coverage, not a complete referenced-upload or history
+inventory. Native acceptance remains blocked: the current selected viewer has
+no asset URL and is inactive, so its first actual discovery attempt produced no
+accepted bytes or sidecar. A historical READY tree or a previously observed data
+URL cannot authorize capture from that state. Metadata-only artifacts remain
+not_materialized. Issue414 remains open.

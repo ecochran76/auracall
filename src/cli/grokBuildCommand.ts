@@ -23,6 +23,7 @@ export const GrokBuildRequestSchema = z.discriminatedUnion("action", [
 	z
 		.object({
 			action: z.literal("inspect"),
+			inspectPublicationControls: z.literal(true).optional(),
 			targetId: retainedId,
 			conversationId: retainedId,
 			responseId: retainedId.optional(),
