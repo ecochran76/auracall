@@ -108,6 +108,7 @@ export async function materializeGrokWorkspaceFile(
 		destDir: string;
 		targetId: string;
 		providerAccountRef: string;
+		providerAccountRefFormat: "legacy-untagged";
 		verifyPrincipal: () => Promise<boolean>;
 	},
 ): Promise<FileRef> {
@@ -121,7 +122,8 @@ export async function materializeGrokWorkspaceFile(
 		input.artifact.id !== selected.filePath ||
 		typeof selected.dataUrlSha256 !== "string" ||
 		!input.targetId ||
-		!input.providerAccountRef
+		!input.providerAccountRef ||
+		input.providerAccountRefFormat !== "legacy-untagged"
 	)
 		throw new Error("Grok workspace selection lacks conversation/path provenance.");
 	const captured = await readGrokWorkspaceFile(runtime, input.conversationId, {
@@ -166,6 +168,7 @@ export async function materializeGrokWorkspaceFile(
 				appVersion: null,
 				targetId: input.targetId,
 				providerAccountRef: input.providerAccountRef,
+				providerAccountRefFormat: input.providerAccountRefFormat,
 				sizeBytes: bytes.length,
 				sha256,
 			},

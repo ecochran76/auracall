@@ -12,6 +12,7 @@ export interface GrokWorkspaceFileReceipt {
 	dataUrlSha256: string;
 	targetId: string;
 	providerAccountRef: string;
+	providerAccountRefFormat: "legacy-untagged";
 	sha256: string;
 	sizeBytes: number;
 	contentRevision: string | number | null;
@@ -32,6 +33,7 @@ export function grokWorkspaceFileReceipt(item: RunArchiveItem): GrokWorkspaceFil
 		!p.targetId ||
 		typeof p.providerAccountRef !== "string" ||
 		!p.providerAccountRef ||
+		p.providerAccountRefFormat !== "legacy-untagged" ||
 		!/^([a-f0-9]{64})$/.test(p.dataUrlSha256) ||
 		!/^([a-f0-9]{64})$/.test(p.sha256) ||
 		p.sha256 !== item.checksumSha256 ||

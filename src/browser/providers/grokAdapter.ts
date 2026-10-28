@@ -3371,7 +3371,7 @@ async function readGrokDiscoveryWithAdmission<T>(
 async function withGrokWorkspaceConnection<T>(
  options: BrowserProviderListOptions | undefined,
  targetId: string | undefined,
- work: (runtime: ChromeClient['Runtime'], scope: {targetId:string;providerAccountRef:string;verifyPrincipal:()=>Promise<boolean>})=>Promise<T>,
+ work: (runtime: ChromeClient['Runtime'], scope: {targetId:string;providerAccountRef:string;providerAccountRefFormat:'legacy-untagged';verifyPrincipal:()=>Promise<boolean>})=>Promise<T>,
 ):Promise<T>{
  if(!targetId)throw new Error('Grok workspace reads require the exact existing browser target.');
  options?.abortSignal?.throwIfAborted();
@@ -3384,12 +3384,12 @@ async function withGrokWorkspaceConnection<T>(
   await governor.checkWarning?.(connection.client.Runtime);
   action=await governor.begin({kind:'provider-read',interactionClass:'generic',source:'provider:grok:workspace-file-read',targetId,abortSignal:options?.abortSignal});
   const before=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
-  const providerAccountRef=projectGrokAccountReference(before.actualIdentity);
+  const providerAccountRef=projectGrokAccountReference(before.actualIdentity, 'legacy-untagged');
   if(!providerAccountRef)throw new Error('Grok workspace account identity is unqualified.');
-  return await work(connection.client.Runtime,{targetId,providerAccountRef,verifyPrincipal:async()=>{
+  return await work(connection.client.Runtime,{targetId,providerAccountRef,providerAccountRefFormat:'legacy-untagged',verifyPrincipal:async()=>{
    options?.abortSignal?.throwIfAborted();
    const after=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
-   return projectGrokAccountReference(after.actualIdentity)===providerAccountRef;
+   return projectGrokAccountReference(after.actualIdentity, 'legacy-untagged')===providerAccountRef;
   }});
  }catch(error){failure=error;throw error;}finally{
   try{await action?.settle({outcome:failure?'failed':'succeeded',probeContext:connection.client.Runtime,...(failure?{error:failure instanceof Error?failure.message:'Grok workspace read failed'}:{})});}
@@ -5809,14 +5809,14 @@ export function createGrokAdapter(): Pick<
       return withGrokWorkspaceConnection(options,options?.tabTargetId,async(runtime,scope)=>{
         const observed=await readGrokWorkspaceFile(runtime,conversationId);
         if(!await scope.verifyPrincipal())throw new Error('Grok workspace account changed during discovery.');
-        return [{id:observed.filePath,title:observed.fileName,kind:'generated',metadata:{grokWorkspaceFile:{version:1,...observed,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,identityKind:'native-file-path',coverage:{scope:'selected-workspace-file',complete:false}}}}];
+        return [{id:observed.filePath,title:observed.fileName,kind:'generated',metadata:{grokWorkspaceFile:{version:1,...observed,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:'legacy-untagged',identityKind:'native-file-path',coverage:{scope:'selected-workspace-file',complete:false}}}}];
       });
     },
     async materializeConversationArtifact(conversationId:string,artifact:ConversationArtifact,destDir:string,_projectId?:string,options?:BrowserProviderListOptions):Promise<FileRef|null>{
-      const selected=artifact.metadata?.grokWorkspaceFile as {targetId?:string;providerAccountRef?:string}|undefined;
+      const selected=artifact.metadata?.grokWorkspaceFile as {targetId?:string;providerAccountRef?:string;providerAccountRefFormat?:string}|undefined;
       if(!selected)throw new Error('Grok artifact lacks a qualified native workspace selection.');
       return withGrokWorkspaceConnection(options,options?.tabTargetId??selected.targetId,async(runtime,scope)=>{
-        if(selected.providerAccountRef!==scope.providerAccountRef)throw new Error('Grok artifact belongs to another provider account.');
+        if(selected.providerAccountRef!==scope.providerAccountRef||selected.providerAccountRefFormat!==scope.providerAccountRefFormat)throw new Error('Grok artifact belongs to another provider account.');
         return materializeGrokWorkspaceFile(runtime,{conversationId,artifact,destDir,...scope});
       });
     },

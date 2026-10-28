@@ -160,6 +160,7 @@ test("public archive materialization retains actual selected native workspace by
 				destDir: input.destDir,
 				targetId: "owned-target",
 				providerAccountRef: "qualified-account",
+				providerAccountRefFormat: "legacy-untagged",
 				verifyPrincipal: async () => true,
 			}),
 	});
@@ -183,6 +184,7 @@ test("public archive materialization retains actual selected native workspace by
 				sizeBytes: 24,
 				targetId: "owned-target",
 				providerAccountRef: "qualified-account",
+				providerAccountRefFormat: "legacy-untagged",
 			},
 		},
 	});
@@ -329,6 +331,7 @@ test.each([
 			destDir: root,
 			targetId: "owned-target",
 			providerAccountRef: "qualified-account",
+			providerAccountRefFormat: "legacy-untagged",
 			verifyPrincipal: async () => reason !== "account-changed",
 		}),
 	).rejects.toThrow(/workspace/);
