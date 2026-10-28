@@ -49,6 +49,15 @@ export const GrokBotsRequestSchema = z.discriminatedUnion("action", [
 		.strict(),
 	z
 		.object({
+			action: z.literal("resources"),
+			selector: GrokBotSettingsSelectorSchema,
+			targetId: z.string().min(1).max(512),
+			expectedProviderAccountRef: accountRef,
+			runtimeProfile: z.string().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
 			action: z.literal("inspect"),
 			selector: GrokBotSettingsSelectorSchema,
 			targetId: z.string().min(1).max(512),

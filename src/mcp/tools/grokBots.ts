@@ -35,9 +35,9 @@ export function registerGrokBotsTool(
 		{
 			title: "Discover and invoke Grok Bots",
 			description:
-				"List visible owned or catalog Bots, or invoke one existing owned Bot by exact stable identity. Catalog listing does not install. Create requires explicit Terms confirmation. Native settings expose Name/Title/Description; Instructions and Model defaults are unavailable. Reconcile ambiguous lifecycle outcomes instead of replaying. No installation, removal or scheduling. Unknown outcomes must not be automatically resubmitted.",
+				"List visible owned or catalog Bots, or invoke one existing owned Bot by exact stable identity. Catalog listing does not install. Create requires explicit Terms confirmation. Resources observes only the exact owned Bot Settings controls, with unavailable or unknown capability and no grant/inventory claim. Native settings expose Name/Title/Description; Instructions and Model defaults are unavailable. Reconcile ambiguous lifecycle outcomes instead of replaying. No installation, removal or scheduling. Unknown outcomes must not be automatically resubmitted.",
 			inputSchema: {
-				action: z.enum(["list", "invoke", "create", "edit", "inspect", "reconcile"]),
+				action: z.enum(["list", "invoke", "create", "edit", "inspect", "resources", "reconcile"]),
 				name: z.string().min(1).max(80).optional(),
 				patch: GrokBotConfigurationPatchSchema.optional(),
 				targetId: z.string().min(1).max(512).optional(),

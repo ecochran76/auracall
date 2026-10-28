@@ -299,6 +299,15 @@ export interface HistoryMaterializationProviderListOptions extends BrowserProvid
 	skipFeatureSignature?: boolean;
 }
 
+/** Progress within an explicit caller-selected frontier, never provider-wide coverage. */
+export interface HistoryMaterializationSelectedFrontier {
+	attemptedConversationIds: string[];
+	unattemptedConversationIds: string[];
+	providerHistoryComplete: false;
+	assetCoverage: "unknown";
+	budget: { targetLimit: number; targetsConsumed: number; assetsRemaining: number };
+}
+
 export interface HistoryMaterializationResult {
 	object: "history_materialization_result";
 	generatedAt: string;
@@ -309,6 +318,7 @@ export interface HistoryMaterializationResult {
 	entries: HistoryMaterializationManifestEntry[];
 	archiveItems: RunArchiveItem[];
 	pendingAssetCount?: number;
+	selectedFrontier?: HistoryMaterializationSelectedFrontier;
 	snapshotRefreshes?: HistoryMaterializationSnapshotRefresh[] | null;
 	attempts?: HistoryMaterializationAttemptReceipt[] | null;
 	scrapeTelemetry?: BrowserScrapeTelemetrySnapshot | null;
@@ -2814,7 +2824,7 @@ async function materializeReconciliation(input: {
 			return 0;
 		});
 		for (const conversationId of orderedConversationIds) {
-			if (consumedTargetBudget >= maxTargets) break;
+			if (consumedTargetBudget >= maxTargets || remainingAssetBudget <= 0) break;
 			const assetFamilySignatures = selectedCatalogAssetFamilySignatures.get(conversationId) ?? [];
 			if (
 				assetFamilySignatures.length > 0 &&
@@ -2843,7 +2853,7 @@ async function materializeReconciliation(input: {
 			};
 			const outcome = await input.materializationAttemptExecutor.execute({
 				jobId: input.jobId,
-				request: input.request,
+				request: { ...input.request, maxItems: remainingAssetBudget },
 				candidate: {
 					origin: "selected_conversation_id",
 					index: selectedCandidates,
@@ -2860,10 +2870,12 @@ async function materializeReconciliation(input: {
 			attemptReceipts.push(outcome.receipt);
 			selectedCandidates += 1;
 			if (outcome.accounting.candidateMaterialized) materializedCandidates += 1;
-			if (outcome.accounting.providerGuardObserved) break;
+			remainingAssetBudget =
+				decrementRemaining(remainingAssetBudget, outcome.accounting.assetsAttempted) ?? 0;
 			if (outcome.accounting.targetConsumed) {
 				consumedTargetBudget += 1;
 			}
+			if (outcome.accounting.providerGuardObserved) break;
 		}
 	} else if (
 		selectedKinds.includes("artifacts") ||
@@ -3097,6 +3109,25 @@ async function materializeReconciliation(input: {
 		archiveItems,
 		snapshotRefreshes,
 		attempts: attemptReceipts,
+		...(selectedConversationIds.length > 0
+			? {
+					selectedFrontier: {
+						attemptedConversationIds: attemptReceipts.map(
+							(attempt) => attempt.target.conversationId,
+						),
+						unattemptedConversationIds: selectedConversationIds.filter(
+							(id) => !attemptReceipts.some((attempt) => attempt.target.conversationId === id),
+						),
+						providerHistoryComplete: false as const,
+						assetCoverage: "unknown" as const,
+						budget: {
+							targetLimit: maxTargets,
+							targetsConsumed: consumedTargetBudget,
+							assetsRemaining: remainingAssetBudget,
+						},
+					},
+				}
+			: {}),
 		metrics,
 		phases: {
 			snapshotRefresh: snapshotRefreshes.length === 1 ? snapshotRefreshes[0] : null,

@@ -1,3 +1,4 @@
+import { GROK_CONNECTOR_NAME_READER } from "./grokConnectorLabels.js";
 import { readGrokNativeConnectorDetail } from "./grokNativeConnectorDetail.js";
 import { createHash, randomUUID } from "node:crypto";
 import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
@@ -83,6 +84,7 @@ const digest = (value: string) => createHash("sha256").update(value).digest("hex
 // Reauthenticate/Disconnect, See more and Server URL. No invented provider IDs.
 // Row handles exist only for one read and are revalidated before activation.
 const DOM_HELPERS = `
+ const connectorName = ${GROK_CONNECTOR_NAME_READER};
  const visible = el => {
    for (let node = el; node; node = node.parentElement) {
      if (node.getAttribute('role') === 'dialog' && node.getAttribute('data-closed') !== null) return false;
@@ -125,7 +127,8 @@ const INVENTORY = expression(`
  for (const button of buttons(root)) {
    if (button.getAttribute('role') === 'tab' || button.getAttribute('aria-label') === 'New Connector') continue;
    const lines = text(button).split(/\\n+/).map(s => s.trim()).filter(Boolean);
-   if (lines.length < 2 || /^(Add|Added|New|Connectors|Skills|Bots)$/.test(lines[0])) continue;
+   const name=connectorName(button);
+   if (!name || lines.length < 2 || /^(Add|Added|New|Connectors|Skills|Bots)$/.test(name)) continue;
    let container = button.parentElement;
    let kind = null;
    for (let depth = 0; container && container !== root && depth < 4; depth++, container = container.parentElement) {
@@ -133,12 +136,12 @@ const INVENTORY = expression(`
      const primary = buttons(container).filter(b => text(b).split(/\\n+/).filter(Boolean).length >= 2);
      if (primary.length !== 1) break;
      if (linesInRow.includes('Added')) {kind = 'installed'; break;}
-     if (buttons(container).some(b => b.getAttribute('aria-label') === 'Add ' + lines[0] || text(b) === 'Add')) {kind = 'catalog'; break;}
+     if (buttons(container).some(b => b.getAttribute('aria-label') === 'Add ' + name || text(b) === 'Add')) {kind = 'catalog'; break;}
    }
    if (!kind) continue;
    const handle = 'row-' + rows.length;
    button.setAttribute('data-auracall-connector-read', handle);
-   rows.push({handle, name: lines[0], kind, providerId: null, account: kind === 'installed' && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(lines[1] || '') ? lines[1] : null});
+   rows.push({handle, name, kind, providerId: null, account: kind === 'installed' && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(lines[lines.indexOf(name)+1] || '') ? lines[lines.indexOf(name)+1] : null});
  }
  return {state: 'visible', rows: rows.slice(0, 100), truncated: rows.length > 100};
 `);
@@ -226,7 +229,7 @@ export function createGrokConnectorClient(
 				await delay(25);
 				probe = await evaluate<InventoryProbe>(INVENTORY);
 			}
-			return probe;
+			return await bindNativeRows(probe);
 		}
 		const searchValue = expression(`
       const root = plugins();
@@ -246,7 +249,7 @@ export function createGrokConnectorClient(
 		try {
 			if (!(await evaluate<boolean>(setSearch(query))))
 				throw new Error("grok_connector_search_not_verified");
-			result = await evaluate<InventoryProbe>(INVENTORY);
+			result = await bindNativeRows(await evaluate<InventoryProbe>(INVENTORY));
 		} catch (error) {
 			primaryFailure = error;
 			throw error;
@@ -271,8 +274,10 @@ export function createGrokConnectorClient(
 	}
 	const nativeRows = new Map<string, GrokNativeConnectorRow>();
 	async function observe(query?: string) {
-		const probe = await observeRaw(query);
 		nativeRows.clear();
+		return observeRaw(query);
+	}
+	async function bindNativeRows(probe: InventoryProbe) {
 		if (probe.state === "visible" && options.providerUserId) {
 			options.abortSignal?.throwIfAborted();
 			const native = await observeGrokNativeConnectorRows(runtime, {
@@ -327,19 +332,20 @@ export function createGrokConnectorClient(
           const root = plugins();
           const matches = Array.from(root?.querySelectorAll('[data-auracall-connector-read]') || []).filter(b =>
             visible(b) && b.getAttribute('data-auracall-connector-read') === ${JSON.stringify(row.handle)} &&
-            text(b).split(/\\n+/)[0].trim() === ${JSON.stringify(row.name)});
+            connectorName(b) === ${JSON.stringify(row.name)});
           if (matches.length !== 1) return false;
           const button = matches[0];
           const lines = text(button).split(/\\n+/).map(s => s.trim()).filter(Boolean);
+          const name=connectorName(button);if(name!==${JSON.stringify(row.name)})return false;
           let container = button.parentElement;
           let kind = null;
           for (let depth = 0; container && container !== root && depth < 4; depth++, container = container.parentElement) {
             const primary = buttons(container).filter(b => text(b).split(/\\n+/).filter(Boolean).length >= 2);
             if (primary.length !== 1) break;
             if (text(container).split(/\\n+/).map(s => s.trim()).includes('Added')) {kind = 'installed'; break;}
-            if (buttons(container).some(b => b.getAttribute('aria-label') === 'Add ' + lines[0] || text(b) === 'Add')) {kind = 'catalog'; break;}
+            if (buttons(container).some(b => b.getAttribute('aria-label') === 'Add ' + name || text(b) === 'Add')) {kind = 'catalog'; break;}
           }
-          const account = kind === 'installed' && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(lines[1] || '') ? lines[1] : null;
+          const account = kind === 'installed' && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(lines[lines.indexOf(name)+1] || '') ? lines[lines.indexOf(name)+1] : null;
           if (kind !== ${JSON.stringify(row.kind)} || account !== ${JSON.stringify(row.account ?? null)}) return false;
           button.setAttribute('data-auracall-connector-activation', ${JSON.stringify(activationId)});
           button.click(); return true;

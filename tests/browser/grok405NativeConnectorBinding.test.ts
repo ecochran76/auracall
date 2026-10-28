@@ -71,3 +71,37 @@ it("rejects mismatched account, fiber identity, name or unknown transport", asyn
 		).toEqual([]);
 	}
 });
+
+it("retains native Connector identity when a text avatar precedes its title", async () => {
+	const { ConnectorFixtureNode: N } = await import("./grok404ConnectorDomFixture.js");
+	const { f } = fixture();
+	f.installed.parentElement?.setAttribute("data-testid", "connector-card-Example");
+	f.installed.ownText = "";
+	f.installed.children = [
+		new N("span", "E"),
+		new N("span", "Example", { class: "text-sm font-medium" }),
+		new N("span", "example.test"),
+	];
+	for (const child of f.installed.children) child.parentElement = f.installed;
+	expect(
+		await observeGrokNativeConnectorRows(f.runtime, {
+			providerUserId: "fixture-user",
+			rows: [{ handle: "row-0", name: "Example", kind: "installed" }],
+		}),
+	).toEqual([{ handle: "row-0", id: "connector-native", type: "live", endpoint: null }]);
+});
+
+it("binds the searched Connector identity before restoring a different gallery view", async () => {
+	const { createGrokConnectorClient } = await import(
+		"../../src/browser/providers/grokConnectors.js"
+	);
+	const { f, record } = fixture();
+	f.search.onInput = () => {
+		if (f.search.value === "") record.originScopeId = "different-view-owner";
+	};
+	const client = createGrokConnectorClient(f.runtime, { providerUserId: "fixture-user" });
+	expect((await client.list("Example")).installed).toEqual([
+		{ id: "connector-native", name: "Example", kind: "installed" },
+	]);
+	expect(f.search.value).toBe("");
+});

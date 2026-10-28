@@ -377,3 +377,28 @@ it("preserves cancellation and restoration failure together", async () => {
 		"restore-denied",
 	]);
 });
+
+it("lists a native custom Connector by its label rather than its avatar initial", async () => {
+	const f = connectorDomFixture();
+	const row = f.plugins.children.find((node) =>
+		node.children.some((child) => child.tag === "span" && child.ownText === "Added"),
+	);
+	if (!row) throw new Error("installed fixture row missing");
+	const button = row.children.find((node) => node.tag === "button");
+	if (!button) throw new Error("installed button missing");
+	row.setAttribute("data-testid", "connector-card-Example");
+	button.ownText = "";
+	button.children = [
+		new ConnectorFixtureNode("span", "E"),
+		new ConnectorFixtureNode("span", "Example", { class: "truncate text-sm font-medium" }),
+		new ConnectorFixtureNode("span", "mcp.example.test"),
+	];
+	for (const child of button.children) child.parentElement = button;
+	const client = createGrokConnectorClient(f.runtime);
+	expect((await client.list("Example")).installed).toEqual([
+		{ id: null, name: "Example", kind: "installed" },
+	]);
+	expect((await client.inspect({ name: "Example", kind: "installed" })).connector?.name).toBe(
+		"Example",
+	);
+});

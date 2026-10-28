@@ -53,3 +53,19 @@ referenced-file download API. Referenced-file byte retrieval remains an unmet
 unavailable bytes and uncertain provider effects remain distinct evidence states;
 this archive bridge only qualifies the retained workspace portion. Source tests,
 installed identity and any future native acceptance must be reported separately.
+
+Selected-conversation history reconciliation shares one new-transfer budget across
+its exact conversation frontier. Each subsequent conversation receives only the
+remaining allowance, and zero remaining allowance ends the pass even when the
+target-count allowance remains. Cached reuse does not spend this transfer budget.
+The durable job's attempt receipts retain the allowance before each attempt;
+restarting or issuing another pass does not establish complete provider history
+or qualify an unobserved referenced-file download control.
+
+For an explicit `conversationIds` frontier, the public job result also retains
+`selectedFrontier`: the exact attempted and unattempted IDs, final target/transfer
+budget, `providerHistoryComplete=false`, and `assetCoverage=unknown`. This survives
+service restart through the existing durable job store. Unattempted means no
+attempt in that pass; it can include an asset already covered by verified archive
+reuse. Attempted does not mean complete, available or safe to retry. The field is
+an observation checkpoint, not a provider cursor or an automatic resume command.

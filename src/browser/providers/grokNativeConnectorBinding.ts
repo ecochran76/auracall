@@ -1,3 +1,4 @@
+import { GROK_CONNECTOR_NAME_READER } from "./grokConnectorLabels.js";
 import { GROK_COMMITTED_REACT_PATH } from "./grokCommittedReact.js";
 import type { GrokConnectorRuntime } from "./grokConnectors.js";
 export interface GrokNativeConnectorRow {
@@ -20,6 +21,7 @@ export async function observeGrokNativeConnectorRows(
 		awaitPromise: true,
 		expression: `(() => {
   const expected=${JSON.stringify(input)};
+  const connectorName=${GROK_CONNECTOR_NAME_READER};
   const visible=e=>{for(let n=e;n;n=n.parentElement)if(n.getAttribute('role')==='dialog'&&n.getAttribute('data-closed')!==null)return false;return e&&e.getAttribute('aria-hidden')!=='true'&&getComputedStyle(e).display!=='none'&&getComputedStyle(e).visibility!=='hidden'&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0;};
   const roots=Array.from(document.querySelectorAll('[role="dialog"]')).filter(d=>visible(d)&&Array.from(d.querySelectorAll('[role="tab"]')).some(t=>String(t.innerText||t.textContent||'').trim()==='Connectors'));
   if(roots.length!==1||!expected.providerUserId)return [];
@@ -28,7 +30,7 @@ export async function observeGrokNativeConnectorRows(
   const result=[];let observed=null;
   for(const row of expected.rows){
    if(row.kind!=='installed'||!/^row-[0-9]+$/.test(row.handle))continue;
-   const buttons=Array.from(root.querySelectorAll('[data-auracall-connector-read]')).filter(b=>visible(b)&&b.getAttribute('data-auracall-connector-read')===row.handle&&String(b.innerText||b.textContent||'').split(/\\n+/)[0].trim()===row.name);
+   const buttons=Array.from(root.querySelectorAll('[data-auracall-connector-read]')).filter(b=>visible(b)&&b.getAttribute('data-auracall-connector-read')===row.handle&&connectorName(b)===row.name);
    if(buttons.length!==1)return [];
    const button=buttons[0],keys=Object.keys(button).filter(k=>k.startsWith('__reactFiber'));
    if(keys.length!==1)continue;

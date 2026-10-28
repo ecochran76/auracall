@@ -1,3 +1,35 @@
+## 2026-10-27 — Account for guarded attempts before stopping the frontier
+
+A provider guard stops later work but does not erase the attempt already made.
+Apply its explicit target/asset accounting before breaking; otherwise public
+remaining-budget diagnostics conflict with retained attempt receipts. A selected
+Grok partial-transfer regression was red for consumed0/remaining2, then green
+for consumed1/remaining1 while the next target remains unattempted.
+
+## 2026-10-27 — Bind searched Connector identities before restoring the view
+
+Search cleanup can re-render card metadata. Bind exact committed account-scoped
+identity while the observed search view is still owned; then restore the caller's
+view. Binding after restoration discarded otherwise valid selected identities.
+A public client regression observed null instead of the genuine ID before the fix.
+
+## 2026-10-27 — Share transfer allowance across selected conversations
+
+Explicit conversation IDs must decrement the same remaining transfer allowance
+after each attempt as broad reconciliation. Otherwise two selected conversations
+each receive the full allowance. A public durable-job regression observed[2,2]
+instead of remaining allowances[2,1]. Retain attempted/unattempted frontier as an
+observation, without implying a provider cursor or automatic crash continuation.
+
+## 2026-10-27 — Native Connector text avatars are not names
+
+Custom MCP cards can render an avatar initial before the title. First-line text
+parsing misnamed the installed canary A and filtered it out of exact-name reads.
+Bind the native card marker to its actual title for inventory, activation and
+committed provider-ID lookup. Preserve legacy rows and fail closed on ambiguous
+marked titles. A public CDP-boundary regression reproduced empty exact-name results
+before the correction; native identity remains bound to the same title.
+
 ## 2026-10-27 — An omitted Grok gallery card is not an absent Connector
 
 Use the actual selected-ID MCP metadata protocol to qualify an existing record.

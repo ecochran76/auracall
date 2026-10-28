@@ -15,7 +15,20 @@ export interface GrokBotConfigurationPatch {
 	instructions?: string;
 	model?: string;
 }
+export interface GrokBotResourceCapability {
+	status: "unavailable" | "unknown";
+	/** Null means no qualified inventory/grant observation, never an empty inventory. */
+	choices: null;
+	granted: null;
+}
+export interface GrokBotResourceObservation {
+	scope: "exact-bot-settings";
+	connectors: GrokBotResourceCapability;
+	skills: GrokBotResourceCapability;
+	knowledge: GrokBotResourceCapability;
+}
 export interface GrokBotLifecycleResult {
+	resources?: GrokBotResourceObservation;
 	status: "supported" | "unavailable" | "unknown";
 	code: string;
 	providerAccountRef: string | null;
@@ -121,6 +134,40 @@ export function createGrokBotLifecycleClient(
 			},
 		};
 	}
+	async function resources(selector: {
+		id: string;
+		name: string;
+	}): Promise<GrokBotLifecycleResult> {
+		const observed = await inspect(selector);
+		if (observed.status !== "supported") return observed;
+		const labels = await evaluate<string[] | null>(
+			`if(route()!==${JSON.stringify(selector.id)})return null;const roots=settings();if(roots.length!==1)return null;const r=roots[0];if(all(r,'[id="bot-settings-name"]')[0].value!==${JSON.stringify(selector.name)})return null;return all(r,'h1,h2,h3,h4,h5,h6,p,span,div,a,button,label,input,textarea,select,[role="combobox"],[role="checkbox"],[role="switch"]').map(e=>[e.getAttribute('aria-label')||'',e.getAttribute('id')||'',text(e)].join(' '));`,
+		);
+		if (!labels) return grokBotLifecycleUnknown("grok_bot_exact_settings_unknown");
+		const capability = (pattern: RegExp): GrokBotResourceCapability => ({
+			status: labels.some((label) => pattern.test(label)) ? "unknown" : "unavailable",
+			choices: null,
+			granted: null,
+		});
+		const resourceObservation: GrokBotResourceObservation = {
+			scope: "exact-bot-settings",
+			connectors: capability(/connector|tool|permission|plugin/i),
+			skills: capability(/skill/i),
+			knowledge: capability(/knowledge|source|attach|file/i),
+		};
+		const unavailable = Object.values(resourceObservation)
+			.filter((value) => typeof value === "object")
+			.every((value) => value.status === "unavailable");
+		return {
+			...observed,
+			status: unavailable ? "unavailable" : "unknown",
+			code: unavailable
+				? "grok_bot_resource_controls_unavailable"
+				: "grok_bot_resource_controls_unqualified",
+			resources: resourceObservation,
+		};
+	}
+
 	async function open(selector: { id: string; name: string }) {
 		if ((await inspect(selector)).status === "supported") return true;
 		const opened = await effect("in-page-click", "bot-settings-open", () =>
@@ -290,5 +337,5 @@ export function createGrokBotLifecycleClient(
 			};
 		return inspect({ id, name });
 	}
-	return { inspect, open, edit, create, reconcile };
+	return { inspect, resources, open, edit, create, reconcile };
 }

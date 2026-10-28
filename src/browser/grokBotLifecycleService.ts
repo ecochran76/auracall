@@ -37,6 +37,12 @@ export type GrokBotLifecycleRequest =
 			targetId: string;
 			expectedProviderAccountRef: string;
 	  }
+	| {
+			action: "resources";
+			selector: { id: string; name: string };
+			targetId: string;
+			expectedProviderAccountRef: string;
+	  }
 	| { action: "reconcile"; operationId: string; expectedProviderAccountRef: string };
 interface Journal {
 	version: 1;
@@ -126,7 +132,7 @@ export function createGrokBotLifecycleService(
 			let record: Journal | undefined;
 			let existing = false;
 			let file: string | undefined;
-			if (request.action !== "inspect") {
+			if (request.action !== "inspect" && request.action !== "resources") {
 				const operationId =
 					request.action === "reconcile"
 						? request.operationId
@@ -200,7 +206,10 @@ export function createGrokBotLifecycleService(
 						};
 				}
 			}
-			const retainedTarget = request.action === "inspect" ? request.targetId : record?.targetId;
+			const retainedTarget =
+				request.action === "inspect" || request.action === "resources"
+					? request.targetId
+					: record?.targetId;
 			const connect =
 				dependencies.connect ??
 				(async (input: BrowserProviderListOptions) => {
@@ -299,10 +308,14 @@ export function createGrokBotLifecycleService(
 							await persist(file, record);
 						},
 					});
-					if (request.action === "inspect") {
+					if (request.action === "inspect" || request.action === "resources") {
 						if (!(await client.open(request.selector)))
 							result = unknown("grok_bot_exact_settings_unknown");
-						else result = await client.inspect(request.selector);
+						else
+							result =
+								request.action === "resources"
+									? await client.resources(request.selector)
+									: await client.inspect(request.selector);
 					} else if (existing && record) {
 						const original = record.request;
 						const name =

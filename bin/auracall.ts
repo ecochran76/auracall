@@ -3448,7 +3448,7 @@ program.command('grok-files').description('Inspect exact Grok composer files, li
   console.log(JSON.stringify(result,null,2));if(result.status==='failed'||result.status==='unconfirmed')process.exitCode=1;
  });
 program.command('grok-bots').description('Discover/invoke Grok Bots and operate confirmed native Bot lifecycle settings.')
- .option('--request-json <json>','Exact shared Grok Bots request, including confirmed create/edit/inspect/reconcile.')
+ .option('--request-json <json>','Exact shared Grok Bots request, including confirmed create/edit, inspect/resources or reconcile.')
  .option('--action <list|invoke>','Operation.','list').option('--source <owned|catalog>','Bot inventory source.','owned')
  .option('--id <id>','Stable observed Bot ID.').option('--author <author>','Exact observed catalog author.').option('--prompt <text>','Exact prompt text.')
  .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
