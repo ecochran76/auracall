@@ -56934,3 +56934,7 @@ wrapper; command process exited. CI excluded. Plan/lane closed and integrated.
 ## 2026-10-26 — Plan0463 dormant tab TTL
 
 Read-only tab/lease census and activity probes complete. Building real configured-maintenance regression for independent cleanup despite a preserved lost tab. No tabs closed; deferred issue377 remains deferred.
+
+## 2026-10-28 | Issue427 temporary composer capture
+
+Operator approved installed failure-time instrumentation after current-page selector observation passed. Added structural-only private receipts on mode failure, replacing the broad DOM logger at that boundary. Controlled missing-receipt red reproduced; focused capture and composer checks passed25. Actual intermittent mode failure remains unreproduced; no research prompt authorized by this diagnostic change. Remove DEBUG-issue427-mode instrumentation after diagnosis.

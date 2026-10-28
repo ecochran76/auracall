@@ -270,3 +270,5 @@ Its sanitized aggregate stderr report preserves terminal inventory stdout and
 never changes admission or ownership. Counts are observations with explicit
 unresolved/coverage limits; admission duration includes local governor overhead.
 See `docs/dev/browser-service-tools.md#app-list-performance-diagnostics`.
+
+Temporary issue427 composer-mode failure capture writes structural control counts and readiness enums to private user-scope diagnostics/composer-mode receipts. It records no page text, account, prompt, URL identifiers or conversation contents. Capture failure preserves the original selection error. This is instrumentation, not selector qualification; remove after the intermittent failure is explained.

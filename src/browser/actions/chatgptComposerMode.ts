@@ -1,4 +1,7 @@
-import { logDomFailure } from "../domDebug.js";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { getAuracallHomeDir } from "../../auracallHome.js";
 import type { BrowserLogger, BrowserModelStrategy, ChromeClient } from "../types.js";
 import { buildClickDispatcher } from "./domEvents.js";
 
@@ -44,13 +47,68 @@ export async function ensureChatgptComposerMode(
 		logger(`ChatGPT mode: ${label}`);
 		return;
 	}
-	await logDomFailure(Runtime, logger, "chatgpt-composer-mode");
+	await captureModeFailure(Runtime, desiredMode, result?.status, logger);
 	if (result?.status === "mode-not-found") {
 		const available = result.availableModes.filter(Boolean);
 		const hint = available.length > 0 ? ` Available: ${available.join(", ")}.` : "";
 		throw new Error(`Unable to find the ChatGPT ${label} mode control.${hint}`);
 	}
 	throw new Error(`ChatGPT ${label} mode did not remain selected after activation.`);
+}
+
+// Temporary issue427 instrumentation: structural counts only, never page text.
+async function captureModeFailure(
+	Runtime: ChromeClient["Runtime"],
+	desiredMode: ChatgptComposerMode,
+	outcome: string | undefined,
+	logger: BrowserLogger,
+): Promise<void> {
+	try {
+		const snapshot = await Runtime.evaluate({
+			expression: `(() => {
+          const visible = n => { const r=n.getBoundingClientRect(); const s=getComputedStyle(n); return r.width>0 && r.height>0 && s.visibility!=='hidden' && s.display!=='none'; };
+          const modes=[...document.querySelectorAll('button,[role="radio"],[role="menuitemradio"]')].filter(n=>/^(chat|work)$/i.test((n.textContent||'').trim()));
+          const editors=[...document.querySelectorAll('[contenteditable="true"][role="textbox"],textarea')];
+          return {readyState:document.readyState,pathKind:location.pathname==='/'?'root':/^\\/c\\/[^/]+\\/?$/.test(location.pathname)?'conversation':'other',modeControls:modes.length,visibleModeControls:modes.filter(visible).length,enabledModeControls:modes.filter(n=>visible(n)&&!n.disabled&&n.getAttribute('aria-disabled')!=='true').length,legacyEditors:document.querySelectorAll('#prompt-textarea,textarea[name="prompt-textarea"]').length,editableTextboxes:document.querySelectorAll('[contenteditable="true"][role="textbox"]').length,visibleEditors:editors.filter(visible).length,dialogs:[...document.querySelectorAll('[role="dialog"],dialog')].filter(visible).length};
+        })()`,
+			returnByValue: true,
+		});
+		const value = snapshot.result?.value as Record<string, unknown> | undefined;
+		const controls: Record<string, unknown> = {};
+		for (const key of [
+			"modeControls",
+			"visibleModeControls",
+			"enabledModeControls",
+			"legacyEditors",
+			"editableTextboxes",
+			"visibleEditors",
+			"dialogs",
+		]) {
+			const count = value?.[key];
+			if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0)
+				controls[key] = count;
+		}
+		if (["loading", "interactive", "complete"].includes(String(value?.readyState)))
+			controls.readyState = value?.readyState;
+		if (["root", "conversation", "other"].includes(String(value?.pathKind)))
+			controls.pathKind = value?.pathKind;
+		const directory = path.join(getAuracallHomeDir(), "diagnostics", "composer-mode");
+		await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+		const file = path.join(directory, `${randomUUID()}.json`);
+		await fs.writeFile(
+			file,
+			JSON.stringify(
+				{ schemaVersion: 1, capturedAt: new Date().toISOString(), desiredMode, outcome, controls },
+				null,
+				2,
+			),
+			{ mode: 0o600, flag: "wx" },
+		);
+		logger(`[DEBUG-issue427-mode] structural receipt: ${file}`);
+	} catch {
+		// Diagnostic failure must preserve the original selection failure.
+		logger("[DEBUG-issue427-mode] structural capture unavailable");
+	}
 }
 
 export function resolveChatgptModelSelectionPlan(input: {
