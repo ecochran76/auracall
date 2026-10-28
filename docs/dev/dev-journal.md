@@ -1,3 +1,12 @@
+## 2026-10-27 — Renewed parallel ticket implementation
+
+User requests TDD implementation, independent workers per unblocked ticket, then
+one code-review and one TDD findings round. Root406; workers409/411/414, separate
+worktrees from main5d332eef0. Browser interactions and compiler serialized.477
+remains native-capability blocked. Batch note records seams and current counters.
+Root reproduced avatar-letter Connector misidentification at public CDP seam,
+then repaired exact-name/native-ID reads;54affected tests and typecheck passed.
+
 ## 2026-10-27 — #414 selected archive accepted, wider criteria open
 
 Integrated verified worker bridge; primary32focused tests/typecheck passed.

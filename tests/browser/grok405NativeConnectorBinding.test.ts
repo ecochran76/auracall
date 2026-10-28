@@ -71,3 +71,22 @@ it("rejects mismatched account, fiber identity, name or unknown transport", asyn
 		).toEqual([]);
 	}
 });
+
+it("retains native Connector identity when a text avatar precedes its title", async () => {
+	const { ConnectorFixtureNode: N } = await import("./grok404ConnectorDomFixture.js");
+	const { f } = fixture();
+	f.installed.parentElement?.setAttribute("data-testid", "connector-card-Example");
+	f.installed.ownText = "";
+	f.installed.children = [
+		new N("span", "E"),
+		new N("span", "Example", { class: "text-sm font-medium" }),
+		new N("span", "example.test"),
+	];
+	for (const child of f.installed.children) child.parentElement = f.installed;
+	expect(
+		await observeGrokNativeConnectorRows(f.runtime, {
+			providerUserId: "fixture-user",
+			rows: [{ handle: "row-0", name: "Example", kind: "installed" }],
+		}),
+	).toEqual([{ handle: "row-0", id: "connector-native", type: "live", endpoint: null }]);
+});

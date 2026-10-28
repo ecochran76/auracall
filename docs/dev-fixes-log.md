@@ -1,3 +1,12 @@
+## 2026-10-27 — Native Connector text avatars are not names
+
+Custom MCP cards can render an avatar initial before the title. First-line text
+parsing misnamed the installed canary A and filtered it out of exact-name reads.
+Bind the native card marker to its actual title for inventory, activation and
+committed provider-ID lookup. Preserve legacy rows and fail closed on ambiguous
+marked titles. A public CDP-boundary regression reproduced empty exact-name results
+before the correction; native identity remains bound to the same title.
+
 ## 2026-10-27 — An omitted Grok gallery card is not an absent Connector
 
 Use the actual selected-ID MCP metadata protocol to qualify an existing record.
