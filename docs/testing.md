@@ -3920,3 +3920,9 @@ acceptance is separate: source execution against the retained managed target
 must retain exact account/response identity, observe the controller and verify
 dialog dismissal. No generation, publication, provider ID aliases or installed
 runtime claim follows from these tests.
+
+The Ops public-status regression was red when `publicationInspection` disappeared
+from the saved Build summary, then green after the strict aggregate projection.
+`pnpm vitest run tests/http.grokBuild.test.ts tests/browser/grokEcosystemProgress.test.ts tests/browser/grok411PublicationControls.test.ts`
+passed7checks. The projection retains native state/button/dismissal/binding flags
+and omits the proposed name, response content and URLs.

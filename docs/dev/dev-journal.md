@@ -1,3 +1,20 @@
+## 2026-10-28 — Continued native411 Ops and offline414 qualification
+
+Root411 adds a sanitized publicationInspection observation to Ops through a
+public-status red/green test; proposed names and URLs stay excluded. Worker414
+checked cursor/budget/foreground/restart/public detail paths and found no new
+offline gap:45fresh selected checks pass, source unchanged. The apparent default
+monitor projection gap was rejected because full-detail/public cursor contracts
+already preserve exact remaining work and uncertainty.
+
+Fresh OS/endpoint census now finds the previously qualified managed Grok browser
+generation absent and its endpoint unreachable. The reopen probe stopped before
+connection, with zero navigation; no replacement was launched. Earlier native
+controls/cache receipts remain historical.409/411/414 remainOPEN; no current
+native acceptance is possible until the configured runtime is qualified again.
+92focused tests/9files, full typecheck and changed-unit lint pass. The one
+completed-batch review/findings-TDD round remains reserved.
+
 ## 2026-10-28 — Renewed411/409/414 implementation checkpoint
 
 Root411 implements explicit CLI/HTTP/MCP native Publish-controls inspection;

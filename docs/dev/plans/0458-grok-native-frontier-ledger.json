@@ -277,7 +277,7 @@
       ],
       "state": "implemented-controls-read-native-snapshot-blocked",
       "scope": "original-program",
-      "gate": "Public explicit publication-controls read observed and dismissed the native idle/unpublished controller; current workspace inactive. Fresh attributable archive-to-publish binding, actual publication approval, dispatch/reconciliation and genuine provider app/version readback remain unmet."
+      "gate": "Native controls read and sanitized Ops are implemented; earlier exact-account idle/unpublished receipt is historical. Managed runtime now absent. Fresh selected snapshot binding, publication approval/dispatch/reconciliation and genuine provider app/version readback remain unmet."
     },
     "412": {
       "title": "Grok: Backfill Grok conversation indexes and follow changes",
@@ -315,7 +315,7 @@
       ],
       "state": "implemented-selected-file-native-inactive",
       "scope": "original-program",
-      "gate": "Selected native workspace-file adapter and retained archive receipt integration are committed; current selected viewer has no assetUrl and isWorkspaceInactive=true. Actual byte capture, conversation-bound uploaded references and broader history acceptance remain unmet.",
+      "gate": "Selected native workspace-file and archive-integrity source committed; earlier native attempt refused inactive/no-URL file state before bytes. Runtime now absent. Actual selected file capture and wider native acceptance remain unmet; offline cursor/budget/foreground/public detail behavior already covered.",
       "materializationEvidence": {
         "integrationCommit": "e5b3707fcb444106948777ada0a3cb5309fa95ac",
         "primaryTests": 32,
@@ -512,10 +512,10 @@
       "base": "00a45bd0bf7df36845ba100aec2a2ddf97e72f33",
       "broadReviews": 0,
       "postReviewTddPasses": 0,
-      "state": "source checkpoint validated; native snapshot gates remain open; review and findings TDD reserved until completed ticket batch",
-      "focusedTests": 91,
-      "focusedFiles": 8,
-      "typecheck": "PASS",
+      "state": "continued source checkpoint validated; native runtime unavailable; no new ticket closures; completed-batch review/findings TDD reserved",
+      "focusedTests": 92,
+      "focusedFiles": 9,
+      "typecheck": "PASS after Ops continuation",
       "installedValidation": "not run",
       "newTrackerClosures": 0,
       "selectedFileIntegratedCommits": [
@@ -524,7 +524,11 @@
       ],
       "nativePublicationControls": "observed idle/not_published; exact account and response retained; dialog dismissal verified; overall workspace_inactive",
       "nativeSelectedFileCapture": "one actual discovery failed before bytes; current inactive query state confirmed, no retry",
-      "botConfiguration": "committed DTO and exact editor source observed; resource contract absent; no source change"
+      "botConfiguration": "committed DTO and exact editor source observed; resource contract absent; no source change",
+      "runtimeStatus": "unavailable: prior managed browser generation absent and endpoint unreachable; reopen preflight stopped before connection; no replacement launched",
+      "publicationOps": "sanitized native state/button/dismissal/unqualified snapshot flags; no name/identity/URL",
+      "worker414OfflineQualification": "45 fresh selected checks passed; no new gap; existing full-detail cursor, budget, uncertainty and foreground restart contracts retained",
+      "sourceChecks": "PASS focused92/9files, full typecheck, changed-unit lint, source CLI help; no installed adoption"
     }
   },
   "executionControl": {

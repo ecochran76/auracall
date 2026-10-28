@@ -10,7 +10,20 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## Current State
 
-### 2026-10-28 renewed implementation checkpoint
+### 2026-10-28 continued implementation checkpoint
+
+Sanitized Ops now preserves the publication-controls observation without proposed
+names or URLs. Worker414's offline check found no further source gap in cursor,
+budget, full-detail remaining IDs or foreground restart behavior;45fresh selected
+checks passed without source changes. Root's attempted native reopen stopped in
+preflight: the previously qualified browser generation is gone and its endpoint
+is unreachable. No navigation/replacement occurred. Earlier native state is
+historical, not current runtime proof. Current source checkpoint850ec83fc is
+published on this branch; source-only Ops continuation passed92focused tests/9files, full typecheck and
+changed-unit lint.
+All three original tickets and parent398 remainOPEN.
+
+### 2026-10-28 renewed implementation checkpoint (historical)
 
 Root owns411; separate workers own409 and414. Selected workspace-file bytes and
 archive-integrity source from414 are integrated as d4ed8851e/ae5d52f6d. Root adds

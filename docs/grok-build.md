@@ -161,3 +161,9 @@ reuse those bytes without another provider download. Missing or changed bytes
 are unavailable rather than silently rehashed or re-exported. See
 [Grok materialization](grok-materialization.md) for coverage limits and the
 still-unqualified referenced-file retrieval gate.
+
+Ops retains a sanitized `publicationInspection` observation with native state,
+native button enablement, verified dismissal and `snapshotBinding=unqualified`.
+It excludes the proposed name, account identity, app identifiers and URLs. Its
+`observedAt` describes the saved observation; it does not prove that the browser
+or workspace is still available. Overall inactive/unknown status is preserved.
