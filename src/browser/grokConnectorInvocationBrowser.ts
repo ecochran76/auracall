@@ -179,25 +179,17 @@ export async function openGrokConnectorInvocationBrowser(
 			await ui("in-page-click", "submit", () => submitGrokPrompt(client.Input, client.Runtime));
 		},
 		async observe() {
-			if (submitted && baseline)
-				await waitForGrokAssistantResult(client.Runtime, 120000, () => {}, {
-					baseline,
+			const result = await observeGrokConnectorInvocationResponse(
+				client.Runtime,
+				request.selector,
+				{
+					baseline: submitted ? baseline : undefined,
 					abortSignal: options.abortSignal,
 					checkWarning: () => governor?.checkWarning?.(client.Runtime) ?? Promise.resolve(),
-				});
-			const snapshot = await readGrokAssistantSnapshotForRuntime(client.Runtime);
+				},
+			);
 			await verify();
-			const toolTrace = snapshot.responseId
-				? await readGrokConnectorToolTrace(client.Runtime, {
-						responseId: snapshot.responseId,
-						connector: request.selector,
-					})
-				: null;
-			return {
-				responseId: snapshot.responseId ?? null,
-				text: snapshot.lastText ?? null,
-				toolTrace,
-			};
+			return result;
 		},
 		async close() {
 			try {
@@ -210,5 +202,49 @@ export async function openGrokConnectorInvocationBrowser(
 				await client.close();
 			}
 		},
+	};
+}
+
+/** Observe one retained Connector response through the browser protocol boundary. */
+export async function observeGrokConnectorInvocationResponse(
+	runtime: ChromeClient["Runtime"],
+	selector: { id: string; name: string },
+	options: {
+		baseline?: Awaited<ReturnType<typeof readGrokAssistantSnapshotForRuntime>>;
+		abortSignal?: AbortSignal;
+		checkWarning?: () => Promise<void>;
+	} = {},
+) {
+	let accepted: Awaited<ReturnType<typeof readGrokAssistantSnapshotForRuntime>> | undefined;
+	if (options.baseline)
+		await waitForGrokAssistantResult(runtime, 120000, () => {}, {
+			baseline: options.baseline,
+			abortSignal: options.abortSignal,
+			checkWarning: options.checkWarning,
+			onTerminalSnapshot: (snapshot) => {
+				accepted = snapshot;
+			},
+		});
+	const snapshot = await readGrokAssistantSnapshotForRuntime(runtime);
+	if (
+		options.baseline &&
+		(!accepted?.responseId ||
+			snapshot.responseId !== accepted.responseId ||
+			!snapshot.terminal ||
+			snapshot.streaming ||
+			(snapshot.lastMarkdown || snapshot.lastText) !== (accepted.lastMarkdown || accepted.lastText))
+	)
+		throw new Error("grok_connector_result_attribution_unknown");
+
+	const toolTrace = snapshot.responseId
+		? await readGrokConnectorToolTrace(runtime, {
+				responseId: snapshot.responseId,
+				connector: selector,
+			})
+		: null;
+	return {
+		responseId: snapshot.responseId ?? null,
+		text: snapshot.lastText ?? null,
+		toolTrace,
 	};
 }

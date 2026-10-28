@@ -26407,3 +26407,12 @@ inventory. Reuse the already resolved exact-target authority instead of resolvin
 it twice; classify the empty contenteditable newline as an empty draft while
 preserving meaningful existing text. The native offline canary verified revision
 protected edit and exact readback without Send.
+
+## 2026-10-28 — Preserve unknown custody and atomic response ownership
+
+Corrupt or unreadable Connector intent journals now retain deterministic operation
+identity and retrySafe:false in the public result. Build readiness resolves the
+current committed React tree rather than trusting a stale DOM fiber seed. The
+Grok text waiter can report its exact accepted terminal snapshot; Connector
+observation checks that identity/content/terminal state before returning native
+tool cards, preventing an unrelated later response from becoming the first anchor.

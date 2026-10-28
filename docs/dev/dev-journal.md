@@ -1,3 +1,13 @@
+## 2026-10-28 — PR489 single review and findings-TDD phase
+
+User approved4a3d63d18…68ea3e83f. Independent Standards and Spec axes returned
+three uniqueP2defects:corrupt invocation custody, stale Build React ownership,
+and initial response substitution. All were accepted and repaired through one
+bounded TDD phase. Original native read/offline CAS draft receipts are reused;
+no new provider effects. Integrated checks and closed-world verification precede
+PR489 merge and406closure.409/411/414 keep their native capability gates.
+See notes/2026-10-28-grok489-review.md for adjudication and exact red/green commands.
+
 ## 2026-10-28 — Native406 journey verified; integration and review pending
 
 Root406 and independent409/411/414 source work are integrated from main4a3d63d18.

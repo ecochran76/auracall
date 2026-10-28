@@ -75,16 +75,23 @@ export function createGrokConnectorInvocationService(deps: {
 				!/^[a-f0-9]{64}$/.test(request.expectedProviderAccountRef)
 			)
 				return { ...base, code: "grok_connector_invocation_request_invalid" };
-			await fs.mkdir(deps.directory, { recursive: true, mode: 0o700 });
 			const fence = path.join(deps.directory, `${operationId}.json`);
 			let existing = false;
 			try {
+				await fs.mkdir(deps.directory, { recursive: true, mode: 0o700 });
 				const saved = JSON.parse(await fs.readFile(fence, "utf8"));
 				if (JSON.stringify(saved.identity) !== JSON.stringify(identity))
 					throw new Error("grok_connector_invocation_identity_changed");
 				existing = true;
 			} catch (error) {
-				if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+				if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+					return {
+						...base,
+						status: "unconfirmed",
+						code: "grok_connector_invocation_journal_unavailable",
+						effectState: "unknown",
+						retrySafe: false,
+					};
 			}
 			let port: GrokConnectorInvocationPort;
 			try {

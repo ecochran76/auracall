@@ -677,6 +677,7 @@ export async function waitForGrokAssistantResult(
       responseId?: string;
     } | null;
     onResponseIncoming?: () => void;
+    onTerminalSnapshot?: (snapshot: GrokTextAssistantSnapshot) => void;
     checkWarning?: () => Promise<void>;
     abortSignal?: AbortSignal;
   } = {},
@@ -713,6 +714,7 @@ export async function waitForGrokAssistantResult(
       }
       if (stableCount >= 2 && !current.streaming && current.terminal) {
         logger('Recovered assistant response');
+        options.onTerminalSnapshot?.({ ...current });
         return {
           text: current.lastText,
           markdown: current.lastMarkdown || current.lastText,

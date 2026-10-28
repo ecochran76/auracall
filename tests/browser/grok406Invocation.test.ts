@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
@@ -280,6 +280,59 @@ it("preserves durable unknown custody when the retained browser cannot be reopen
 			effectState: "unknown",
 			retrySafe: false,
 		});
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
+it("keeps corrupt retained invocation custody unconfirmed through the public command without replay", async () => {
+	const directory = await mkdtemp(path.join(os.tmpdir(), "grok406-corrupt-"));
+	let submissions = 0;
+	const request = {
+		action: "invoke" as const,
+		targetId: "EXACT-TARGET",
+		expectedProviderAccountRef: "a".repeat(64),
+		selector: { id: "connector-native", name: "Example", endpoint: "https://example.test/mcp" },
+		prompt: "Read accounts once.",
+		confirm: true as const,
+	};
+	const service = createGrokConnectorInvocationService({
+		directory,
+		open: async () => ({
+			prepare: async () => true,
+			submit: async () => {
+				submissions++;
+				throw new Error("lost acknowledgement");
+			},
+			observe: async () => ({ responseId: null, text: null }),
+		}),
+	});
+	try {
+		const first = await service.invoke(request);
+		await writeFile(path.join(directory, `${first.operationId}.json`), "{truncated", {
+			mode: 0o600,
+		});
+		const { runGrokConnectorsCommand, summarizeGrokConnectorDiagnostics } = await import(
+			"../../src/cli/grokConnectorsCommand.js"
+		);
+		const result = await runGrokConnectorsCommand(request, {
+			list: async () => {
+				throw new Error("wrong operation");
+			},
+			inspect: async () => {
+				throw new Error("wrong operation");
+			},
+			invoke: service.invoke,
+		});
+		expect(result).toMatchObject({
+			operationId: first.operationId,
+			status: "unconfirmed",
+			effectState: "unknown",
+			retrySafe: false,
+			code: "grok_connector_invocation_journal_unavailable",
+		});
+		expect(summarizeGrokConnectorDiagnostics(result).retrySafe).toBe(false);
+		expect(submissions).toBe(1);
 	} finally {
 		await rm(directory, { recursive: true, force: true });
 	}

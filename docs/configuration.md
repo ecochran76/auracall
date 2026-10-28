@@ -1296,7 +1296,9 @@ CLI, HTTP and MCP operation. Supply `targetId`, an exact `selector` containing
 native composer row must match the current committed provider ID; AuraCall
 never toggles unrelated or disabled Connectors to satisfy selection. Existing
 composer drafts are preserved. A private durable intent fence precedes submit;
-repeating that exact request only observes its retained target. Assistant text
+repeating that exact request only observes its retained target. Corrupt or
+unreadable intent custody returns an unconfirmed operation with its original
+deterministic identity and `retrySafe: false`; it never resets the fence. Assistant text
 alone returns `unconfirmed` with `toolTrace: null` and `retrySafe: false`,
 because it cannot establish that the selected Connector executed a tool. Native
 settled MCP cards populate `toolTrace` with actual arguments/results for the
