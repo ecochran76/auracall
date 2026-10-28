@@ -2870,12 +2870,12 @@ async function materializeReconciliation(input: {
 			attemptReceipts.push(outcome.receipt);
 			selectedCandidates += 1;
 			if (outcome.accounting.candidateMaterialized) materializedCandidates += 1;
-			if (outcome.accounting.providerGuardObserved) break;
 			remainingAssetBudget =
 				decrementRemaining(remainingAssetBudget, outcome.accounting.assetsAttempted) ?? 0;
 			if (outcome.accounting.targetConsumed) {
 				consumedTargetBudget += 1;
 			}
+			if (outcome.accounting.providerGuardObserved) break;
 		}
 	} else if (
 		selectedKinds.includes("artifacts") ||

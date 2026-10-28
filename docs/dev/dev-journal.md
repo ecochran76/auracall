@@ -1,3 +1,13 @@
+## 2026-10-27 — Parallel source integration and one review/remediation round
+
+Root Connector title/search identity repairs, independent409resource observation
+and414selected-frontier budget/progress fixes integrated. One two-axis review:
+Standards0findings; SpecS1P2accepted and repaired in one public-seam RED/GREEN
+TDD pass. Final208focused tests/12files, full typecheck andscopedlint pass.
+Exact-root native Connector metadata read hasrealID; default-target failedread
+retained. Bot editor andpublication revision unqualified; no Mailtool/draft or
+publication. Remainingticketsstayopen. Batchnote records exact evidence/limits.
+
 ## 2026-10-27 — Renewed parallel ticket implementation
 
 User requests TDD implementation, independent workers per unblocked ticket, then

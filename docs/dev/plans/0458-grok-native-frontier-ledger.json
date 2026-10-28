@@ -162,7 +162,8 @@
         405
       ],
       "state": "implementing-exact-composer-selection",
-      "scope": "original-program"
+      "scope": "original-program",
+      "gate": "Exact-root public metadata now yields original Connector ID; composer selection and actual through-Grok read/offline-draft qualification remain open."
     },
     "407": {
       "title": "Grok: Discover and invoke existing Grok Bots",
@@ -210,7 +211,8 @@
         408
       ],
       "state": "public-resource-observation-implemented-native-editor-unknown",
-      "scope": "original-program"
+      "scope": "original-program",
+      "gate": "Public resource observation implemented; current exact owned Bot route/account valid but native header/editor absent from bounded read, so grants/persistence unknown."
     },
     "410": {
       "title": "Grok: Generate Build apps and retrieve their artifacts",
@@ -264,7 +266,8 @@
         410
       ],
       "state": "blocked-dependencies",
-      "scope": "original-program"
+      "scope": "original-program",
+      "gate": "Original selected assistant file panel observed; current workspace revision/archive association and genuine publication app/version remain unqualified. No publication."
     },
     "412": {
       "title": "Grok: Backfill Grok conversation indexes and follow changes",
@@ -302,7 +305,7 @@
       ],
       "state": "selected-frontier-budget-progress-implemented-native-bytes-open",
       "scope": "original-program",
-      "gate": "Referenced-file retrieval and actual Grok history budget/foreground-resume evidence remain unqualified.",
+      "gate": "Selected transfer accounting/frontier progress implemented; referenced-file retrieval and actual history crash/foreground continuation remain unqualified.",
       "materializationEvidence": {
         "integrationCommit": "e5b3707fcb444106948777ada0a3cb5309fa95ac",
         "primaryTests": 32,
@@ -454,9 +457,15 @@
       "authority": "User explicitly renewed implementation TDD, one code-review round and one findings-TDD round",
       "base": "5d332eef076f0cd32cb9049a82c8ae53ebdd6771",
       "baselineChoiceAsked": true,
-      "broadReviews": 0,
-      "postReviewTddPasses": 0,
-      "report": "../notes/2026-10-27-grok-ticket-implementation-batch.md"
+      "broadReviews": 1,
+      "postReviewTddPasses": 1,
+      "report": "../notes/2026-10-27-grok-ticket-implementation-batch.md",
+      "reviewHead": "f829d49583de485b05da7420381f128c8f8dd544",
+      "standardsAccepted": 0,
+      "specAccepted": 1,
+      "acceptedFinding": "S1 P2 guarded-attempt accounting; repaired by public-seam RED/GREEN",
+      "finalFocusedTests": 208,
+      "sourceChecks": "PASS; full typecheck and scoped lint; no installed adoption"
     }
   },
   "executionControl": {

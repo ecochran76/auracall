@@ -111,6 +111,75 @@ describe("history materialization service", () => {
 		}
 	});
 
+	it("accounts for the guarded Grok attempt before retaining the final frontier budget", async () => {
+		const home = await fs.mkdtemp(path.join(os.tmpdir(), "grok414-guard-budget-"));
+		setAuracallHomeDirOverrideForTest(home);
+		let scheduled: (() => Promise<void>) | undefined;
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: async () => ({ ...buildReconciliationCatalog([]), entries: [] }),
+				readItem: async () => null,
+			},
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: async (target) => {
+				const result = buildNoMaterializableHistoryResult(target);
+				const entry = result.entries[1];
+				if (!entry) throw new Error("fixture entry missing");
+				return {
+					...result,
+					status: "materialized",
+					entries: [
+						{
+							...entry,
+							status: "materialized",
+							providerId: "selected-file",
+							localPath: "/fixture/retained",
+							size: 7,
+						},
+						{
+							...entry,
+							status: "failed",
+							providerId: null,
+							remoteUrl: null,
+							localPath: null,
+							materializationMethod: null,
+							reason: "Grok provider guard: Too many requests; making requests too quickly.",
+						},
+					],
+					metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 1 },
+				};
+			},
+		});
+		try {
+			const created = await service.createJob({
+				provider: "grok",
+				runtimeProfile: "default",
+				reconcile: true,
+				conversationIds: ["guarded-one", "unattempted-two"],
+				assetKinds: ["files"],
+				maxItems: 2,
+			});
+			if (!scheduled) throw new Error("expected scheduled job");
+			await scheduled();
+			const job = await service.readJob(created.job.id);
+			expect(job?.result?.attempts?.[0]?.accounting).toMatchObject({
+				targetConsumed: true,
+				assetsAttempted: 1,
+				providerGuardObserved: true,
+			});
+			expect(job?.result?.selectedFrontier).toMatchObject({
+				attemptedConversationIds: ["guarded-one"],
+				unattemptedConversationIds: ["unattempted-two"],
+				budget: { targetLimit: 2, targetsConsumed: 1, assetsRemaining: 1 },
+			});
+		} finally {
+			await fs.rm(home, { recursive: true, force: true });
+		}
+	});
+
 	afterEach(() => {
 		setAuracallHomeDirOverrideForTest(null);
 	});

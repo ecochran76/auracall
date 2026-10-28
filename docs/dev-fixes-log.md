@@ -1,3 +1,11 @@
+## 2026-10-27 — Account for guarded attempts before stopping the frontier
+
+A provider guard stops later work but does not erase the attempt already made.
+Apply its explicit target/asset accounting before breaking; otherwise public
+remaining-budget diagnostics conflict with retained attempt receipts. A selected
+Grok partial-transfer regression was red for consumed0/remaining2, then green
+for consumed1/remaining1 while the next target remains unattempted.
+
 ## 2026-10-27 — Bind searched Connector identities before restoring the view
 
 Search cleanup can re-render card metadata. Bind exact committed account-scoped
