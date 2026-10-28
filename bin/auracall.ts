@@ -3495,20 +3495,21 @@ program.command('grok-conversations').description('Read bounded Grok Chats inven
   console.log(JSON.stringify(result,null,2));if(result.coverage.state==='failed')process.exitCode=1;
  });
 
-program.command('grok-connectors').description('Discover, explicitly install or reconcile Grok Connectors as JSON.')
- .option('--action <list|inspect|install|reconcile>','Connector operation.','list').option('--query <text>','Search visible Connector inventory.')
+program.command('grok-connectors').description('Discover, install, reconcile or invoke Grok Connectors as JSON.')
+ .option('--action <list|inspect|install|reconcile|invoke>','Connector operation.','list').option('--query <text>','Search visible Connector inventory.')
  .option('--id <id>','Exact observed Connector ID.').option('--name <name>','Exact name; ambiguity rejects.')
  .option('--endpoint <url>','Exact endpoint identity.').option('--kind <installed|catalog|custom>','Inventory kind; install defaults to custom.')
- .option('--expected-provider-account <sha256>','Exact Grok account reference from discovery.').option('--connected-account-ref <sha256>','Exact expected connected account reference.').option('--yes','Confirm a Connector installation.')
+ .option('--expected-provider-account <sha256>','Exact Grok account reference from discovery.').option('--connected-account-ref <sha256>','Exact expected connected account reference.').option('--yes','Confirm a Connector installation or invocation.')
+ .option('--target-id <id>','Exact retained browser target for invocation.').option('--prompt <text>','Exact through-Grok Connector invocation prompt.')
  .option('--reconcile-target <targetId>','Explicit read-only replacement browser target.').option('--reconcile-connector <id>','Original provider Connector ID for reconciliation.')
  .option('--runtime-profile <id>','Select configured AuraCall runtime profile.').option('--json','Print JSON.')
  .action(async (commandOptions,command)=>{
   const userConfig=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
-  const request=['install','reconcile'].includes(commandOptions.action) ? {action:commandOptions.action,runtimeProfile:commandOptions.runtimeProfile,...(commandOptions.reconcileTarget||commandOptions.reconcileConnector?{reconciliationTarget:{targetId:commandOptions.reconcileTarget,connectorId:commandOptions.reconcileConnector}}:{}),input:{kind:commandOptions.kind??'custom',name:commandOptions.name,endpoint:commandOptions.endpoint,connectorId:commandOptions.id,accountRef:commandOptions.connectedAccountRef},expectedProviderAccountRef:commandOptions.expectedProviderAccount,...(commandOptions.action==='install'?{confirm:commandOptions.yes===true}:{})} : commandOptions.action==='inspect' ? {action:'inspect',runtimeProfile:commandOptions.runtimeProfile,selector:{id:commandOptions.id,name:commandOptions.name,endpoint:commandOptions.endpoint,kind:commandOptions.kind}} : {action:commandOptions.action,query:commandOptions.query,runtimeProfile:commandOptions.runtimeProfile};
+  const request=commandOptions.action==='invoke'?{action:'invoke',runtimeProfile:commandOptions.runtimeProfile,targetId:commandOptions.targetId,selector:{id:commandOptions.id,name:commandOptions.name,endpoint:commandOptions.endpoint},prompt:commandOptions.prompt,expectedProviderAccountRef:commandOptions.expectedProviderAccount,confirm:commandOptions.yes===true}:['install','reconcile'].includes(commandOptions.action) ? {action:commandOptions.action,runtimeProfile:commandOptions.runtimeProfile,...(commandOptions.reconcileTarget||commandOptions.reconcileConnector?{reconciliationTarget:{targetId:commandOptions.reconcileTarget,connectorId:commandOptions.reconcileConnector}}:{}),input:{kind:commandOptions.kind??'custom',name:commandOptions.name,endpoint:commandOptions.endpoint,connectorId:commandOptions.id,accountRef:commandOptions.connectedAccountRef},expectedProviderAccountRef:commandOptions.expectedProviderAccount,...(commandOptions.action==='install'?{confirm:commandOptions.yes===true}:{})} : commandOptions.action==='inspect' ? {action:'inspect',runtimeProfile:commandOptions.runtimeProfile,selector:{id:commandOptions.id,name:commandOptions.name,endpoint:commandOptions.endpoint,kind:commandOptions.kind}} : {action:commandOptions.action,query:commandOptions.query,runtimeProfile:commandOptions.runtimeProfile};
   if(commandOptions.action==='list' && [commandOptions.id,commandOptions.name,commandOptions.endpoint,commandOptions.kind].some(Boolean))throw new Error('Use --action inspect with Connector selectors.');
   const validated=GrokConnectorsRequestSchema.parse(request);
   let result;
-  try {result=await runGrokConnectorsCommand(validated,await createConfiguredGrokConnectorsService(userConfig,commandOptions.runtimeProfile));} catch {result=grokConnectorsFailureResult();}
+  try {result=await runGrokConnectorsCommand(validated,await createConfiguredGrokConnectorsService(userConfig,commandOptions.runtimeProfile,undefined,validated.action==='invoke'?validated.targetId:undefined));} catch {result=grokConnectorsFailureResult();}
   console.log(JSON.stringify(result,null,2));if(grokConnectorsResultIsError(result))process.exitCode=1;
  });
 

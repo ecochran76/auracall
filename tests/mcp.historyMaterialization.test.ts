@@ -1,5 +1,8 @@
+import { z } from "zod";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it, vi } from 'vitest';
 import {
+  registerHistoryMaterializationTools,
   createHistoryMaterializationCancelToolHandler,
   createHistoryMaterializationCreateToolHandler,
   createHistoryMaterializationJobsToolHandler,
@@ -11,6 +14,47 @@ import {
 } from '../src/runtime/historyMaterializationService.js';
 
 describe('mcp history materialization tools', () => {
+  it("retains restart uncertainty and completed budgets in the registered public job output contract", () => {
+    let outputSchema: z.ZodRawShape | undefined;
+    const server = {
+      registerTool: (name: string, config: { outputSchema: z.ZodRawShape }) => {
+        if (name === "history_materialization_job") outputSchema = config.outputSchema;
+      },
+    } as unknown as McpServer;
+    registerHistoryMaterializationTools(server, {
+      service: {
+        createJob: vi.fn(),
+        listJobs: vi.fn(),
+        readJob: vi.fn(),
+        cancelJob: vi.fn(),
+        runJob: vi.fn(),
+        recoverInterruptedJobs: vi.fn(),
+      },
+    });
+    if (!outputSchema) throw new Error("Expected public job output schema");
+    const cursor = {
+      version: 1,
+      checkpointedAt: "2026-10-28T00:00:00.000Z",
+      budgetScope: "completed_attempts_only",
+      inFlight: {
+        conversationId: "second",
+        index: 1,
+        budgetBefore: { targetLimit: 3, targetsConsumed: 1, assetsRemaining: 2 },
+      },
+      completedAttemptCount: 1,
+      remainingConversationCount: 2,
+      resumePolicy: "explicit_request_required",
+      attempts: [],
+      remainingConversationIds: ["second", "third"],
+      budget: { targetLimit: 3, targetsConsumed: 1, assetsRemaining: 2 },
+    };
+    const parsed = z
+      .object(outputSchema)
+      .parse({ ...historyJob("succeeded"), materializationCursor: cursor });
+    expect(parsed.materializationCursor).toEqual(cursor);
+  });
+
+
   it('queues history materialization jobs through the shared service', async () => {
     const createJob = vi.fn(async () => ({
       object: 'history_materialization_job_create_result' as const,

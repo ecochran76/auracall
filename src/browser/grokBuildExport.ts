@@ -10,7 +10,10 @@ import type {
 } from "./grokBuildService.js";
 import { grokBuildUnknown } from "./grokBuildService.js";
 import { runGrokUiOperation } from "./grokUiOperation.js";
-import { readGrokBuildPlaneSnapshot } from "./providers/grokBuild.js";
+import {
+	readGrokBuildPlaneSnapshot,
+	readGrokBuildWorkspaceReadiness,
+} from "./providers/grokBuild.js";
 import { grokBuildExportControlExpression } from "./providers/grokBuildExport.js";
 import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
 import type { BrowserProviderListOptions } from "./providers/types.js";
@@ -212,6 +215,10 @@ export async function exportGrokBuild(
 				uiState: "completed",
 			},
 		};
+		if (
+			(await readGrokBuildWorkspaceReadiness(client.Runtime, request.conversationId)) === "inactive"
+		)
+			throw new Error("grok_build_workspace_inactive");
 		const responseId = view.responseId,
 			gatewayRowId = view.gatewayRowId;
 		const exact = { ...request, responseId };
@@ -220,6 +227,11 @@ export async function exportGrokBuild(
 			await governor.checkWarning?.(client.Runtime);
 			if ((await verify(client.Runtime, options)) !== account)
 				throw new Error("grok_build_account_changed");
+			if (
+				(await readGrokBuildWorkspaceReadiness(client.Runtime, request.conversationId)) ===
+				"inactive"
+			)
+				throw new Error("grok_build_workspace_inactive");
 			if (click) {
 				const { ensureGrokTabVisible } = await import("./providers/grokAdapter.js");
 				await ensureGrokTabVisible(client, { timeoutMs: 2500 });
@@ -361,18 +373,21 @@ export async function exportGrokBuild(
 			},
 		});
 	} catch (error) {
+		const inactive = error instanceof Error && error.message === "grok_build_workspace_inactive";
 		const unsupported =
 			error instanceof Error && error.message === "grok_build_target_download_unsupported";
 		result = {
 			...result,
-			status: unsupported ? "unavailable" : "unknown",
+			status: unsupported || inactive ? "unavailable" : "unknown",
 			code: attempted
 				? "grok_build_export_outcome_unknown"
 				: uncertainUiEffect
 					? "grok_build_export_ui_outcome_unknown"
-					: unsupported
-						? "grok_build_target_download_unsupported"
-						: "grok_build_export_preflight_failed",
+					: inactive
+						? "grok_build_workspace_inactive"
+						: unsupported
+							? "grok_build_target_download_unsupported"
+							: "grok_build_export_preflight_failed",
 			effectState: attempted || uncertainUiEffect ? "unknown" : "none",
 			retrySafe: !attempted && !uncertainUiEffect,
 			artifacts:

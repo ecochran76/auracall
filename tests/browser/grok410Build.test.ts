@@ -284,6 +284,37 @@ function buildFixture({
 			},
 		},
 	};
+	type WorkspaceFiber = {
+		memoizedProps: Record<string, unknown>;
+		stateNode?: unknown;
+		tag?: number;
+		return?: WorkspaceFiber | null;
+		child?: WorkspaceFiber;
+	};
+	const setWorkspace = (committed: "inactive" | "ready", seeded = committed) => {
+		const button = new Button("", { "aria-label": "File tree" });
+		const owner: { current: WorkspaceFiber | null } = { current: null };
+		const tree = (status: string) => {
+			const path: WorkspaceFiber[] = [
+				{ memoizedProps: {}, stateNode: owner, tag: 3, return: null },
+				{ memoizedProps: { conversationId: "conversation-generated", view: "document" } },
+				{ memoizedProps: { fs: { fsKey: "conversation:conversation-generated" } } },
+				{ memoizedProps: { tree: [], status, dirStatus: new Map() } },
+				{ memoizedProps: {}, stateNode: button },
+			];
+			for (let index = 1; index < path.length; index++) {
+				path[index].return = path[index - 1];
+				path[index - 1].child = path[index];
+			}
+			return path;
+		};
+		const current = tree(committed);
+		owner.current = current[0];
+		const seed = seeded === committed ? current : tree(seeded);
+		Object.assign(button, { __reactFiber$fixture: seed[seed.length - 1] });
+		button.parentElement = document;
+		document.children.push(button);
+	};
 	return {
 		runtime,
 		service: createGrokBuildService(
@@ -308,6 +339,8 @@ function buildFixture({
 		inputs: () => inputs,
 		selections: () => selections,
 		seedPlane,
+		setInactiveWorkspace: () => setWorkspace("inactive"),
+		setWorkspace,
 		addNativeFile: () => {
 			const input = Object.assign(new Node("input", "", { type: "file" }), {
 				files: [{ name: "existing.txt" }],
@@ -812,6 +845,83 @@ test("export refuses an older assistant when the conversation has another worksp
 			effectState: "none",
 			exportCapture: { setup: "not_attempted" },
 		});
+	} finally {
+		await fs.rm(outputDir, { recursive: true, force: true });
+	}
+});
+
+test("public inspection reports the selected native workspace inactive despite its completed assistant", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane();
+	fixture.setInactiveWorkspace();
+	const result = await fixture.service.inspect({
+		targetId: "build-target",
+		conversationId: "conversation-generated",
+	});
+	expect(result).toMatchObject({
+		status: "unavailable",
+		code: "grok_build_workspace_inactive",
+		generation: { status: "response_completed" },
+		preview: { status: "unknown" },
+		effectState: "none",
+		cleanupState: "completed",
+	});
+});
+
+test("public export refuses the current inactive workspace before capture or download dispatch", async () => {
+	const fixture = buildFixture();
+	fixture.seedPlane();
+	fixture.setInactiveWorkspace();
+	const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "grok-inactive-"));
+	await fs.chmod(outputDir, 0o700);
+	try {
+		const result = await fixture.service.export({
+			targetId: "build-target",
+			conversationId: "conversation-generated",
+			outputDir,
+			acknowledgeTargetDefaultReset: true,
+		});
+		expect(result).toMatchObject({
+			status: "unavailable",
+			code: "grok_build_workspace_inactive",
+			effectState: "none",
+			exportCapture: { setup: "not_attempted", reset: "not_needed" },
+			artifacts: { status: "unavailable", entries: [] },
+			cleanupState: "completed",
+		});
+	} finally {
+		await fs.rm(outputDir, { recursive: true, force: true });
+	}
+});
+
+test.each([
+	["inspect", "ready"],
+	["inspect", "inactive"],
+	["export", "ready"],
+	["export", "inactive"],
+] as const)("public %s reads committed workspace state %s instead of the stale DOM fiber", async (action, committed) => {
+	const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "grok-committed-"));
+	await fs.chmod(outputDir, 0o700);
+	try {
+		const fixture = buildFixture();
+		fixture.seedPlane();
+		fixture.setWorkspace(committed, committed === "ready" ? "inactive" : "ready");
+		const request = { targetId: "build-target", conversationId: "conversation-generated" };
+		const result =
+			action === "inspect"
+				? await fixture.service.inspect(request)
+				: await fixture.service.export({
+						...request,
+						outputDir,
+						acknowledgeTargetDefaultReset: true,
+					});
+		expect(result.code).toBe(
+			committed === "inactive"
+				? "grok_build_workspace_inactive"
+				: action === "inspect"
+					? "grok_build_app_identity_unobserved"
+					: "grok_build_target_download_unsupported",
+		);
 	} finally {
 		await fs.rm(outputDir, { recursive: true, force: true });
 	}

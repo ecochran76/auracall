@@ -1,3 +1,27 @@
+## 2026-10-28 — PR489 single review and findings-TDD phase
+
+User approved4a3d63d18…68ea3e83f. Independent Standards and Spec axes returned
+three uniqueP2defects:corrupt invocation custody, stale Build React ownership,
+and initial response substitution. All were accepted and repaired through one
+bounded TDD phase. Original native read/offline CAS draft receipts are reused;
+no new provider effects. Integrated checks and closed-world verification precede
+PR489 merge and406closure.409/411/414 keep their native capability gates.
+See notes/2026-10-28-grok489-review.md for adjudication and exact red/green commands.
+
+## 2026-10-28 — Native406 journey verified; integration and review pending
+
+Root406 and independent409/411/414 source work are integrated from main4a3d63d18.
+One actual through-Grok accounts call and one retained offline draft journey are
+verified from native tool cards. Draft create/read/CAS-edit/readback retained
+one exact draft, empty recipients and revision1→2, with no Send. The read stage
+also performed a web search, recorded explicitly instead of accepting assistant
+claims. Public native trace, no-replay custody, later-response binding and Ops
+persistence are implemented.409 has no native Bot resource controls;411 current
+workspace is inactive;414 referenced bytes remain unqualified. DraftPR489 is published;406 and the remaining409/411/414 stayOPEN pending
+their distinct review/main or native-capability gates. Graphiti disposition is
+forbidden:no memory write requested; a private non-write receipt is retained. See the batch
+note for private evidence hash, failures, tests and review status.
+
 ## 2026-10-27 — Parallel source integration and one review/remediation round
 
 Root Connector title/search identity repairs, independent409resource observation

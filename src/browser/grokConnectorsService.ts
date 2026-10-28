@@ -1,4 +1,5 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP and provider identity wire names are case-sensitive.
+import type { GrokConnectorInvocationRequest, GrokConnectorInvocationResult } from './grokConnectorInvocationService.js';
 import { projectGrokAccountReference } from "./grokAccountReference.js";
 import type { GrokConnectorInstallationService } from "./grokConnectorInstallationService.js";
 import {
@@ -25,6 +26,7 @@ export interface GrokConnectorConnection {
 }
 export interface GrokConnectorsService
 	extends Partial<Pick<GrokConnectorInstallationService, "install" | "reconcile">> {
+	invoke?(request:GrokConnectorInvocationRequest):Promise<GrokConnectorInvocationResult>;
 	list(query?: string): Promise<GrokConnectorInventory>;
 	inspect(selector: GrokConnectorSelector): Promise<GrokConnectorDetail>;
 }

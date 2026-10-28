@@ -15,6 +15,7 @@ import {
 	hasEmptyGrokBuildRoot,
 	readGrokBuildPlaneSnapshot,
 	readGrokBuildResponseIdentity,
+	readGrokBuildWorkspaceReadiness,
 	redactGrokBuildPreviewBearers,
 } from "./providers/grokBuild.js";
 import { resolveProviderTrafficGovernor } from "./providers/mutationAudit.js";
@@ -466,6 +467,9 @@ export function createGrokBuildService(
 				if (!account) throw new Error("grok_build_account_not_verified");
 				options.abortSignal?.throwIfAborted();
 				const view = await readGrokBuildPlaneSnapshot(client.Runtime, request);
+				const readiness = view.conversationId
+					? await readGrokBuildWorkspaceReadiness(client.Runtime, view.conversationId)
+					: "unobserved";
 				options.abortSignal?.throwIfAborted();
 				if ((await verify(client.Runtime, options)) !== account)
 					throw new Error("grok_build_account_changed");
@@ -490,6 +494,13 @@ export function createGrokBuildService(
 						...(view.previewAvailable ? { code: "grok_build_preview_session_required" } : {}),
 					},
 				};
+				if (readiness === "inactive")
+					result = {
+						...result,
+						status: "unavailable",
+						code: "grok_build_workspace_inactive",
+						preview: { status: "unknown", url: null, code: "grok_build_workspace_inactive" },
+					};
 				await admission.settle({ outcome: "succeeded", probeContext: client.Runtime });
 			} catch (error) {
 				await admission.settle({

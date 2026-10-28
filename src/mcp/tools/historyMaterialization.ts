@@ -59,6 +59,12 @@ const historyMaterializationListInputShape = {
 	limit: z.number().int().nonnegative().max(500).optional(),
 } satisfies z.ZodRawShape;
 
+const materializationBudgetShape = z.object({
+	targetLimit: z.number().nonnegative().nullable(),
+	targetsConsumed: z.number().nonnegative(),
+	assetsRemaining: z.number().nonnegative().nullable(),
+});
+
 const historyMaterializationJobShape = z.object({
 	object: z.literal("history_materialization_job"),
 	id: z.string(),
@@ -71,6 +77,27 @@ const historyMaterializationJobShape = z.object({
 	startedAt: z.string().nullable(),
 	completedAt: z.string().nullable(),
 	attemptCount: z.number(),
+	materializationCursor: z
+		.object({
+			version: z.literal(1),
+			checkpointedAt: z.string(),
+			budgetScope: z.literal("completed_attempts_only"),
+			inFlight: z
+				.object({
+					conversationId: z.string(),
+					index: z.number().int().nonnegative(),
+					budgetBefore: materializationBudgetShape,
+				})
+				.nullable(),
+			completedAttemptCount: z.number().int().nonnegative(),
+			remainingConversationCount: z.number().int().nonnegative().nullable(),
+			resumePolicy: z.literal("explicit_request_required"),
+			attempts: z.array(z.unknown()),
+			remainingConversationIds: z.array(z.string()).nullable(),
+			budget: materializationBudgetShape,
+		})
+		.nullable()
+		.optional(),
 	result: z.unknown().nullable(),
 	error: z
 		.object({

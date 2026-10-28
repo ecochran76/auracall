@@ -1,5 +1,6 @@
 import type { ChromeClient } from "../types.js";
 import { GROK_PROVIDER } from "./grok.js";
+import { GROK_COMMITTED_REACT_PATH } from "./grokCommittedReact.js";
 
 /** A Build submission starts only on the observed root composer, preserving drafts
  * and existing conversations. These selectors are the shared Grok text surface. */
@@ -121,4 +122,41 @@ export function redactGrokBuildPreviewBearers(value: string): string {
 		}
 		return candidate;
 	});
+}
+
+/** Committed Files readiness is current authority. Historical overflow visibility
+ * (`everReady`) cannot establish that a workspace is still active. This read
+ * never invokes provider hooks, store getters, or filesystem callbacks. */
+export async function readGrokBuildWorkspaceReadiness(
+	runtime: ChromeClient["Runtime"],
+	conversationId: string,
+): Promise<"inactive" | "unobserved"> {
+	const reply = await runtime.evaluate({
+		returnByValue: true,
+		expression: `(() => {
+      const expected=${JSON.stringify(conversationId)}, url=new URL(location.href);
+      if(url.origin!=='https://grok.com'||url.pathname!=='/c/'+expected)return 'unobserved';
+      const visible=el=>el instanceof HTMLElement&&!el.closest('[aria-hidden="true"],[data-state="closed"],[data-closed=""],[data-closed="true"]')&&window.getComputedStyle(el).display!=='none'&&window.getComputedStyle(el).visibility!=='hidden'&&el.getBoundingClientRect().width>0&&el.getBoundingClientRect().height>0;
+      const buttons=Array.from(document.querySelectorAll('button[aria-label="File tree"]')).filter(visible);
+      if(buttons.length!==1)return 'unobserved';
+      const own=(object,key)=>{if(!object||typeof object!=='object')return undefined;const descriptor=Object.getOwnPropertyDescriptor(object,key);return descriptor&&'value' in descriptor?descriptor.value:undefined;};
+      const keys=Object.keys(buttons[0]).filter(key=>key.startsWith('__reactFiber$'));
+      if(keys.length!==1)return 'unobserved';
+      ${GROK_COMMITTED_REACT_PATH}
+      const current=committedPath(own(buttons[0],keys[0]),buttons[0],buttons[0]);
+      if(!current)return 'unobserved';
+      let inactive=false, filesystem=false;
+      for(const fiber of current.path.slice(0,45)){
+        const props=own(fiber,'memoizedProps');
+        if(own(props,'status')==='inactive'&&Array.isArray(own(props,'tree')))inactive=true;
+        const fs=own(props,'fs');
+        if(fs){if(own(fs,'fsKey')!=='conversation:'+expected)return 'unobserved';filesystem=true;}
+        const owner=own(props,'conversationId');
+        if(owner!==undefined)return current.owner.current===current.current&&owner===expected&&filesystem&&inactive?'inactive':'unobserved';
+      }
+      return 'unobserved';
+    })()`,
+	});
+	if (reply.exceptionDetails) throw new Error("grok_build_workspace_read_failed");
+	return reply.result?.value === "inactive" ? "inactive" : "unobserved";
 }

@@ -69,3 +69,34 @@ service restart through the existing durable job store. Unattempted means no
 attempt in that pass; it can include an asset already covered by verified archive
 reuse. Attempted does not mean complete, available or safe to retry. The field is
 an observation checkpoint, not a provider cursor or an automatic resume command.
+
+For Grok history jobs, `materializationCursor` checkpoints progress before and
+after each conversation attempt. Completed attempts retain their verified
+attempt receipts and target/transfer budgets. Before provider work starts,
+`inFlight` identifies the selected conversation, attempt index and allowance;
+a completed checkpoint clears it. If work is interrupted, the durable job keeps
+both the completed progress and any unresolved in-flight attempt. Its
+`budgetScope=completed_attempts_only` means the retained allowance excludes
+unknown effects from unfinished work.
+
+Default HTTP/Ops job responses expose completed-attempt and remaining-conversation
+counts, budgets, restart policy and in-flight state. They omit the full receipt
+array and remaining conversation-ID batch; request `detail=full` on the existing
+history job read/list endpoints for those retained details. MCP history job
+outputs also retain the cursor. These fields describe the selected local pass;
+they do not establish provider history completeness or local asset coverage.
+
+The cursor's `resumePolicy=explicit_request_required` preserves the existing
+restart boundary: queued jobs can be recovered, while running jobs interrupted
+by API startup become failed and retain their cursor. No unknown in-flight
+attempt is automatically replayed. A separately authorized new request must
+rediscover the selected assets and verify retained archive bytes before reuse.
+Neither the cursor nor a remaining budget qualifies a provider file-read method,
+a safe retry, or a provider-native resume token.
+
+Current native inspection has observed an inactive conversation Files controller
+with an empty tree. That observation does not prove that referenced files are
+absent. A genuine conversation-scoped file path, revision and byte-read protocol
+remain unqualified, so #414 remains open beyond the source cursor and retained
+workspace-archive portions. Source tests, installed runtime checks and native
+acceptance remain separate gates.

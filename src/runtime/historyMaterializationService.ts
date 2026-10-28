@@ -362,6 +362,23 @@ export interface HistoryMaterializationCandidateFunnel {
 	selected: number;
 }
 
+export interface HistoryMaterializationCursor {
+	version: 1;
+	checkpointedAt: string;
+	budgetScope: "completed_attempts_only";
+	inFlight: {
+		conversationId: string;
+		index: number;
+		budgetBefore: HistoryMaterializationAttemptReceipt["budgetBefore"];
+	} | null;
+	completedAttemptCount: number;
+	remainingConversationCount: number | null;
+	resumePolicy: "explicit_request_required";
+	attempts: HistoryMaterializationAttemptReceipt[];
+	remainingConversationIds: string[] | null;
+	budget: HistoryMaterializationAttemptReceipt["budgetBefore"];
+}
+
 export interface HistoryMaterializationJob {
 	object: "history_materialization_job";
 	id: string;
@@ -395,6 +412,7 @@ export interface HistoryMaterializationJob {
 	} | null;
 	message: string;
 	scheduler?: HistoryMaterializationJobSchedulerDiagnostics | null;
+	materializationCursor?: HistoryMaterializationCursor | null;
 }
 
 export function projectHistoryMaterializationJobForMonitoring(
@@ -439,6 +457,9 @@ export function projectHistoryMaterializationJobForMonitoring(
 		error: job.error ? { ...job.error, message: job.error.message.slice(0, 500) } : null,
 		message: job.message.slice(0, 500),
 		scheduler: job.scheduler,
+		materializationCursor: job.materializationCursor
+			? { ...job.materializationCursor, attempts: [], remainingConversationIds: null }
+			: null,
 	};
 }
 
@@ -667,9 +688,28 @@ function createHistoryMaterializationAttemptExecutor(input: {
 		request: HistoryMaterializationCreateRequest,
 	) => HistoryMaterializationProviderWorkContext;
 	now: () => Date;
+	beginAttempt: (attempt: HistoryMaterializationAttempt) => Promise<void>;
+	checkpoint: (
+		attempt: HistoryMaterializationAttempt,
+		outcome: HistoryMaterializationAttemptOutcome,
+	) => Promise<void>;
 }): HistoryMaterializationAttemptExecutor {
 	return {
 		async execute(attempt) {
+			const finish = async (
+				result: HistoryMaterializationResult,
+				writes: HistoryMaterializationAttemptReceipt["evidence"]["writes"],
+			) => {
+				const outcome = projectHistoryMaterializationAttemptOutcome(
+					attempt,
+					result,
+					writes,
+					input.now,
+				);
+				if (attempt.candidate.target.provider === "grok") await input.checkpoint(attempt, outcome);
+				return outcome;
+			};
+			if (attempt.candidate.target.provider === "grok") await input.beginAttempt(attempt);
 			const jobContext = input.providerWorkContext(attempt.jobId, attempt.request);
 			const context: HistoryMaterializationProviderWorkContext = {
 				...jobContext,
@@ -731,12 +771,7 @@ function createHistoryMaterializationAttemptExecutor(input: {
 						shouldReuseCollectorSnapshot(attempt.candidate.target, attempt.request)
 					) {
 						result = initialMaterialization;
-						return projectHistoryMaterializationAttemptOutcome(
-							attempt,
-							result,
-							evidenceWrites,
-							input.now,
-						);
+						return finish(result, evidenceWrites);
 					}
 				}
 				let snapshotRefresh: HistoryMaterializationSnapshotRefresh;
@@ -770,12 +805,7 @@ function createHistoryMaterializationAttemptExecutor(input: {
 					result = withSnapshotRefreshPhase(materialization, snapshotRefresh);
 				}
 			}
-			return projectHistoryMaterializationAttemptOutcome(
-				attempt,
-				result,
-				evidenceWrites,
-				input.now,
-			);
+			return finish(result, evidenceWrites);
 		},
 	};
 }
@@ -1034,6 +1064,76 @@ export function createHistoryMaterializationService(
 		recordConversationEvidence,
 		providerWorkContext,
 		now,
+		beginAttempt: async (attempt) => {
+			const job = await store.readJob(attempt.jobId);
+			if (!job || job.status !== "running")
+				throw new Error("Materialization attempt lost running job ownership.");
+			const previous = job.materializationCursor;
+			await store.upsertJob({
+				...job,
+				materializationCursor: {
+					version: 1,
+					checkpointedAt: now().toISOString(),
+					budgetScope: "completed_attempts_only",
+					resumePolicy: "explicit_request_required",
+					attempts: previous?.attempts ?? [],
+					completedAttemptCount: previous?.attempts.length ?? 0,
+					remainingConversationIds:
+						previous?.remainingConversationIds ?? job.request.conversationIds ?? null,
+					remainingConversationCount:
+						previous?.remainingConversationIds?.length ??
+						job.request.conversationIds?.length ??
+						null,
+					budget: previous?.budget ?? attempt.budgetBefore,
+					inFlight: {
+						conversationId: attempt.candidate.target.conversationId,
+						index: attempt.candidate.index,
+						budgetBefore: attempt.budgetBefore,
+					},
+				},
+			});
+		},
+		checkpoint: async (attempt, outcome) => {
+			const job = await store.readJob(attempt.jobId);
+			if (!job || job.status !== "running")
+				throw new Error("Materialization checkpoint lost running job ownership.");
+			const attempts = [...(job.materializationCursor?.attempts ?? []), outcome.receipt];
+			const selected = job.request.conversationIds;
+			const consumed =
+				outcome.receipt.budgetBefore.targetsConsumed + (outcome.accounting.targetConsumed ? 1 : 0);
+			const remaining = outcome.receipt.budgetBefore.assetsRemaining;
+			await store.upsertJob({
+				...job,
+				updatedAt: outcome.receipt.generatedAt,
+				materializationCursor: {
+					version: 1,
+					checkpointedAt: outcome.receipt.generatedAt,
+					budgetScope: "completed_attempts_only",
+					inFlight: null,
+					completedAttemptCount: attempts.length,
+					remainingConversationCount: selected
+						? selected.filter(
+								(id) => !attempts.some((receipt) => receipt.target.conversationId === id),
+							).length
+						: null,
+					resumePolicy: "explicit_request_required",
+					attempts,
+					remainingConversationIds: selected
+						? selected.filter(
+								(id) => !attempts.some((receipt) => receipt.target.conversationId === id),
+							)
+						: null,
+					budget: {
+						targetLimit: outcome.receipt.budgetBefore.targetLimit,
+						targetsConsumed: consumed,
+						assetsRemaining:
+							remaining === null
+								? null
+								: Math.max(0, remaining - outcome.accounting.assetsAttempted),
+					},
+				},
+			});
+		},
 	});
 	const materializeMediaGeneration =
 		deps.materializeMediaGeneration ??
@@ -1277,7 +1377,7 @@ export function createHistoryMaterializationService(
 				}
 				const completedAt = now().toISOString();
 				const completed: HistoryMaterializationJob = {
-					...running,
+					...(current ?? running),
 					status:
 						result.status === "failed"
 							? "failed"
@@ -1307,7 +1407,7 @@ export function createHistoryMaterializationService(
 				}
 				const completedAt = now().toISOString();
 				const failed: HistoryMaterializationJob = {
-					...running,
+					...(current ?? running),
 					status: "failed",
 					updatedAt: completedAt,
 					completedAt,
