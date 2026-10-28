@@ -31,7 +31,7 @@ proof of the responsible TTL. Preserve original peer targets and OS identities.
 
 | Ticket | Owner | Branch/base | State | Blockers |
 | --- | --- | --- | --- | --- |
-| AuraCall#490 | primary | fix/ttl-ownership-integration / 00a45bd0bf7d | running | none |
+| AuraCall#490 | primary | fix/ttl-ownership-integration / 1cb828564 | validated; tracker CLOSED | none |
 | Agent Browser#490 | worker agent_browser_ttl | fix/issue488-tab-ttl / 7d9b4b7ad411 | running | none |
 | AuraCall#491 | primary after dependency validation | same AuraCall integration | pending | both490repairs |
 
@@ -66,3 +66,19 @@ lease. Its14checks passed, completing88checks across the selected files. Full
 source build/typecheck, scoped lint and docs validation passed. No native acceptance
 yet. Red/green commands and private logs retained under user-scoped ttl-integration
 artifacts. No broad code review has run; the reserved post-closure review is unused.
+
+## AuraCall installed checkpoint
+
+Source1cb828564 published in draftPR492; five installed module hashes match the
+validated build. Guarded CLI/API activation preserved five observed browser
+process generations and23paused completions, no queued/running work. MCP wrapper
+unchanged. Native source-level scheduler acceptance in the real wsl-chrome-3
+browser: positively created20second workload target absent at23.79seconds after
+one attributable scheduled close request, released after delayed Chrome removal;
+all original peers and protected Agent Browser target survived90seconds. Isolated
+real lease namespace and explicit exact-process endpoint adapter avoid changing
+production Native desktop binding. Ordinary resolver refusal remains intact.
+Raw harness predicate demanded immediate closedCount1 and returned false; the
+separate reconciled receipt qualifies actual target absence/audit/release without
+rewriting raw evidence. AuraCall490 closed from this qualified candidate;491 still
+blocked on Agent Browser490. No broad review has run.
