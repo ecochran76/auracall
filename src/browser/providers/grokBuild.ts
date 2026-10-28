@@ -1,5 +1,6 @@
 import type { ChromeClient } from "../types.js";
 import { GROK_PROVIDER } from "./grok.js";
+import { GROK_COMMITTED_REACT_PATH } from "./grokCommittedReact.js";
 
 /** A Build submission starts only on the observed root composer, preserving drafts
  * and existing conversations. These selectors are the shared Grok text surface. */
@@ -141,14 +142,17 @@ export async function readGrokBuildWorkspaceReadiness(
       const own=(object,key)=>{if(!object||typeof object!=='object')return undefined;const descriptor=Object.getOwnPropertyDescriptor(object,key);return descriptor&&'value' in descriptor?descriptor.value:undefined;};
       const keys=Object.keys(buttons[0]).filter(key=>key.startsWith('__reactFiber$'));
       if(keys.length!==1)return 'unobserved';
-      let fiber=own(buttons[0],keys[0]), inactive=false, filesystem=false;
-      for(let depth=0;fiber&&depth<45;depth++,fiber=own(fiber,'return')){
+      ${GROK_COMMITTED_REACT_PATH}
+      const current=committedPath(own(buttons[0],keys[0]),buttons[0],buttons[0]);
+      if(!current)return 'unobserved';
+      let inactive=false, filesystem=false;
+      for(const fiber of current.path.slice(0,45)){
         const props=own(fiber,'memoizedProps');
         if(own(props,'status')==='inactive'&&Array.isArray(own(props,'tree')))inactive=true;
         const fs=own(props,'fs');
         if(fs){if(own(fs,'fsKey')!=='conversation:'+expected)return 'unobserved';filesystem=true;}
         const owner=own(props,'conversationId');
-        if(owner!==undefined)return owner===expected&&filesystem&&inactive?'inactive':'unobserved';
+        if(owner!==undefined)return current.owner.current===current.current&&owner===expected&&filesystem&&inactive?'inactive':'unobserved';
       }
       return 'unobserved';
     })()`,

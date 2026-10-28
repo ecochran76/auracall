@@ -284,6 +284,37 @@ function buildFixture({
 			},
 		},
 	};
+	type WorkspaceFiber = {
+		memoizedProps: Record<string, unknown>;
+		stateNode?: unknown;
+		tag?: number;
+		return?: WorkspaceFiber | null;
+		child?: WorkspaceFiber;
+	};
+	const setWorkspace = (committed: "inactive" | "ready", seeded = committed) => {
+		const button = new Button("", { "aria-label": "File tree" });
+		const owner: { current: WorkspaceFiber | null } = { current: null };
+		const tree = (status: string) => {
+			const path: WorkspaceFiber[] = [
+				{ memoizedProps: {}, stateNode: owner, tag: 3, return: null },
+				{ memoizedProps: { conversationId: "conversation-generated", view: "document" } },
+				{ memoizedProps: { fs: { fsKey: "conversation:conversation-generated" } } },
+				{ memoizedProps: { tree: [], status, dirStatus: new Map() } },
+				{ memoizedProps: {}, stateNode: button },
+			];
+			for (let index = 1; index < path.length; index++) {
+				path[index].return = path[index - 1];
+				path[index - 1].child = path[index];
+			}
+			return path;
+		};
+		const current = tree(committed);
+		owner.current = current[0];
+		const seed = seeded === committed ? current : tree(seeded);
+		Object.assign(button, { __reactFiber$fixture: seed[seed.length - 1] });
+		button.parentElement = document;
+		document.children.push(button);
+	};
 	return {
 		runtime,
 		service: createGrokBuildService(
@@ -308,25 +339,8 @@ function buildFixture({
 		inputs: () => inputs,
 		selections: () => selections,
 		seedPlane,
-		setInactiveWorkspace: () => {
-			const button = new Button("", { "aria-label": "File tree" });
-			Object.assign(button, {
-				__reactFiber$fixture: {
-					memoizedProps: {},
-					return: {
-						memoizedProps: { tree: [], status: "inactive", dirStatus: new Map() },
-						return: {
-							memoizedProps: { fs: { fsKey: "conversation:conversation-generated" } },
-							return: {
-								memoizedProps: { conversationId: "conversation-generated", view: "document" },
-							},
-						},
-					},
-				},
-			});
-			button.parentElement = document;
-			document.children.push(button);
-		},
+		setInactiveWorkspace: () => setWorkspace("inactive"),
+		setWorkspace,
 		addNativeFile: () => {
 			const input = Object.assign(new Node("input", "", { type: "file" }), {
 				files: [{ name: "existing.txt" }],
@@ -875,6 +889,39 @@ test("public export refuses the current inactive workspace before capture or dow
 			artifacts: { status: "unavailable", entries: [] },
 			cleanupState: "completed",
 		});
+	} finally {
+		await fs.rm(outputDir, { recursive: true, force: true });
+	}
+});
+
+test.each([
+	["inspect", "ready"],
+	["inspect", "inactive"],
+	["export", "ready"],
+	["export", "inactive"],
+] as const)("public %s reads committed workspace state %s instead of the stale DOM fiber", async (action, committed) => {
+	const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "grok-committed-"));
+	await fs.chmod(outputDir, 0o700);
+	try {
+		const fixture = buildFixture();
+		fixture.seedPlane();
+		fixture.setWorkspace(committed, committed === "ready" ? "inactive" : "ready");
+		const request = { targetId: "build-target", conversationId: "conversation-generated" };
+		const result =
+			action === "inspect"
+				? await fixture.service.inspect(request)
+				: await fixture.service.export({
+						...request,
+						outputDir,
+						acknowledgeTargetDefaultReset: true,
+					});
+		expect(result.code).toBe(
+			committed === "inactive"
+				? "grok_build_workspace_inactive"
+				: action === "inspect"
+					? "grok_build_app_identity_unobserved"
+					: "grok_build_target_download_unsupported",
+		);
 	} finally {
 		await fs.rm(outputDir, { recursive: true, force: true });
 	}
