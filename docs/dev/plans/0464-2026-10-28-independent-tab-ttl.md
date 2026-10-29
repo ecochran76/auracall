@@ -189,3 +189,23 @@ ed7f164b381d90b4e8e2a60a24c932c97690b2c0309a9da0894a22b332e717e4 is active,
 operation candidate-build-d434b1ff-e155-4120-ba5a-38bbf9ee4bfc. Same reviewed
 4jobs/12GiB hard cap/16GiB host reserve. Source qualification is not installed
 acceptance. No remaining ticket closed and no reserved review performed yet.
+
+
+## Native readback isolation continuation
+
+Sealed399ded40b/b969060d installed through accepted preserve transaction
+upgrade-ddb72273-4a11-4f7a-a490-390463b2e398. The final post-convergence owner
+executable matches sealed bytes and all four observed browser-root generations
+survive. Both interrupted test targets are now physically absent, but their active
+records remain with no terminal history after95seconds. Owner memory equals
+SQLite. Periodic stderr reports browser_session_idle_readback_required rather
+than missing-target failure. This is FAILED lifecycle acceptance, not TTL success.
+
+The worker reproduced the exact later old-Native readback failure at the public
+host plus real SQLite boundary. Guard/publication eligibility isolation is under
+red/green verification, including the risk of a later failed scope rolling back
+completed independent progress. Durable journals and custody fences remain intact;
+no live database editing or manual target closure. Restart locator is the worker's
+user-scoped issue490/worker-resume-latest.md; current exact runtime binding and raw
+failed warmup receipts are under the primary's ttl-integration artifacts.
+Both remaining tickets stay OPEN and the reserved broad review remains unused.
