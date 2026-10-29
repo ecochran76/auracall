@@ -1,3 +1,19 @@
+## 2026-10-29 — Approved reference fixture consumed; adapter TDD
+
+User approved the exact additional107B upload plus one Grok chat Send. Both
+dispatched once behind separate durable fences on a fresh Fast root. The terminal
+response waiter timed out; same-target read-only reconciliation observed the
+filename acknowledgement without resending. Current committed human response DTO
+contains the actual uploaded fileMetadataId and conversation identity; native
+preview/cache pins the real Download URL to that metadata and principal.
+
+Worker414 implements separate conversation-reference discovery/materialization
+through public-adapter TDD. Workspace provenance is not reused or relabelled;
+raw URL/identity/effect receipts remain private. Source actions/grok.ts remains
+unchanged: the Fast native-plane terminal-control limitation is recorded, and
+Build's stricter completion contract is not weakened. No additional uploads or Sends are authorized by the consumed fixture
+approval; the standing review bound remains unchanged.
+
 ## 2026-10-29 — Native timer/ZIP and isolated archive acceptance
 
 Fresh normal configured Grok startup passed OS/profile/account qualification.

@@ -1,6 +1,7 @@
 # Proposed #414 conversation-bound reference canary — 2026-10-29
 
-State: PREPARED — NOT APPROVED; no dispatch.
+State: APPROVED AND CONSUMED — user replied yes to this exact packet.
+One upload and one Grok Send were dispatched; no replay is authorized.
 Authority owner: Plan0458, root coordinator. This is a proposed additional packet,
 not a renewal or replay of the four previously approved canaries.
 
@@ -51,5 +52,22 @@ provider identity aliases.
 Bounds: one upload, one Grok Send, no automatic replay, no Bot/Connector edits,
 no mail Send, no Build generation, no publication, no legal-consent acceptance,
 no cleanup/deletion. Stop on account/target drift, CAPTCHA/MFA, new consent,
-unqualified controls or uncertain effects; retain evidence. User approval of
-this exact packet is required before either provider effect.
+unqualified controls or uncertain effects; retain evidence. The user approved this exact packet before both provider effects.
+That approval is consumed; it does not authorize another upload or Send.
+
+## Execution checkpoint
+
+A fresh retained root passed the original-account and native Fast checks. One
+107-byte upload returned complete/ready with the expected source SHA-256. One
+Grok Send returned from the submit helper; its terminal-response wait timed out.
+The same retained target was reconciled read-only, with no resubmission: the
+reply acknowledges the exact filename and the human response DTO binds the actual
+uploaded fileMetadataId to the new conversation. DOM response identity and
+gateway identity remain distinct. Canonical human DTO membership is independently
+qualified; metadata is not yet referenced-byte acceptance.
+
+One reversible native Open attachment click exposed its actual Download control.
+Its current committed SidePanel cache pairs the exact active file metadata with
+the actual native asset URL and observed asset-server origin; no URL was guessed.
+A separate referenced-file adapter is being implemented through TDD against this
+contract. Raw identity, URL/cache and effect-fence receipts remain private.

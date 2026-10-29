@@ -313,9 +313,9 @@
         410,
         413
       ],
-      "state": "native-selected-timer-validated-referenced-files-open",
+      "state": "running-conversation-reference-tdd",
       "scope": "original-program",
-      "gate": "Selected generated timer bytes and sidecar native-accepted; real isolated Archive APIs/durable reuse and tamper refusal pass. Conversation-bound referenced uploads and installed/native history continuation remain unqualified; original issue stays open.",
+      "gate": "One approved synthetic upload/GrokSend consumed; actual native fileMetadataId/canonical human response/conversation/preview URL tuple qualified. Separate referenced-byte adapter TDD in progress; selected timer native acceptance retained. No replay.",
       "materializationEvidence": {
         "integrationCommit": "e5b3707fcb444106948777ada0a3cb5309fa95ac",
         "primaryTests": 32,
@@ -554,14 +554,20 @@
     "broadReviewLimit": 1,
     "tddFindingsPassLimit": 1,
     "nextReferenceCanary": {
-      "status": "prepared-not-approved",
+      "status": "approved-and-consumed",
       "packet": "../notes/2026-10-29-grok414-reference-canary-packet.md",
       "fileName": "reference-414.txt",
       "sizeBytes": 107,
       "sha256": "5e34ff7e9d8997af149b7a875940dce6117c1f2b73fc23e7ae159ea197d38e78",
       "maxUploads": 1,
       "maxGrokSends": 1,
-      "publicationApproved": false
+      "publicationApproved": false,
+      "approval": "user yes after exactpacket question",
+      "uploadsDispatched": 1,
+      "grokSendsDispatched": 1,
+      "replayAuthorized": false,
+      "terminalWait": "timed_out; same-target readonly acknowledgement and canonical file membership observed",
+      "referencedBytes": "not yet qualified; public adapter TDD in progress"
     }
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
