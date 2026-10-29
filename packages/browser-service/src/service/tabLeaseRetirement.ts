@@ -1,3 +1,4 @@
+import { isUnownedBrowserTabLease } from "./tabInventory.js";
 import { recordTabLeaseRetirementAudit, type TabLeaseRetirementAuditSink } from "./tabLeaseRetirementAudit.js";
 import { isTabLeaseTtlExempt } from "./tabLeaseRegistry.js";
 import type {
@@ -55,6 +56,11 @@ export async function retireExpiredTabLeases(input: {
 	}
 
 	for (const candidate of candidates) {
+		if (isUnownedBrowserTabLease(candidate)) {
+			const reason = retirementReason(candidate, nowMs);
+			if (reason) outcomes.push({leaseId:candidate.leaseId,targetId:candidate.targetId,reason,disposition:"preserved",detail:"cleanup-ownership-unverified"});
+			continue;
+		}
 		const retainedFollow = isTabLeaseTtlExempt(candidate);
 		if (retainedFollow && endpoint && candidate.state !== "retiring") continue;
 		const reason = retainedFollow && !endpoint && input.endpointAbsenceProvesTargetsMissing

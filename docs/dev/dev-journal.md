@@ -65,6 +65,15 @@ has only text/avatar fields and no persistent resource editing contract.
 help exposes the flag. No installed adoption, regeneration, publication or new
 tracker closure. Review/findings-TDD reserved for a completed validated batch.
 Parent398 and477 untouched. Memory disposition:forbidden; no user memory request.
+## 2026-10-28 — Plan0464 independent TTL ownership execution
+
+Primary owns AuraCall490 on fix/ttl-ownership-integration from00a45bd0bf7d;
+one delegated worker owns Agent Browser490 on its separate integration branch.
+AuraCall491 has native blocking relationships to both repairs. Public maintenance
+ownership regression and legacy idle/lost/retiring cases were red, then green.
+62 focused checks pass. Source typecheck/lint and installed acceptance are being
+qualified; no source or tracker closure is claimed yet. One post-closure broad
+review and one bounded findings-TDD phase are reserved. CI excluded.
 
 ## 2026-10-28 — PR489 merged;406closed
 
@@ -57131,3 +57140,72 @@ Native public reference acceptance now PASS at040695203: canonical upload/contex
 107B expected checksum, sidecar and default-policy reset. Actual isolated archive
 APIs pass reuse/restart/injected foreground/tamper guards; installed adoption is
 not performed. Single consolidated r2 review now starts; findings-TDD remains.
+
+### 2026-10-29 — Plan0464 installed continuation
+
+Sealed Agent Browser TTL candidate83888301/bf0bcd3d installed through accepted
+preserve transaction; current owner bytes match and all four observed browser-root
+generations survive. AuraCall normal Native resolver verifies shared wsl-chrome-3.
+Live Agent Browser task creation returned idle publication conflict; exact task
+readback retained for reconciliation, without another task or cleanup. Worker
+traces store custody fences. Both remaining tickets stay open; reserved review
+and findings-TDD phase have not started.
+
+
+### 2026-10-29 — Plan0464 replacement runtime observation
+
+Production-shaped c3a83438b/8fa17247d candidate is installed and accepted; all four
+observed browser roots survived. Ordinary task recovery now succeeds. Independent
+TTL acceptance is still incomplete: physical target removal observed, but no
+terminal lifecycle publication in150seconds. Protected peers survive, AuraCall
+issued no matching close request. Exact target-not-found retries retained; worker
+reproduces multi-session and verified-absence recovery. Remaining tickets stay open.
+
+
+### 2026-10-29 — Plan0464 qualified batch and absence recovery
+
+Agent Browser399ded40b is clean/pushed with model, runtime, host, consumer and
+strict source gates green. The second live failure is explained by logical session
+membership being mistaken for physical browser identity; batch expiry and exact
+absent-target/cache recovery now have qualified red/green proofs. Sealed build is
+active under its recorded bounded resource profile. Installed acceptance, both
+remaining ticket closures and the one reserved review/TDD phase are still pending.
+
+
+### 2026-10-29 — Plan0464 durable expiry and census latency
+
+Installed53 reconciled both interrupted targets to durable automatic-expiry history.
+Public status then timed out during all-process cleanup observation. The namespace
+batch repair9d782cb is clean/pushed with scoped source gates green and seal active.
+Fresh installed responsiveness and TTL/shared acceptance remain mandatory; both
+remaining tickets are open and the reserved consolidated review is unused.
+
+
+### 2026-10-29 — Plan0464 ticket closure and reserved review
+
+All three requested tickets are closed with observed acceptance. Fresh AB task
+expired in50.759seconds; production shared acceptance completed by65.792seconds.
+Delayed AuraCall closure reconciled to a released lease on the next normal pass.
+The protected fixture task was ended and three original peers/four browser roots
+remain. Source/runtime identities and namespace-smoke limitations are in Plan0464.
+Exactly one consolidated Standards/Spec review and one findings-TDD phase remain.
+
+
+### 2026-10-29 — Plan0464 review and findings phase
+
+One consolidated independent review completed: Standards0, Spec0. Primary accepted
+both reports; the single bounded findings-TDD phase required no code/test changes.
+Canonical Agent Browser main composition is now delegated to the existing worker,
+preserving both additive tests and runbook states; no second broad review or runtime
+upgrade is implied. AuraCall PR492 is prepared for integration.
+
+
+### 2026-10-29 — Plan0464 integration closeout
+
+All three tickets and Plan0464 are closed. One broad review returned Standards0 /
+Spec0; one findings-TDD phase required no changes. Agent Browser PR491 merged
+fb4a776e after combined-source model/native/MCP/client gates. The installed TTL
+hotfix remains9d782cb/0ed64bf6; Auth/journey main composition was not installed.
+AuraCall PR492 carries final source/evidence closure, guarded merge/readback and
+memory receipt completing delivery. Original peers and browser roots are retained;
+only the test-owned protected task was explicitly closed after automatic proofs.

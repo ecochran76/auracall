@@ -2110,5 +2110,21 @@ lanes:
     overlaps: [grok398]
     reconciled_overlaps: [grok398]
     reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
-    validation_status: 406-closed-409-bot-content-unavailable-411-current-archive-qualified-414-native-selected-timer-accepted
+    validation_status: 406-closed-409-blocked-411-partial-414-native-accepted-findings-remediated
+    updated_at: 2026-10-29
+
+  - id: P464
+    objective: Close independent tab ownership and TTL tickets with attributed shared-browser acceptance
+    work_items: [ecochran76/auracall#490, CochranResearchGroup/agent-browser#490, ecochran76/auracall#491]
+    plan: docs/dev/plans/0464-2026-10-28-independent-tab-ttl.md
+    plan_ref: refs/heads/fix/ttl-ownership-integration
+    branch: fix/ttl-ownership-integration
+    target: main
+    plan_state: CLOSED
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 27c61aa2b173faa48988e103f4a921a8f764b3aa
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: source-installed-and-three-tickets-qualified-review1-standards0-spec0
     updated_at: 2026-10-29

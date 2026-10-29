@@ -61,6 +61,11 @@ Warning-frozen interaction settlement reports the existing provider-warning admi
 
 ## Language
 
+Tab census observation does not establish AuraCall workload ownership. Automatic
+TTL retirement requires positive workload custody; another agent's target in the
+same browser stays outside cleanup authority. Historical census-only deadline
+records remain preservation evidence, not authority to close their target.
+
 **AuraCall runtime profile**:
 A named Aura-Call configuration entry that selects execution defaults and provider bindings for one operator context.
 _Avoid_: Profile, runtime config

@@ -1,3 +1,10 @@
+- Independent tab cleanup ownership (provider-free, issue490):
+  `pnpm vitest run tests/browser/configuredChatgptTabMaintenance.test.ts tests/browser/activeChatRetirement.test.ts tests/accountMirror/liveFollowTabCoordinator.test.ts tests/browser-service/tabLeaseRetirement.test.ts tests/browser/tabAffinityMaintenanceLoop.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts --maxWorkers=1`.
+  Public configured maintenance preserves unregistered and legacy census-only
+  idle/lost/retiring targets while retiring actual expired AuraCall work. Cold
+  startup leaves restored peers unclaimed. Native shared-browser acceptance is
+  a separate gate and must attribute the close to the responsible runtime.
+
 - Default app-list waiting diagnostics (provider-free, issue427):
   `pnpm vitest run tests/cli/developerAppWaitingDiagnostics.test.ts tests/cli/developerAppTerminalExit.test.ts tests/cli/developerAppFailureDiagnostics.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/cli/chatgptDeveloperAppsGovernor.test.ts --maxWorkers=1`.
   Real CLI action/public operation/adapter/file dispatch with a stalled SDK read
