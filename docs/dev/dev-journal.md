@@ -57052,3 +57052,13 @@ Live Agent Browser task creation returned idle publication conflict; exact task
 readback retained for reconciliation, without another task or cleanup. Worker
 traces store custody fences. Both remaining tickets stay open; reserved review
 and findings-TDD phase have not started.
+
+
+### 2026-10-29 — Plan0464 replacement runtime observation
+
+Production-shaped c3a83438b/8fa17247d candidate is installed and accepted; all four
+observed browser roots survived. Ordinary task recovery now succeeds. Independent
+TTL acceptance is still incomplete: physical target removal observed, but no
+terminal lifecycle publication in150seconds. Protected peers survive, AuraCall
+issued no matching close request. Exact target-not-found retries retained; worker
+reproduces multi-session and verified-absence recovery. Remaining tickets stay open.

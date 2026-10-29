@@ -136,3 +136,27 @@ Qualified red/green now proves an unrelated task can publish, the next maintenan
 pass finishes the original settled retirement and expires an independent task,
 and each physical close occurs once. Broader source gates and replacement sealed
 candidate remain pending. No runtime state or store fence was manually rewritten.
+
+
+## Replacement candidate acceptance boundary
+
+Worker follow-up c3a83438b passed123native-consumer checks (one explicit ignored
+live-viewer fixture),11host checks, strict Clippy and formatting. Sealed production
+binary8fa17247ddb8e1d9ad33a9e2935e25d6fda26dd192ee834da3e5f290e3a827ea
+installed through accepted preserve transaction
+upgrade-11598af9-08a6-4542-a606-a8e8e01a1582; current owner bytes match and all four
+observed browser-root generations survive. The interrupted same-key task reconciled
+and an independent protected task opened normally, qualifying the availability
+repair separately from TTL acceptance.
+
+Installed30second TTL observation remains FAILED: target physically absent at
+52.64seconds after its unchanged last activity, but active in both owner memory and
+SQLite with no terminal history throughout the150second observation. All four
+protected peer pages and the exact browser generation survived; no AuraCall close
+request matched the target. Current retries report exact target-not-found. The
+first post-close failure was not retained and is not yet attributed to a store
+refusal. Worker is reproducing the multi-session borrowed-browser path and missing
+target reconciliation. No manual target close, global cleanup or database rewrite.
+Agent Browser490 and AuraCall491 remain OPEN. Reserved broad review/TDD phase
+still unused. Current canonical Agent Browser main advanced independently; the
+frozen TTL branch is not claimed equivalent to that newer Auth feature source.
