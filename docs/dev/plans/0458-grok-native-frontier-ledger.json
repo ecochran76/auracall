@@ -512,7 +512,7 @@
       "base": "00a45bd0bf7df36845ba100aec2a2ddf97e72f33",
       "broadReviews": 1,
       "postReviewTddPasses": 1,
-      "state": "single review adjudicated; sole findings-TDD active for mixed asset inventory",
+      "state": "single review/findings phase complete;414 accepted pending PR integration;409/411 blocked",
       "focusedTests": 92,
       "focusedFiles": 9,
       "typecheck": "PASS after Ops continuation",
@@ -563,6 +563,17 @@
         "SPEC1": "blocking P2 mixed reference/workspace inventory",
         "SPEC2": "nonblocking documentation corrected in same phase",
         "STANDARDS1": "nonblocking_backlog duplicated local integrity verifier"
+      },
+      "findingsRemediation": {
+        "commit": "165e5ae63",
+        "primaryTests": 53,
+        "files": 6,
+        "typecheck": "PASS",
+        "build": "PASS",
+        "closedWorld": "SPEC1/SPEC2 cured;16tests independent",
+        "nativeReadOnlyReferenceRegression": "PASS;zero transfers/policy changes",
+        "mergedMain": "d2217269c",
+        "memoryDisposition": "forbidden"
       }
     }
   },

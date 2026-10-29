@@ -48,3 +48,26 @@ current despite native acceptance. Corrected in the same bounded phase.
 One broad Standards/Spec round consumed; one findings-TDD phase now active.
 Further verification is closed-world, limited to these findings and regressions
 introduced by their remedies. No new broad review will be run.
+
+## Bounded remediation outcome
+
+SPEC1 cured by165e5ae63: mixed public discovery includes both families; absence
+of a visible File tree remains valid for reference-only views, while present
+foreign workspace ownership rejects. Primary post-fix checks:39tests/four files
+plus14bridge/configured checks/two files; full typecheck and full build passed.
+Independent closed-world verification passed16reference/workspace tests and
+found both SPEC1/SPEC2 cured, with no directly introduced critical regression.
+A fresh read-only public native reference inventory at165e5ae63 also passed,
+without another download or policy change. Primary independently rehashed the
+accepted107B file and checked the sidecar equality and isolated API receipt.
+
+Current main d2217269c was reconciled by merge; source merged automatically.
+Documentation conflicts preserve both lane histories and current lane states.
+No installed adoption, publication, terms acceptance, upload or Send was added.
+
+Standards: one accepted nonblocking smell, no hard breach; Spec: acceptedP2
+functional finding cured and documentation finding corrected. One broad review
+and one findings-TDD phase consumed; no remaining accepted blocker.
+
+Memory disposition:forbidden; root non-write receipt retained privately, zero
+Graphiti writes attempted because no explicit memory-write request exists.
