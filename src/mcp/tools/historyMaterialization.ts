@@ -25,6 +25,7 @@ const historyMaterializationCreateInputShape = {
 	assetKinds: z.array(z.enum(["artifacts", "files", "media", "all"])).optional(),
 	maxItems: z.number().int().nonnegative().max(500).optional(),
 	force: z.boolean().optional(),
+	acknowledgeTargetDefaultReset: z.literal(true).optional(),
 } satisfies z.ZodRawShape;
 
 const historyMaterializationJobInputShape = {
@@ -195,7 +196,7 @@ export function registerHistoryMaterializationTools(
 		{
 			title: "Queue history-backed artifact materialization",
 			description:
-				"Queue a durable account-history-backed provider materialization job by conversation id, account-mirror catalog item, archive item, or bounded reconciliation pass.",
+				"Queue a durable account-history-backed provider materialization job by conversation id, account-mirror catalog item, archive item, or bounded reconciliation pass. Fresh Grok reference downloads require acknowledgeTargetDefaultReset=true; verified local reuse does not.",
 			inputSchema: historyMaterializationCreateInputShape,
 			outputSchema: historyMaterializationCreateOutputShape,
 		},

@@ -83,6 +83,7 @@ describe('mcp history materialization tools', () => {
       refreshSnapshot: true,
       assetKinds: ['artifacts'],
       maxItems: 1,
+      acknowledgeTargetDefaultReset: true,
     });
 
     expect(createJob).toHaveBeenCalledWith({
@@ -94,6 +95,7 @@ describe('mcp history materialization tools', () => {
       refreshSnapshot: true,
       assetKinds: ['artifacts'],
       maxItems: 1,
+      acknowledgeTargetDefaultReset: true,
     });
     expect(result).toMatchObject({
       structuredContent: {

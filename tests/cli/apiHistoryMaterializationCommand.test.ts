@@ -26,6 +26,7 @@ describe('api history materialization CLI helpers', () => {
           maxItems: 2,
           providerWorkTimeoutMs: 30000,
           force: true,
+          acknowledgeTargetDefaultReset: true,
         });
         return new Response(JSON.stringify({
           object: 'history_materialization_job_create_result',
@@ -50,6 +51,7 @@ describe('api history materialization CLI helpers', () => {
       maxItems: 2,
       providerWorkTimeoutMs: 30000,
       force: true,
+      acknowledgeTargetDefaultReset: true,
     }, fetchImpl as never);
     expect(formatApiHistoryMaterializationJobCliSummary(created)).toContain(
       'History materialization job: hmj_test_1',

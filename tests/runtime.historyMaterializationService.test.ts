@@ -84,6 +84,7 @@ describe("history materialization service", () => {
 				reconcile: true,
 				conversationIds: ["observed-one", "observed-two", "observed-three"],
 				assetKinds: ["files"],
+				acknowledgeTargetDefaultReset: true,
 				maxItems: 2,
 			});
 			if (!scheduled) throw new Error("Expected scheduled Grok reconciliation");
@@ -95,6 +96,7 @@ describe("history materialization service", () => {
 				config: {},
 				schedule: () => undefined,
 			});
+			expect((await restarted.readJob(created.job.id))?.request.acknowledgeTargetDefaultReset).toBe(true);
 			expect((await restarted.readJob(created.job.id))?.result?.selectedFrontier).toEqual({
 				attemptedConversationIds: ["observed-one", "observed-two"],
 				unattemptedConversationIds: ["observed-three"],
@@ -1062,6 +1064,16 @@ describe("history materialization service", () => {
 		});
 		expect(chatgptOptions.configuredUrl).toBe("https://chatgpt.com/c/conv_direct_1");
 		expect(chatgptOptions.skipFeatureSignature).toBe(true);
+	});
+
+	it("grants native reference download policy scope only to an explicitly acknowledged Grok target", () => {
+		const target = { provider: "grok" as const, runtimeProfile: "default", browserProfile: "default", boundIdentityKey: null,
+			conversationId: "native-reference-conversation", providerConversationUrl: "https://grok.com/c/native-reference-conversation", projectId: null };
+		expect(resolveHistoryMaterializationProviderListOptions(target, { acknowledgeTargetDefaultReset: true })).toMatchObject({
+			grokReferenceDownload: { acknowledgeTargetDefaultReset: true },
+		});
+		expect(resolveHistoryMaterializationProviderListOptions(target)).not.toHaveProperty("grokReferenceDownload");
+		expect(resolveHistoryMaterializationProviderListOptions({ ...target, provider: "chatgpt" }, { acknowledgeTargetDefaultReset: true })).not.toHaveProperty("grokReferenceDownload");
 	});
 
 	it("persists and runs a direct conversation materialization job", async () => {

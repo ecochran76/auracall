@@ -1529,12 +1529,13 @@ apiCommand
 
 apiCommand
   .command('archive-materialize')
-  .description('Ask the provider runtime to materialize one missing generated artifact archive item.')
+  .description('Ask the provider runtime to materialize one missing archive item.')
   .argument('<id>', 'Run archive item id.')
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
   .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 60000)
   .option('--force', 'Refresh from the provider even when the archive item already has a readable local asset.', false)
+  .option('--acknowledge-target-default-reset', 'Accept the Grok reference download policy reset to default after a fresh native transfer.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1549,6 +1550,7 @@ apiCommand
       port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
       force: commandOptions.force,
+      acknowledgeTargetDefaultReset: commandOptions.acknowledgeTargetDefaultReset === true ? true : undefined,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
@@ -1559,12 +1561,13 @@ apiCommand
 
 apiCommand
   .command('archive-materialization-create')
-  .description('Queue a durable provider-backed archive materialization job for one generated artifact archive item.')
+  .description('Queue a durable provider-backed archive materialization job for one archive item.')
   .argument('<id>', 'Run archive item id.')
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
   .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 10000)
   .option('--force', 'Refresh from the provider even when the archive item already has a readable local asset.', false)
+  .option('--acknowledge-target-default-reset', 'Accept the Grok reference download policy reset to default after a fresh native transfer.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1579,6 +1582,7 @@ apiCommand
       port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
       force: commandOptions.force,
+      acknowledgeTargetDefaultReset: commandOptions.acknowledgeTargetDefaultReset === true ? true : undefined,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
@@ -1791,6 +1795,7 @@ apiCommand
   .option('--max-items <count>', 'Maximum assets or reconciliation conversations to process.', parseIntOption)
   .option('--provider-work-timeout-ms <ms>', 'Provider browser work timeout in milliseconds.', parseIntOption)
   .option('--force', 'Refresh through the provider even when related local evidence already exists.', false)
+  .option('--acknowledge-target-default-reset', 'Accept the Grok reference download policy reset to default after each fresh native transfer.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1821,6 +1826,7 @@ apiCommand
       maxItems: commandOptions.maxItems,
       providerWorkTimeoutMs: commandOptions.providerWorkTimeoutMs,
       force: commandOptions.force,
+      acknowledgeTargetDefaultReset: commandOptions.acknowledgeTargetDefaultReset === true ? true : undefined,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
