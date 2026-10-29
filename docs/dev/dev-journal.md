@@ -57041,3 +57041,14 @@ inactive expired AuraCall tabs (4→2) and preserved2unknown tabs; no manual clo
 HTTP200 status retains23paused completions,0running/0queued, scheduler paused,
 drain restored idle/unpaused. The17Agent Browser pages remain a separate runtime
 scope. MCP wrapper unchanged; CI excluded. Plan/lane CLOSED and INTEGRATED.
+
+
+### 2026-10-29 — Plan0464 installed continuation
+
+Sealed Agent Browser TTL candidate83888301/bf0bcd3d installed through accepted
+preserve transaction; current owner bytes match and all four observed browser-root
+generations survive. AuraCall normal Native resolver verifies shared wsl-chrome-3.
+Live Agent Browser task creation returned idle publication conflict; exact task
+readback retained for reconciliation, without another task or cleanup. Worker
+traces store custody fences. Both remaining tickets stay open; reserved review
+and findings-TDD phase have not started.

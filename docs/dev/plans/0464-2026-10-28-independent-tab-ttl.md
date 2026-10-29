@@ -102,3 +102,25 @@ proving its pre-reboot owner gone. Interrupted receipts remain preserved. Source
 83888301 has396model tests and exact real-effects red/green evidence; native
 host and sealed production-shaped gates remain pending. No new build was started
 blindly and no unrelated runtime was restarted.
+
+## October 29 installed continuation
+
+Agent Browser production-shaped sealed candidate is complete at source83888301,
+binary bf0bcd3d87632f09d6397685f93b067e903c8bf67f5e0d5a863e8848d023ca5e.
+The worker native gate completed97passed/0failed/1explicit live-viewer fixture
+ignored; the ignored fixture is outside this no-viewer TTL qualification.
+Supported candidate install transaction
+upgrade-56d0e64b-20b1-49ab-b422-c2d3ccebc63a accepted generation
+0.28.0-bf0bcd3d8763-46539f16ed68. Current owner executable matches sealed bytes.
+All four actual browser-root PID/start identities observed before installation
+survived; preliminary larger counts included utility/render processes and a shell
+and are not browser-root preservation evidence.
+
+AuraCall's normal Native resolver now verifies the current wsl-chrome-3 browser
+with ensurePort false, retaining the ownership/runtime binding without an endpoint
+adapter. Agent Browser ordinary task open reached a publication conflict after
+creating its addressed task. Readback identifies the exact task and shared browser;
+the same-key replay remains fenced. No new task or broad cleanup was attempted.
+Worker is diagnosing the retirement publication boundary read-only. Agent Browser490
+and shared491 remain OPEN; physical creation or source success is not TTL acceptance.
+The single post-closure review and findings-TDD phase remain unused.
