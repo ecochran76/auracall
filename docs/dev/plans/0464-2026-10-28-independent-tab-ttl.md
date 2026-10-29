@@ -124,3 +124,15 @@ the same-key replay remains fenced. No new task or broad cleanup was attempted.
 Worker is diagnosing the retirement publication boundary read-only. Agent Browser490
 and shared491 remain OPEN; physical creation or source success is not TTL acceptance.
 The single post-closure review and findings-TDD phase remain unused.
+
+
+The installed publication failure is now reproduced at the existing Agent Browser
+host plus real SQLite seam. A failed pass carried unpublished changes to old
+settled retirement scopes into the next ordinary task, while the effect adapter
+started a new operation without those old publication IDs. Store custody fences
+correctly refused that projection. Worker repair restores the durable aggregate
+on failed reap/publication, retaining the original error and durable effect journal.
+Qualified red/green now proves an unrelated task can publish, the next maintenance
+pass finishes the original settled retirement and expires an independent task,
+and each physical close occurs once. Broader source gates and replacement sealed
+candidate remain pending. No runtime state or store fence was manually rewritten.
