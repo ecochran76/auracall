@@ -23,22 +23,24 @@ export interface GrokWorkspaceFileObservation {
 
 /** Reads one actually selected native viewer. It never selects files or invokes
  * React hooks, provider callbacks, network requests or generated code. */
-export async function readGrokWorkspaceFile(
+async function observeGrokWorkspaceFile(
 	runtime: GrokFileRuntime,
 	conversationId: string,
 	selection?: { filePath: string; dataUrlSha256: string; captureBytes?: boolean },
-): Promise<GrokWorkspaceFileObservation> {
+	allowAbsent = false,
+): Promise<GrokWorkspaceFileObservation | null> {
 	const reply = await runtime.evaluate({
 		awaitPromise: true,
 		returnByValue: true,
 		expression: `(async()=>{
-  const expected=${JSON.stringify({ conversationId, selection, maxBytes: MAX_BYTES })};
+  const expected=${JSON.stringify({ conversationId, selection, allowAbsent, maxBytes: MAX_BYTES })};
   const fail=reason=>{throw new Error('grok_workspace_file_'+reason);};
   if(location.origin!=='https://grok.com'||location.pathname!=='/c/'+expected.conversationId)fail('route_mismatch');
   const own=(o,k)=>{const d=o&&typeof o==='object'?Object.getOwnPropertyDescriptor(o,k):null;return d&&'value'in d?d.value:undefined;};
   const visible=e=>e instanceof HTMLElement&&!e.closest('[aria-hidden="true"],[data-state="closed"],[data-closed="true"]')&&getComputedStyle(e).display!=='none'&&getComputedStyle(e).visibility!=='hidden'&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0;
   ${GROK_COMMITTED_REACT_PATH}
   const buttons=Array.from(document.querySelectorAll('button[aria-label="File tree"]')).filter(visible);
+  if(!buttons.length&&expected.allowAbsent)return null;
   if(buttons.length!==1)fail('tree_unqualified');const button=buttons[0],key=Object.keys(button).find(k=>k.startsWith('__reactFiber$'));
   const committed=key?committedPath(own(button,key),button,button):null;if(!committed)fail('commit_unqualified');
   const scope=committed.path.find(f=>own(own(own(f,'memoizedProps'),'fs'),'fsKey')==='conversation:'+expected.conversationId);
@@ -83,7 +85,8 @@ export async function readGrokWorkspaceFile(
 	});
 	if (reply.exceptionDetails)
 		throw new Error("Grok selected workspace file could not be qualified.");
-	const value = reply.result?.value as GrokWorkspaceFileObservation | undefined;
+	const value = reply.result?.value as GrokWorkspaceFileObservation | null | undefined;
+	if (value === null && allowAbsent) return null;
 	if (
 		!value ||
 		value.conversationId !== conversationId ||
@@ -98,6 +101,24 @@ export async function readGrokWorkspaceFile(
 	)
 		throw new Error("Grok selected workspace file returned invalid evidence.");
 	return value;
+}
+
+/** Absence means no visible native workspace tree. Present but unqualified
+ * workspace state and provider failures remain errors. */
+export async function readOptionalGrokWorkspaceFile(
+	runtime: GrokFileRuntime,
+	conversationId: string,
+): Promise<GrokWorkspaceFileObservation | null> {
+	return observeGrokWorkspaceFile(runtime, conversationId, undefined, true);
+}
+export async function readGrokWorkspaceFile(
+	runtime: GrokFileRuntime,
+	conversationId: string,
+	selection?: { filePath: string; dataUrlSha256: string; captureBytes?: boolean },
+): Promise<GrokWorkspaceFileObservation> {
+	const result = await observeGrokWorkspaceFile(runtime, conversationId, selection);
+	if (!result) throw Error("Grok selected workspace file is absent.");
+	return result;
 }
 
 export async function materializeGrokWorkspaceFile(

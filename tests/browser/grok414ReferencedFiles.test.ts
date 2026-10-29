@@ -74,7 +74,7 @@ class Element {
 		return new Element({}, this.innerText);
 	}
 }
-function fixture(nativePlane = false) {
+function fixture(nativePlane = false, workspace = false) {
 	const row = new Element({
 		id: `response-${responseId}`,
 		"data-plane-row": "gateway:separate-domain",
@@ -127,6 +127,41 @@ function fixture(nativePlane = false) {
 	owner.current = root;
 	Object.assign(card, { __reactFiber$fixture: host });
 	Object.assign(row, { __reactFiber$fixture: rowFiber });
+	const treeButton = new Element({ "aria-label": "File tree" });
+	const workspaceFs = { fsKey: `conversation:${conversationId}` };
+	const workspaceScope: Fiber = {
+			return: root,
+			memoizedProps: {
+				fs: workspaceFs,
+				status: "ready",
+				tree: [{ path: "/src/components/timer.tsx", isDir: false }],
+			},
+		},
+		treeHost: Fiber = { return: workspaceScope, stateNode: treeButton },
+		viewer: Fiber = {
+			return: workspaceScope,
+			memoizedProps: { filePath: "/src/components/timer.tsx" },
+			updateQueue: {
+				memoCache: {
+					data: [
+						[
+							{
+								assetUrl: "data:text/typescript;base64,ZXhwb3J0IGNvbnN0IHRpbWVyID0gMTsK",
+								fileName: "timer.tsx",
+								mimeType: "text/typescript",
+								isLoading: false,
+								isError: false,
+								isWorkspaceInactive: false,
+							},
+						],
+						[{ dataUrl: "data:text/typescript;base64,ZXhwb3J0IGNvbnN0IHRpbWVyID0gMTsK" }],
+					],
+				},
+			},
+		};
+	workspaceScope.child = treeHost;
+	treeHost.sibling = viewer;
+	Object.assign(treeButton, { __reactFiber$fixture: treeHost });
 	const transfer = {
 		fetchCalls: 0,
 		downloadClicks: 0,
@@ -166,6 +201,7 @@ function fixture(nativePlane = false) {
 		},
 		assistantHost: Fiber = { return: assistantMessage, stateNode: assistantRow };
 	preview.sibling = assistantMessage;
+	if (workspace) assistantMessage.sibling = workspaceScope;
 	assistantMessage.child = assistantHost;
 	Object.assign(assistantRow, { __reactFiber$fixture: assistantHost });
 	Object.assign(download, { __reactFiber$fixture: downloadHost });
@@ -235,11 +271,15 @@ function fixture(nativePlane = false) {
 										? nativePlane
 											? [row, assistantRow, foreignRow]
 											: [row, assistantRow]
-										: selector.includes("Open attachment")
-											? [card]
-											: selector.includes("Download") && transfer.previewOpen
-												? [download]
-												: [],
+										: selector.includes("File tree")
+											? workspace
+												? [treeButton]
+												: []
+											: selector.includes("Open attachment")
+												? [card]
+												: selector.includes("Download") && transfer.previewOpen
+													? [download]
+													: [],
 								getElementById: (id: string) => (id === row.id ? row : null),
 							},
 							HTMLElement: Element,
@@ -311,7 +351,7 @@ function fixture(nativePlane = false) {
 			begin: async () => ({ settle: async () => undefined }),
 		},
 	};
-	return { options, metadata, response, owner, root, transfer, cache };
+	return { options, metadata, response, owner, root, transfer, cache, workspaceFs };
 }
 
 test("public Grok artifact discovery binds an uploaded reference to its actual native human response and file identity", async () => {
@@ -666,4 +706,23 @@ test("public context reads the mounted native plane outside main while rejecting
 		{ role: "assistant", text: "reference-414.txt" },
 	]);
 	expect(context.files.map((f) => f.id)).toEqual([fileId]);
+});
+
+test("mixed public discovery preserves canonical reference and qualified selected workspace file", async () => {
+	const f = fixture(false, true),
+		artifacts = await required(createGrokAdapter().readActiveConversationArtifacts)(
+			conversationId,
+			f.options as never,
+		);
+	expect(artifacts.map((a) => a.id)).toEqual([fileId, "/src/components/timer.tsx"]);
+	expect(artifacts[0].metadata).toHaveProperty("grokReferencedFile");
+	expect(artifacts[1].metadata).toHaveProperty("grokWorkspaceFile");
+	expect(artifacts[1].metadata).not.toHaveProperty("grokReferencedFile");
+	f.workspaceFs.fsKey = "conversation:foreign";
+	await expect(
+		required(createGrokAdapter().readActiveConversationArtifacts)(
+			conversationId,
+			f.options as never,
+		),
+	).rejects.toThrow();
 });

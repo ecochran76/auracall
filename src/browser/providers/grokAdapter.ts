@@ -1,6 +1,6 @@
 import { GROK_COMMITTED_REACT_PATH } from './grokCommittedReact.js';
 import { BrowserAutomationError } from "../../oracle/errors.js";
-import { readGrokWorkspaceFile, materializeGrokWorkspaceFile } from './grokWorkspaceFile.js';
+import { readOptionalGrokWorkspaceFile, materializeGrokWorkspaceFile } from './grokWorkspaceFile.js';
 import { projectGrokAccountReference } from '../grokAccountReference.js';
 import { boundObservedGrokContext } from './grokContext.js';
 import { withCdpCommandAbortSignal } from "../../../packages/browser-service/src/guardedCdp.js";
@@ -5834,13 +5834,11 @@ export function createGrokAdapter(): Pick<
     async readActiveConversationArtifacts(conversationId:string,options?:BrowserProviderListOptions):Promise<ConversationArtifact[]>{
       return withGrokWorkspaceConnection(options,options?.tabTargetId,async(runtime,scope)=>{
         const references=await readGrokReferencedFiles(runtime,conversationId,scope.providerUserId);
-        if(references.length){
-          if(!await scope.verifyPrincipal())throw new Error('Grok referenced-file account changed during discovery.');
-          return references.map(reference=>({id:reference.fileMetadataId,title:reference.fileName,kind:'document' as const,messageId:reference.providerResponseId,metadata:{grokReferencedFile:{...reference,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:scope.providerAccountRefFormat,coverage:{scope:'visible-conversation-references',complete:false}}}}));
-        }
-        const observed=await readGrokWorkspaceFile(runtime,conversationId);
-        if(!await scope.verifyPrincipal())throw new Error('Grok workspace account changed during discovery.');
-        return [{id:observed.filePath,title:observed.fileName,kind:'generated',metadata:{grokWorkspaceFile:{version:1,...observed,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:'legacy-untagged',identityKind:'native-file-path',coverage:{scope:'selected-workspace-file',complete:false}}}}];
+        const observed=await readOptionalGrokWorkspaceFile(runtime,conversationId);
+        if(!await scope.verifyPrincipal())throw new Error('Grok native artifact account changed during discovery.');
+        const artifacts:ConversationArtifact[]=references.map(reference=>({id:reference.fileMetadataId,title:reference.fileName,kind:'document' as const,messageId:reference.providerResponseId,metadata:{grokReferencedFile:{...reference,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:scope.providerAccountRefFormat,coverage:{scope:'visible-conversation-references',complete:false}}}}));
+        if(observed)artifacts.push({id:observed.filePath,title:observed.fileName,kind:'generated',metadata:{grokWorkspaceFile:{version:1,...observed,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:'legacy-untagged',identityKind:'native-file-path',coverage:{scope:'selected-workspace-file',complete:false}}}});
+        return artifacts;
       });
     },
     async materializeConversationArtifact(conversationId:string,artifact:ConversationArtifact,destDir:string,_projectId?:string,options?:BrowserProviderListOptions):Promise<FileRef|null>{
