@@ -308,6 +308,14 @@ missing targets are released, exact expired targets are closed only with a
 post-close absence census, and identity mismatches remain fenced. Status exposes content-free per-binding age and
 elapsed time since last meaningful use, idle/absolute time remaining, plus a
 restart-unverified attention count.
+TTL cleanup requires a lease established by actual AuraCall work. A browser
+census, matching account, URL or inactivity is observation, not tab ownership.
+Unregistered pages, including Agent Browser tasks in the same managed browser,
+do not receive automatic AuraCall deadlines. Historical census-only deadline
+records are preserved without closure; they do not prove ownership even when
+their recorded deadlines have elapsed. Eligible AuraCall workload leases still
+retire independently under the existing activity, audit and ownership guards.
+
 The same maintenance pass reports aggregate live, fenced, and unleased ChatGPT
 page-target counts. Unleased targets are preserved as observation-only evidence;
 the census grants no authority to adopt, navigate, focus, refresh, or close them.

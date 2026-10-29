@@ -226,7 +226,7 @@ describe("live-follow crawler tab coordinator", () => {
 		expect(await registry.list()).toEqual([]);
 	});
 
-	test("creates one governed process crawler and assigns restored pages finite deadlines", async () => {
+	test("creates one governed process crawler without claiming restored peer pages", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const closeTarget = vi.fn();
 		const openTarget = vi.fn(async () => ({
@@ -266,8 +266,8 @@ describe("live-follow crawler tab coordinator", () => {
 			expect.objectContaining({ outcome: "succeeded", targetId: "owned-crawler" }),
 		);
 		expect(closeTarget).not.toHaveBeenCalled();
-		expect(await registry.list()).toHaveLength(4);
-		expect((await registry.list()).filter((lease) => lease.retention === "ttl")).toHaveLength(3);
+		expect(await registry.list()).toHaveLength(1);
+		expect((await registry.list())[0].targetId).toBe("owned-crawler");
 	});
 
 	test.each([

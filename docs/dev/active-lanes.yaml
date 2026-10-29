@@ -2112,3 +2112,19 @@ lanes:
     reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
     validation_status: 405-closed-406-409-411-414-implementation-in-progress-renewed-review-round
     updated_at: 2026-10-27
+
+  - id: P464
+    objective: Close independent tab ownership and TTL tickets with attributed shared-browser acceptance
+    work_items: [ecochran76/auracall#490, CochranResearchGroup/agent-browser#490, ecochran76/auracall#491]
+    plan: docs/dev/plans/0464-2026-10-28-independent-tab-ttl.md
+    plan_ref: refs/heads/fix/ttl-ownership-integration
+    branch: fix/ttl-ownership-integration
+    target: main
+    plan_state: CLOSED
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 27c61aa2b173faa48988e103f4a921a8f764b3aa
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: source-installed-and-three-tickets-qualified-review1-standards0-spec0
+    updated_at: 2026-10-29

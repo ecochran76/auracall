@@ -16,7 +16,7 @@ vi.mock("../../src/browser/chatgptTabActivity.js", async (importOriginal) => {
 });
 
 describe("configured ChatGPT tab maintenance", () => {
-	test("expires every extra physical page while retaining the live-follow tab", async () => {
+	test("expires only owned work while preserving unregistered peers and live-follow", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const scope = {
 			runtimeProfileId: "affinity",
@@ -40,8 +40,16 @@ describe("configured ChatGPT tab maintenance", () => {
 			now: "2026-10-05T11:00:00Z",
 			effectState: "settled",
 		});
+		const owned = await registry.reserve({
+			scope, targetId: "owned", workload: {kind:"ephemeral",operationId:"real-operation"},
+			operationId:"real-operation", now:"2026-10-05T11:00:00Z",
+			idleTtlMs:300_000, absoluteTtlMs:300_000, targetFingerprint:"https://chatgpt.com/",
+		});
+		if (!owned.ok) throw new Error("fixture failed");
+		await registry.idle({claim:owned.value.claim,now:"2026-10-05T11:00:00Z",effectState:"settled"});
 		const pages = new Map<string, string>([
 			["follow", "https://chatgpt.com/"],
+			["owned", "https://chatgpt.com/"],
 			["blank", "about:blank"],
 			["external", "https://example.com/"],
 			...Array.from({ length: 32 }, (_, i): [string, string] => [
@@ -81,12 +89,105 @@ describe("configured ChatGPT tab maintenance", () => {
 		await run();
 		time = "2026-10-05T11:04:01Z";
 		await run();
-		expect(pages.size).toBe(35);
+		expect(pages.size).toBe(36);
 		time = "2026-10-05T11:05:01Z";
 		const summary = await run();
 		expect(summary.errors).toEqual([]);
-		expect(Array.from(pages.keys())).toEqual(["follow"]);
-		expect(summary.closedCount).toBe(34);
+		expect(pages.has("owned")).toBe(false);
+		expect(pages.size).toBe(35);
+		expect(summary.closedCount).toBe(1);
+		expect(await registry.list()).toHaveLength(2);
+	});
+	test.each(["idle", "lost", "retiring"] as const)("preserves legacy %s census claims while retiring owned work", async (legacyState) => {
+		const registry = createInMemoryBrowserTabLeaseRegistry();
+		const scope = {
+			runtimeProfileId: "affinity",
+			managedBrowserProfile: "/managed/affinity/chatgpt",
+			service: "chatgpt",
+			tenantKey: "service-account:chatgpt:account-id=account-1",
+		};
+		const follow = await registry.reserve({
+			scope,
+			targetId: "follow",
+			workload: { kind: "live-follow", operationId: "completion" },
+			operationId: "completion",
+			now: "2026-10-05T11:00:00Z",
+			idleTtlMs: 1000,
+			absoluteTtlMs: 2000,
+			targetFingerprint: "https://chatgpt.com/",
+		});
+		if (!follow.ok) throw new Error("fixture failed");
+		await registry.idle({
+			claim: follow.value.claim,
+			now: "2026-10-05T11:00:00Z",
+			effectState: "settled",
+		});
+		const owned = await registry.reserve({
+			scope, targetId: "owned", workload: {kind:"ephemeral",operationId:"real-operation"},
+			operationId:"real-operation", now:"2026-10-05T11:00:00Z",
+			idleTtlMs:300_000, absoluteTtlMs:300_000, targetFingerprint:"https://chatgpt.com/",
+		});
+		if (!owned.ok) throw new Error("fixture failed");
+		await registry.idle({claim:owned.value.claim,now:"2026-10-05T11:00:00Z",effectState:"settled"});
+		const legacy = await registry.reserve({scope,targetId:"blank",workload:{kind:"ephemeral",operationId:"tab-deadline:blank"},operationId:"tab-deadline:blank",now:"2026-10-05T11:00:00Z",idleTtlMs:300_000,absoluteTtlMs:300_000,targetFingerprint:"about:blank"});
+		if (!legacy.ok) throw new Error("fixture failed");
+		await registry.idle({claim:legacy.value.claim,now:"2026-10-05T11:00:00Z",effectState:"settled"});
+		if (legacyState !== "idle") {
+			const lease=(await registry.list()).find(x=>x.targetId==="blank");
+			if (!lease) throw new Error("legacy fixture lease missing");
+			if (legacyState === "lost") await registry.markLost({leaseId:lease.leaseId,expectedRevision:lease.revision,now:"2026-10-05T11:00:00Z",reason:"restart-unverified"});
+			else await registry.beginRetirement({leaseId:lease.leaseId,expectedRevision:lease.revision,now:"2026-10-05T11:05:00Z",reason:"absolute-expired"});
+		}
+		const pages = new Map<string, string>([
+			["follow", "https://chatgpt.com/"],
+			["owned", "https://chatgpt.com/"],
+			["blank", "about:blank"],
+			["external", "https://example.com/"],
+			...Array.from({ length: 32 }, (_, i): [string, string] => [
+				`restored-${i}`,
+				`https://chatgpt.com/c/fixture-${i}`,
+			]),
+		]);
+		let time = "2026-10-05T11:00:01Z";
+		const run = () =>
+			runConfiguredChatgptTabMaintenance({
+				userConfig: {
+					browser: { tabConcurrencyMode: "tab-affinity" },
+					profiles: {
+						affinity: {
+							browser: { tabConcurrencyMode: "tab-affinity" },
+							services: { chatgpt: { identity: { accountId: "account-1" } } },
+						},
+					},
+				} as never,
+				now: () => new Date(time),
+				deps: {
+					createRuntime: () => ({ registry }),
+					createBrowserService: () => ({
+						resolveServiceTarget: async () => ({
+							host: "127.0.0.1",
+							port: 9222,
+							managedBrowserProfile: scope.managedBrowserProfile,
+						}),
+					}),
+					listTargets: (async () =>
+						Array.from(pages, ([id, url]) => ({ id, url, type: "page" }))) as never,
+					closeTarget: (async (_host: string, _port: number, id: string) => {
+						pages.delete(id);
+					}) as never,
+				},
+			});
+		await run();
+		time = "2026-10-05T11:04:01Z";
+		await run();
+		expect(pages.size).toBe(36);
+		time = "2026-10-05T11:05:01Z";
+		const summary = await run();
+		expect(summary.errors).toEqual([]);
+		expect(pages.has("owned")).toBe(false);
+		expect(pages.size).toBe(35);
+		expect(summary.closedCount).toBe(1);
+		expect(await registry.list()).toHaveLength(3);
 	});
 	test("retires only settled idle leases in the exact stopped managed-browser scope", async () => {
 		const leaseIds = ["crawler", "materialization", "active", "uncertain", "unrelated"];
@@ -236,13 +337,13 @@ describe("configured ChatGPT tab maintenance", () => {
 			configuredScopeCount: 2,
 			visitedScopeCount: 2,
 			liveChatgptTargetCount: 1,
-			fencedLiveTargetCount: 1,
-			unleasedLiveTargetCount: 0,
+			fencedLiveTargetCount: 0,
+			unleasedLiveTargetCount: 1,
 		});
 		expect(listTargets).toHaveBeenCalledOnce();
 	});
 
-	test("registers unleased pages for TTL without closing them before their deadline", async () => {
+	test("reports unleased pages without claiming cleanup ownership", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const reserved = await registry.reserve({
 			scope: {
@@ -297,8 +398,8 @@ describe("configured ChatGPT tab maintenance", () => {
 
 		expect(summary).toMatchObject({
 			liveChatgptTargetCount: 2,
-			fencedLiveTargetCount: 2,
-			unleasedLiveTargetCount: 0,
+			fencedLiveTargetCount: 1,
+			unleasedLiveTargetCount: 1,
 			targetCensusErrorCount: 0,
 		});
 		expect(closeTarget).not.toHaveBeenCalled();

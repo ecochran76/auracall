@@ -1,3 +1,13 @@
+## 2026-10-28 — A census does not grant cleanup ownership
+
+Shared browsers contain targets created by other agents. Registering every
+unleased page with an AuraCall deadline converted missing evidence into cleanup
+authority. Remove census-driven deadline registration and preserve legacy
+synthetic records at both normal and lost-lease retirement boundaries. Public
+maintenance tests were red for foreign-target disappearance, then green while
+owned expired work continued to close. Keep physical disappearance separate from
+actor attribution: another runtime can close the same target later.
+
 ## 2026-10-27 — Account for guarded attempts before stopping the frontier
 
 A provider guard stops later work but does not erase the attempt already made.

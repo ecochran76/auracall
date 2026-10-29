@@ -1,10 +1,10 @@
+import { isUnownedBrowserTabLease } from "../../packages/browser-service/src/service/tabInventory.js";
 import { recordTabLeaseRetirementAudit, type TabLeaseRetirementAuditSink } from "../../packages/browser-service/src/service/tabLeaseRetirementAudit.js";
 import { requireInactiveChatgptTab, type probeChatgptTabActivity } from "./chatgptTabActivity.js";
 import {
 	closeRemoteChromeTarget,
 	listChromeTargets,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
-import { registerUnownedBrowserTabDeadlines } from "../../packages/browser-service/src/service/tabInventory.js";
 import {
 	type BrowserTabLeaseRegistry,
 	getCurrentTabLeaseOwnerIdentity,
@@ -236,26 +236,7 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 			};
 			if (endpoint) {
 				const censusKey = `${managedBrowserProfile}\u0000${endpoint.host}\u0000${endpoint.port}`;
-				const targets =
-					observedCensuses.get(censusKey) ?? (await listTargets(endpoint.port, endpoint.host));
-				observedCensuses.set(censusKey, targets);
-				await registerUnownedBrowserTabDeadlines({
-					registry: runtime.registry,
-					scope,
-					now: input.now,
-					targets: targets.flatMap((target) => {
-						const record = target as {
-							id?: string;
-							targetId?: string;
-							type?: string;
-							url?: string;
-						};
-						const targetId = record.targetId ?? record.id;
-						return targetId && (!record.type || record.type === "page")
-							? [{ targetId, url: record.url ?? "about:blank" }]
-							: [];
-					}),
-				});
+				if (!observedCensuses.has(censusKey)) observedCensuses.set(censusKey, await listTargets(endpoint.port, endpoint.host));
 			}
 			const staleActive = await reconcileStaleTabLeases({
 				registry: runtime.registry,
@@ -269,6 +250,10 @@ export async function runConfiguredChatgptTabMaintenance(input: {
 			).length;
 			const lostLeases = await runtime.registry.list({ scope, states: ["lost"] });
 			for (const lostLease of lostLeases) {
+				if (isUnownedBrowserTabLease(lostLease)) {
+					summary.restartPreservedCount += 1;
+					continue;
+				}
 				try {
 					let target: { url?: string } | undefined;
 					if (endpoint) {
