@@ -47,12 +47,30 @@ bytes. These counters are not account-wide artifact inventory, completed history
 backfill or publication proof.
 A failed provider read is not a successful empty inventory.
 
-Grok's existing Files context/recent/select/upload APIs do not supply a qualified
-referenced-file download API. Referenced-file byte retrieval remains an unmet
-#414 gate. Metadata discovery, initial native transfer, verified local reuse,
-unavailable bytes and uncertain provider effects remain distinct evidence states;
-this archive bridge only qualifies the retained workspace portion. Source tests,
-installed identity and any future native acceptance must be reported separately.
+Conversation-bound uploaded references now use the actual native attachment card
+and Download control. Context and file listing return one canonical `upload`
+reference per observed file metadata ID, retaining the native human response UUID,
+DOM response ID and separate gateway row ID. They do not duplicate uploads as
+generated artifacts. Coverage remains visible-conversation-only and incomplete;
+unobserved app/version identity remains null. This does not qualify account-wide
+file discovery or arbitrary file types.
+
+A fresh reference transfer requires explicit `acknowledgeTargetDefaultReset: true`
+on the archive materialization request. The provider option is
+`grokReferenceDownload: { acknowledgeTargetDefaultReset: true }`. This acknowledges
+that native Chrome download policy is temporarily scoped to a new private capture
+directory and then reset to the target default; it does not claim restoration of
+an unknown prior policy. Missing acknowledgment refuses before preview or download
+changes. The transfer uses the exact owned native Download control and a bounded
+fresh filesystem capture; there is no generic HTTP fallback.
+
+Reference receipts retain distinct account, conversation, human response, file
+metadata and native URL fingerprints, alongside original byte count and SHA256.
+Verified local reuse needs no download acknowledgment or provider transfer.
+Changed bytes retain the original checksum and become unavailable. A policy reset
+or transport cleanup failure preserves captured bytes and receipt with an unknown
+outcome; reconcile custody before retrying. Metadata discovery, source-test
+qualification and successful native byte acceptance remain separate evidence.
 
 Selected-conversation history reconciliation shares one new-transfer budget across
 its exact conversation frontier. Each subsequent conversation receives only the

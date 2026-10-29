@@ -26424,3 +26424,13 @@ current committed React tree rather than trusting a stale DOM fiber seed. The
 Grok text waiter can report its exact accepted terminal snapshot; Connector
 observation checks that identity/content/terminal state before returning native
 tool cards, preventing an unrelated later response from becoming the first anchor.
+
+## 2026-10-29 — Preserve native reference download custody
+
+Grok uploaded references require current human-response attachment membership and
+the actual committed SidePanel Download selection. A readable native URL did not
+establish a working direct-GET protocol; native Chrome download capture is the
+qualified transfer seam. Require explicit target-default-reset acknowledgment for
+fresh transfers, retain sidecars before cleanup, and keep bytes when reset or
+transport settlement is unknown. Canonical upload inventory and verified archive
+reuse stay separate from generated workspace artifacts and broad history coverage.

@@ -1,3 +1,4 @@
+import { verifyGrokReferencedArchiveItem } from "./grokReferencedFileArchive.js";
 import { verifyGrokWorkspaceArchiveItem } from './grokWorkspaceArchive.js';
 import {grokBuildArchiveProvenance,verifyGrokBuildArchiveItem} from "./grokBuildArchiveBridge.js";
 import { createHash } from 'node:crypto';
@@ -19,6 +20,7 @@ import {
 import { findCachedConversationAttachmentAsset } from './archiveCachedAssetLookup.js';
 
 export interface ArchiveItemMaterializationRequest {
+  acknowledgeTargetDefaultReset?: true;
   archiveItemId: string;
   force?: boolean | null;
 }
@@ -67,6 +69,7 @@ export interface ArchiveMaterializationServiceDeps {
       destDir: string;
       projectId: string | null;
       providerConversationUrl: string | null;
+      acknowledgeTargetDefaultReset?: true;
     },
   ) => Promise<FileRef | null>;
 }
@@ -91,8 +94,9 @@ export function createArchiveMaterializationService(
       }
       const item = detail.item;
       const workspaceFile = item.provider === 'grok' && Boolean(item.metadata.grokWorkspaceFile);
-      if (item.provider === 'grok' && (item.metadata.grokBuildArchive || (workspaceFile && (item.localPath || item.checksumSha256)))) {
-        const valid = workspaceFile ? await verifyGrokWorkspaceArchiveItem(item) : Boolean(grokBuildArchiveProvenance(item)) && await verifyGrokBuildArchiveItem(item);
+      const referenceFile = item.provider === 'grok' && Boolean(item.metadata.grokReferencedFile);
+      if (item.provider === 'grok' && (item.metadata.grokBuildArchive || ((workspaceFile || referenceFile) && (item.localPath || item.checksumSha256)))) {
+        const valid = referenceFile ? await verifyGrokReferencedArchiveItem(item) : workspaceFile ? await verifyGrokWorkspaceArchiveItem(item) : Boolean(grokBuildArchiveProvenance(item)) && await verifyGrokBuildArchiveItem(item);
         if (valid) {
           return {
             object: 'run_archive_item_materialization',
@@ -152,10 +156,10 @@ export function createArchiveMaterializationService(
           message: 'Archive item already has a readable local asset.',
         };
       }
-      if (item.kind !== 'generated_artifact') {
+      if (item.kind !== 'generated_artifact' && !(referenceFile && item.kind === 'upload')) {
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} is ${item.kind}; only generated_artifact materialization is supported.`);
       }
-      const existingMaterializedAsset = force || workspaceFile ? null : await findExistingMaterializedItemAsset(item);
+      const existingMaterializedAsset = force || workspaceFile || referenceFile ? null : await findExistingMaterializedItemAsset(item);
       if (existingMaterializedAsset) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, existingMaterializedAsset, materializedAt);
@@ -172,7 +176,7 @@ export function createArchiveMaterializationService(
           message: 'Archive item linked to an existing materialized file in its archive directory.',
         };
       }
-      const cachedConversationAsset = force || workspaceFile ? null : await findCachedConversationAttachmentAsset(item);
+      const cachedConversationAsset = force || workspaceFile || referenceFile ? null : await findCachedConversationAttachmentAsset(item);
       if (cachedConversationAsset) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, cachedConversationAsset, materializedAt);
@@ -189,7 +193,7 @@ export function createArchiveMaterializationService(
           message: 'Archive item linked to an existing provider conversation attachment cache file.',
         };
       }
-      const reusable = force || workspaceFile ? null : await findReusableArchiveAsset(runArchiveService, item);
+      const reusable = force || workspaceFile || referenceFile ? null : await findReusableArchiveAsset(runArchiveService, item);
       if (reusable) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, reusable, materializedAt);
@@ -214,6 +218,7 @@ export function createArchiveMaterializationService(
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} does not have a provider conversation id.`);
       }
 
+      if(referenceFile && request.acknowledgeTargetDefaultReset!==true)throw new ArchiveMaterializationError('Grok reference transfer requires acknowledgeTargetDefaultReset=true.');
       const artifact = archiveItemToConversationArtifact(item);
       const destDir = path.join(getRunArchiveDir(), 'materialized', sanitizePathSegment(archiveItemId));
       await fs.mkdir(destDir, { recursive: true });
@@ -227,6 +232,7 @@ export function createArchiveMaterializationService(
             destDir,
             projectId: item.projectId,
             providerConversationUrl: item.providerConversationUrl,
+            acknowledgeTargetDefaultReset: request.acknowledgeTargetDefaultReset,
           })
         : await materializeProviderConversationArtifact({
             provider,
@@ -236,6 +242,7 @@ export function createArchiveMaterializationService(
             destDir,
             projectId: item.projectId,
             providerConversationUrl: item.providerConversationUrl,
+            acknowledgeTargetDefaultReset: request.acknowledgeTargetDefaultReset,
           });
       if (!file?.localPath) {
         return {
@@ -387,8 +394,11 @@ async function materializeProviderConversationArtifact(input: {
   destDir: string;
   projectId: string | null;
   providerConversationUrl: string | null;
+  acknowledgeTargetDefaultReset?: true;
 }): Promise<FileRef | null> {
   const llmService = createLlmService(input.provider, input.config as ResolvedUserConfig);
+  const reference=input.artifact.metadata?.grokReferencedFile as {targetId?:unknown}|undefined;
+  const referenceTarget=typeof reference?.targetId==='string'?reference.targetId:undefined;
   return llmService.materializeConversationArtifact(
     input.conversationId,
     input.artifact,
@@ -396,6 +406,8 @@ async function materializeProviderConversationArtifact(input: {
     {
       projectId: input.projectId ?? undefined,
       listOptions: {
+        ...(referenceTarget?{tabTargetId:referenceTarget,requireExistingTarget:true,allowNavigation:false}:{}),
+        ...(input.acknowledgeTargetDefaultReset ? {grokReferenceDownload:{acknowledgeTargetDefaultReset:true as const}} : {}),
         configuredUrl: input.providerConversationUrl,
         projectId: input.projectId,
         tabUrl: input.providerConversationUrl,

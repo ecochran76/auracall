@@ -5,19 +5,21 @@ import os from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 import { afterEach, expect, test, vi } from "vitest";
+
 const wire = vi.hoisted(() => ({ client: undefined as unknown }));
 vi.mock("chrome-remote-interface", () => ({ default: { Close: async () => undefined } }));
 vi.mock("../packages/browser-service/src/chromeLifecycle.js", async (original) => ({
 	...(await original<typeof import("../packages/browser-service/src/chromeLifecycle.js")>()),
 	connectToChromeTarget: async () => wire.client,
 }));
-import { createGrokAdapter } from "../src/browser/providers/grokAdapter.js";
-import { createProviderSessionAuthority } from "../src/browser/providers/providerSessionAuthority.js";
+
 import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
+import { createGrokAdapter } from "../src/browser/providers/grokAdapter.js";
 import {
 	materializeGrokWorkspaceFile,
 	readGrokWorkspaceFile,
 } from "../src/browser/providers/grokWorkspaceFile.js";
+import { createProviderSessionAuthority } from "../src/browser/providers/providerSessionAuthority.js";
 import { createRunArchiveIndexStore } from "../src/runtime/archiveIndexStore.js";
 import { createArchiveMaterializationService } from "../src/runtime/archiveMaterializationService.js";
 import { createRunArchiveService, type RunArchiveItem } from "../src/runtime/archiveService.js";
@@ -213,7 +215,11 @@ test("existing Grok artifact discovery and materialization expose the actual sel
 		Runtime: {
 			enable: async () => undefined,
 			evaluate: async (input: { expression: string }) => {
-				if (input.expression.includes("grok_workspace_file_")) return evaluate(input);
+				if (
+					input.expression.includes("grok_workspace_file_") ||
+					input.expression.includes("grok_referenced_file_")
+				)
+					return evaluate(input);
 				if (input.expression.includes("const identity = { id: null"))
 					return {
 						result: {

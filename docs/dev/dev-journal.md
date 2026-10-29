@@ -57099,3 +57099,12 @@ inactive expired AuraCall tabs (4→2) and preserved2unknown tabs; no manual clo
 HTTP200 status retains23paused completions,0running/0queued, scheduler paused,
 drain restored idle/unpaused. The17Agent Browser pages remain a separate runtime
 scope. MCP wrapper unchanged; CI excluded. Plan/lane CLOSED and INTEGRATED.
+
+### 2026-10-29 — #414 conversation reference source slice
+
+Implemented the separately qualified native attachment-card/Download path, canonical
+upload references, explicit default-reset acknowledgment, isolated download custody,
+and archive integrity/reuse guards. TDD covered public adapter, context/files and
+archive seams, including failed reset/transport cleanup and same-size corruption.
+Native public-adapter acceptance remains a separate integration gate; no additional
+upload or Send was performed by this implementation slice.

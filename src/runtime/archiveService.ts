@@ -1,3 +1,4 @@
+import { grokReferencedFileReceipt, verifyGrokReferencedArchiveItem } from "./grokReferencedFileArchive.js";
 import { grokWorkspaceFileReceipt, verifyGrokWorkspaceArchiveItem } from './grokWorkspaceArchive.js';
 import { grokBuildArchiveProvenance, verifyGrokBuildArchiveItem } from './grokBuildArchiveBridge.js';
 import fs from 'node:fs/promises';
@@ -328,7 +329,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
     async readAsset(id) {
       const item = (await readIndexedItems()).find((entry) => entry.id === id) ?? null;
       if (!item?.localPath) return null;
-      if (item.provider === 'grok' && (item.metadata.grokBuildArchive || item.metadata.grokWorkspaceFile) && item.fileAvailable !== true) return null;
+      if (item.provider === 'grok' && (item.metadata.grokBuildArchive || item.metadata.grokWorkspaceFile || item.metadata.grokReferencedFile) && item.fileAvailable !== true) return null;
       const stat = await fs.stat(item.localPath).catch(() => null);
       if (!stat?.isFile()) return null;
       return {
@@ -1330,22 +1331,23 @@ async function enrichFileMetadata(
   options: { includeChecksum?: boolean } = {},
 ): Promise<RunArchiveItem[]> {
   return Promise.all(items.map(async (item) => {
-    if (item.provider === 'grok' && (item.metadata.grokBuildArchive || item.metadata.grokWorkspaceFile)) {
+    if (item.provider === 'grok' && (item.metadata.grokBuildArchive || item.metadata.grokWorkspaceFile || item.metadata.grokReferencedFile)) {
       const workspaceFile = Boolean(item.metadata.grokWorkspaceFile);
-      if (workspaceFile && !item.localPath && !item.checksumSha256) {
+      const referenceFile = Boolean(item.metadata.grokReferencedFile);
+      if ((workspaceFile || referenceFile) && !item.localPath && !item.checksumSha256) {
         const { asset: _asset, ...links } = item.links;
         return { ...item, status: 'metadata-only', fileAvailable: false, links,
           metadata: { ...item.metadata, fileAvailable: false, materialization: {
-            status: 'not_materialized', source: 'grok-workspace-selection',
+            status: 'not_materialized', source: referenceFile ? 'grok-conversation-reference' : 'grok-workspace-selection',
           } },
         };
       }
-      const receipt = workspaceFile ? grokWorkspaceFileReceipt(item) : grokBuildArchiveProvenance(item);
+      const receipt = referenceFile ? grokReferencedFileReceipt(item) : workspaceFile ? grokWorkspaceFileReceipt(item) : grokBuildArchiveProvenance(item);
       const stat = options.includeChecksum === false && item.localPath
         ? await fs.lstat(item.localPath).catch(() => null) : null;
       const available = options.includeChecksum === false
         ? Boolean(receipt && stat?.isFile() && !stat.isSymbolicLink() && stat.size === receipt.sizeBytes)
-        : workspaceFile ? await verifyGrokWorkspaceArchiveItem(item) : await verifyGrokBuildArchiveItem(item);
+        : referenceFile ? await verifyGrokReferencedArchiveItem(item) : workspaceFile ? await verifyGrokWorkspaceArchiveItem(item) : await verifyGrokBuildArchiveItem(item);
       const { asset: _asset, ...links } = item.links;
       return {
         ...item,
