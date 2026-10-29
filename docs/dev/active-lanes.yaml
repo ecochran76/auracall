@@ -2122,9 +2122,9 @@ lanes:
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 00a45bd0bf7df36845ba100aec2a2ddf97e72f33
+    checkpoint: 27c61aa2b173faa48988e103f4a921a8f764b3aa
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: ownership-red-green-62-focused-checks-installed-gate-pending
-    updated_at: 2026-10-28
+    validation_status: aura490-closed-ab-candidate-installed-publication-recovery-in-progress
+    updated_at: 2026-10-29
