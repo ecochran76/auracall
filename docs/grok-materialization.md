@@ -112,12 +112,12 @@ rediscover the selected assets and verify retained archive bytes before reuse.
 Neither the cursor nor a remaining budget qualifies a provider file-read method,
 a safe retry, or a provider-native resume token.
 
-Current native inspection has observed an inactive conversation Files controller
-with an empty tree. That observation does not prove that referenced files are
-absent. A genuine conversation-scoped file path, revision and byte-read protocol
-remain unqualified, so #414 remains open beyond the source cursor and retained
-workspace-archive portions. Source tests, installed runtime checks and native
-acceptance remain separate gates.
+### Qualification history
+
+Earlier inspection observed an inactive Files controller and empty tree; that
+observation did not prove referenced files absent. Later selected-file and
+referenced-upload acceptance superseded that gate, as recorded below. Source,
+local API, installed and native evidence remain separate.
 
 ## Selected native workspace files
 
@@ -129,12 +129,11 @@ after hashing. The archive materializer verifies retained byte size and checksum
 same-size tampering is a failure, including forced reads. Credentialized asset
 URLs are never returned. Unobserved revision/app/version fields remain null.
 
-This is selected-file coverage, not a complete referenced-upload or history
-inventory. Native acceptance remains blocked: the current selected viewer has
-no asset URL and is inactive, so its first actual discovery attempt produced no
-accepted bytes or sidecar. A historical READY tree or a previously observed data
-URL cannot authorize capture from that state. Metadata-only artifacts remain
-not_materialized. Issue414 remains open.
+This is selected-file coverage, not a complete history inventory. The first
+discovery attempt found an inactive viewer and retained no bytes or sidecar.
+That historical failure is preserved; the later acceptance below qualified a
+fresh active viewer. A historical READY tree or previously observed data URL
+cannot authorize a new capture. Metadata-only artifacts remain not_materialized.
 
 ### Native selected-file acceptance, 2026-10-29
 
@@ -145,8 +144,8 @@ The bytes match the fresh native ZIP member and retained sidecar. Real isolated
 Archive APIs proved materialization, verified reuse, durable restart through an
 injected foreground gate, and same-size tamper refusal. No provider recapture
 or operational-store write occurred. App/version/revision remain null.
-This accepts the selected generated-file slice; it does not complete referenced
-uploads or installed/native history continuation. Issue414 remains open.
+This accepts the selected generated-file slice. Referenced-upload acceptance
+followed separately; installed/native history continuation is not claimed.
 
 ### Explicit native reference download scope
 
@@ -158,3 +157,16 @@ Durable jobs retain this explicit scope through restart; old requests do not gai
 it automatically. Verified local reuse needs no acknowledgment. This scope
 authorizes temporary capture-directory policy followed by a target-default reset,
 not restoration of an unknown prior download policy.
+
+### Native referenced-upload acceptance, 2026-10-29
+
+The public adapter discovered the current canonical upload, read both conversation
+messages without a legacy main shell, and downloaded `reference-414.txt`: 107 bytes,
+SHA-256 `5e34ff7e9d8997af149b7a875940dce6117c1f2b73fc23e7ae159ea197d38e78`.
+Independent rehash, receipt/sidecar equality and acknowledged default-policy reset
+passed. Isolated public archive APIs proved retained-file handoff, verified reuse,
+durable restart with an injected foreground gate, and same-size tamper refusal.
+These do not claim installed-host adoption, complete provider history, or a native
+foreground run. App/version remain unobserved null fields. The bounded review
+and original-issue closure decision are tracked in
+[the review record](dev/notes/2026-10-29-grok-r2-review.md).

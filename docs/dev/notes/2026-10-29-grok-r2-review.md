@@ -29,3 +29,22 @@ Standards and Spec run independently. One findings-TDD phase remains available.
 No additional upload/Send or publication is authorized by review. #409/#411 remain
 open on the native gates in the snapshot report. #414 closure awaits adjudication,
 findings remediation and integration. Installed adoption has not occurred.
+
+## Standards
+
+No hard documented breach. STANDARDS1, possible duplicated filesystem integrity
+logic in grokReferencedFileArchive and grokWorkspaceArchive: accepted
+`nonblocking_backlog`. The domain receipt validators differ and current checks
+pass; shared verifier extraction is optional follow-up, not this remediation.
+
+## Spec
+
+SPEC1 accepted `blocking`, P2: an early reference return suppresses a qualified
+selected generated file in mixed conversations. Public adapter mixed-inventory
+RED→GREEN is the single findings-TDD phase. SPEC2 accepted
+`nonblocking_backlog`, documentation: historical inactive-viewer wording reads as
+current despite native acceptance. Corrected in the same bounded phase.
+
+One broad Standards/Spec round consumed; one findings-TDD phase now active.
+Further verification is closed-world, limited to these findings and regressions
+introduced by their remedies. No new broad review will be run.
