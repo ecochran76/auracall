@@ -147,3 +147,14 @@ injected foreground gate, and same-size tamper refusal. No provider recapture
 or operational-store write occurred. App/version/revision remain null.
 This accepts the selected generated-file slice; it does not complete referenced
 uploads or installed/native history continuation. Issue414 remains open.
+
+### Explicit native reference download scope
+
+Fresh reference transfers require `acknowledgeTargetDefaultReset: true` on
+HTTP/MCP archive materialization and history-job requests. CLI callers use
+`--acknowledge-target-default-reset` with `api archive-materialize`,
+`api archive-materialization-create`, or `api history-materialization-create`.
+Durable jobs retain this explicit scope through restart; old requests do not gain
+it automatically. Verified local reuse needs no acknowledgment. This scope
+authorizes temporary capture-directory policy followed by a target-default reset,
+not restoration of an unknown prior download policy.

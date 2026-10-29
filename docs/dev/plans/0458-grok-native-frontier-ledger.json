@@ -540,7 +540,20 @@
         "botContentDiagnosis": "1eb52c6ab220175c7a37fc14ec4377fd77f4f96cbf6fed522711f8bc7c1ac7c6",
         "publishController": "b50ae1cfeae002294a8064080e15e3311462a3b6e8addf13eb3de02dde88dd7f"
       },
-      "validatedSourceHead": "af1bdb9ad54f5c3789dd93b3777b29ee6804f0b0"
+      "validatedSourceHead": "af1bdb9ad54f5c3789dd93b3777b29ee6804f0b0",
+      "referenceSourceIntegration": {
+        "commits": [
+          "f98eb0a71",
+          "32cb0f2da"
+        ],
+        "primaryTypecheck": "PASS",
+        "primaryTests": 392,
+        "files": 9,
+        "nativePublicAcceptance": "stopped before transfer: actual Fast plane has no main; public reader requires main; targeted regression/fix underway",
+        "installedAdoption": "not run",
+        "broadReviews": 0,
+        "postReviewTddPasses": 0
+      }
     }
   },
   "executionControl": {

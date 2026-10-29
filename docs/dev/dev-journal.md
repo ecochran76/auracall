@@ -57108,3 +57108,16 @@ and archive integrity/reuse guards. TDD covered public adapter, context/files an
 archive seams, including failed reset/transport cleanup and same-size corruption.
 Native public-adapter acceptance remains a separate integration gate; no additional
 upload or Send was performed by this implementation slice.
+
+Integrated reference source at `32cb0f2da` with public acknowledgment propagation
+`f98eb0a71`. Primary full typecheck and 392 tests across nine affected files pass.
+CLI, HTTP, MCP and durable archive/history jobs preserve explicit scope. Native
+public-adapter acceptance is in progress; upload and Send are already consumed
+and are not replayed. Review/findings-TDD counters remain unchanged.
+
+First public native reference acceptance stopped before transfer: Fast conversation
+rows render in the native gateway plane outside `main`; the shared context reader
+still requires `main`. Passive route/response/account observations confirm the
+current conversation and retained attachment. A targeted source regression/fix is
+underway. No transfer, upload or Send was retried. All three CLI acknowledgment
+flags are confirmed in source help.
