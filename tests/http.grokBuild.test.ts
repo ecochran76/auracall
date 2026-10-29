@@ -6,6 +6,7 @@ import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
 import { grokBuildUnknown } from "../src/browser/grokBuildService.js";
 import { recordGrokEcosystemProgress } from "../src/browser/grokEcosystemProgress.js";
 import { createBrowserTabConcurrencyRuntime } from "../src/browser/tabConcurrencyRuntime.js";
+import { summarizeGrokBuildDiagnostics } from "../src/cli/grokBuildCommand.js";
 import { createResponsesHttpServer } from "../src/http/responsesServer.js";
 
 test("Build HTTP validates confirmation before resolving and preserves partial generation outcome", async () => {
@@ -90,6 +91,21 @@ test("Ops projects partial Build state without retaining response text or privat
 	setAuracallHomeDirOverrideForTest(root);
 	try {
 		await recordGrokEcosystemProgress("build", "default", {
+			...summarizeGrokBuildDiagnostics({
+				...grokBuildUnknown(),
+				publication: {
+					requested: false,
+					status: "unknown",
+					controls: {
+						state: "not_published",
+						phase: "idle",
+						publishEnabled: true,
+						proposedName: "PRIVATE_PROPOSED_NAME",
+						snapshotBinding: "unqualified",
+						dialogDismissed: true,
+					},
+				},
+			}),
 			status: "partial",
 			code: "grok_build_app_version_not_observed",
 			effectState: "completed",
@@ -102,9 +118,16 @@ test("Ops projects partial Build state without retaining response text or privat
 			status: "partial",
 			effectState: "completed",
 			hasResponseIdentity: true,
+			publicationInspection: {
+				nativeState: "not_published",
+				nativePublishEnabled: true,
+				dialogDismissed: true,
+				snapshotBinding: "unqualified",
+			},
 		});
 		expect(JSON.stringify(status.providerControls)).not.toContain("PRIVATE_BUILD_TEXT");
 		expect(JSON.stringify(status.providerControls)).not.toContain("private.example");
+		expect(JSON.stringify(status.providerControls)).not.toContain("PRIVATE_PROPOSED_NAME");
 	} finally {
 		setAuracallHomeDirOverrideForTest(null);
 		await fs.rm(root, { recursive: true, force: true });

@@ -78,6 +78,7 @@ export type HistoryMaterializationAssetKind = "artifacts" | "files" | "media" | 
 export type HistoryMaterializationAssetSource = "account-library";
 
 export interface HistoryMaterializationCreateRequest {
+  acknowledgeTargetDefaultReset?: true;
 	provider?: ProviderId | null;
 	runtimeProfile?: string | null;
 	browserProfile?: string | null;
@@ -4437,7 +4438,7 @@ async function materializeConversationTarget(input: {
 		},
 	);
 	const listOptions = {
-		...resolveHistoryMaterializationProviderListOptions(input.target),
+		...resolveHistoryMaterializationProviderListOptions(input.target, input.request),
 		...(input.interactionGovernor ? { interactionGovernor: input.interactionGovernor } : {}),
 		...createHistoryMaterializationTrafficOptions(
 			input.target.conversationId,
@@ -4674,6 +4675,7 @@ function normalizeCreateRequest(
 		maxItems: normalizeMaxItems(request.maxItems),
 		providerWorkTimeoutMs: normalizeProviderWorkTimeoutMs(request.providerWorkTimeoutMs),
 		force: request.force === true,
+		...(request.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}),
 	};
 	if (normalized.conversationId && !normalized.provider) {
 		throw new HistoryMaterializationError("Provider is required when conversationId is provided.");
@@ -6747,6 +6749,7 @@ function normalizeConversationIds(value: string[] | null | undefined): string[] 
 
 export function resolveHistoryMaterializationProviderListOptions(
 	target: HistoryMaterializationTarget,
+	request?: Pick<HistoryMaterializationCreateRequest, "acknowledgeTargetDefaultReset">,
 ): HistoryMaterializationProviderListOptions {
 	const providerConversationUrl =
 		target.providerConversationUrl ??
@@ -6754,6 +6757,8 @@ export function resolveHistoryMaterializationProviderListOptions(
 		undefined;
 	return {
 		configuredUrl: resolveHistoryMaterializationConfiguredUrl(target, providerConversationUrl),
+		...(target.provider === "grok" && request?.acknowledgeTargetDefaultReset === true
+			? { grokReferenceDownload: { acknowledgeTargetDefaultReset: true as const } } : {}),
 		tabUrl: providerConversationUrl,
 		projectId: target.projectId ?? undefined,
 		allowNavigation: true,

@@ -64,9 +64,26 @@ For the existing HTTP/MCP surfaces, use
 `{"action":"inspect","targetId":"...","conversationId":"...","responseId":"..."}`;
 `responseId` is optional when exactly one assistant message is mounted. Inspection
 requires an existing configured browser endpoint and the exact retained target.
-It never launches a browser, opens a model menu, navigates, edits, sends, downloads
+Default inspection never launches a browser, opens a model menu, navigates, edits, sends, downloads
 or settles an unknown-effect lease. A still-fenced target requires supported
 operator reconciliation before ordinary inspection can acquire it.
+
+For an explicit native publication-control read, add
+`--inspect-publication-controls` to the inspect command, or set
+`"inspectPublicationControls":true` in its HTTP/MCP request. This opens the
+exact conversation's owned Publish dialog, reads its committed controller, and
+focuses that dialog before sending Escape. The result includes controls only
+after dismissal is verified. It never clicks the final Publish button, edits a
+name, generates a cover, or changes access. Default inspection performs no input.
+
+`publication.controls` reports the observed native phase, whether a deployment
+object exists, the native Publish button's enabled state, and a proposed name
+when qualified. A proposed name is not a published URL. App/version identity
+remains unobserved and `snapshotBinding` remains `unqualified`; this read creates
+no publication authority or dispatch path. Inactive workspace status still takes
+precedence even if the native dialog shows an enabled button. Unverified dialog
+cleanup returns `grok_build_publication_dialog_cleanup_unknown`, with
+`cleanupState=unknown` and `retrySafe=false`; preserve the target for inspection.
 
 The observed Build plane has provider response IDs under separate user and
 assistant gateway rows, rather than under `main`. Inspection accepts assistant
@@ -144,3 +161,9 @@ reuse those bytes without another provider download. Missing or changed bytes
 are unavailable rather than silently rehashed or re-exported. See
 [Grok materialization](grok-materialization.md) for coverage limits and the
 still-unqualified referenced-file retrieval gate.
+
+Ops retains a sanitized `publicationInspection` observation with native state,
+native button enablement, verified dismissal and `snapshotBinding=unqualified`.
+It excludes the proposed name, account identity, app identifiers and URLs. Its
+`observedAt` describes the saved observation; it does not prove that the browser
+or workspace is still available. Overall inactive/unknown status is preserved.

@@ -69,7 +69,7 @@ export interface GrokBuildResult {
 		setup: "not_attempted" | "attempted" | "acknowledged";
 		reset: "not_needed" | "default_acknowledged" | "unknown";
 	};
-	publication: { requested: false; status: "unknown" };
+	publication: { requested: false; status: "unknown"; controls?: GrokBuildPublicationControls };
 	cleanupState: "completed" | "unknown";
 	effectState: "none" | "completed" | "unknown";
 	retrySafe: boolean;
@@ -78,6 +78,15 @@ export interface GrokBuildInspectRequest {
 	targetId: string;
 	conversationId: string;
 	responseId?: string;
+	inspectPublicationControls?: true;
+}
+export interface GrokBuildPublicationControls {
+	state: "not_published" | "deployment_observed" | "unknown";
+	phase: string;
+	publishEnabled: boolean;
+	proposedName: string | null;
+	snapshotBinding: "unqualified";
+	dialogDismissed: true;
 }
 export interface GrokBuildExportRequest extends GrokBuildInspectRequest {
 	outputDir: string;
@@ -404,6 +413,7 @@ export function createGrokBuildService(
 			operation: "inspect",
 			targetId: request.targetId,
 		};
+		let publicationDialogUnknown = false;
 		if (
 			!Number.isInteger(options.port) ||
 			!options.port ||
@@ -470,16 +480,50 @@ export function createGrokBuildService(
 				const readiness = view.conversationId
 					? await readGrokBuildWorkspaceReadiness(client.Runtime, view.conversationId)
 					: "unobserved";
+				let publicationControls: GrokBuildPublicationControls | undefined;
+				if (request.inspectPublicationControls && view.state === "completed") {
+					publicationDialogUnknown = true;
+					const { inspectGrokBuildPublicationControls } = await import("./grokBuildPublication.js");
+					const inspected = await inspectGrokBuildPublicationControls(
+						client,
+						request,
+						options.abortSignal,
+					);
+					publicationDialogUnknown = !inspected.dialogDismissed;
+					const after = await readGrokBuildPlaneSnapshot(client.Runtime, request);
+					if (
+						after.state !== "completed" ||
+						after.responseId !== view.responseId ||
+						after.gatewayRowId !== view.gatewayRowId
+					)
+						throw new Error("grok_build_publication_selection_changed");
+					publicationControls = inspected.controls;
+				}
 				options.abortSignal?.throwIfAborted();
 				if ((await verify(client.Runtime, options)) !== account)
 					throw new Error("grok_build_account_changed");
 				result = {
 					...result,
 					status: view.state === "unknown" ? "unknown" : "partial",
-					code: view.state === "completed" ? "grok_build_app_identity_unobserved" : view.code,
+					code: request.inspectPublicationControls
+						? publicationControls
+							? "grok_build_publication_controls_observed"
+							: "grok_build_publication_controls_unconfirmed"
+						: view.state === "completed"
+							? "grok_build_app_identity_unobserved"
+							: view.code,
 					providerAccountRef: account,
 					conversationId: view.conversationId,
 					conversationUrl: view.conversationUrl,
+					...(publicationControls
+						? {
+								publication: {
+									requested: false as const,
+									status: "unknown" as const,
+									controls: publicationControls,
+								},
+							}
+						: {}),
 					generation: {
 						status: view.state === "completed" ? "response_completed" : "unknown",
 						responseId: view.responseId,
@@ -526,6 +570,12 @@ export function createGrokBuildService(
 				result.retrySafe = false;
 				result.code = "grok_build_cleanup_unknown";
 				result.status = "unknown";
+			}
+			if (publicationDialogUnknown) {
+				result.status = "unknown";
+				result.code = "grok_build_publication_dialog_cleanup_unknown";
+				result.cleanupState = "unknown";
+				result.retrySafe = false;
 			}
 		}
 		return result;

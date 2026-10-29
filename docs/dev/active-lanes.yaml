@@ -2095,23 +2095,23 @@ lanes:
     updated_at: 2026-10-25
 
   - id: grok-native-frontier-0458
-    objective: Close the remaining eight Grok tickets with qualified native acceptance
+    objective: Close the remaining Grok tickets with qualified native acceptance
     work_items: [ecochran76/auracall#403, ecochran76/auracall#405, ecochran76/auracall#406, ecochran76/auracall#408, ecochran76/auracall#409, ecochran76/auracall#410, ecochran76/auracall#411, ecochran76/auracall#414]
     plan: docs/dev/plans/0458-2026-10-25-grok-native-frontier.md
-    plan_ref: refs/heads/feat/grok406-invocation-20261027
-    branch: feat/grok406-invocation-20261027
+    plan_ref: refs/heads/feat/grok411-spec-20261028-r2
+    branch: feat/grok411-spec-20261028-r2
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: bd3915060
-    remote_ref: refs/remotes/origin/feat/grok406-invocation-20261027
+    checkpoint: af1bdb9ad
+    remote_ref: refs/remotes/origin/feat/grok411-spec-20261028-r2
     integration: merge
     dependencies: []
     overlaps: [grok398]
     reconciled_overlaps: [grok398]
     reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
-    validation_status: 405-closed-406-409-411-414-implementation-in-progress-renewed-review-round
-    updated_at: 2026-10-27
+    validation_status: 406-closed-409-blocked-411-partial-414-native-accepted-findings-remediated
+    updated_at: 2026-10-29
 
   - id: P464
     objective: Close independent tab ownership and TTL tickets with attributed shared-browser acceptance

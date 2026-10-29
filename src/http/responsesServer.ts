@@ -2644,7 +2644,7 @@ export async function createResponsesHttpServer(
 					const result: ArchiveItemMaterializationResult =
 						await archiveMaterializationService.materializeItem({
 							archiveItemId: itemId,
-							force: payload.force,
+							...payload,
 						});
 					sendJson(
 						res,
@@ -9792,22 +9792,24 @@ function parseRunArchiveMaterializationCreateBody(value: unknown) {
 			archiveItemId: z.string().trim().min(1).optional(),
 			archive_item_id: z.string().trim().min(1).optional(),
 			force: z.boolean().optional(),
+			acknowledgeTargetDefaultReset: z.literal(true).optional(),
 		})
 		.parse(value);
 	const archiveItemId = parsed.archiveItemId ?? parsed.archive_item_id;
 	if (!archiveItemId) {
 		throw new ArchiveMaterializationError("Archive item id is required.");
 	}
-	return { archiveItemId, force: parsed.force ?? false };
+	return { archiveItemId, force: parsed.force ?? false, ...(parsed.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}) };
 }
 
 function parseRunArchiveItemMaterializeBody(value: unknown) {
 	const parsed = z
 		.object({
 			force: z.boolean().optional(),
+			acknowledgeTargetDefaultReset: z.literal(true).optional(),
 		})
 		.parse(value);
-	return { force: parsed.force ?? false };
+	return { force: parsed.force ?? false, ...(parsed.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}) };
 }
 
 function parseRunArchiveMaterializationJobListQuery(searchParams: URLSearchParams) {
@@ -9887,6 +9889,7 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 			providerWorkTimeoutMs: z.number().int().positive().optional(),
 			provider_work_timeout_ms: z.number().int().positive().optional(),
 			force: z.boolean().optional(),
+			acknowledgeTargetDefaultReset: z.literal(true).optional(),
 		})
 		.parse(value);
 	return {
@@ -9913,6 +9916,7 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 		maxItems: parsed.maxItems ?? parsed.max_items,
 		providerWorkTimeoutMs: parsed.providerWorkTimeoutMs ?? parsed.provider_work_timeout_ms,
 		force: parsed.force ?? false,
+		...(parsed.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}),
 	};
 }
 

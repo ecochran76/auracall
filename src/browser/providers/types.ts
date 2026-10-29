@@ -47,6 +47,8 @@ export interface BrowserProviderCapabilities {
 }
 
 export interface BrowserProviderListOptions extends GrokHistoryOptions {
+	/** Explicit consent to target download-policy reset after a native reference transfer. */
+	grokReferenceDownload?: { acknowledgeTargetDefaultReset: true };
 	onHistoryInventory?: (coverage: GrokHistoryCoverage) => Promise<void> | void;
 	/** Owned history custody lent to the configured traffic authority for one socket. */
 	historyOwnedLease?: {

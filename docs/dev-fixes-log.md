@@ -1,3 +1,10 @@
+## 2026-10-28 — Separate native publishing controls from workspace readiness
+
+A visible Publish button and an old READY file tree do not prove current file
+bytes or a publishable snapshot. Read the committed native publication controller
+only through an explicit reversible dialog inspection, verify dismissal, and
+retain the inactive workspace result independently. Proposed names, deployment
+objects and archive hashes do not establish genuine app/version identity.
 ## 2026-10-28 — A census does not grant cleanup ownership
 
 Shared browsers contain targets created by other agents. Registering every
@@ -26426,3 +26433,22 @@ current committed React tree rather than trusting a stale DOM fiber seed. The
 Grok text waiter can report its exact accepted terminal snapshot; Connector
 observation checks that identity/content/terminal state before returning native
 tool cards, preventing an unrelated later response from becoming the first anchor.
+
+## 2026-10-29 — Preserve native reference download custody
+
+Grok uploaded references require current human-response attachment membership and
+the actual committed SidePanel Download selection. A readable native URL did not
+establish a working direct-GET protocol; native Chrome download capture is the
+qualified transfer seam. Require explicit target-default-reset acknowledgment for
+fresh transfers, retain sidecars before cleanup, and keep bytes when reset or
+transport settlement is unknown. Canonical upload inventory and verified archive
+reuse stay separate from generated workspace artifacts and broad history coverage.
+
+## 2026-10-29 — Read native mounted conversation planes outside main
+
+The current Grok Fast conversation mounts response rows under a region/gateway
+plane without a main element. Context readiness, message inventory and reference
+chunk selection now share those mounted rows, qualified by current committed
+React response ownership, exact conversation route, canonical response DOM ID,
+and matching sender/role. Hidden, inert, dialog and unowned rows remain excluded.
+The public regression executes actual browser readiness and extraction expressions.

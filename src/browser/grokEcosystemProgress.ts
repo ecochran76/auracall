@@ -15,6 +15,12 @@ export interface GrokEcosystemProgress {
 	hasResponseIdentity: boolean;
 	effectState: "none" | "completed" | "unknown";
 	observedAt: string;
+	publicationInspection?: {
+		nativeState: "not_published" | "deployment_observed" | "unknown";
+		nativePublishEnabled: boolean;
+		dialogDismissed: boolean;
+		snapshotBinding: "unqualified";
+	};
 	materialization?: {
 		status: "indexed" | "not_materialized" | "failed";
 		indexedAssets: number;
@@ -42,7 +48,26 @@ function sanitize(value: Record<string, unknown>): GrokEcosystemProgress {
 		value.materialization && typeof value.materialization === "object"
 			? (value.materialization as Record<string, unknown>)
 			: null;
+	const publication =
+		value.publicationInspection && typeof value.publicationInspection === "object"
+			? (value.publicationInspection as Record<string, unknown>)
+			: null;
 	return {
+		...(publication
+			? {
+					publicationInspection: {
+						nativeState:
+							publication.nativeState === "not_published"
+								? ("not_published" as const)
+								: publication.nativeState === "deployment_observed"
+									? ("deployment_observed" as const)
+									: ("unknown" as const),
+						nativePublishEnabled: publication.nativePublishEnabled === true,
+						dialogDismissed: publication.dialogDismissed === true,
+						snapshotBinding: "unqualified" as const,
+					},
+				}
+			: {}),
 		...(m
 			? {
 					materialization: {

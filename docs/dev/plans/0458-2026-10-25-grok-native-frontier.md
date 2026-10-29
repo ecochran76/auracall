@@ -1,16 +1,62 @@
 # Plan0458 — remaining Grok native frontier
 
 State: OPEN
-Branch: feat/grok406-invocation-20261027
+Branch: feat/grok411-spec-20261028-r2
 Target: main
 Owner: ecochran76
-Base: d107e13cef6a83b76f63de9b3f268366be936a6b
+Base: 00a45bd0bf7df36845ba100aec2a2ddf97e72f33
 Ledger: [0458-grok-native-frontier-ledger.json](0458-grok-native-frontier-ledger.json)
 Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## Current State
 
-### 2026-10-28 main checkpoint
+### 2026-10-29 native snapshot checkpoint
+
+A fresh configured managed runtime and the original account are qualified.
+The current native ZIP is verified (1,524,947 bytes, 222 files). The selected timer
+is native-accepted (21,762 bytes), with identical bytes in the fresh ZIP and its
+retained sidecar. Actual isolated archive materialization, reuse, durable restart,
+injected foreground gating and same-size tamper refusal pass. Source unchanged.
+
+409 currently loads only an authenticated Grok shell, not Bot/Settings content.
+411 still lacks qualified revision-bound publish selection and provider app/version
+readback.414 still lacks conversation-bound referenced-upload and installed/native
+history-continuation acceptance. No new ticket closure, publication or consent.
+See [native report](../notes/2026-10-29-grok-native-snapshot.md). The one completed
+batch review/findings-TDD round remains reserved; historical counters unchanged.
+
+### 2026-10-28 continued implementation checkpoint
+
+Sanitized Ops now preserves the publication-controls observation without proposed
+names or URLs. Worker414's offline check found no further source gap in cursor,
+budget, full-detail remaining IDs or foreground restart behavior;45fresh selected
+checks passed without source changes. Root's attempted native reopen stopped in
+preflight: the previously qualified browser generation is gone and its endpoint
+is unreachable. No navigation/replacement occurred. Earlier native state is
+historical, not current runtime proof. Current source checkpoint850ec83fc is
+published on this branch; source-only Ops continuation passed92focused tests/9files, full typecheck and
+changed-unit lint.
+All three original tickets and parent398 remainOPEN.
+
+### 2026-10-28 renewed implementation checkpoint (historical)
+
+Root owns411; separate workers own409 and414. Selected workspace-file bytes and
+archive-integrity source from414 are integrated as d4ed8851e/ae5d52f6d. Root adds
+an explicit public native Publish-controls read with verified dialog dismissal.
+91 focused tests across8files and full typecheck pass; CLI source help exposes
+the opt-in flag. No installed runtime adoption, generation or publication.
+
+The current native controller is idle/not_published and its Publish button is
+enabled, but the workspace is inactive. Current414 viewer has no assetUrl and
+isWorkspaceInactive=true despite an older READY tree. One actual capture attempt
+failed before bytes; later diagnostics explain that refusal. No cached URL or
+old archive is substituted for a fresh attributable snapshot. Existing native
+viewer source exposes no mounted eligible revive/retry control in this state.
+409's exact committed DTO/editor has no resource contract. All three tickets
+remainOPEN. One review/findings-TDD round remains unconsumed until a completed
+validated ticket batch; prior PR489 counters and closures remain intact.
+
+### 2026-10-28 main checkpoint (historical)
 
 PR489 merged07bcf31b5. Scoped403/405/406/408/410 areCLOSED;409/411/414 remainOPEN.
 406 native account read and retained offline create/read/CAS-edit/readback are

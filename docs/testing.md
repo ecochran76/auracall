@@ -3914,3 +3914,22 @@ budgets and an in-flight checkpoint before provider work. Restart retains
 completed progress and unknown in-flight custody; an explicit new request is
 required and unknown work is never automatically replayed. Monitoring exposes
 a bounded cursor summary; full receipts remain on the job/MCP result.
+
+### Grok native publication-controls inspection (2026-10-28)
+
+Focused provider-free selection:
+`pnpm vitest run tests/browser/grok411PublicationControls.test.ts tests/browser/grok410Build.test.ts tests/http.grokBuild.test.ts`.
+The public request-schema red rejected the explicit flag; the native observer red
+returned unobserved instead of the actual idle controller. The greens accept the
+strict opt-in request and read native state without invoking provider callbacks.
+Committed-root and closed-overlay failures return no observed controls. Native
+acceptance is separate: source execution against the retained managed target
+must retain exact account/response identity, observe the controller and verify
+dialog dismissal. No generation, publication, provider ID aliases or installed
+runtime claim follows from these tests.
+
+The Ops public-status regression was red when `publicationInspection` disappeared
+from the saved Build summary, then green after the strict aggregate projection.
+`pnpm vitest run tests/http.grokBuild.test.ts tests/browser/grokEcosystemProgress.test.ts tests/browser/grok411PublicationControls.test.ts`
+passed7checks. The projection retains native state/button/dismissal/binding flags
+and omits the proposed name, response content and URLs.

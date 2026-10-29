@@ -23,6 +23,7 @@ export const GrokBuildRequestSchema = z.discriminatedUnion("action", [
 	z
 		.object({
 			action: z.literal("inspect"),
+			inspectPublicationControls: z.literal(true).optional(),
 			targetId: retainedId,
 			conversationId: retainedId,
 			responseId: retainedId.optional(),
@@ -99,6 +100,16 @@ export function summarizeGrokBuildDiagnostics(result: GrokBuildResult) {
 				? result.materialization.itemIds.length
 				: 0
 			: null,
+		...(result.publication.controls
+			? {
+					publicationInspection: {
+						nativeState: result.publication.controls.state,
+						nativePublishEnabled: result.publication.controls.publishEnabled,
+						dialogDismissed: result.publication.controls.dialogDismissed,
+						snapshotBinding: result.publication.controls.snapshotBinding,
+					},
+				}
+			: {}),
 		...(result.materialization
 			? {
 					materialization: {

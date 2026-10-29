@@ -47,12 +47,30 @@ bytes. These counters are not account-wide artifact inventory, completed history
 backfill or publication proof.
 A failed provider read is not a successful empty inventory.
 
-Grok's existing Files context/recent/select/upload APIs do not supply a qualified
-referenced-file download API. Referenced-file byte retrieval remains an unmet
-#414 gate. Metadata discovery, initial native transfer, verified local reuse,
-unavailable bytes and uncertain provider effects remain distinct evidence states;
-this archive bridge only qualifies the retained workspace portion. Source tests,
-installed identity and any future native acceptance must be reported separately.
+Conversation-bound uploaded references now use the actual native attachment card
+and Download control. Context and file listing return one canonical `upload`
+reference per observed file metadata ID, retaining the native human response UUID,
+DOM response ID and separate gateway row ID. They do not duplicate uploads as
+generated artifacts. Coverage remains visible-conversation-only and incomplete;
+unobserved app/version identity remains null. This does not qualify account-wide
+file discovery or arbitrary file types.
+
+A fresh reference transfer requires explicit `acknowledgeTargetDefaultReset: true`
+on the archive materialization request. The provider option is
+`grokReferenceDownload: { acknowledgeTargetDefaultReset: true }`. This acknowledges
+that native Chrome download policy is temporarily scoped to a new private capture
+directory and then reset to the target default; it does not claim restoration of
+an unknown prior policy. Missing acknowledgment refuses before preview or download
+changes. The transfer uses the exact owned native Download control and a bounded
+fresh filesystem capture; there is no generic HTTP fallback.
+
+Reference receipts retain distinct account, conversation, human response, file
+metadata and native URL fingerprints, alongside original byte count and SHA256.
+Verified local reuse needs no download acknowledgment or provider transfer.
+Changed bytes retain the original checksum and become unavailable. A policy reset
+or transport cleanup failure preserves captured bytes and receipt with an unknown
+outcome; reconcile custody before retrying. Metadata discovery, source-test
+qualification and successful native byte acceptance remain separate evidence.
 
 Selected-conversation history reconciliation shares one new-transfer budget across
 its exact conversation frontier. Each subsequent conversation receives only the
@@ -94,9 +112,61 @@ rediscover the selected assets and verify retained archive bytes before reuse.
 Neither the cursor nor a remaining budget qualifies a provider file-read method,
 a safe retry, or a provider-native resume token.
 
-Current native inspection has observed an inactive conversation Files controller
-with an empty tree. That observation does not prove that referenced files are
-absent. A genuine conversation-scoped file path, revision and byte-read protocol
-remain unqualified, so #414 remains open beyond the source cursor and retained
-workspace-archive portions. Source tests, installed runtime checks and native
-acceptance remain separate gates.
+### Qualification history
+
+Earlier inspection observed an inactive Files controller and empty tree; that
+observation did not prove referenced files absent. Later selected-file and
+referenced-upload acceptance superseded that gate, as recorded below. Source,
+local API, installed and native evidence remain separate.
+
+## Selected native workspace files
+
+The source adapter can expose an actually selected generated workspace file as
+an artifact and retain its bytes with account/conversation/fsKey/full-path and
+dataURL fingerprint provenance. It accepts only current committed ready-tree
+membership and a loaded native data URL, then rechecks ownership/cache state
+after hashing. The archive materializer verifies retained byte size and checksum;
+same-size tampering is a failure, including forced reads. Credentialized asset
+URLs are never returned. Unobserved revision/app/version fields remain null.
+
+This is selected-file coverage, not a complete history inventory. The first
+discovery attempt found an inactive viewer and retained no bytes or sidecar.
+That historical failure is preserved; the later acceptance below qualified a
+fresh active viewer. A historical READY tree or previously observed data URL
+cannot authorize a new capture. Metadata-only artifacts remain not_materialized.
+
+### Native selected-file acceptance, 2026-10-29
+
+The previously inactive selected-file gate now passes on a freshly qualified
+managed browser: `/src/components/timer.tsx`, 21,762 bytes, SHA-256
+`9c806b0f60e392ad993cc2485d1631914a8100303027dff1896fee24f6753f06`.
+The bytes match the fresh native ZIP member and retained sidecar. Real isolated
+Archive APIs proved materialization, verified reuse, durable restart through an
+injected foreground gate, and same-size tamper refusal. No provider recapture
+or operational-store write occurred. App/version/revision remain null.
+This accepts the selected generated-file slice. Referenced-upload acceptance
+followed separately; installed/native history continuation is not claimed.
+
+### Explicit native reference download scope
+
+Fresh reference transfers require `acknowledgeTargetDefaultReset: true` on
+HTTP/MCP archive materialization and history-job requests. CLI callers use
+`--acknowledge-target-default-reset` with `api archive-materialize`,
+`api archive-materialization-create`, or `api history-materialization-create`.
+Durable jobs retain this explicit scope through restart; old requests do not gain
+it automatically. Verified local reuse needs no acknowledgment. This scope
+authorizes temporary capture-directory policy followed by a target-default reset,
+not restoration of an unknown prior download policy.
+
+### Native referenced-upload acceptance, 2026-10-29
+
+The public adapter discovered the current canonical upload, read both conversation
+messages without a legacy main shell, and downloaded `reference-414.txt`: 107 bytes,
+SHA-256 `5e34ff7e9d8997af149b7a875940dce6117c1f2b73fc23e7ae159ea197d38e78`.
+Independent rehash, receipt/sidecar equality and acknowledged default-policy reset
+passed. Isolated public archive APIs proved retained-file handoff, verified reuse,
+durable restart with an injected foreground gate, and same-size tamper refusal.
+These do not claim installed-host adoption, complete provider history, or a native
+foreground run. App/version remain unobserved null fields. The bounded review
+and original-issue closure decision are tracked in
+[the review record](dev/notes/2026-10-29-grok-r2-review.md).

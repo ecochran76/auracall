@@ -1,3 +1,70 @@
+## 2026-10-29 — Approved reference fixture consumed; adapter TDD
+
+User approved the exact additional107B upload plus one Grok chat Send. Both
+dispatched once behind separate durable fences on a fresh Fast root. The terminal
+response waiter timed out; same-target read-only reconciliation observed the
+filename acknowledgement without resending. Current committed human response DTO
+contains the actual uploaded fileMetadataId and conversation identity; native
+preview/cache pins the real Download URL to that metadata and principal.
+
+Worker414 implements separate conversation-reference discovery/materialization
+through public-adapter TDD. Workspace provenance is not reused or relabelled;
+raw URL/identity/effect receipts remain private. Source actions/grok.ts remains
+unchanged: the Fast native-plane terminal-control limitation is recorded, and
+Build's stricter completion contract is not weakened. No additional uploads or Sends are authorized by the consumed fixture
+approval; the standing review bound remains unchanged.
+
+## 2026-10-29 — Native timer/ZIP and isolated archive acceptance
+
+Fresh normal configured Grok startup passed OS/profile/account qualification.
+One fresh current ZIP (1,524,947B/222files) and one selected timer capture
+(21,762B) match exactly. Primary independently verified bytes, sidecar and five
+capture-source hashes. Worker actual isolated Archive APIs proved materialize,
+reuse, durable restart/injected foreground gate and same-size tamper refusal;
+no provider recapture. See notes/2026-10-29-grok-native-snapshot.md.
+
+409's authenticated canonical Bot route settles to shell only; normal focus did
+not restore Bot/Settings content, so no speculative source fix or retry.411
+native publish callback is observed but revision-bound output selection and
+provider app/version remain unqualified.414's referenced-upload and installed/
+native history-continuation gates remain. All three issues stay OPEN; no new
+prompt/upload/Send/publication/terms acceptance. Source af1bdb9ad unchanged;
+prior matching source checks reused. One exact synthetic conversation-bound
+upload+Grok-Send packet is prepared but NOT approved; the original403 packet
+explicitly excluded Send. Review/findings-TDD reserved for completed
+validated ticket batch. Memory disposition:forbidden; no memory-write request.
+
+## 2026-10-28 — Continued native411 Ops and offline414 qualification
+
+Root411 adds a sanitized publicationInspection observation to Ops through a
+public-status red/green test; proposed names and URLs stay excluded. Worker414
+checked cursor/budget/foreground/restart/public detail paths and found no new
+offline gap:45fresh selected checks pass, source unchanged. The apparent default
+monitor projection gap was rejected because full-detail/public cursor contracts
+already preserve exact remaining work and uncertainty.
+
+Fresh OS/endpoint census now finds the previously qualified managed Grok browser
+generation absent and its endpoint unreachable. The reopen probe stopped before
+connection, with zero navigation; no replacement was launched. Earlier native
+controls/cache receipts remain historical.409/411/414 remainOPEN; no current
+native acceptance is possible until the configured runtime is qualified again.
+92focused tests/9files, full typecheck and changed-unit lint pass. The one
+completed-batch review/findings-TDD round remains reserved.
+
+## 2026-10-28 — Renewed411/409/414 implementation checkpoint
+
+Root411 implements explicit CLI/HTTP/MCP native Publish-controls inspection;
+the actual committed controller is idle/not_published, native button enabled,
+dialog dismissal verified and account/response continuity retained. The overall
+Build result remains workspace_inactive. Selected414 file bytes/archive receipt
+source is integrated, but actual discovery refused current inactive/no-URL file
+state before capture; no bytes are accepted. The tooltip hypothesis was disproven
+for Filetree and no speculative fix was made. Worker409's exact committed editor
+has only text/avatar fields and no persistent resource editing contract.
+91 focused tests/8files, full typecheck and changed-unit lint pass; source CLI
+help exposes the flag. No installed adoption, regeneration, publication or new
+tracker closure. Review/findings-TDD reserved for a completed validated batch.
+Parent398 and477 untouched. Memory disposition:forbidden; no user memory request.
 ## 2026-10-28 — Plan0464 independent TTL ownership execution
 
 Primary owns AuraCall490 on fix/ttl-ownership-integration from00a45bd0bf7d;
@@ -57042,6 +57109,37 @@ HTTP200 status retains23paused completions,0running/0queued, scheduler paused,
 drain restored idle/unpaused. The17Agent Browser pages remain a separate runtime
 scope. MCP wrapper unchanged; CI excluded. Plan/lane CLOSED and INTEGRATED.
 
+### 2026-10-29 — #414 conversation reference source slice
+
+Implemented the separately qualified native attachment-card/Download path, canonical
+upload references, explicit default-reset acknowledgment, isolated download custody,
+and archive integrity/reuse guards. TDD covered public adapter, context/files and
+archive seams, including failed reset/transport cleanup and same-size corruption.
+Native public-adapter acceptance remains a separate integration gate; no additional
+upload or Send was performed by this implementation slice.
+
+Integrated reference source at `32cb0f2da` with public acknowledgment propagation
+`f98eb0a71`. Primary full typecheck and 392 tests across nine affected files pass.
+CLI, HTTP, MCP and durable archive/history jobs preserve explicit scope. Native
+public-adapter acceptance is in progress; upload and Send are already consumed
+and are not replayed. Review/findings-TDD counters remain unchanged.
+
+First public native reference acceptance stopped before transfer: Fast conversation
+rows render in the native gateway plane outside `main`; the shared context reader
+still requires `main`. Passive route/response/account observations confirm the
+current conversation and retained attachment. A targeted source regression/fix is
+underway. No transfer, upload or Send was retried. All three CLI acknowledgment
+flags are confirmed in source help.
+#414 native acceptance exposed a main-only context readiness assumption before
+transfer. A focused TDD slice qualifies the observed mounted region/gateway plane
+through canonical committed response ownership and reuses that inventory for text
+and file chunk offsets. 51 checks across five focused files and touched-unit lint
+pass; fresh native acceptance remains parent-owned.
+
+Native public reference acceptance now PASS at040695203: canonical upload/context,
+107B expected checksum, sidecar and default-policy reset. Actual isolated archive
+APIs pass reuse/restart/injected foreground/tamper guards; installed adoption is
+not performed. Single consolidated r2 review now starts; findings-TDD remains.
 
 ### 2026-10-29 — Plan0464 installed continuation
 
@@ -57111,3 +57209,12 @@ hotfix remains9d782cb/0ed64bf6; Auth/journey main composition was not installed.
 AuraCall PR492 carries final source/evidence closure, guarded merge/readback and
 memory receipt completing delivery. Original peers and browser roots are retained;
 only the test-owned protected task was explicitly closed after automatic proofs.
+
+### 2026-10-29 — #414 bounded review remediation
+
+Single Standards/Spec review accepted mixed-inventoryP2 and stale documentation.
+One findings-TDD phase preserved both upload/workspace families and foreign-owner
+refusal. Primary53post-fix checks, full typecheck/build, independent16check
+closed-world verification and read-only native reference regression pass. Main
+d2217269c reconciled with source auto-merge and both doc histories preserved.
+414awaitsPRintegration;409/411remainopen on nativegates. Memoryforbidden,zero writes.

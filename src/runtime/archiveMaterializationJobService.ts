@@ -21,6 +21,7 @@ export interface ArchiveMaterializationJob {
   id: string;
   archiveItemId: string;
   force?: boolean;
+  acknowledgeTargetDefaultReset?: true;
   status: ArchiveMaterializationJobStatus;
   createdAt: string;
   updatedAt: string;
@@ -65,7 +66,7 @@ export interface ArchiveMaterializationJobListResult {
 }
 
 export interface ArchiveMaterializationJobService {
-  createJob(request: { archiveItemId: string; force?: boolean | null }): Promise<ArchiveMaterializationJobCreateResult>;
+  createJob(request: { archiveItemId: string; force?: boolean | null; acknowledgeTargetDefaultReset?: true }): Promise<ArchiveMaterializationJobCreateResult>;
   listJobs(request?: ArchiveMaterializationJobListRequest): Promise<ArchiveMaterializationJobListResult>;
   readJob(id: string): Promise<ArchiveMaterializationJob | null>;
   cancelJob(id: string): Promise<ArchiveMaterializationJob>;
@@ -135,6 +136,7 @@ export function createArchiveMaterializationJobService(
         id: generateId(),
         archiveItemId,
         force,
+        ...(request.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}),
         status: 'queued',
         createdAt: generatedAt,
         updatedAt: generatedAt,
@@ -240,6 +242,7 @@ export function createArchiveMaterializationJobService(
         const result = await withForegroundWork(() => deps.materializationService.materializeItem({
           archiveItemId: running.archiveItemId,
           force: running.force === true,
+          ...(running.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}),
         }));
         const completedAt = now().toISOString();
         const completed: ArchiveMaterializationJob = {
@@ -405,9 +408,11 @@ function isArchiveMaterializationJob(value: unknown): value is ArchiveMaterializ
 }
 
 function normalizeArchiveMaterializationJob(job: ArchiveMaterializationJob): ArchiveMaterializationJob {
+  const { acknowledgeTargetDefaultReset, ...persisted } = job;
   return {
-    ...job,
+    ...persisted,
     force: job.force === true,
+    ...(acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}),
   };
 }
 

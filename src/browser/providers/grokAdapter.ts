@@ -1,3 +1,7 @@
+import { GROK_COMMITTED_REACT_PATH } from './grokCommittedReact.js';
+import { BrowserAutomationError } from "../../oracle/errors.js";
+import { readOptionalGrokWorkspaceFile, materializeGrokWorkspaceFile } from './grokWorkspaceFile.js';
+import { projectGrokAccountReference } from '../grokAccountReference.js';
 import { boundObservedGrokContext } from './grokContext.js';
 import { withCdpCommandAbortSignal } from "../../../packages/browser-service/src/guardedCdp.js";
 import { collectGrokHistoryInventory, buildGrokHistoryPageExpression, buildGrokChatsOpenerExpression, type GrokHistoryPage } from "./grokHistoryInventory.js";
@@ -7,7 +11,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { hasProviderBackendRequestAdmission } from '../../../packages/browser-service/src/service/providerTrafficGovernor.js';
 import CDP from '../cdp.js';
-import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
+import type { Project, Conversation, ConversationContext, FileRef, ConversationArtifact } from './domain.js';
 import type {
   BrowserProvider,
   BrowserProviderListOptions,
@@ -38,6 +42,7 @@ import {
 } from '../../services/registry.js';
 import { GROK_MODEL_LABEL_NORMALIZER, normalizeGrokModelLabel } from './grokModelMenu.js';
 import { uploadGrokAttachments } from '../actions/grok.js';
+import { readGrokReferencedFiles, materializeGrokReferencedFile, type GrokReferencedFileObservation } from "./grokReferencedFile.js";
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
 import {
   clickRevealedRowAction,
@@ -83,8 +88,20 @@ const GROK_TIME_SELECTOR = cssClassContains('time');
 const GROK_TIMESTAMP_SELECTOR = cssClassContains('timestamp');
 const GROK_SOURCES_CONTENT_SELECTOR = 'div[id*="content-sources"]';
 const GROK_SOURCES_ROOT_SELECTOR = `${GROK_SOURCES_CONTENT_SELECTOR}, main`;
+const GROK_MOUNTED_PLANE_ROWS = `
+${GROK_COMMITTED_REACT_PATH}
+const planeOwn=(o,k)=>{const d=o&&typeof o==='object'?Object.getOwnPropertyDescriptor(o,k):null;return d&&'value'in d?d.value:undefined;};
+const qualifiedPlaneRow=row=>{
+ if(row.closest('[aria-hidden="true"],[inert],[role="dialog"]'))return false;
+ const key=Object.keys(row).find(k=>k.startsWith('__reactFiber$')),q=key?committedPath(planeOwn(row,key),row,row):null;if(!q)return false;
+ return q.path.some(f=>{const response=planeOwn(planeOwn(f,'memoizedProps'),'response');return 'response-'+planeOwn(response,'responseId')===row.id&&location.pathname==='/c/'+planeOwn(response,'conversationId')&&((planeOwn(response,'sender')==='human'&&String(row.getAttribute('class')).includes('items-end'))||(planeOwn(response,'sender')==='assistant'&&String(row.getAttribute('class')).includes('items-start')));});
+};
+const planeRows=Array.from(document.querySelectorAll('[role="region"] [data-plane-row^="gateway:"] [id^="response-"]')).filter(row=>qualifiedPlaneRow(row)&&row.getBoundingClientRect().width>0&&row.getBoundingClientRect().height>0&&row.querySelector('[class*="response-content-markdown"], div.message-bubble'));
+`;
 // One mounted-card inventory keeps content and chunked file offsets aligned.
-const GROK_CONTEXT_ROW_INVENTORY = `const rows = Array.from(document.querySelectorAll('main [id^="response-"]')).filter((row) => {
+const GROK_CONTEXT_ROW_INVENTORY = `${GROK_MOUNTED_PLANE_ROWS}
+const rows = Array.from(new Set([...document.querySelectorAll('main [id^="response-"]'),...planeRows])).filter((row) => {
+              if(row.closest('[aria-hidden="true"],[inert],[role="dialog"]'))return false;
               const classes = String(row.getAttribute('class') || '');
               return (classes.includes('items-end') || classes.includes('items-start')) && row.querySelector('[class*="response-content-markdown"], div.message-bubble');
             });
@@ -3366,6 +3383,44 @@ async function readGrokDiscoveryWithAdmission<T>(
   return value;
 }
 
+async function withGrokWorkspaceConnection<T>(
+ options: BrowserProviderListOptions | undefined,
+ targetId: string | undefined,
+ work: (runtime: ChromeClient['Runtime'], scope: {targetId:string;providerAccountRef:string;providerAccountRefFormat:'legacy-untagged';providerUserId:string|null;client:ChromeClient;governor:NonNullable<ReturnType<typeof resolveProviderTrafficGovernor>>;verifyPrincipal:()=>Promise<boolean>})=>Promise<T>,
+):Promise<T>{
+ if(!targetId)throw new Error('Grok workspace reads require the exact existing browser target.');
+ options?.abortSignal?.throwIfAborted();
+ const connection=await connectToGrokTab({...options,tabTargetId:targetId,allowNavigation:false,providerTrafficRequired:true});
+ let action: Awaited<ReturnType<NonNullable<ReturnType<typeof resolveProviderTrafficGovernor>>['begin']>>|undefined;
+ let failure:unknown;
+ let retainedResult:T|undefined;
+ try{
+  const governor=resolveProviderTrafficGovernor(connection.client);
+  if(!governor||governor.attribution.provider!=='grok'||governor.attribution.targetId!==targetId)throw new Error('Grok workspace read requires exact provider traffic authority.');
+  await governor.checkWarning?.(connection.client.Runtime);
+  action=await governor.begin({kind:'provider-read',interactionClass:'generic',source:'provider:grok:workspace-file-read',targetId,abortSignal:options?.abortSignal});
+  const before=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
+  const providerAccountRef=projectGrokAccountReference(before.actualIdentity, 'legacy-untagged');
+  if(!providerAccountRef)throw new Error('Grok workspace account identity is unqualified.');
+  retainedResult=await work(connection.client.Runtime,{targetId,providerAccountRef,providerAccountRefFormat:'legacy-untagged',providerUserId:typeof before.actualIdentity?.id==='string'?before.actualIdentity.id:null,client:connection.client,governor,verifyPrincipal:async()=>{
+   options?.abortSignal?.throwIfAborted();
+   const after=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
+   return projectGrokAccountReference(after.actualIdentity, 'legacy-untagged')===providerAccountRef;
+  }});
+ }catch(error){failure=error;}finally{
+  let cleanupFailure:unknown;
+  try{await action?.settle({outcome:failure?'failed':'succeeded',probeContext:connection.client.Runtime,...(failure?{error:failure instanceof Error?failure.message:'Grok native file read failed'}:{})});}catch(error){cleanupFailure=error;}
+  try{await connection.client.close();}catch(error){cleanupFailure=cleanupFailure?new AggregateError([cleanupFailure,error],'Grok native file cleanup failed'):error;}
+  if(cleanupFailure){
+    const candidate=retainedResult as FileRef|undefined,existing=failure instanceof BrowserAutomationError&&failure.details?.stage==='grok-reference-download'?failure.details:undefined;
+    const retainedFile=candidate?.metadata?.grokReferencedFile?candidate:existing?.retainedFile;
+    failure=retainedFile||existing?new BrowserAutomationError('Grok referenced-file transport cleanup is unknown; preserve retained custody before retry.',{...existing,stage:'grok-reference-download',effectState:'unknown',retrySafe:false,cleanupState:'unknown',...(retainedFile?{retainedFile}:{})},cleanupFailure):cleanupFailure;
+  }
+ }
+ if(failure)throw failure;
+ return retainedResult as T;
+}
+
 export function createGrokAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
@@ -3403,6 +3458,10 @@ export function createGrokAdapter(): Pick<
   | 'getProjectInstructions'
   | 'readConversationContext'
   | 'listConversationFiles'
+  | 'downloadConversationFile'
+  | 'downloadConversationFiles'
+  | 'readActiveConversationArtifacts'
+  | 'materializeConversationArtifact'
   | 'listAccountFiles'
   | 'uploadAccountFiles'
   | 'deleteAccountFile'
@@ -5749,7 +5808,7 @@ export function createGrokAdapter(): Pick<
         const messages = Array.isArray(info?.messages) ? info.messages : [];
         const sources = Array.isArray(info?.sources) ? info.sources : [];
         options?.abortSignal?.throwIfAborted();
-        const files = await readVisibleConversationFilesWithClient(client, conversationId, options?.accountMirrorContextChunk);
+        const files = await readVisibleConversationFilesWithClient(client, conversationId, options?.accountMirrorContextChunk, options, targetId);
         if (messages.length === 0) {
           throw Object.assign(new Error('Grok conversation history unavailable: no observed messages.'), { code: 'grok_history_unavailable' });
         }
@@ -5770,6 +5829,68 @@ export function createGrokAdapter(): Pick<
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
       }
+    },
+
+    async readActiveConversationArtifacts(conversationId:string,options?:BrowserProviderListOptions):Promise<ConversationArtifact[]>{
+      return withGrokWorkspaceConnection(options,options?.tabTargetId,async(runtime,scope)=>{
+        const references=await readGrokReferencedFiles(runtime,conversationId,scope.providerUserId);
+        const observed=await readOptionalGrokWorkspaceFile(runtime,conversationId);
+        if(!await scope.verifyPrincipal())throw new Error('Grok native artifact account changed during discovery.');
+        const artifacts:ConversationArtifact[]=references.map(reference=>({id:reference.fileMetadataId,title:reference.fileName,kind:'document' as const,messageId:reference.providerResponseId,metadata:{grokReferencedFile:{...reference,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:scope.providerAccountRefFormat,coverage:{scope:'visible-conversation-references',complete:false}}}}));
+        if(observed)artifacts.push({id:observed.filePath,title:observed.fileName,kind:'generated',metadata:{grokWorkspaceFile:{version:1,...observed,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:'legacy-untagged',identityKind:'native-file-path',coverage:{scope:'selected-workspace-file',complete:false}}}});
+        return artifacts;
+      });
+    },
+    async materializeConversationArtifact(conversationId:string,artifact:ConversationArtifact,destDir:string,_projectId?:string,options?:BrowserProviderListOptions):Promise<FileRef|null>{
+      const reference=artifact.metadata?.grokReferencedFile as (GrokReferencedFileObservation & {targetId?:string;providerAccountRef?:string;providerAccountRefFormat?:string})|undefined;
+      if(reference){
+        if(artifact.metadata?.grokWorkspaceFile)throw Error('Grok artifact has ambiguous native reference/workspace provenance.');
+        if(options?.grokReferenceDownload?.acknowledgeTargetDefaultReset!==true)throw new BrowserAutomationError('Grok reference transfer requires acknowledgeTargetDefaultReset=true.',{stage:'grok-reference-download',effectState:'pre_effect',retrySafe:true});
+        return withGrokWorkspaceConnection(options,options?.tabTargetId??reference.targetId,async(_runtime,scope)=>{
+          if(reference.providerAccountRef!==scope.providerAccountRef||reference.providerAccountRefFormat!==scope.providerAccountRefFormat||reference.targetId!==scope.targetId)throw Error('Grok referenced file belongs to another account or target.');
+          return materializeGrokReferencedFile(scope.client,{conversationId,artifact,destDir,...scope,acknowledgeTargetDefaultReset:true,abortSignal:options?.abortSignal});
+        });
+      }
+      const selected=artifact.metadata?.grokWorkspaceFile as {targetId?:string;providerAccountRef?:string;providerAccountRefFormat?:string}|undefined;
+      if(!selected)throw new Error('Grok artifact lacks a qualified native workspace selection.');
+      return withGrokWorkspaceConnection(options,options?.tabTargetId??selected.targetId,async(runtime,scope)=>{
+        if(selected.providerAccountRef!==scope.providerAccountRef||selected.providerAccountRefFormat!==scope.providerAccountRefFormat)throw new Error('Grok artifact belongs to another provider account.');
+        return materializeGrokWorkspaceFile(runtime,{conversationId,artifact,destDir,...scope});
+      });
+    },
+
+    async downloadConversationFiles(conversationId,items,options){
+      const adapter=createGrokAdapter(),results:import('./types.js').BrowserProviderConversationFileDownloadResult[]=[];let stopped=false;
+      for(const transfer of items){
+        if(stopped){results.push({fileId:transfer.file.id,status:'error',error:'Grok reference transfer was not attempted after an earlier refusal or uncertain transfer.',failureKind:'retrieval_failed',retryable:false});continue;}
+        try{
+          const reference=transfer.file.metadata?.grokReferencedFile as (GrokReferencedFileObservation & {targetId?:string})|undefined;
+          if(transfer.file.provider!=='grok'||transfer.file.source!=='conversation'||reference?.fileMetadataId!==transfer.file.id||transfer.file.metadata?.grokWorkspaceFile)throw Error('Grok conversation file lacks distinct canonical reference provenance.');
+          if(!adapter.materializeConversationArtifact)throw Error('Grok artifact materializer unavailable.');
+          const retained=await adapter.materializeConversationArtifact(conversationId,{id:transfer.file.id,title:transfer.file.name,kind:'document',messageId:reference.providerResponseId,metadata:transfer.file.metadata},path.dirname(transfer.destPath),undefined,options);
+          if(!retained?.localPath)throw Error('Grok native reference transfer produced no local bytes.');
+          Object.assign(transfer.file,retained);
+          await fs.mkdir(path.dirname(transfer.destPath),{recursive:true});
+          if(path.resolve(retained.localPath)!==path.resolve(transfer.destPath))await fs.copyFile(retained.localPath,transfer.destPath);
+          await fs.chmod(transfer.destPath,0o600);Object.assign(transfer.file,retained,{localPath:transfer.destPath});
+          results.push({fileId:transfer.file.id,status:'materialized'});
+        }catch(error){
+          stopped=true;
+          const details=error instanceof BrowserAutomationError?error.details:undefined;
+          if(details?.retainedFile)Object.assign(transfer.file,details.retainedFile);
+          transfer.file.metadata={...transfer.file.metadata,grokReferenceFailure:{effectState:details?.effectState??(transfer.file.checksumSha256?'unknown':'pre_effect'),retrySafe:false,...(details?.captureDir?{captureDir:details.captureDir}:{}),...(details?.downloadCapture?{downloadCapture:details.downloadCapture}:{}),...(details?.cleanupState?{cleanupState:details.cleanupState}:{})}};
+          results.push({fileId:transfer.file.id,status:'error',error:error instanceof Error?error.message:'Grok native reference transfer failed.',failureKind:'retrieval_failed',retryable:false});
+        }
+      }
+      return results;
+    },
+    async downloadConversationFile(conversationId,fileId,destPath,options,file){
+      const adapter=createGrokAdapter();
+      if(!adapter.listConversationFiles||!adapter.downloadConversationFiles)throw Error('Grok file materializer unavailable.');
+      const selected=file??((await adapter.listConversationFiles(conversationId,options)) as FileRef[]).find(candidate=>candidate.id===fileId);
+      if(!selected||selected.id!==fileId)throw Error('Grok exact conversation reference is unqualified.');
+      const result=(await adapter.downloadConversationFiles(conversationId,[{file:selected,destPath}],options))[0];
+      if(result?.status!=='materialized')throw new BrowserAutomationError(result?.status==='error'?result.error:'Grok native reference transfer failed.',{stage:'grok-reference-download',...(selected.metadata?.grokReferenceFailure as Record<string,unknown>??{}),...(selected.checksumSha256?{retainedFile:selected}:{})});
     },
 
     async listConversationFiles(
@@ -5810,7 +5931,7 @@ export function createGrokAdapter(): Pick<
               : `Grok active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
           );
         }
-        return await readVisibleConversationFilesWithClient(client, conversationId);
+        return await readVisibleConversationFilesWithClient(client, conversationId, options?.accountMirrorContextChunk, options, targetId);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -6738,7 +6859,27 @@ async function readVisibleConversationFilesWithClient(
   client: ChromeClient,
   conversationId: string,
   chunk?: BrowserProviderListOptions["accountMirrorContextChunk"],
+  options?: BrowserProviderListOptions,
+  targetId?: string,
 ): Promise<FileRef[]> {
+  const presence=await client.Runtime.evaluate({expression:`(()=>{const marker='grok_referenced_file_presence';if(location.origin!=='https://grok.com'||location.pathname!==${JSON.stringify(`/c/${conversationId}`)})throw Error(marker+'_route_mismatch');return Array.from(document.querySelectorAll('button[aria-label="Open attachment"]')).some(e=>e.getAttribute('aria-label')==='Open attachment'&&e.closest('[id^="response-"]'));})()`,returnByValue:true});
+  if(presence.exceptionDetails||typeof presence.result?.value!=='boolean')throw Error('Grok native referenced-file presence could not be qualified.');
+  if(presence.result.value){
+    const governor=resolveProviderTrafficGovernor(client);
+    if(!targetId||!governor||governor.attribution.provider!=='grok'||governor.attribution.targetId!==targetId)throw Error('Grok referenced-file listing requires exact configured authority.');
+    const before=await assertGrokBrowserAuthPreflight(client.Runtime,options),account=projectGrokAccountReference(before.actualIdentity,'legacy-untagged');
+    if(!account)throw Error('Grok referenced-file account is unqualified.');
+    let messageDomIds:string[]|undefined;
+    if(chunk){
+      const scoped=await client.Runtime.evaluate({expression:`(()=>{const marker='grok_referenced_file_chunk';${GROK_CONTEXT_ROW_INVENTORY}return observedRows.slice(${Math.max(0,Math.floor(chunk.startMessageIndex??0))},${Math.max(0,Math.floor(chunk.startMessageIndex??0))+Math.max(1,Math.floor(chunk.maxMessages??24))}).map(row=>row.id||row.closest('[id^="response-"]')?.id).filter(Boolean);})()`,returnByValue:true});
+      if(scoped.exceptionDetails||!Array.isArray(scoped.result?.value)||scoped.result.value.some((id:unknown)=>typeof id!=='string'))throw Error('Grok referenced-file chunk scope could not be qualified.');
+      messageDomIds=scoped.result.value as string[];
+    }
+    const references=await readGrokReferencedFiles(client.Runtime,conversationId,typeof before.actualIdentity?.id==='string'?before.actualIdentity.id:null,messageDomIds);
+    const after=await assertGrokBrowserAuthPreflight(client.Runtime,options);
+    if(projectGrokAccountReference(after.actualIdentity,'legacy-untagged')!==account)throw Error('Grok referenced-file account changed during listing.');
+    return references.map(reference=>({id:reference.fileMetadataId,name:reference.fileName,provider:'grok' as const,source:'conversation' as const,mimeType:reference.mimeType,metadata:{grokReferencedFile:{...reference,targetId,providerAccountRef:account,providerAccountRefFormat:'legacy-untagged',coverage:{scope:'visible-conversation-references',complete:false}}}}));
+  }
   const result = await client.Runtime.evaluate({
     expression: `(async () => {
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -8052,7 +8193,8 @@ async function waitForGrokConversationSurface(
     Runtime,
     `(() => {
       const main = document.querySelector('main');
-      if (!main) return false;
+      ${GROK_MOUNTED_PLANE_ROWS}
+      if (!main&&!planeRows.length) return false;
       let isConversation = false;
       try {
         const current = new URL(location.href);
@@ -8063,7 +8205,7 @@ async function waitForGrokConversationSurface(
         isConversation = /\\/c\\//.test(location.pathname) || /(?:\\?|&)chat=/.test(location.search);
       }
       if (!isConversation) return false;
-      if (main.querySelector('[id^="response-"], div.message-bubble, [class*="response-content-markdown"]')) {
+      if (planeRows.length||main?.querySelector('[id^="response-"], div.message-bubble, [class*="response-content-markdown"]')) {
         return true;
       }
       if (${JSON.stringify(requireResponse)}) {
