@@ -66,6 +66,8 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	userConfig: ResolvedUserConfig;
 	browserService: BrowserService;
 	utilityId: string;
+	/** Explicit utility commands need target custody even when prompts are serialized. */
+	requireTargetLease?: boolean;
 	buildListOptions: (overrides: BrowserProviderListOptions) => Promise<BrowserProviderListOptions>;
 	options?: BrowserProviderListOptions;
 	mutability: "read-only" | "provider-mutating";
@@ -85,7 +87,8 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		input.userConfig.auracallProfile?.trim() || "default",
 	);
 	validateBackendRequestLimit(backendRequestLimit);
-	if (input.userConfig.browser?.tabConcurrencyMode !== "tab-affinity") return null;
+	if (input.userConfig.browser?.tabConcurrencyMode !== "tab-affinity" && !input.requireTargetLease)
+		return null;
 	if (backendRequestLimit !== undefined && input.options?.providerSession)
 		throw new Error("Request-aware ChatGPT utility cannot inherit a provider session.");
 	const now = input.now ?? (() => new Date());
@@ -96,11 +99,16 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	if (!runtime.registry || !runtime.ledger) {
 		throw new Error("ChatGPT utility affinity is missing its registry or interaction ledger.");
 	}
-	const tenantKey = resolveConfiguredServiceAccountId(input.userConfig as Record<string, unknown>, {
-		serviceId: "chatgpt",
-		runtimeProfileId,
-	});
-	if (!tenantKey)
+	const configuredTenantKey = resolveConfiguredServiceAccountId(
+		input.userConfig as Record<string, unknown>,
+		{
+			serviceId: "chatgpt",
+			runtimeProfileId,
+		},
+	);
+	const allowManagedScope =
+		input.requireTargetLease && input.userConfig.browser?.tabConcurrencyMode !== "tab-affinity";
+	if (!configuredTenantKey && !allowManagedScope)
 		throw new Error("ChatGPT utility affinity requires a configured tenant identity.");
 	const configuredUrl =
 		input.options?.configuredUrl ??
@@ -118,6 +126,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	if (!managedBrowserProfile) {
 		throw new Error("ChatGPT utility affinity could not resolve the managed browser profile.");
 	}
+	const tenantKey = configuredTenantKey ?? `managed-browser:${managedBrowserProfile}`;
 	const scope = {
 		runtimeProfileId,
 		managedBrowserProfile,

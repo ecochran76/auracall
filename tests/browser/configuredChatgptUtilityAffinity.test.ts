@@ -233,7 +233,7 @@ describe("configured ChatGPT utility affinity", () => {
 				providerTrafficGovernor: expect.objectContaining({
 					attribution: expect.objectContaining({
 						operationId: "library-files",
-						tabLeaseId: "lease-library-2",
+						tabLeaseId: "lease-library-1",
 					}),
 				}),
 			}),

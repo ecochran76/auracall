@@ -6,8 +6,9 @@ Developer-app inventory diagnostics retain browser resolution, utility/interacti
 admission, identity, attachment, inventory, Developer mode, navigation restoration
 and cleanup stages. Queue admission precedes the operation and has its own bound.
 The effective inventory deadline includes configured backend capacity waiting.
-A visible main-page account-load failure ends installed inventory observation with
-`developer_app_account_load_error`; sidebar/hidden text is not failure evidence.
+For UI-driven lifecycle observation, a visible main-page account-load failure ends observation with
+`developer_app_account_load_error`. A visible Plugins load failure ends the read
+with `developer_app_inventory_load_error`; sidebar/hidden text is not failure evidence.
 Plugins Add is a dropdown/combo. A disabled control permits one pre-form refresh,
 with exact account continuity and fresh readiness checks; missing identity or a
 still unavailable control stops creation. No recovery wraps form input/submission.
@@ -18,8 +19,15 @@ text, passive progress, completion, terminal deadline and later recovery evidenc
 are separate observations. A later completed answer cannot prove pre-deadline
 completion.
 
-App list reads use inventory-only observation and do not navigate Developer mode
-settings; unobserved Developer mode remains unknown. Mutation checks are separate.
+CLI app list selects authenticated API inventory after browser identity/bootstrap,
+without extra Plugins/Home or Developer mode navigation. Fresh session email,
+account/workspace and organization continuity precede two governed inventory GETs.
+Generic UI retry/load failure is not account authority for this path: fresh
+session and HTTP inventory responses decide. Visible provider limits and human
+verification still stop the read. Optional linked metadata failure remains
+unknown; malformed installed payload cannot establish complete inventory.
+Browser credentials are not returned by the evaluation. UI-driven mutation
+preflights retain their existing strict surfaces and navigation restoration.
 A failure receipt does not establish transport cleanup or authorize retries.
 
 Provider-interaction ledger observations share the same-instance operation queue
@@ -27,6 +35,11 @@ with mutations. Concurrent reads share a locked snapshot; pure reads never
 rewrite it. Mixed-batch results publish only after durable commit. Cross-process
 locking, complete history and warning/ownership fences remain authoritative.
 CLI stage diagnostics preserve original error identity and aggregate causes.
+App failure receipts project bounded, sanitized cause/aggregate trees without
+serializing stacks or request objects; unknown cleanup retains its refusal.
+Long app-list waits retain stage progress on stderr even without verbose mode;
+JSON stdout remains terminal-only. Reported budget is an allowance, not proof
+of capacity denial or a changed deadline.
 Identical concurrent tab-custody lists share only an unfinished observation,
 with separate caller clones; completed custody state is never cached.
 Active utility operations renew tab-owner liveness every 30 seconds through
@@ -47,6 +60,11 @@ abort ends observation and prevents later navigation; outer deadlines remain.
 Warning-frozen interaction settlement reports the existing provider-warning admission stop; it never converts the frozen record to settled or clears the warning. Other invalid settlement states remain errors.
 
 ## Language
+
+Tab census observation does not establish AuraCall workload ownership. Automatic
+TTL retirement requires positive workload custody; another agent's target in the
+same browser stays outside cleanup authority. Historical census-only deadline
+records remain preservation evidence, not authority to close their target.
 
 **AuraCall runtime profile**:
 A named Aura-Call configuration entry that selects execution defaults and provider bindings for one operator context.
@@ -134,8 +152,12 @@ The general desktop view available independently of the AuraCall remote-view cli
 _Avoid_: AuraCall remote-view client
 
 **AuraCall desktop**:
-A desktop owned by AuraCall and used to display its managed browsers. Its allocation is distinct from an AuraCall runtime profile, which remains available when no desktop is assigned.
-_Avoid_: Browser profile, AuraCall runtime profile
+A desktop owned by AuraCall that houses its controlled browsers, identified by a neutral label such as Desktop 1. Desktops have no dedicated task purpose; browser profiles and accounts identify the browsers inside them.
+_Avoid_: Browser profile, AuraCall runtime profile, research desktop, writing desktop
+
+**Browser Recall**:
+An operator-confirmed return of a borrowed managed browser profile to AuraCall: close its identified external browser and launch the same profile under AuraCall. Profile data is retained.
+_Avoid_: Profile reset, desktop reassignment
 
 **Control handoff**:
 An explicit transfer of interaction ownership between automation and a human operator.
@@ -154,6 +176,9 @@ _Avoid_: Version-only runtime identity
 
 **Desktop control ownership record**:
 The retained identity and role governing desktop interaction. Invalid or incomplete ownership preserves unknown custody and blocks interaction with recovery guidance. Atomic publication prevents partially written records from being exposed. Browser opening is independent of this interaction ownership.
+The short coordination transition has its own immutable generation and process
+identity. Proven-dead same-boot Linux transitions can be reclaimed once without
+revoking human custody; ambiguous transitions remain blocked.
 
 **Browser opening custody**:
 The retained managed-profile process identity plus current desktop assignment that qualifies creation of a new tab/window. A current window cannot be a prerequisite for creating its replacement. Existing-page interaction separately requires current window proof and desktop input ownership.
@@ -204,3 +229,48 @@ identity remain tenant-scoped; live-owner and uncertain-effect fences remain int
 
 **Unknown semantic model selector**:
 An unrecognized `chatgpt:` model intent in a single-model browser CLI request. Run-option resolution rejects it before generic label inference or browser startup. `chatgpt:reasoning` carries standard/Medium effort; `chatgpt:reasoning-medium` is not a supported selector.
+
+
+**Grok Connector**:
+An external service connected to Grok through its Plugins connector surface,
+including a custom MCP server. Its connected account and permissions are distinct
+from a generated app or a Bot.
+
+**Grok incremental index follow**:
+Bounded fresh observations of visible Chats heads that retain completed backfill
+and merge observed new or changed rows. A known row fingerprint bounds the
+observed window; it does not establish global provider ordering or prove older
+rows unchanged. An explicit full sweep covers that separate observation gap.
+Relative-time labels supply filtering estimates, not stable update identity;
+qualified absolute timestamps can establish observable date changes. History
+windows own their bounded change evidence; supplemental mounted rows do not
+refill an empty incremental frontier.
+
+**Grok Bot**:
+A named Grok agent with its own configuration that an operator can select for a
+conversation. It is distinct from an AuraCall runtime profile or execution agent.
+
+**Grok generated app**:
+An app created through Grok Build mode. Generation, preview, artifact retrieval
+and publication are distinct outcomes; a Connector is not a generated app.
+
+Interaction-ledger durable encoding serializes the lock-owned complete state to
+an immutable compact JSON string before I/O. Internal mutable records/warnings/
+events do not escape; schema1, complete history, lock ordering, fsync and atomic
+commit publication remain authoritative. Human-readable views may format JSON
+at the read boundary rather than imposing that cost on every admission commit.
+
+A file-backed ledger may reuse its own state only after checking file identity
+under the existing cross-process lock. Peer replacement/edit/removal and failed
+operations/commits invalidate it; metadata failure after a successful commit
+only discards reuse. The append-only encoded event prefix belongs to that exact
+loaded state and is discarded when peer state is reloaded. Every snapshot still
+contains full records, warnings and events, with public reads returning copies.
+
+
+App-list performance observation is explicit (`apps list --performance`), scoped
+to the command's governed ChatGPT connections after backend interception attaches.
+Its sanitized aggregate stderr report preserves terminal inventory stdout and
+never changes admission or ownership. Counts are observations with explicit
+unresolved/coverage limits; admission duration includes local governor overhead.
+See `docs/dev/browser-service-tools.md#app-list-performance-diagnostics`.

@@ -22,6 +22,7 @@ export interface ApiHistoryMaterializationCreateCliOptions {
 	maxItems?: number | null;
 	providerWorkTimeoutMs?: number | null;
 	force?: boolean | null;
+	acknowledgeTargetDefaultReset?: true;
 }
 
 export interface ApiHistoryMaterializationStatusCliOptions {
@@ -76,6 +77,7 @@ export async function createApiHistoryMaterializationJobForCli(
 					maxItems: normalizeOptionalNumber(options.maxItems),
 					providerWorkTimeoutMs: normalizeOptionalNumber(options.providerWorkTimeoutMs),
 					force: options.force === true,
+					...(options.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true } : {}),
 				}),
 				signal: controller.signal,
 			},

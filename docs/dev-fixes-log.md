@@ -8,6 +8,328 @@ existing standard/Medium selector. Regression first failed, then passed; no new
 alias or live model remapping is introduced. Installed acceptance is separate.
 
 
+## 2026-10-28 — Separate native publishing controls from workspace readiness
+
+A visible Publish button and an old READY file tree do not prove current file
+bytes or a publishable snapshot. Read the committed native publication controller
+only through an explicit reversible dialog inspection, verify dismissal, and
+retain the inactive workspace result independently. Proposed names, deployment
+objects and archive hashes do not establish genuine app/version identity.
+## 2026-10-28 — A census does not grant cleanup ownership
+
+Shared browsers contain targets created by other agents. Registering every
+unleased page with an AuraCall deadline converted missing evidence into cleanup
+authority. Remove census-driven deadline registration and preserve legacy
+synthetic records at both normal and lost-lease retirement boundaries. Public
+maintenance tests were red for foreign-target disappearance, then green while
+owned expired work continued to close. Keep physical disappearance separate from
+actor attribution: another runtime can close the same target later.
+
+## 2026-10-27 — Account for guarded attempts before stopping the frontier
+
+A provider guard stops later work but does not erase the attempt already made.
+Apply its explicit target/asset accounting before breaking; otherwise public
+remaining-budget diagnostics conflict with retained attempt receipts. A selected
+Grok partial-transfer regression was red for consumed0/remaining2, then green
+for consumed1/remaining1 while the next target remains unattempted.
+
+## 2026-10-27 — Bind searched Connector identities before restoring the view
+
+Search cleanup can re-render card metadata. Bind exact committed account-scoped
+identity while the observed search view is still owned; then restore the caller's
+view. Binding after restoration discarded otherwise valid selected identities.
+A public client regression observed null instead of the genuine ID before the fix.
+
+## 2026-10-27 — Share transfer allowance across selected conversations
+
+Explicit conversation IDs must decrement the same remaining transfer allowance
+after each attempt as broad reconciliation. Otherwise two selected conversations
+each receive the full allowance. A public durable-job regression observed[2,2]
+instead of remaining allowances[2,1]. Retain attempted/unattempted frontier as an
+observation, without implying a provider cursor or automatic crash continuation.
+
+## 2026-10-27 — Native Connector text avatars are not names
+
+Custom MCP cards can render an avatar initial before the title. First-line text
+parsing misnamed the installed canary A and filtered it out of exact-name reads.
+Bind the native card marker to its actual title for inventory, activation and
+committed provider-ID lookup. Preserve legacy rows and fail closed on ambiguous
+marked titles. A public CDP-boundary regression reproduced empty exact-name results
+before the correction; native identity remains bound to the same title.
+
+## 2026-10-27 — An omitted Grok gallery card is not an absent Connector
+
+Use the actual selected-ID MCP metadata protocol to qualify an existing record.
+Bind personal actor scope, exact entity, safe endpoint and every returned tool;
+never infer remote account or OAuth grants from provider identity or tool scope.
+Browser-loss recovery must preserve installation input and replay fences and
+record verified target history, rather than reset the journal or repeat Add.
+
+## 2026-10-25 — Closed Grok overlays can retain layout geometry
+
+BaseUI dialog nodes may retain display, visibility, opacity and nonzero geometry
+after data-closed is present. Exclude only explicitly closed dialog ancestry;
+never mistake those cached nodes for active modal ownership. Wait boundedly for
+an activated catalog/detail to mount, without repeating clicks. Use the guarded
+native keyboard when owned Escape-only detail cleanup requires it, and verify
+restoration. Read a nested form's exact inventory owner even while its parent
+is inert; keep token/input/account/inventory guards before Add.
+
+## 2026-10-25 — Reconcile completed effects without erasing uncertainty
+
+Use exact account scope, target and revision plus a validated immutable evidence
+receipt to settle a positively observed completed effect. Preserve the prior
+unknown outcome in an appended audit; never turn a receipt string alone into
+provider proof. Keep live/in-flight ownership protected. Settlement does not
+close/release a target, authorize replay, or establish asynchronous file readiness.
+
+## 2026-10-25 — Restore owned nested Connector details
+
+Grok marks the parent Plugins dialog inert while Connector details are open.
+Recover only the exact activation marker from that parent for cleanup; do not
+interact with its inert controls. Native details can omit a Close button: use
+Escape only for the proven-owned observed detail and verify disappearance.
+Keep known no-effect preparation refusals distinct from uncertain effects. One
+explicit confirmed continuation of an exactly recorded endpoint-observation
+refusal uses an exclusive persistent claim; unknown outcomes never reopen Add.
+## 2026-10-25 — Read native composer eligibility, not an isolated phase label
+
+A committed attachment phase may remain processing after valid metadata arrives.
+Its renderer suppresses loading then, while the actual submit component gates
+on isQueryable. Require the committed same-form eligibility and enabled native
+control, valid source-bound metadata, and no private/disabled/deleted/error flags.
+Preserve unknown gates as non-ready and recheck the stable account in ordinary
+prompt attachment preparation before any later submission.
+
+## 2026-10-25 — A DOM React pointer does not establish current provider state
+
+Resolve the committed HostRoot.current topology before consuming attachment
+metadata or phase. Follow the actual child/sibling path to the exact DOM host,
+not stale alternate return links. Reject topology ambiguity, traversal exhaustion
+and commits during digest observation. Retained File context can be recovered
+without replay; label observed-native digests separately from local-path proof.
+
+## 2026-10-25 — Qualify native File object identity before Grok upload acceptance
+
+Grok attachment metadata can live in the chip component's props without DOM file
+ID attributes. Bind only the identical selected File object, its SHA256/length,
+and observed metadata ID/account/source URI. Reject conflicting associations;
+never substitute filenames. Preserve processing as progress and unknown phases
+as unknown. Source identity and server materialization do not silently authorize
+Send, replay, or clearing an uncertainty fence.
+
+## 2026-10-25 — Keep unknown upload custody through cleanup and diagnosis
+
+A cleanup AggregateError cannot replace a started file mutation's unknown outcome
+with generic failure. Preserve its target and fail visibly. Diagnose a retained
+target by exact ID through the governed browser tool; broad Puppeteer page
+initialization can wait on unrelated renderers even when its transport is ready.
+Native FileList bytes and a visible chip still do not prove provider-file identity.
+
+## 2026-10-25 — Honor Grok fresh-operation target lifecycles
+
+A matching root URL does not prove an empty composer. Honor `retain-new` and
+`dispose-new` during actual adapter target selection, not only while resolving
+configured options. Use owned blank-target acquisition before governed root
+navigation, preserve retained tabs, and keep explicit target overrides binding.
+Fixture success does not establish native upload-byte or Build artifact identity.
+
+## 2026-10-25 — Qualify generation and timestamp evidence before reuse
+
+Compare the saved browser endpoint/process fingerprint before target lookup or
+loss interpretation: absence from another browser does not prove original-target
+loss. Relative date labels remain filtering estimates, not durable updatedAt or
+change identity; retain qualified absolute changes and normalize legacy estimates
+once within existing bounds. Keep exclusive-group admission policy centralized
+while callers preserve conflict precedence, scope, locking and process checks.
+
+## 2026-10-25 — Preserve app inventory progress in default mode
+
+The apps CLI discarded onProgress unless verbose was enabled, hiding identity,
+inventory and queue waits throughout a capacity-extended operation budget.
+Retain the observer and emit bounded stage/elapsed/budget diagnostics on stderr
+every30seconds for long default list calls. Keep stdout terminal JSON and stop
+the timer on completion. A real CLI/operation/adapter/file-queue fixture varies
+only verbosity and proves the silence red before repair. Do not infer the
+provider delay's cause or shorten configured admission windows from this fix.
+
+## 2026-10-25 — An unchanged row cannot hide observed Grok changes
+
+Without qualified provider ordering, process all available rows in the bounded
+observed page after an unchanged fingerprint. Retain later changed/new rows,
+and keep an actionable continuation when the item limit leaves work unfinished.
+An unobserved older window remains explicit partial/full-sweep work. Public
+collector restart and controlled-CDP service regressions prove the difference.
+
+## 2026-10-25 — Retain bounded Grok history custody
+
+Keep cursor continuation attached to an exact account/query owned history view,
+so successive bounded calls can reach older rows after service recreation.
+Rebuild a lost view incrementally; explicitly restart a missing anchor or legacy
+unowned cursor. Share active utility admission through the existing lease
+registry, retain uncertain cleanup fences, and refuse missing browser PID before
+any target I/O. Never derive complete project history from mounted sidebar rows.
+
+## 2026-10-24 — Attribute desktop transitions before publication
+
+An empty transition directory stranded by process death blocks acquisition
+before dead desktop-owner recovery can run. Atomically link a complete identity
+instead. Reclaim only proven-dead same-boot Linux owners, elect one reclaimer
+per generation and compare inode identity before unlinking. Retain election
+links to fence paused contenders. Ambiguous/legacy records and human claims
+remain protected. Real child-process crash, live-owner, human-release and paused
+contender fixtures cover the public gate; no live lock cleanup is implied.
+
+## 2026-10-25 — Bind Grok transport and project stable identity
+
+Bind the attached target and actual DevTools endpoint into provider-session
+context before account proof. A changed endpoint cannot inherit the old browser
+PID. A display label cannot replace configured email/handle evidence or hide
+stronger serialized evidence. Grok bootstrap account data may occur far beyond
+the first16,000 characters: parse bounded Flight JSON and project whitelisted
+fields from `initialData.user`, without returning raw session data. Reject
+conflicting identities and traversal exhaustion. Globally scanned page handles
+are display context; Bot discovery text is not account authority. Keep source, built executable
+and native account-proof receipts distinct.
+
+## 2026-10-24 — Preserve nested cleanup failures at the CLI boundary
+
+Node's default inspection can collapse nested AggregateError.errors to [Array].
+App commands must emit a bounded metadata projection through the actual CLI
+catch path, not rethrow beyond the JSON formatter. Retain sanitized messages,
+codes, cause and aggregate children, mark truncation, and omit stacks/request
+objects. JSON goes to stdout with --json and stderr otherwise. Failed cleanup
+still exits nonzero and remains unknown; diagnostic capture never makes a retry
+safe. Public CLI regressions cover submitted tests, list and refresh-tools.
+
+## 2026-10-24 — Keep bounded Grok detail aligned and attributable
+
+Slice content and referenced files against the same mounted-card inventory.
+Persist compatible qualified cache tails during bounded follow; a partial read
+does not prove those older observations disappeared. Missing card content cannot
+advance a cursor. Preserve literal later-chunk text instead of applying first
+message prefix cleanup again, and check cancellation after awaited cache/receipt
+publication before returning success.
+
+## 2026-10-24 — Commit Grok index rows with continuation
+
+A progress callback can report an advanced cursor before collected rows are
+retained. Never persist that callback as a restart checkpoint. Commit qualified
+scope rows and continuation together after the read returns successfully; an
+aborted scope replays from the previous commit. Share the history-page budget
+across scopes, and check foreground yield before each page and new inventory
+phase. Keep opaque cursors private, including conversation metadata.
+
+## 2026-10-24 — Retain a bounded protocol receipt after continuation send
+
+Native request cancellation can arrive before Chrome acknowledges an already
+sent continuation. Racing that cancellation against a valid acknowledgment
+creates avoidable unknown cleanup. Honor cancellation before SDK send, then
+retain the existing bounded wait for the receipt. Only a successful receipt
+settles the continuation; rejection or timeout remains unknown.
+
+## 2026-10-24 — Recover plugin settings once without replaying tool refresh
+
+A terminal plugin-settings load error can recover with one page reload. Share
+one reload allowance across both settings reads; verify account continuity and
+retain exact app/endpoint plus final connection/permission checks. Stop on
+persistent errors, unavailable/changed identity or approval. This read recovery
+must never repeat the trusted Refresh tools activation.
+
+## 2026-10-24 — A generic authority does not establish provider governance
+
+Grok already acquired shared traffic authority, but its non-ChatGPT operation
+limit was null and visible-warning preflight absent. Test the real GrokService
+read and shared stores, not only the governor interface. Charge read discovery
+explicitly; keep operation/request units separate and expose effective controls.
+Same-account runtime overrides must tighten the account ceiling, never raise it.
+
+## 2026-10-24 — Plugin-settings errors are terminal readiness outcomes
+
+“Couldn't load plugin settings” cannot settle into connected accounts through
+polling alone. Recognize the visible terminal error before waiting through a
+backend-budget-sized deadline. Refuse before activation; after activation retain
+unconfirmed/no-retry and state that settings preservation is unverified. Do not
+click Try again or repeat Refresh tools automatically.
+
+## 2026-10-24 — Start refresh observation deadline after activation
+
+Attach and arm exact-app observation before the click, but start its response
+wait deadline after governed activation completes. Admission/interaction latency
+can exceed20 seconds before the request exists; expiring observation during that
+wait discards a valid later catalog. The public-adapter regression varies only
+activation latency and retains one-click, exact-attribution and no-replay fences.
+
+## 2026-10-24 — Grok UX drift and plugin boundaries
+
+Survey finds History-only opener against live Chats, Build absent from the bundled
+model registry, and Plugins split into Connectors/Skills/Bots. Composer @ exposes
+Bots/Connectors and / exposes modes/Skills. Existing simple Grok guard is not proof
+of ChatGPT live-follow governance parity. Record observed labels separately from
+model IDs, installed state separately from catalog, and UI forms separately from
+accepted provider mutations. [Survey](dev/notes/2026-10-24-grok-ux-survey.md).
+
+## 2026-10-24 — Preserve tool-refresh observation failure reasons
+
+An unconfirmed catalog refresh must distinguish a missing expected request,
+unmatched/unreadable connection identity, incomplete response, HTTP error and
+unreadable/invalid catalog. Retain bounded messages without response bodies or
+credentials. Diagnostics do not authorize retry or weaken exact app attribution;
+an earlier generic receipt cannot establish which failure occurred.
+
+## 2026-10-23 — Embedded clipboard needs parent permission delegation
+
+A cross-origin viewer cannot read the device clipboard unless each enclosing
+frame delegates clipboard-read/write. Add these permissions to the bundled
+Remote View helper. Browser grants and viewer input custody still govern reads;
+no clipboard text is captured by AuraCall. Reload the desktop page after adoption.
+
+
+## 2026-10-23 — Acquire a utility target before first app connection
+
+A target-bound authority factory cannot govern creation of a target that does
+not exist yet. Serialized developer-app discovery reached that gap while fixtures
+with pre-existing targets passed. Explicit utility commands must acquire the
+existing ephemeral target/lease/governor before identity and app operations.
+Keep first-tab and pre-existing-target regressions distinct.
+
+## 2026-10-23 — Borrowed profiles need an explicit Recall action
+
+A browser profile can be legitimately borrowed by another agent and left open.
+Showing only unavailable/disabled Launch leaves the operator without recovery.
+Qualify the exact holder, offer Recall with an open-tabs warning, bind confirmation
+to its process generation, gracefully stop it and use normal AuraCall launching.
+No profile reset, guessed ownership adoption or automatic force-kill.
+
+## 2026-10-23 — Qualify reused CDP ports against live ownership (#240)
+
+A retained dead browser is history, not an active claim on its old endpoint.
+When a port is reused, ignore a non-verifying receipt only after /proc confirms
+its PID absent and only if a uniquely verified current owner remains. Preserve
+receipts; stale-only endpoints must never fall through to unguarded CDP.
+
+## 2026-10-23 — Keep allocation inventory out of browser navigation (#240)
+
+Empty/stale desktop catalog entries leaked into Other running browsers. Render
+only unmatched owned running browsers there; group configured entries by actual
+browser profile or account and keep dormant entries launchable. Allocation names
+are internal placement, not browser identity.
+
+An embedded authentication redirect can look like a broken document: live Remote
+View redirected to cooper-auth whose login prohibits framing. The client also
+hid the helper's access link/status unconditionally. Show those on unavailable or
+disconnected embeds, hide the failed iframe, and offer an explicit observation
+retry after top-level sign-in. Do not weaken CSP or authentication.
+
+
+## 2026-10-23 — Do not turn desktop examples into task-specific allocation roles
+
+Research/Writing examples misrepresented generic browser homes. Use neutral labels
+and existing automatic placement. A stale dormant explicit pin can obstruct that
+path; qualify assignment absence and all associated browser processes before
+backed-up local cleanup. Preserve live assignments and browser data. See
+[Plan0448](dev/plans/0448-2026-10-22-issue240-acceptance.md).
+
 ## 2026-10-23 — Use authorized ingress authentication before declaring an inspection gate
 
 An Authelia redirect does not establish that agent credentials are unavailable.
@@ -25853,3 +26175,290 @@ from post-provider cleanup using completed wrapper calls, task terminal evidence
 and fresh exact-process absence. Do not rerun successful provider work solely
 because terminal observation lagged. Canonical acceptance retains raw flags and
 independent qualification, with595file parity and2newverified artifacts.
+
+
+## 2026-10-24 Grok wave 2 checkpoint (#398)
+
+#399 and #400 merged and closed. #401 history inventory, #402 strict governed text/model/composer flow, and #404 connector discovery passed bounded review remediation and provider-free acceptance. See `docs/dev/notes/2026-10-24-grok-wave2-review.md` and Plan0453 ledger for exact proof and pending integration. In-flight reads must propagate the SDK abort signal and preserve unknown effects; final account proof must finish before CDP cleanup. No installed/live acceptance claimed.
+
+## 2026-10-24 — Grok Bot dispatch identity and file outcome custody (#403/#407)
+
+Bind the intended Bot ID/name in the same DOM evaluation that captures its
+composer, and retain stable Bot ID/href evidence through the atomic send guard.
+Diagnostic persistence must never replace an unknown operation outcome or its
+retained target. A ready chip with a new provider ID plus a native basename/count
+is insufficient proof of local upload identity; report unconfirmed until an
+actual binding is observed. Recent selection uses the exact provider file ID.
+See the next-wave review receipt for reproductions and the open upload gate.
+
+
+### 2026-10-24 — Grok mirror history coverage must outrank row counts (#412)
+
+The adapter caps history to the requested limit, so testing whether returned rows exceed that limit cannot establish completeness. Mirror reads now retain incomplete coverage and reject reported failed coverage; Grok reads without coverage remain partial. Visible-scope completion is not account-wide backfill proof. Regression fixtures cover capped and empty partial pages, failure tolerance and ordinary overflow. Restart-safe row/cursor persistence remains separate work.
+
+### 2026-10-24 — Fence Grok installation across process and runtime profile boundaries (#405)
+
+In-memory prepare tokens cannot prevent a restarted or different runtime profile
+from repeating a possibly committed Add. Claim a private account/endpoint journal
+before dispatch, retain the original target/custody, and route repeat calls to
+read-only reconciliation. Do not convert a rejected final DOM guard into a
+positive dispatched-effect claim, or let diagnostic persistence erase an unknown
+outcome. Public CLI/API/MCP fixtures cover the production path; saved provider
+identity, granted scopes and native built-in behavior remain separate open gates.
+
+### 2026-10-25 — Grok Bot lifecycle must follow actual native editor controls
+
+New Bot's animated text contains hidden labels for Connector/Skill/Bot; use its
+observed exact aria-label. The actual Settings editor offers Name, optional Title
+and Description, not separate Instructions/Model defaults. Preserve these missing
+capabilities explicitly instead of guessing fields or relabeling Description.
+Require a genuinely new empty target for creation and retain durable account-bound
+intent plus same-ID saved readback for ambiguous create/Save reconciliation.
+
+### 2026-10-25 — Exclude explicitly closed mounted Bot Settings overlays
+
+Grok BaseUI can retain a closed role=dialog with data-closed present while its
+styles and rectangle remain visible. Check that explicit dialog ancestry before
+reading Settings or declaring Save closure. Do not globally hide unrelated
+controls carrying data-closed. Native-shaped fixtures protect closed inspection
+and a real same-ID Settings reopen after Save; no native Save was replayed.
+
+### 2026-10-25 — Native Grok integrations are not missing MCP endpoints
+
+Grok's installed Connector cards include account-bound `live` integrations with
+no server URL. Classify those only through their current committed card DTO,
+matching stable Connector ID, card key and verified account; never infer type
+from display name or absent URL. Preserve name conflicts and fail closed on
+foreign/unqualified metadata. Native Escape needs focus on the owned detail
+before the guarded key dispatch when Grok leaves a mounted background surface.
+## 2026-10-25 — Stop inventory after visible Plugins load failure
+
+Live Apps inspection found a main panel saying Failed to load plugins / signal
+timed out while the adapter waited for successful response capture. The existing
+probe only recognized account-load wording. Recognize visible main Plugins
+failure as developer_app_inventory_load_error, preserving hidden/sidebar-only
+exclusions and existing capacity/deadline rules. Real-adapter red/green fixtures
+and exact live DOM comparison qualify prompt failure detection; they do not
+prove faster successful inventory. Issue464/Plan0460 retains the separate latency
+investigation and measured ledger-processing lead.
+
+## 2026-10-25 — Reduce ledger admission encoding work
+
+An inventory CPU sample led to real reserve/start/settle replay, which exposed
+full-history cloning followed by indented JSON encoding on every commit. Encode
+lock-owned state directly to an immutable compact JSON string; preserve every
+record, warning and event, schema1, fsync and atomic publication. Backend-burst
+regression bounds bytes as well as durable-write count, and legacy snapshot /
+cross-instance tests retain prior history. Timing samples support reduced local
+work; host variation prevents an absolute timing assertion. Usage-summary-only
+optimization was rejected because it did not reach the production inventory path.
+Native successful-inventory qualification remains separate in Plan0460/issue464.
+
+## 2026-10-25 — Reuse ledger state only under verified file ownership
+
+Encoding-only mitigation still left inventory at297.628s. A real request lifecycle
+fixture demonstrated three full history reads across self-owned commits. Under
+the existing cross-process lock, reuse state only while file identity matches;
+invalidate after peer edit/removal and any aborted operation/commit. Metadata
+failure after an already successful commit discards the cache without falsely
+reporting that effect as failed. Encode the append-only event prefix once per
+loaded state, retaining full history in every legacy-compatible snapshot.
+127 focused checks and typecheck/build pass; private replay reaches2.5–2.9s.
+This is not yet a claim that native inventory latency is resolved (Plan0460).
+
+## 2026-10-25 — Avoid full-site navigation for app list
+
+A controlled utility-tab trace exposed155backend requests to observe an installed
+endpoint and absent optional linked metadata, colliding with the configured
+30/minute cap. After identity/bootstrap, CLI list now reads installed/linked JSON
+through its existing governed browser session, with fresh account/workspace/org
+continuity, no extra inventory navigation and no credential data in the result.
+Generic UI retry is not account authority for this API read; actual session/API
+errors, provider limits and human verification retain their stops. UI mutation
+preflights remain unchanged. Source-native result is39.866s/34apps, preserving all
+26prior entries and adding8linked entries. Installed proof is tracked in Plan0460.
+
+### 2026-10-25 — Observe the owned Connector result before inventory reconciliation
+
+Grok replaces the custom form inputs with a terminal Connection failed / Go Back
+surface after Add. An immediate inventory read misses this owned outcome and
+reports an unrelated inventory-incomplete error. Observe the exact prepared
+modal token for a bounded transition, recognize only its actual native terminal
+failure, and settle that known failed effect while retaining target/journal and
+retrySafe=false. Foreign owners and uncertain transport/cleanup remain fenced.
+Causal client/service regressions failed before the correction and now pass;
+no new native installation was attempted to validate the repair.
+
+2026-10-25 — Grok Recent chooser failures retain item-dispatch attribution.
+An observation failure before the selection expression now returns optional
+`selectionDispatch: "not-dispatched"`, including cleanup failure. This does not
+settle menu effects, release unknown leases, or authorize retry.
+
+
+2026-10-25 — Grok committed React readers share bounded deep-portal traversal.
+Actual Recent portals exceeded 256 ancestry; even a found composer host was
+rejected by a later branch reaching the topology cap. Raise both caps to 512,
+retain 20,000-node budget and all current-root/scope/unique-host checks, and reuse
+the same helper for File/Connector observation. Exhaustion remains unavailable.
+
+
+2026-10-25 — Grok Recent identity comes from current asset keys, not DOM labels.
+Actual Recent rows lack upload-shaped DOM IDs. Join the committed menu-item key
+to the current `assets[].assetId` DTO with verified owner/content URI; repeat
+that association immediately at selection. Metadata-only attachment recovery
+provides identity/readiness without a File hash or local-manifest/server-byte
+claim. The existing native File/digest upload guard remains separate.
+
+
+2026-10-25 — Grok closed trigger state does not hide its control.
+Attach/menu triggers normally expose `data-state=closed`. Restrict closed-state
+visibility exclusion to overlay roles/modal ancestors; retain refusal of their
+closed descendants. Exact native opener-false evidence and source replay prove
+the failed canary dispatched no menu/file-selection click.
+
+
+2026-10-25 — Grok Recent unsupported rows make inventory partial.
+An unrelated asset with an unsupported content-key shape must not prevent a
+fully qualified current asset from being selected. Omit unsupported content-key URI rows with
+explicit incomplete/visible-only coverage; never invent alternate keys or IDs.
+Duplicate IDs, foreign ownership and global current-root failures still block.
+
+### 2026-10-25 — Build export preserves unknown Download custody
+
+The native workspace Download is independent of app/version metadata. Bound
+capture to the exact owned target's Page capability and a private directory;
+never reuse Browser-global download settings or fabricate IDs from filenames.
+A rejected setup may already have changed browser state, so reset on attempted
+setup and close in a nested finally. Completed-looking files alongside partial
+files do not qualify. Download acknowledgement/capture failures must reach the
+interaction ledger as outcome-unknown, without replay.
+
+
+### 2026-10-25 — Grok trusted input requires the configured visibility precondition
+
+CDP mouse command acknowledgements did not deliver events to an owned background
+Build control. Reuse ensureGrokTabVisible, respect focus suppression and explicitly
+require visible same-account/route/target state before trusted pointer input.
+Requalify committed control ownership afterward. Preserve unknown More outcomes
+separately from a Download that never dispatched; no automatic replay. Renderer
+gateway rows can change after reload while the saved assistant ID remains stable.
+Root source2986 native public export passed after causal visibility guards; root
+24affected checks and worker fulltypecheck passed. Private receipts preserve the
+failed attempts, operator adjudication and fresh archive integrity proof.
+
+
+### 2026-10-25 — Qualify Connector failure stage from the retained session
+
+A generic connection error can conceal a created-but-unvalidated native session.
+Read the exact owned flow's tracked session and current SDK/caller contract before
+attributing failure to OAuth. An exact observed callback is a configuration
+prerequisite, not evidence that authentication began. Preserve failed pending
+flows whose cleanup abandons sessions; operator passive reads must never invoke
+SDK business methods outside normal provider governance.
+
+
+### 2026-10-26 — Bind Build exports without filtering away ambiguity
+
+A selected response still mounted in a conversation does not establish which
+workspace a native Download exports. Before export, require a unique assistant
+and match an explicit requested ID; recheck uniqueness during native-control
+qualification and same response/gateway after capture. Refuse ambiguous history
+rather than label current bytes with older provenance. Preserve unknown custody
+if binding changes after input. Three causal regressions plus affected62checks
+and typecheck passed; historical inspect behavior remains available.
+
+
+### 2026-10-26 — Separate stale validation failure from OAuth compatibility
+
+The retained generic Grok failure no longer reproduced under one governed actual
+SDK validation read. Avoid treating the old created-session UI as current server
+reachability evidence. The installed OAuth registration guard independently
+rejects Grok's runtime-qualified exact callback while its ChatGPT-only allowlist
+is active. Isolated actual-code red/minimal/green checks confirm the callback-only
+candidate, without real registration or grants. Activation and human consent
+remain separate from source/configuration readiness.
+
+
+### 2026-10-26 — Use realm-specific agent login before requiring human sign-in
+
+The Cooper ingress skill explicitly authorizes existing agent credentials for
+requested service acceptance. Select the Cooper file for cooper-auth, authenticate
+once and verify app policy; do not infer that a login form requires a human when
+this configured agent path exists. A sign-in establishes ingress identity, while
+Mail Receipts approval remains bound to its existing exact account/scope policy.
+Native OAuth cookies expire independently of the external login session. Fresh
+same-ID authentication after a qualified expired/unapproved flow completed the
+Grok callback and62tool catalog read without another Add. Public inventory and
+installation-journal reconciliation remain separate acceptance boundaries.
+
+## 2026-10-26 — Observe app-list request churn during the first baseline
+
+Plan0461 adds opt-in `apps list --performance` on the existing owned admission
+path. A sanitized bounded aggregate report combines stage durations, installed /
+linked / background request observations, response timing and admission timing.
+It emits on stderr even on command failure; normal stdout and existing authority
+remain intact. Real admission fixture proves thirteen requests and their observed
+responses/failure reach the report without extra protocol commands. Explicit
+coverage and unresolved counts prevent partial observations from implying complete
+browser traffic or known request outcomes. Admission timing includes governor
+processing, so it must not be called pure quota delay.
+
+## 2026-10-26 — Isolate lost-tab TTL deferrals
+
+A preserved active/unknown lost tab threw out of the per-profile maintenance
+loop, starving later expired lost and idle tabs. Catch and report each lost
+lease's deferral independently, retaining inactivity checks, audit admission,
+close confirmation and ownership fences. A two-tab public-maintenance regression
+was red (both tabs retained), then green (only the inactive expired tab closes).
+Other browser runtimes have their own cleanup authority; their tabs are not
+included merely because they share the desktop. Plan0463 tracks native acceptance.
+
+## 2026-10-28 — Preserve materialization progress and current Build readiness
+
+Materialization now checkpoints completed receipts, remaining budgets and the
+in-flight attempt before provider work; interruption preserves unknown custody
+without replay. MCP retains the durable cursor while monitoring uses a bounded
+projection. Native Build overflow visibility was historical `everReady`; the
+exact current Files owner was `inactive`. Inspect/export now respect that
+current state instead of implying a usable snapshot or revision. Bot Settings
+inspection similarly distinguishes global Plugins from absent persistent grants.
+
+## 2026-10-28 — Fence Connector invocation and read native tool evidence
+
+A durable exact-intent fence precedes through-Grok submit; restart observes the
+retained target without replay. Native committed tool cards, not assistant prose,
+supply tool arguments/results and reveal additional tool activity. Reconciliation
+rejects later response substitution and preserves operation custody across
+transport cleanup/open failures. Ops stores invocation custody separately from
+inventory. Reuse the already resolved exact-target authority instead of resolving
+it twice; classify the empty contenteditable newline as an empty draft while
+preserving meaningful existing text. The native offline canary verified revision
+protected edit and exact readback without Send.
+
+## 2026-10-28 — Preserve unknown custody and atomic response ownership
+
+Corrupt or unreadable Connector intent journals now retain deterministic operation
+identity and retrySafe:false in the public result. Build readiness resolves the
+current committed React tree rather than trusting a stale DOM fiber seed. The
+Grok text waiter can report its exact accepted terminal snapshot; Connector
+observation checks that identity/content/terminal state before returning native
+tool cards, preventing an unrelated later response from becoming the first anchor.
+
+## 2026-10-29 — Preserve native reference download custody
+
+Grok uploaded references require current human-response attachment membership and
+the actual committed SidePanel Download selection. A readable native URL did not
+establish a working direct-GET protocol; native Chrome download capture is the
+qualified transfer seam. Require explicit target-default-reset acknowledgment for
+fresh transfers, retain sidecars before cleanup, and keep bytes when reset or
+transport settlement is unknown. Canonical upload inventory and verified archive
+reuse stay separate from generated workspace artifacts and broad history coverage.
+
+## 2026-10-29 — Read native mounted conversation planes outside main
+
+The current Grok Fast conversation mounts response rows under a region/gateway
+plane without a main element. Context readiness, message inventory and reference
+chunk selection now share those mounted rows, qualified by current committed
+React response ownership, exact conversation route, canonical response DOM ID,
+and matching sender/role. Hidden, inert, dialog and unowned rows remain excluded.
+The public regression executes actual browser readiness and extraction expressions.

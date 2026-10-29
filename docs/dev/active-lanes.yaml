@@ -1,6 +1,127 @@
 schema_version: 1
 work_item_tracking: optional
 lanes:
+  - id: P463
+    objective: Restore independent TTL cleanup of dormant tabs
+    work_items: [Plan0463]
+    plan: docs/dev/plans/0463-2026-10-26-dormant-tab-ttl.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/dormant-tab-ttl
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 67eb6bd073d03eeaa6f86c80b68f5f0cf94c1493
+    remote_ref: refs/remotes/origin/fix/dormant-tab-ttl
+    integration: merge
+    integration_receipt: c59dfcd5a15aa0e4b494345cce09de897239c959
+    dependencies: []
+    overlaps: []
+    validation_status: installed-periodic-4-to-2-tabs-uncertain-preserved
+    updated_at: 2026-10-26
+  - id: P461
+    objective: Expose request churn and stage timing during opt-in app inventory
+    work_items: [Plan0461]
+    plan: docs/dev/plans/0461-2026-10-26-browser-performance-diagnostics.md
+    plan_ref: refs/remotes/origin/main
+    branch: feat/browser-performance-diagnostics
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 1afa3fe4401eb3cdf1fb0c2315c2e338ec30c4ae
+    remote_ref: refs/remotes/origin/feat/browser-performance-diagnostics
+    integration: merge
+    integration_receipt: b2ecae89a641650877160a482d7aff461c871697
+    dependencies: []
+    overlaps: []
+    validation_status: installed-cli-complete-34-apps-one-report-26s
+    updated_at: 2026-10-26
+  - id: issue464
+    objective: Diagnose app inventory latency against live Apps UI
+    work_items: [ecochran76/auracall#464]
+    plan: docs/dev/plans/0460-2026-10-25-app-inventory-latency.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue464-focused-inventory-read
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 94773974003b2324d992337ea5e2107b1da11dac
+    remote_ref: refs/remotes/origin/fix/issue464-focused-inventory-read
+    integration: merge
+    integration_receipt: 42fb89512351734d36beec4e976d0fb492f72c20
+    dependencies: []
+    overlaps: []
+    validation_status: installed-native-complete-34-apps-26s
+    updated_at: 2026-10-25
+  - id: issue427
+    objective: Repair silent installed app inventory
+    work_items: [ecochran76/auracall#427]
+    plan: docs/dev/plans/0459-2026-10-25-app-inventory-silence.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue427-inventory-silence
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 0d550bea35c6ef4d19b82147bccbe21e36e7d2b7
+    remote_ref: refs/remotes/origin/fix/issue427-inventory-silence
+    integration: merge
+    integration_receipt: 7a38eb67117407a7cb80b0fc46d628dd77bb9f93
+    dependencies: []
+    overlaps: []
+    validation_status: installed-progress-qualified-source-native-30-apps
+    updated_at: 2026-10-25
+  - id: P455
+    objective: Recover attributable dead desktop transitions safely
+    work_items: [ecochran76/auracall#437]
+    plan: docs/dev/plans/0455-2026-10-24-desktop-transition-recovery.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/desktop-transition-recovery
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 8e7b1c28692a51d1970347d5aac3db54b65311b3
+    remote_ref: refs/remotes/origin/fix/desktop-transition-recovery
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: installed-crash-recovery-http-200-process-generations-preserved
+    validation_ref: docs/dev/plans/0455-2026-10-24-desktop-transition-recovery.md
+    integration_receipt: 4270f8fd3c0a4993cecff2e2f2e2abd23a61ed27
+    updated_at: 2026-10-24
+  - id: Plan0454
+    objective: Preserve bounded sanitized app cleanup failure causes
+    work_items: [Plan0454]
+    plan: docs/dev/plans/0454-2026-10-24-app-cleanup-diagnostics.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/app-cleanup-diagnostics
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 4c9b4985c0e9036b6cf51c64519c91bbc929d82a
+    remote_ref: refs/remotes/origin/fix/app-cleanup-diagnostics
+    integration: merge
+    dependencies: []
+    overlaps: [issue368]
+    validation_status: installed-cli-qualified
+    integration_receipt: 569f4b907dcaeadef2e25c157f27be6aaefa3138
+    updated_at: 2026-10-24
+  - id: issue368
+    objective: Govern first-tab developer-app utility acquisition
+    work_items: [ecochran76/auracall#368]
+    plan: docs/dev/plans/0451-2026-10-23-app-discovery-governor.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/issue368-continuation-receipt
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 76aa429c0fa43a82642fae05f3ce7d11f163f010
+    remote_ref: refs/remotes/origin/fix/issue368-continuation-receipt
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: installed-accepted-31-tools-exact-settings-preserved
+    validation_ref: docs/dev/notes/2026-10-24-issue368-live-acceptance.md
+    integration_receipt: 24a86240794a26a30c6311b79439e332c61ce0b5
+    updated_at: 2026-10-24
   - id: P87-IQ2
     objective: Honor configured admission wait while reading refresh settings
     work_items: [Plan0393-IQ2]
@@ -1912,3 +2033,98 @@ lanes:
     integration_receipt: 6e7009727d7f0b18ce84fb125986129360aebd59
     disposition: PR270 installed; five original browsers spread with14 routes preserved and one spare; native maximum10. Corrected duplicate P87 registration to P89; Plan0393 retains P87.
     updated_at: 2026-10-11
+
+  - id: grok398
+    objective: Implement approved Grok controls and UX support in dependency waves
+    work_items: [ecochran76/auracall#398, ecochran76/auracall#403, ecochran76/auracall#405, ecochran76/auracall#408, ecochran76/auracall#410, ecochran76/auracall#412, ecochran76/auracall#413]
+    plan: docs/dev/plans/0453-2026-10-24-grok-implementation.md
+    plan_ref: refs/heads/feat/grok-upgrade-integration
+    branch: feat/grok-upgrade-integration
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 556522f24a849e0256f090f7044d13dee308505e
+    remote_ref: refs/remotes/origin/feat/grok-upgrade-integration
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: native-account-proof-matches-112-tests-eight-open
+    updated_at: 2026-10-24
+
+  - id: grok-review-repairs-0456
+    objective: Close five accepted Grok review repair tickets and verify post-closure findings
+    work_items: [ecochran76/auracall#440, ecochran76/auracall#441, ecochran76/auracall#442, ecochran76/auracall#443, ecochran76/auracall#444]
+    plan: docs/dev/plans/0456-2026-10-25-grok-review-repair-execution.md
+    plan_ref: refs/heads/feat/grok-review-repairs-20261025
+    branch: feat/grok-review-repairs-20261025
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 69f953d77741694c45ccd8f01ea9e5d6daf389ce
+    remote_ref: refs/remotes/origin/feat/grok-review-repairs-20261025
+    integration: merge
+    dependencies: []
+    overlaps: [grok398]
+    validation_status: five-repairs-closed-one-review-one-tdd-verified
+    validation_ref: docs/dev/notes/2026-10-25-grok-repair-postclosure-review.md
+    integration_receipt: 69f953d77741694c45ccd8f01ea9e5d6daf389ce
+    reconciled_overlaps: [grok398]
+    disposition: Five repair tickets closed on main; original eight native-gated program tickets and parent398 remain open.
+    updated_at: 2026-10-25
+
+  - id: grok-final-review-repairs-0457
+    objective: Close three final-range Grok review repairs and verify one post-closure findings pass
+    work_items: [ecochran76/auracall#451, ecochran76/auracall#452, ecochran76/auracall#453]
+    plan: docs/dev/plans/0457-2026-10-25-grok-final-review-repair-execution.md
+    plan_ref: refs/heads/feat/grok-final-review-repairs-20261025
+    branch: feat/grok-final-review-repairs-20261025
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: e55567f9cb4ebf28e6625180ffb311b7eb97bcd4
+    remote_ref: refs/remotes/origin/feat/grok-final-review-repairs-20261025
+    integration: merge
+    dependencies: []
+    overlaps: [grok398, grok-review-repairs-0456]
+    reconciled_overlaps: [grok398, grok-review-repairs-0456]
+    reconciliation_note: New corrective source repairs preserve both historical repair closures and original eight native gates; no concurrent Grok PR found.
+    validation_status: three-repairs-closed-one-review-one-tdd-no-findings
+    validation_ref: docs/dev/notes/2026-10-25-grok-0457-postclosure-review.md
+    integration_receipt: e55567f9cb4ebf28e6625180ffb311b7eb97bcd4
+    disposition: All three source repairs closed; original eight native-gated program tickets and parent398 remain open.
+    updated_at: 2026-10-25
+
+  - id: grok-native-frontier-0458
+    objective: Close the remaining Grok tickets with qualified native acceptance
+    work_items: [ecochran76/auracall#403, ecochran76/auracall#405, ecochran76/auracall#406, ecochran76/auracall#408, ecochran76/auracall#409, ecochran76/auracall#410, ecochran76/auracall#411, ecochran76/auracall#414]
+    plan: docs/dev/plans/0458-2026-10-25-grok-native-frontier.md
+    plan_ref: refs/heads/feat/grok411-spec-20261028-r2
+    branch: feat/grok411-spec-20261028-r2
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: af1bdb9ad
+    remote_ref: refs/remotes/origin/feat/grok411-spec-20261028-r2
+    integration: merge
+    dependencies: []
+    overlaps: [grok398]
+    reconciled_overlaps: [grok398]
+    reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
+    validation_status: 406-414-closed-409-native-blocked-411-publication-unqualified-review1-findings1
+    updated_at: 2026-10-29
+
+  - id: P464
+    objective: Close independent tab ownership and TTL tickets with attributed shared-browser acceptance
+    work_items: [ecochran76/auracall#490, CochranResearchGroup/agent-browser#490, ecochran76/auracall#491]
+    plan: docs/dev/plans/0464-2026-10-28-independent-tab-ttl.md
+    plan_ref: refs/heads/fix/ttl-ownership-integration
+    branch: fix/ttl-ownership-integration
+    target: main
+    plan_state: CLOSED
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 27c61aa2b173faa48988e103f4a921a8f764b3aa
+    integration: merge
+    dependencies: []
+    overlaps: []
+    validation_status: source-installed-and-three-tickets-qualified-review1-standards0-spec0
+    updated_at: 2026-10-29

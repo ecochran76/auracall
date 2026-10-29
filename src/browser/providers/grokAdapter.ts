@@ -1,8 +1,17 @@
+import { GROK_COMMITTED_REACT_PATH } from './grokCommittedReact.js';
+import { BrowserAutomationError } from "../../oracle/errors.js";
+import { readOptionalGrokWorkspaceFile, materializeGrokWorkspaceFile } from './grokWorkspaceFile.js';
+import { projectGrokAccountReference } from '../grokAccountReference.js';
+import { boundObservedGrokContext } from './grokContext.js';
+import { withCdpCommandAbortSignal } from "../../../packages/browser-service/src/guardedCdp.js";
+import { collectGrokHistoryInventory, buildGrokHistoryPageExpression, buildGrokChatsOpenerExpression, type GrokHistoryPage } from "./grokHistoryInventory.js";
+import { recordGrokHistoryProgress } from "../grokHistoryProgress.js";
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { hasProviderBackendRequestAdmission } from '../../../packages/browser-service/src/service/providerTrafficGovernor.js';
 import CDP from '../cdp.js';
-import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
+import type { Project, Conversation, ConversationContext, FileRef, ConversationArtifact } from './domain.js';
 import type {
   BrowserProvider,
   BrowserProviderListOptions,
@@ -18,7 +27,7 @@ import {
 } from './providerSessionAuthority.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
 import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource, resolveProviderTrafficGovernor } from './mutationAudit.js';
-import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
+import { connectToChromeTarget, openOrReuseChromeTarget, openChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import {
   detectGrokSignedInIdentity,
   extractGrokIdentityFromSerializedScripts,
@@ -33,6 +42,7 @@ import {
 } from '../../services/registry.js';
 import { GROK_MODEL_LABEL_NORMALIZER, normalizeGrokModelLabel } from './grokModelMenu.js';
 import { uploadGrokAttachments } from '../actions/grok.js';
+import { readGrokReferencedFiles, materializeGrokReferencedFile, type GrokReferencedFileObservation } from "./grokReferencedFile.js";
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
 import {
   clickRevealedRowAction,
@@ -78,6 +88,26 @@ const GROK_TIME_SELECTOR = cssClassContains('time');
 const GROK_TIMESTAMP_SELECTOR = cssClassContains('timestamp');
 const GROK_SOURCES_CONTENT_SELECTOR = 'div[id*="content-sources"]';
 const GROK_SOURCES_ROOT_SELECTOR = `${GROK_SOURCES_CONTENT_SELECTOR}, main`;
+const GROK_MOUNTED_PLANE_ROWS = `
+${GROK_COMMITTED_REACT_PATH}
+const planeOwn=(o,k)=>{const d=o&&typeof o==='object'?Object.getOwnPropertyDescriptor(o,k):null;return d&&'value'in d?d.value:undefined;};
+const qualifiedPlaneRow=row=>{
+ if(row.closest('[aria-hidden="true"],[inert],[role="dialog"]'))return false;
+ const key=Object.keys(row).find(k=>k.startsWith('__reactFiber$')),q=key?committedPath(planeOwn(row,key),row,row):null;if(!q)return false;
+ return q.path.some(f=>{const response=planeOwn(planeOwn(f,'memoizedProps'),'response');return 'response-'+planeOwn(response,'responseId')===row.id&&location.pathname==='/c/'+planeOwn(response,'conversationId')&&((planeOwn(response,'sender')==='human'&&String(row.getAttribute('class')).includes('items-end'))||(planeOwn(response,'sender')==='assistant'&&String(row.getAttribute('class')).includes('items-start')));});
+};
+const planeRows=Array.from(document.querySelectorAll('[role="region"] [data-plane-row^="gateway:"] [id^="response-"]')).filter(row=>qualifiedPlaneRow(row)&&row.getBoundingClientRect().width>0&&row.getBoundingClientRect().height>0&&row.querySelector('[class*="response-content-markdown"], div.message-bubble'));
+`;
+// One mounted-card inventory keeps content and chunked file offsets aligned.
+const GROK_CONTEXT_ROW_INVENTORY = `${GROK_MOUNTED_PLANE_ROWS}
+const rows = Array.from(new Set([...document.querySelectorAll('main [id^="response-"]'),...planeRows])).filter((row) => {
+              if(row.closest('[aria-hidden="true"],[inert],[role="dialog"]'))return false;
+              const classes = String(row.getAttribute('class') || '');
+              return (classes.includes('items-end') || classes.includes('items-start')) && row.querySelector('[class*="response-content-markdown"], div.message-bubble');
+            });
+            const fallbackRows = rows.length ? [] : Array.from(document.querySelectorAll('div.message-bubble'));
+            const observedRows = rows.length ? rows : fallbackRows;`;
+
 const GROK_ASSET_ROW_SELECTOR = `div${cssClassContains('group/asset-row')}`;
 const GROK_SOURCES_FILES_ROW_SELECTOR = `div${cssClassContains('group/collapsible-row')}`;
 const _GROK_PROJECT_SOURCES_ATTACH_SELECTOR = `button[aria-label="Attach"]${cssClassContains('ms-[1px]')}`;
@@ -3257,22 +3287,24 @@ export function choosePreferredGrokConversation(
   if (!existing) {
     return candidate;
   }
+  if(existing.projectId && candidate.projectId && existing.projectId !== candidate.projectId)throw new Error('Conflicting Grok conversation project membership.');
+  const preserveEvidence = (preferred:Conversation):Conversation => ({...preferred,projectId:existing.projectId ?? candidate.projectId,metadata:{...existing.metadata,...candidate.metadata}});
   const existingQuality = grokConversationTitleQuality(existing.title, existing.id);
   const candidateQuality = grokConversationTitleQuality(candidate.title, candidate.id);
   if (candidateQuality !== existingQuality) {
-    return candidateQuality > existingQuality ? candidate : existing;
+    return preserveEvidence(candidateQuality > existingQuality ? candidate : existing);
   }
   const existingTimestamp = grokConversationTimestampValue(existing.updatedAt);
   const candidateTimestamp = grokConversationTimestampValue(candidate.updatedAt);
   if (candidateTimestamp !== existingTimestamp) {
-    return candidateTimestamp > existingTimestamp ? candidate : existing;
+    return preserveEvidence(candidateTimestamp > existingTimestamp ? candidate : existing);
   }
   const existingHasUrl = Boolean(existing.url);
   const candidateHasUrl = Boolean(candidate.url);
   if (candidateHasUrl !== existingHasUrl) {
-    return candidateHasUrl ? candidate : existing;
+    return preserveEvidence(candidateHasUrl ? candidate : existing);
   }
-  return candidate;
+  return preserveEvidence(candidate);
 }
 
 export async function ensureGrokTabVisible(
@@ -3325,6 +3357,70 @@ export async function ensureGrokTabVisible(
   );
 }
 
+async function closeGrokClient(client: ChromeClient): Promise<void> {
+  if (resolveProviderTrafficGovernor(client)?.admitBackendRequest) await client.close();
+  else await client.close().catch(() => undefined);
+}
+
+async function readGrokDiscoveryWithAdmission<T>(
+  client: ChromeClient,
+  source: string,
+  read: () => Promise<T>,
+  abortSignal?: AbortSignal,
+): Promise<T> {
+  const governor = resolveProviderTrafficGovernor(client);
+  const action = await governor?.begin({
+    kind: 'provider-read', interactionClass: 'generic', source,
+    targetId: governor.attribution.targetId, abortSignal,
+  });
+  let value: T;
+  try { value = await read(); }
+  catch (error) {
+    await action?.settle({ outcome: 'failed', error: error instanceof Error ? error.message : 'Grok discovery read failed', probeContext: client.Runtime });
+    throw error;
+  }
+  await action?.settle({ outcome: 'succeeded', probeContext: client.Runtime });
+  return value;
+}
+
+async function withGrokWorkspaceConnection<T>(
+ options: BrowserProviderListOptions | undefined,
+ targetId: string | undefined,
+ work: (runtime: ChromeClient['Runtime'], scope: {targetId:string;providerAccountRef:string;providerAccountRefFormat:'legacy-untagged';providerUserId:string|null;client:ChromeClient;governor:NonNullable<ReturnType<typeof resolveProviderTrafficGovernor>>;verifyPrincipal:()=>Promise<boolean>})=>Promise<T>,
+):Promise<T>{
+ if(!targetId)throw new Error('Grok workspace reads require the exact existing browser target.');
+ options?.abortSignal?.throwIfAborted();
+ const connection=await connectToGrokTab({...options,tabTargetId:targetId,allowNavigation:false,providerTrafficRequired:true});
+ let action: Awaited<ReturnType<NonNullable<ReturnType<typeof resolveProviderTrafficGovernor>>['begin']>>|undefined;
+ let failure:unknown;
+ let retainedResult:T|undefined;
+ try{
+  const governor=resolveProviderTrafficGovernor(connection.client);
+  if(!governor||governor.attribution.provider!=='grok'||governor.attribution.targetId!==targetId)throw new Error('Grok workspace read requires exact provider traffic authority.');
+  await governor.checkWarning?.(connection.client.Runtime);
+  action=await governor.begin({kind:'provider-read',interactionClass:'generic',source:'provider:grok:workspace-file-read',targetId,abortSignal:options?.abortSignal});
+  const before=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
+  const providerAccountRef=projectGrokAccountReference(before.actualIdentity, 'legacy-untagged');
+  if(!providerAccountRef)throw new Error('Grok workspace account identity is unqualified.');
+  retainedResult=await work(connection.client.Runtime,{targetId,providerAccountRef,providerAccountRefFormat:'legacy-untagged',providerUserId:typeof before.actualIdentity?.id==='string'?before.actualIdentity.id:null,client:connection.client,governor,verifyPrincipal:async()=>{
+   options?.abortSignal?.throwIfAborted();
+   const after=await assertGrokBrowserAuthPreflight(connection.client.Runtime,options);
+   return projectGrokAccountReference(after.actualIdentity, 'legacy-untagged')===providerAccountRef;
+  }});
+ }catch(error){failure=error;}finally{
+  let cleanupFailure:unknown;
+  try{await action?.settle({outcome:failure?'failed':'succeeded',probeContext:connection.client.Runtime,...(failure?{error:failure instanceof Error?failure.message:'Grok native file read failed'}:{})});}catch(error){cleanupFailure=error;}
+  try{await connection.client.close();}catch(error){cleanupFailure=cleanupFailure?new AggregateError([cleanupFailure,error],'Grok native file cleanup failed'):error;}
+  if(cleanupFailure){
+    const candidate=retainedResult as FileRef|undefined,existing=failure instanceof BrowserAutomationError&&failure.details?.stage==='grok-reference-download'?failure.details:undefined;
+    const retainedFile=candidate?.metadata?.grokReferencedFile?candidate:existing?.retainedFile;
+    failure=retainedFile||existing?new BrowserAutomationError('Grok referenced-file transport cleanup is unknown; preserve retained custody before retry.',{...existing,stage:'grok-reference-download',effectState:'unknown',retrySafe:false,cleanupState:'unknown',...(retainedFile?{retainedFile}:{})},cleanupFailure):cleanupFailure;
+  }
+ }
+ if(failure)throw failure;
+ return retainedResult as T;
+}
+
 export function createGrokAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
@@ -3362,6 +3458,10 @@ export function createGrokAdapter(): Pick<
   | 'getProjectInstructions'
   | 'readConversationContext'
   | 'listConversationFiles'
+  | 'downloadConversationFile'
+  | 'downloadConversationFiles'
+  | 'readActiveConversationArtifacts'
+  | 'materializeConversationArtifact'
   | 'listAccountFiles'
   | 'uploadAccountFiles'
   | 'deleteAccountFile'
@@ -3408,6 +3508,7 @@ export function createGrokAdapter(): Pick<
             },
           ).catch(() => undefined);
         }
+        return await readGrokDiscoveryWithAdmission(client, 'provider:grok:feature-read', async () => {
         if (options?.discoveryAction === 'grok-imagine-video-mode') {
           await waitForGrokImagineModeControls(client.Runtime);
         }
@@ -3420,8 +3521,9 @@ export function createGrokAdapter(): Pick<
         } finally {
           await restoreGrokImaginePrimaryMode(client.Runtime, discoveryAction?.restoreMode ?? null);
         }
+        }, options?.abortSignal);
       } finally {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -3567,7 +3669,7 @@ export function createGrokAdapter(): Pick<
           devtoolsPort: port,
         };
       } finally {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -3607,7 +3709,7 @@ export function createGrokAdapter(): Pick<
           fullQualityActivationContext: input.fullQualityActivationContext ?? null,
         });
       } finally {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -3753,23 +3855,44 @@ export function createGrokAdapter(): Pick<
       }
     },
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
+      let historyCoverage: import('./grokHistoryInventory.js').GrokHistoryCoverage | undefined;
+      const originalProgress=options?.onHistoryInventory;
+      options={...options,historySearch:options?.historySearch?.trim(),onHistoryInventory:async coverage=>{historyCoverage=coverage;await originalProgress?.(coverage);}};
+      const finish=async(items:Conversation[])=>{await assertGrokBrowserAuthPreflight(client.Runtime,options);return items.filter(item=>!options?.historySearch || item.title.toLowerCase().includes(options.historySearch.toLowerCase())).slice(0,options?.includeHistory ? options.historyLimit??2000 : items.length).map(item=>historyCoverage?({...item,metadata:{...item.metadata,grokInventory:historyCoverage}}):item);};
       const resolvedProjectId = projectId?.trim() || undefined;
       const projectUrl = resolvedProjectId ? resolveGrokProjectUrl(resolvedProjectId) : undefined;
-      const connection = projectUrl
-        ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
-        : await connectToGrokTab(options, projectUrl);
+      let historyContinuation: Awaited<ReturnType<typeof import('../grokHistoryContinuation.js').acquireGrokHistoryContinuation>> | undefined;
+      if(options.includeHistory && options.providerSessionAuthorization){
+        const {acquireGrokHistoryContinuation,GrokHistoryCursorRestartRequiredError}=await import('../grokHistoryContinuation.js');
+        try {historyContinuation=await acquireGrokHistoryContinuation(options,{projectId:resolvedProjectId,query:options.historySearch,since:options.historySince});}
+        catch(error){if(error instanceof GrokHistoryCursorRestartRequiredError){await options.onHistoryInventory?.(error.coverage);const profile=options.providerSessionAuthorization.context.auracallRuntimeProfile;if(profile)await recordGrokHistoryProgress(profile,error.coverage);return [];}throw error;}
+        options=historyContinuation.options;
+      }
+      let connection: Awaited<ReturnType<typeof connectToGrokTab>>;
+      try {connection = historyContinuation
+        ? await connectToGrokTab(options, projectUrl)
+        : projectUrl
+          ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
+          : await connectToGrokTab(options, projectUrl);}
+      catch(error){await historyContinuation?.finish(false,false);throw error;}
       const { client, targetId, shouldClose, host, port, usedExisting } = connection;
-      if (projectUrl) {
+      try {
+      await assertGrokBrowserAuthPreflight(client.Runtime,options);
+      if (projectUrl && (!historyContinuation || historyContinuation.fresh)) {
         if (!usedExisting) {
           await navigateToProject(client, projectUrl);
         }
         await ensureProjectPage(client, resolvedProjectId);
         await openConversationList(client, resolvedProjectId);
       }
-      try {
         const openConversations = await listOpenConversations(host, port, resolvedProjectId);
         let rootSidebarConversations: Conversation[] = [];
         if (resolvedProjectId) {
+          if (options?.includeHistory) {
+            // Mounted/open rows do not establish history completeness or belong to
+            // the continuation window. Return only the bounded, attributed inventory.
+            return await finish(await listHistoryConversations(client, resolvedProjectId, options));
+          }
           const projectPageConversations = await listProjectPageConversations(client, resolvedProjectId);
           const merged = new Map<string, Conversation>();
           const mergeConversation = (entry: Conversation) => {
@@ -3778,23 +3901,18 @@ export function createGrokAdapter(): Pick<
           for (const entry of projectPageConversations) {
             mergeConversation(entry);
           }
-          if (projectPageConversations.length === 0 && options?.includeHistory) {
-            for (const entry of await listHistoryConversations(client, resolvedProjectId, options)) {
-              mergeConversation(entry);
-            }
-          }
           for (const entry of openConversations) {
             mergeConversation(entry);
           }
-          return Array.from(merged.values());
+          return await finish(Array.from(merged.values()));
         }
         const includeHistory = Boolean(options?.includeHistory);
         let history: Conversation[] = [];
-        await navigateToProject(client, GROK_HOME_URL);
+        if (!historyContinuation || historyContinuation.fresh) await navigateToProject(client, GROK_HOME_URL);
         await ensureMainSidebarOpen(client, { logPrefix: 'browser-root-conversations' });
-        rootSidebarConversations = await listRootSidebarConversations(client);
+        if (!includeHistory) rootSidebarConversations = await listRootSidebarConversations(client);
         if (includeHistory) {
-          if (options?.configuredUrl?.includes('/project/')) {
+          if (!historyContinuation && options?.configuredUrl?.includes('/project/')) {
             const historyConnection = await connectToGrokTab(
               { ...options, configuredUrl: GROK_HOME_URL },
               GROK_HOME_URL,
@@ -3819,6 +3937,11 @@ export function createGrokAdapter(): Pick<
           } else {
             history = await listHistoryConversations(client, undefined, options);
           }
+          // Only the qualified bounded history window owns its continuation and
+          // change evidence. Mounted/sidebar/open rows may be older, outside the
+          // window, or carry observation-clock estimates; they cannot refill an
+          // empty frontier or enrich a deliberately unqualified updatedAt.
+          return await finish(history);
         }
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
@@ -3965,15 +4088,28 @@ export function createGrokAdapter(): Pick<
           })()`,
           returnByValue: true,
         });
-        const payload = (result?.value ?? { items: [] }) as { items?: unknown[] };
+        const payload = (result?.value ?? { items: [] }) as { items?: unknown[]; error?:unknown };
+        if(payload.error)throw new Error("Grok root inventory DOM extraction failed.");
         const raw = Array.isArray(payload.items) ? payload.items : [];
         if (raw.length === 0) {
            // Debug logging if needed, can be enabled via env
         }
+        const historyIds = new Set(history.map((entry) => entry.id));
         const merged = new Map<string, Conversation>();
         const mergeConversation = (entry: Conversation) => {
-          merged.set(entry.id, choosePreferredGrokConversation(merged.get(entry.id), entry));
+          const existing = merged.get(entry.id);
+          // Keep existing conflict checks and compatible enrichment, but a
+          // supplemental title must not undo a qualified history search match.
+          const preferred = choosePreferredGrokConversation(existing, entry);
+          merged.set(entry.id, historyIds.has(entry.id) && existing && options?.historySearch
+            ? { ...preferred, title: existing.title }
+            : preferred);
         };
+        // The continuation covers this bounded history window. Supplemental
+        // mounted/open rows must never crowd its qualified rows out of finish().
+        for (const entry of history) {
+          mergeConversation(entry);
+        }
         for (const entry of raw) {
           if (!entry || typeof entry !== 'object') continue;
           const record = entry as Record<string, unknown>;
@@ -3991,19 +4127,18 @@ export function createGrokAdapter(): Pick<
             updatedAt: timestamp ? new Date(timestamp).toISOString() : undefined,
           });
         }
-        for (const entry of history) {
-          mergeConversation(entry);
-        }
         for (const entry of rootSidebarConversations) {
           mergeConversation(entry);
         }
         for (const entry of openConversations) {
           mergeConversation(entry);
         }
-        return Array.from(merged.values());
+        return await finish(Array.from(merged.values()));
       } finally {
-        await client.close();
-        if (shouldClose && targetId) {
+        let cleanupConfirmed=false;
+        try {await client.close();cleanupConfirmed=true;}
+        finally {await historyContinuation?.finish(historyCoverage?.state!== 'incomplete' || historyCoverage?.reason==='cursor-restart-required' || historyCoverage?.reason==='incremental-frontier',cleanupConfirmed && historyCoverage?.state!=='failed' && historyCoverage!==undefined);}
+        if (!historyContinuation && shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
       }
@@ -4013,7 +4148,7 @@ export function createGrokAdapter(): Pick<
     ): Promise<import('./types.js').ProviderUserIdentity | null> {
       const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options);
       try {
-        const status = await detectGrokSignedInIdentity(client.Runtime);
+        const status = await readGrokDiscoveryWithAdmission(client, 'provider:grok:identity-read', () => detectGrokSignedInIdentity(client.Runtime), options?.abortSignal);
         let normalized = status.identity;
         if (!normalized && !status.guestAuthCta) {
           const serializedScripts = targetId
@@ -4948,7 +5083,7 @@ export function createGrokAdapter(): Pick<
         void client.close().catch(() => undefined);
       };
       if (abortSignal?.aborted) {
-        await client.close().catch(() => undefined);
+        await closeGrokClient(client);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
@@ -5425,21 +5560,24 @@ export function createGrokAdapter(): Pick<
       projectId?: string,
       options?: BrowserProviderListOptions,
     ): Promise<ConversationContext> {
+      options?.abortSignal?.throwIfAborted();
       const cleanProjectId = typeof projectId === 'string' && projectId.trim().length > 0 ? projectId.trim() : undefined;
       const targetUrl = resolveGrokConversationUrl(conversationId, cleanProjectId);
-      const connection = cleanProjectId
-        ? await connectToGrokProjectTab(options, cleanProjectId, targetUrl)
-        : await connectToGrokTab(options, targetUrl);
+      const connection = await connectToGrokTab(options, targetUrl);
       const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       try {
+        return await readGrokDiscoveryWithAdmission(client, 'provider:grok:conversation-context', async () => {
+        options?.abortSignal?.throwIfAborted();
         const allowNavigation = providerNavigationAllowed(options);
         if (cleanProjectId) {
           const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          options?.abortSignal?.throwIfAborted();
           if (shouldNavigate) {
             await navigateToProject(client, targetUrl);
           }
         } else {
           const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          options?.abortSignal?.throwIfAborted();
           if (shouldNavigate) {
             await navigateToConversation(client, targetUrl);
           }
@@ -5448,6 +5586,10 @@ export function createGrokAdapter(): Pick<
           }
         }
 
+        options?.abortSignal?.throwIfAborted();
+        if (!(await currentGrokUrlMatchesPreference(client, targetUrl))) {
+          throw new Error('Grok conversation route identity mismatch; refusing foreign conversation content.');
+        }
         const ready = await waitForGrokConversationSurface(client.Runtime, {
           timeoutMs: 10_000,
           requireResponse: true,
@@ -5455,11 +5597,12 @@ export function createGrokAdapter(): Pick<
         if (!ready.ok) {
           throw new Error(
             allowNavigation
-              ? 'Conversation content not found'
+              ? 'Grok conversation history unavailable: content not found'
               : `Grok active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
           );
         }
 
+        options?.abortSignal?.throwIfAborted();
         const evalResult = await client.Runtime.evaluate({
           expression: `(async () => {
             const normalize = (value) => String(value || '').replace(/\\r\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();
@@ -5475,7 +5618,14 @@ export function createGrokAdapter(): Pick<
               }
             };
             const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-            const rows = Array.from(document.querySelectorAll('main [id^="response-"]'));
+            const chunk = ${JSON.stringify(options?.accountMirrorContextChunk ?? null)};
+            const start = Math.max(0, Math.floor(chunk?.startMessageIndex ?? 0));
+            const limit = Math.max(1, Math.floor(chunk?.maxMessages ?? 10000));
+            ${GROK_CONTEXT_ROW_INVENTORY}
+            const inventory = observedRows.map((row, index) => row.id || row.closest('[id^="response-"]')?.id || String(index)).join('\\n');
+            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inventory));
+            const observation = { totalMessages: observedRows.length, fingerprint: Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('') };
+            const selectedRows = rows.slice(start, start + limit);
             const messages = [];
             const sources = [];
             const seenSourceKeys = new Set();
@@ -5522,13 +5672,12 @@ export function createGrokAdapter(): Pick<
               }
             };
 
-            for (const row of rows) {
+            for (const row of selectedRows) {
               pushFromRow(row);
             }
 
-            if (messages.length === 0) {
-              const fallbackRows = Array.from(document.querySelectorAll('div.message-bubble'));
-              for (const bubble of fallbackRows) {
+            if (rows.length === 0) {
+              for (const bubble of fallbackRows.slice(start, start + limit)) {
                 const row = bubble.closest('div[class*="items-start"], div[class*="items-end"]');
                 const classText = String(row?.getAttribute('class') || bubble.getAttribute('class') || '');
                 const role = classText.includes('items-end') ? 'user' : classText.includes('items-start') ? 'assistant' : null;
@@ -5616,6 +5765,8 @@ export function createGrokAdapter(): Pick<
               return findAccordionButtons().length > 0;
             };
 
+            if (${options?.accountMirrorInventory === true || options?.accountMirrorContextChunk ? 'true' : 'false'}) return { ok: true, messages, sources, observation };
+
             let openedSidebar = findAccordionButtons().length > 0;
             if (!openedSidebar) {
               const sourceChips = findSourceChips();
@@ -5643,35 +5794,103 @@ export function createGrokAdapter(): Pick<
               await collectAccordionLinks(undefined);
             }
 
-            return { ok: true, messages, sources };
+            return { ok: true, messages, sources, observation };
           })()`,
           returnByValue: true,
           awaitPromise: true,
         });
         const info = evalResult.result?.value as {
           ok?: boolean;
+          observation?: { totalMessages: number; fingerprint: string };
           messages?: Array<{ role: 'user' | 'assistant'; text: string }>;
           sources?: Array<{ url: string; title?: string; domain?: string; messageIndex?: number; sourceGroup?: string }>;
         } | undefined;
         const messages = Array.isArray(info?.messages) ? info.messages : [];
         const sources = Array.isArray(info?.sources) ? info.sources : [];
-        const files = await readVisibleConversationFilesWithClient(client, conversationId);
+        options?.abortSignal?.throwIfAborted();
+        const files = await readVisibleConversationFilesWithClient(client, conversationId, options?.accountMirrorContextChunk, options, targetId);
         if (messages.length === 0) {
-          throw new Error('Conversation messages not found');
+          throw Object.assign(new Error('Grok conversation history unavailable: no observed messages.'), { code: 'grok_history_unavailable' });
         }
-        return {
+        options?.abortSignal?.throwIfAborted();
+        if (!(await currentGrokUrlMatchesPreference(client, targetUrl))) throw new Error('Grok conversation route changed during detail read.');
+        options?.abortSignal?.throwIfAborted();
+        return boundObservedGrokContext({
           provider: 'grok',
           conversationId,
           messages,
           files,
           sources,
-        };
+        }, options?.accountMirrorContextChunk, { ...options?.accountMirrorConversationIdentity, projectId: cleanProjectId }, info?.observation);
+        }, options?.abortSignal);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
       }
+    },
+
+    async readActiveConversationArtifacts(conversationId:string,options?:BrowserProviderListOptions):Promise<ConversationArtifact[]>{
+      return withGrokWorkspaceConnection(options,options?.tabTargetId,async(runtime,scope)=>{
+        const references=await readGrokReferencedFiles(runtime,conversationId,scope.providerUserId);
+        const observed=await readOptionalGrokWorkspaceFile(runtime,conversationId);
+        if(!await scope.verifyPrincipal())throw new Error('Grok native artifact account changed during discovery.');
+        const artifacts:ConversationArtifact[]=references.map(reference=>({id:reference.fileMetadataId,title:reference.fileName,kind:'document' as const,messageId:reference.providerResponseId,metadata:{grokReferencedFile:{...reference,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:scope.providerAccountRefFormat,coverage:{scope:'visible-conversation-references',complete:false}}}}));
+        if(observed)artifacts.push({id:observed.filePath,title:observed.fileName,kind:'generated',metadata:{grokWorkspaceFile:{version:1,...observed,targetId:scope.targetId,providerAccountRef:scope.providerAccountRef,providerAccountRefFormat:'legacy-untagged',identityKind:'native-file-path',coverage:{scope:'selected-workspace-file',complete:false}}}});
+        return artifacts;
+      });
+    },
+    async materializeConversationArtifact(conversationId:string,artifact:ConversationArtifact,destDir:string,_projectId?:string,options?:BrowserProviderListOptions):Promise<FileRef|null>{
+      const reference=artifact.metadata?.grokReferencedFile as (GrokReferencedFileObservation & {targetId?:string;providerAccountRef?:string;providerAccountRefFormat?:string})|undefined;
+      if(reference){
+        if(artifact.metadata?.grokWorkspaceFile)throw Error('Grok artifact has ambiguous native reference/workspace provenance.');
+        if(options?.grokReferenceDownload?.acknowledgeTargetDefaultReset!==true)throw new BrowserAutomationError('Grok reference transfer requires acknowledgeTargetDefaultReset=true.',{stage:'grok-reference-download',effectState:'pre_effect',retrySafe:true});
+        return withGrokWorkspaceConnection(options,options?.tabTargetId??reference.targetId,async(_runtime,scope)=>{
+          if(reference.providerAccountRef!==scope.providerAccountRef||reference.providerAccountRefFormat!==scope.providerAccountRefFormat||reference.targetId!==scope.targetId)throw Error('Grok referenced file belongs to another account or target.');
+          return materializeGrokReferencedFile(scope.client,{conversationId,artifact,destDir,...scope,acknowledgeTargetDefaultReset:true,abortSignal:options?.abortSignal});
+        });
+      }
+      const selected=artifact.metadata?.grokWorkspaceFile as {targetId?:string;providerAccountRef?:string;providerAccountRefFormat?:string}|undefined;
+      if(!selected)throw new Error('Grok artifact lacks a qualified native workspace selection.');
+      return withGrokWorkspaceConnection(options,options?.tabTargetId??selected.targetId,async(runtime,scope)=>{
+        if(selected.providerAccountRef!==scope.providerAccountRef||selected.providerAccountRefFormat!==scope.providerAccountRefFormat)throw new Error('Grok artifact belongs to another provider account.');
+        return materializeGrokWorkspaceFile(runtime,{conversationId,artifact,destDir,...scope});
+      });
+    },
+
+    async downloadConversationFiles(conversationId,items,options){
+      const adapter=createGrokAdapter(),results:import('./types.js').BrowserProviderConversationFileDownloadResult[]=[];let stopped=false;
+      for(const transfer of items){
+        if(stopped){results.push({fileId:transfer.file.id,status:'error',error:'Grok reference transfer was not attempted after an earlier refusal or uncertain transfer.',failureKind:'retrieval_failed',retryable:false});continue;}
+        try{
+          const reference=transfer.file.metadata?.grokReferencedFile as (GrokReferencedFileObservation & {targetId?:string})|undefined;
+          if(transfer.file.provider!=='grok'||transfer.file.source!=='conversation'||reference?.fileMetadataId!==transfer.file.id||transfer.file.metadata?.grokWorkspaceFile)throw Error('Grok conversation file lacks distinct canonical reference provenance.');
+          if(!adapter.materializeConversationArtifact)throw Error('Grok artifact materializer unavailable.');
+          const retained=await adapter.materializeConversationArtifact(conversationId,{id:transfer.file.id,title:transfer.file.name,kind:'document',messageId:reference.providerResponseId,metadata:transfer.file.metadata},path.dirname(transfer.destPath),undefined,options);
+          if(!retained?.localPath)throw Error('Grok native reference transfer produced no local bytes.');
+          Object.assign(transfer.file,retained);
+          await fs.mkdir(path.dirname(transfer.destPath),{recursive:true});
+          if(path.resolve(retained.localPath)!==path.resolve(transfer.destPath))await fs.copyFile(retained.localPath,transfer.destPath);
+          await fs.chmod(transfer.destPath,0o600);Object.assign(transfer.file,retained,{localPath:transfer.destPath});
+          results.push({fileId:transfer.file.id,status:'materialized'});
+        }catch(error){
+          stopped=true;
+          const details=error instanceof BrowserAutomationError?error.details:undefined;
+          if(details?.retainedFile)Object.assign(transfer.file,details.retainedFile);
+          transfer.file.metadata={...transfer.file.metadata,grokReferenceFailure:{effectState:details?.effectState??(transfer.file.checksumSha256?'unknown':'pre_effect'),retrySafe:false,...(details?.captureDir?{captureDir:details.captureDir}:{}),...(details?.downloadCapture?{downloadCapture:details.downloadCapture}:{}),...(details?.cleanupState?{cleanupState:details.cleanupState}:{})}};
+          results.push({fileId:transfer.file.id,status:'error',error:error instanceof Error?error.message:'Grok native reference transfer failed.',failureKind:'retrieval_failed',retryable:false});
+        }
+      }
+      return results;
+    },
+    async downloadConversationFile(conversationId,fileId,destPath,options,file){
+      const adapter=createGrokAdapter();
+      if(!adapter.listConversationFiles||!adapter.downloadConversationFiles)throw Error('Grok file materializer unavailable.');
+      const selected=file??((await adapter.listConversationFiles(conversationId,options)) as FileRef[]).find(candidate=>candidate.id===fileId);
+      if(!selected||selected.id!==fileId)throw Error('Grok exact conversation reference is unqualified.');
+      const result=(await adapter.downloadConversationFiles(conversationId,[{file:selected,destPath}],options))[0];
+      if(result?.status!=='materialized')throw new BrowserAutomationError(result?.status==='error'?result.error:'Grok native reference transfer failed.',{stage:'grok-reference-download',...(selected.metadata?.grokReferenceFailure as Record<string,unknown>??{}),...(selected.checksumSha256?{retainedFile:selected}:{})});
     },
 
     async listConversationFiles(
@@ -5712,7 +5931,7 @@ export function createGrokAdapter(): Pick<
               : `Grok active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
           );
         }
-        return await readVisibleConversationFilesWithClient(client, conversationId);
+        return await readVisibleConversationFilesWithClient(client, conversationId, options?.accountMirrorContextChunk, options, targetId);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -5724,7 +5943,34 @@ export function createGrokAdapter(): Pick<
   };
 }
 
-async function connectToGrokTab(
+/** Attachment supplies target provenance, never provider identity or a browser PID.
+ * A retained proof belongs to its old target/endpoint and cannot authorize this one. */
+function bindGrokProviderSessionConnection<T extends { targetId?: string; host: string; port: number }>(
+  options: BrowserProviderListOptions | undefined,
+  connection: T,
+): T {
+  const authorization = options?.providerSessionAuthorization;
+  if (!authorization || !connection.targetId || authorization.context.providerId !== 'grok') return connection;
+  const previous = authorization.context;
+  const endpointMatches =
+    (!previous.devtoolsHost || previous.devtoolsHost === connection.host) &&
+    (!previous.devtoolsPort || previous.devtoolsPort === connection.port);
+  if (previous.browserTargetId !== connection.targetId ||
+      previous.devtoolsHost !== connection.host || previous.devtoolsPort !== connection.port) {
+    authorization.proof = null;
+  }
+  authorization.context = {
+    ...previous,
+    browserTargetId: connection.targetId,
+    devtoolsHost: connection.host,
+    devtoolsPort: connection.port,
+    // An endpoint change does not establish ownership by the previously observed process.
+    ...(endpointMatches ? {} : { browserProcessId: null }),
+  };
+  return connection;
+}
+
+export async function connectToGrokTab(
   options?: BrowserProviderListOptions,
   urlOverride?: string,
 ): Promise<{
@@ -5735,21 +5981,27 @@ async function connectToGrokTab(
   port: number;
   usedExisting: boolean;
 }> {
+  options?.abortSignal?.throwIfAborted();
   let host = options?.host ?? '127.0.0.1';
   let port = options?.port ?? resolvePortFromEnv();
   if (options?.tabTargetId && port) {
     const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
     await annotateClientMutationContext(client, options, 'provider:grok', options.tabTargetId);
+    if (options?.abortSignal?.aborted) { await closeGrokClient(client); options.abortSignal.throwIfAborted(); }
+    if (hasProviderBackendRequestAdmission(options) && options?.tabUrl === 'about:blank') {
+      try { await navigateAndSettle(client, {url: urlOverride ?? options?.configuredUrl ?? GROK_HOME_URL}); }
+      catch (error) { await client.close(); throw error; }
+    }
     setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
-    return {
+    return bindGrokProviderSessionConnection(options, {
       client,
       targetId: options.tabTargetId,
       shouldClose: false,
       host,
       port,
       usedExisting: true,
-    };
+    });
   }
   const serviceResolver = options?.browserService as
     | (import('../service/browserService.js').BrowserService & {
@@ -5765,7 +6017,7 @@ async function connectToGrokTab(
   if (serviceResolver?.resolveServiceTarget) {
     const target = await serviceResolver.resolveServiceTarget({
       serviceId: 'grok',
-      configuredUrl: preferredUrl,
+      configuredUrl: hasProviderBackendRequestAdmission(options) ? "about:blank" : preferredUrl,
       ensurePort: true,
     });
     host = target.host ?? host;
@@ -5787,7 +6039,11 @@ async function connectToGrokTab(
   }
   const resolvedPort = port;
   const targets = await CDP.List({ host, port: resolvedPort });
-  const candidates = targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
+  // New-operation lifecycles cannot inherit an existing composer's draft,
+  // dialog or attachments merely because its URL matches the root route.
+  const forceNewTarget = !options?.tabTargetId && options?.preserveActiveTab !== true &&
+    (options?.tabLifecycle === 'retain-new' || options?.tabLifecycle === 'dispose-new');
+  const candidates = forceNewTarget ? [] : targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
   const requestedTargetId = resolveGrokTargetId(options?.tabTargetId);
   if (requestedTargetId) {
     const requestedTarget = candidates.find((target) => resolveGrokTargetId(target) === requestedTargetId);
@@ -5798,7 +6054,7 @@ async function connectToGrokTab(
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
     await annotateClientMutationContext(client, options, 'provider:grok', requestedTargetId);
     setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
-    return { client, targetId: requestedTargetId, shouldClose: false, host, port: resolvedPort, usedExisting: true };
+    return bindGrokProviderSessionConnection(options, { client, targetId: requestedTargetId, shouldClose: false, host, port: resolvedPort, usedExisting: true });
   }
   const preferred = selectPreferredGrokTarget(candidates, preferredUrl);
   const serviceResolved = resolvedTargetIdFromService
@@ -5808,10 +6064,11 @@ async function connectToGrokTab(
   let shouldClose = false;
   let usedExisting = Boolean(resolveGrokTargetId(targetInfo));
   const tabPolicy = resolveBrowserTabPolicy(options);
-  if (!targetInfo && preferredUrl) {
+  if (!targetInfo && preferredUrl && !hasProviderBackendRequestAdmission(options)) {
     const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
       host,
-      reusePolicy: 'same-origin',
+      reusePolicy: forceNewTarget ? 'new' : 'same-origin',
+      cleanupExistingTargets: !forceNewTarget,
       matchingTabLimit: tabPolicy.serviceTabLimit,
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
@@ -5831,11 +6088,19 @@ async function connectToGrokTab(
     targetInfo = candidates[0];
     usedExisting = Boolean(resolveGrokTargetId(targetInfo));
   }
+  let createdOwnedTargetId: string | undefined;
+  if (!resolveGrokTargetId(targetInfo) && hasProviderBackendRequestAdmission(options)) {
+    options?.abortSignal?.throwIfAborted();
+    targetInfo = await openChromeTarget(resolvedPort, 'about:blank', host, undefined, {kind:'pre-lease-target-acquisition',operationId:randomUUID(),reason:'Grok owned request bootstrap'});
+    createdOwnedTargetId = resolveGrokTargetId(targetInfo);
+    shouldClose = options?.preserveActiveTab !== true;
+  }
   if (!resolveGrokTargetId(targetInfo)) {
     const fallbackUrl = preferredUrl ?? GROK_HOME_URL;
     const opened = await openOrReuseChromeTarget(resolvedPort, fallbackUrl, {
       host,
-      reusePolicy: 'same-origin',
+      reusePolicy: forceNewTarget ? 'new' : 'same-origin',
+      cleanupExistingTargets: !forceNewTarget,
       matchingTabLimit: tabPolicy.serviceTabLimit,
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
@@ -5856,11 +6121,21 @@ async function connectToGrokTab(
   if (!targetId) {
     throw new Error('No grok.com tab found. Launch a Grok browser session and retry.');
   }
-  const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
-  await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  await annotateClientMutationContext(client, options, 'provider:grok', targetId);
-  setClientSuppressFocus(client, tabPolicy.suppressFocus);
-  return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
+  let client: ChromeClient | undefined;
+  try {
+    client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
+    await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    await annotateClientMutationContext(client, options, 'provider:grok', targetId);
+    if (hasProviderBackendRequestAdmission(options) && targetInfo?.url === 'about:blank') await navigateAndSettle(client, {url: preferredUrl});
+    setClientSuppressFocus(client, tabPolicy.suppressFocus);
+    return bindGrokProviderSessionConnection(options, { client, targetId, shouldClose, host, port: resolvedPort, usedExisting });
+  } catch(error) {
+    const failures: unknown[] = [error];
+    if (createdOwnedTargetId) { try { await CDP.Close({host,port:resolvedPort,id:createdOwnedTargetId}); } catch(cleanup) { failures.push(cleanup); } }
+    try { await client?.close(); } catch(cleanup) { failures.push(cleanup); }
+    if (failures.length > 1) throw new AggregateError(failures, 'Grok bootstrap and cleanup failed.');
+    throw error;
+  }
 }
 
 async function openCreateProjectModalWithClient(client: ChromeClient): Promise<void> {
@@ -6583,15 +6858,44 @@ async function readVisibleAccountFilesWithClient(client: ChromeClient): Promise<
 async function readVisibleConversationFilesWithClient(
   client: ChromeClient,
   conversationId: string,
+  chunk?: BrowserProviderListOptions["accountMirrorContextChunk"],
+  options?: BrowserProviderListOptions,
+  targetId?: string,
 ): Promise<FileRef[]> {
+  const presence=await client.Runtime.evaluate({expression:`(()=>{const marker='grok_referenced_file_presence';if(location.origin!=='https://grok.com'||location.pathname!==${JSON.stringify(`/c/${conversationId}`)})throw Error(marker+'_route_mismatch');return Array.from(document.querySelectorAll('button[aria-label="Open attachment"]')).some(e=>e.getAttribute('aria-label')==='Open attachment'&&e.closest('[id^="response-"]'));})()`,returnByValue:true});
+  if(presence.exceptionDetails||typeof presence.result?.value!=='boolean')throw Error('Grok native referenced-file presence could not be qualified.');
+  if(presence.result.value){
+    const governor=resolveProviderTrafficGovernor(client);
+    if(!targetId||!governor||governor.attribution.provider!=='grok'||governor.attribution.targetId!==targetId)throw Error('Grok referenced-file listing requires exact configured authority.');
+    const before=await assertGrokBrowserAuthPreflight(client.Runtime,options),account=projectGrokAccountReference(before.actualIdentity,'legacy-untagged');
+    if(!account)throw Error('Grok referenced-file account is unqualified.');
+    let messageDomIds:string[]|undefined;
+    if(chunk){
+      const scoped=await client.Runtime.evaluate({expression:`(()=>{const marker='grok_referenced_file_chunk';${GROK_CONTEXT_ROW_INVENTORY}return observedRows.slice(${Math.max(0,Math.floor(chunk.startMessageIndex??0))},${Math.max(0,Math.floor(chunk.startMessageIndex??0))+Math.max(1,Math.floor(chunk.maxMessages??24))}).map(row=>row.id||row.closest('[id^="response-"]')?.id).filter(Boolean);})()`,returnByValue:true});
+      if(scoped.exceptionDetails||!Array.isArray(scoped.result?.value)||scoped.result.value.some((id:unknown)=>typeof id!=='string'))throw Error('Grok referenced-file chunk scope could not be qualified.');
+      messageDomIds=scoped.result.value as string[];
+    }
+    const references=await readGrokReferencedFiles(client.Runtime,conversationId,typeof before.actualIdentity?.id==='string'?before.actualIdentity.id:null,messageDomIds);
+    const after=await assertGrokBrowserAuthPreflight(client.Runtime,options);
+    if(projectGrokAccountReference(after.actualIdentity,'legacy-untagged')!==account)throw Error('Grok referenced-file account changed during listing.');
+    return references.map(reference=>({id:reference.fileMetadataId,name:reference.fileName,provider:'grok' as const,source:'conversation' as const,mimeType:reference.mimeType,metadata:{grokReferencedFile:{...reference,targetId,providerAccountRef:account,providerAccountRefFormat:'legacy-untagged',coverage:{scope:'visible-conversation-references',complete:false}}}}));
+  }
   const result = await client.Runtime.evaluate({
     expression: `(async () => {
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const chunk = ${JSON.stringify(chunk ?? null)};
+      const start = Math.max(0, Math.floor(chunk?.startMessageIndex ?? 0));
+      const end = chunk ? start + Math.max(1, Math.floor(chunk.maxMessages ?? 24)) : undefined;
       const collectRows = () => {
+        if (chunk) {
+          ${GROK_CONTEXT_ROW_INVENTORY}
+          return observedRows.slice(start, end).map((row) => rows.length ? row :
+            row.closest('div[class*="items-start"], div[class*="items-end"]') || row);
+        }
         const primary = Array.from(document.querySelectorAll('main [id^="response-"]'));
-        if (primary.length > 0) return primary;
-        return Array.from(document.querySelectorAll('main div[class*="items-end"]'));
+        if (primary.length > 0) return primary.slice(start, end);
+        return Array.from(document.querySelectorAll('main div[class*="items-end"]')).slice(start, end);
       };
       const collectItems = () => {
         const items = [];
@@ -7507,14 +7811,14 @@ async function connectToGrokProjectTab(
     const client = await CDP({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
     await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', options.tabTargetId);
-    return {
+    return bindGrokProviderSessionConnection(options, {
       client,
       targetId: options.tabTargetId,
       shouldClose: false,
       host,
       port,
       usedExisting: true,
-    };
+    });
   }
   const serviceResolver = options?.browserService as
     | (import('../service/browserService.js').BrowserService & {
@@ -7539,14 +7843,14 @@ async function connectToGrokProjectTab(
       const client = await CDP({ host, port: resolvedPort, target: resolvedTargetId });
       await Promise.all([client.Page.enable(), client.Runtime.enable()]);
       await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', resolvedTargetId);
-      return {
+      return bindGrokProviderSessionConnection(options, {
         client,
         targetId: resolvedTargetId,
         shouldClose: false,
         host,
         port: resolvedPort,
         usedExisting: true,
-      };
+      });
     }
   }
   if ((!port || !host) && options?.browserService) {
@@ -7600,7 +7904,7 @@ async function connectToGrokProjectTab(
   const client = await CDP({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
   await annotateClientMutationContext(client as ChromeClient, options, 'provider:grok', targetId);
-  return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
+  return bindGrokProviderSessionConnection(options, { client, targetId, shouldClose, host, port: resolvedPort, usedExisting });
 }
 
 function resolvePortFromEnv(): number | null {
@@ -7889,7 +8193,8 @@ async function waitForGrokConversationSurface(
     Runtime,
     `(() => {
       const main = document.querySelector('main');
-      if (!main) return false;
+      ${GROK_MOUNTED_PLANE_ROWS}
+      if (!main&&!planeRows.length) return false;
       let isConversation = false;
       try {
         const current = new URL(location.href);
@@ -7900,7 +8205,7 @@ async function waitForGrokConversationSurface(
         isConversation = /\\/c\\//.test(location.pathname) || /(?:\\?|&)chat=/.test(location.search);
       }
       if (!isConversation) return false;
-      if (main.querySelector('[id^="response-"], div.message-bubble, [class*="response-content-markdown"]')) {
+      if (planeRows.length||main?.querySelector('[id^="response-"], div.message-bubble, [class*="response-content-markdown"]')) {
         return true;
       }
       if (${JSON.stringify(requireResponse)}) {
@@ -8864,37 +9169,17 @@ export async function clickProjectSidebarToggle(
   }
 }
 
-export async function clickHistoryMenuItem(
-  client: ChromeClient,
-  options?: { logPrefix?: string },
-): Promise<boolean> {
-  const direct = await pressButton(client.Runtime, {
-    selector: '[aria-label="History"], [aria-label*="History" i]',
-    timeoutMs: 3000,
-  });
-  if (direct.ok) {
-    return true;
-  }
-  const result = await pressButton(client.Runtime, {
-    match: { includeAny: ['history'] },
-    timeoutMs: 3000,
-  });
-  if (result.ok) {
-    return true;
-  }
-  await ensureMainSidebarOpen(client, { logPrefix: options?.logPrefix ?? 'browser-history-item' });
-  const retryDirect = await pressButton(client.Runtime, {
-    selector: '[aria-label="History"], [aria-label*="History" i]',
-    timeoutMs: 3000,
-  });
-  if (retryDirect.ok) {
-    return true;
-  }
-  const retry = await pressButton(client.Runtime, {
-    match: { includeAny: ['history'] },
-    timeoutMs: 3000,
-  });
-  return Boolean(retry.ok);
+export async function clickHistoryMenuItem(client:ChromeClient,options?:{logPrefix?:string}):Promise<boolean> {
+ const click=()=>readGrokDiscoveryWithAdmission(client,'provider:grok:open-chats',async()=>{
+  const response=await client.Runtime.evaluate({expression:buildGrokChatsOpenerExpression(),returnByValue:true});
+  if(response.exceptionDetails)throw new Error('Grok Chats opener DOM evaluation failed.');
+  const result=response.result?.value as {ok?:boolean;reason?:string}|undefined;
+  if(result?.reason==='ambiguous-chats-opener')throw new Error('Grok Chats opener is ambiguous.');
+  return result?.ok===true;
+ });
+ if(await click())return true;
+ await ensureMainSidebarOpen(client,{logPrefix:options?.logPrefix??'browser-chats-opener'});
+ return click();
 }
 
 async function tagGrokConversationSidebarRow(
@@ -9189,27 +9474,8 @@ async function deleteConversationFromSidebarList(
   await waitForGrokConversationSidebarGone(client.Runtime, conversationId);
 }
 
-export async function clickHistorySeeAll(
-  client: ChromeClient,
-  options?: { logPrefix?: string },
-): Promise<void> {
-  const dialogSelectors = ['div[role="dialog"][data-state="open"]', '[role="dialog"][aria-modal="true"]', 'dialog[open]'];
-  const first = await pressButton(client.Runtime, {
-    match: { exact: ['see all', 'show all'] },
-    rootSelectors: dialogSelectors,
-    timeoutMs: 3000,
-  });
-  if (first.ok) {
-    return;
-  }
-  await clickMainSidebarToggle(client, { logPrefix: options?.logPrefix ?? 'browser-history-see-all' });
-  const retry = await pressButton(client.Runtime, {
-    match: { exact: ['see all', 'show all'] },
-    timeoutMs: 3000,
-  });
-  if (!retry.ok) {
-    throw new Error(retry.reason || first.reason || 'History see-all not found');
-  }
+export async function clickHistorySeeAll(client:ChromeClient,_options?:{logPrefix?:string}):Promise<void> {
+ await pressButton(client.Runtime,{match:{exact:['see all','show all']},rootSelectors:['[role="dialog"][data-state="open"]','[role="dialog"][aria-modal="true"]','dialog[open]'],timeoutMs:1000});
 }
 
 export async function clickChatArea(
@@ -10009,263 +10275,53 @@ async function deleteConversationInHistoryDialog(
   }
 }
 
-async function listHistoryConversations(
-  client: ChromeClient,
-  projectId: string | undefined,
-  options?: BrowserProviderListOptions,
+export async function listHistoryConversations(
+ client: ChromeClient,
+ projectId: string | undefined,
+ options?: BrowserProviderListOptions,
 ): Promise<Conversation[]> {
-  let opened = await openHistoryDialog(client);
-  if (!opened) {
-    const fallbackUrl = options?.configuredUrl?.includes('/project/') ? GROK_HOME_URL : undefined;
-    if (fallbackUrl) {
-      await navigateToProject(client, fallbackUrl);
-    }
-    opened = await openHistoryDialog(client);
+ let lastCoverage: import('./grokHistoryInventory.js').GrokHistoryCoverage | undefined;
+ let published = false;
+ const publish = async (coverage: import('./grokHistoryInventory.js').GrokHistoryCoverage) => {
+  published = true;
+  lastCoverage = coverage;
+  const profile=resolveProviderTrafficGovernor(client)?.attribution.runtimeProfileId;
+  if(profile)await recordGrokHistoryProgress(profile,coverage);
+  await options?.onHistoryInventory?.(coverage);
+ };
+ try {
+  const retainedDialogOpen=options?.historyRetainDialog && !options.historyFreshDialog ? await isHistoryDialogOpen(client) : false;
+  if (!(await openHistoryDialog(client))) throw new Error('Grok Chats dialog did not open.');
+  if (!retainedDialogOpen) await expandHistoryDialog(client);
+  if(options?.historySearch && !retainedDialogOpen) {
+   await readGrokDiscoveryWithAdmission(client,'provider:grok:history-search',async()=>{
+    const response=await client.Runtime.evaluate({expression:`(() => {const dialog=document.querySelector('[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]'); const inputs=dialog?Array.from(dialog.querySelectorAll('input[role="combobox"], input[placeholder*="Search" i]')).filter(node=>node.getBoundingClientRect().width>0):[];if(inputs.length!==1)return false;const input=inputs[0];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(options.historySearch)});input.dispatchEvent(new Event('input',{bubbles:true}));return true;})()`,returnByValue:true});
+    if(response.result?.value!==true)throw new Error('Grok Chats search composer is missing or ambiguous.');
+   },options.abortSignal);
   }
-  try {
-    if (!opened) return [];
-    await expandHistoryDialog(client);
-    const maxItems = Math.max(1, options?.historyLimit ?? 2000);
-    const cutoffMs = options?.historySince ? Date.parse(options.historySince) : NaN;
-    const entries = new Map<string, { id: string; title: string; url?: string; timestamp?: number | null }>();
-    let idleCount = 0;
-    let lastCount = 0;
-    let lastScrollTop = -1;
-    while (entries.size < maxItems && idleCount < 10) {
-      const expression = `(() => {
-          const projectId = ${JSON.stringify(projectId ?? null)};
-          const dialog =
-            document.querySelector('[role="dialog"]') ||
-            document.querySelector('dialog') ||
-            document.querySelector('[aria-modal="true"]');
-          if (!dialog) return { items: [], canScroll: false, atBottom: true, scrollTop: 0, scrollHeight: 0, oldest: null };
-          const now = Date.now();
-          const parseRelative = (value) => {
-            const text = String(value || '').toLowerCase().trim();
-            if (!text) return null;
-            if (text === 'just now' || text === 'moments ago') return now;
-            if (text === 'today') return now;
-            if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
-            const cleaned = text.replace(/[.,]/g, '');
-            const shortMatch = cleaned.match(/^(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)$/);
-            const agoMatch = cleaned.match(/(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)\\s*ago/);
-            const match = agoMatch || shortMatch;
-            if (match) {
-              const amount = Number.parseInt(match[1], 10);
-              if (!Number.isFinite(amount)) return null;
-              const unit = match[2];
-              const isMonth = unit.startsWith('mo');
-              const isMinute = unit.startsWith('m') && !isMonth;
-              const isHour = unit.startsWith('h');
-              const isDay = unit.startsWith('d');
-              const isWeek = unit.startsWith('w');
-              const isYear = unit.startsWith('y');
-              const ms =
-                isMinute
-                  ? amount * 60 * 1000
-                  : isHour
-                    ? amount * 60 * 60 * 1000
-                    : isDay
-                      ? amount * 24 * 60 * 60 * 1000
-                      : isWeek
-                        ? amount * 7 * 24 * 60 * 60 * 1000
-                        : isMonth
-                          ? amount * 30 * 24 * 60 * 60 * 1000
-                          : isYear
-                            ? amount * 365 * 24 * 60 * 60 * 1000
-                            : null;
-              return ms === null ? null : now - ms;
-            }
-            const parsed = Date.parse(text);
-            return Number.isFinite(parsed) ? parsed : null;
-          };
-            const readTimestamp = (node) => {
-              const timeEl = node.querySelector?.('time');
-              const candidates = [
-                timeEl?.getAttribute?.('datetime'),
-                timeEl?.getAttribute?.('title'),
-                timeEl?.getAttribute?.('aria-label'),
-                timeEl?.textContent,
-                node.getAttribute?.('title'),
-                node.getAttribute?.('aria-label'),
-              ];
-              for (const candidate of candidates) {
-                const parsed = parseRelative(candidate);
-                if (parsed !== null) return { ts: parsed, label: String(candidate || '').trim() };
-                const absolute = Date.parse(String(candidate || ''));
-                if (Number.isFinite(absolute)) return { ts: absolute, label: String(candidate || '').trim() };
-              }
-              const timeNode =
-                node.querySelector?.('.z-20') ||
-                node.querySelector?.(${JSON.stringify(GROK_TIME_SELECTOR)}) ||
-                node.querySelector?.(${JSON.stringify(GROK_TIMESTAMP_SELECTOR)});
-              if (timeNode) {
-                const text = (timeNode.textContent || '').trim();
-                const parsed = parseRelative(text);
-                if (parsed !== null) return { ts: parsed, label: text };
-                const absolute = Date.parse(text);
-                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
-              }
-              const descendants = Array.from(node.querySelectorAll?.('*') ?? []).reverse();
-              for (const el of descendants) {
-                const text = (el.textContent || '').trim();
-                if (!text || text.length > 40) continue;
-                const parsed = parseRelative(text);
-                if (parsed !== null) return { ts: parsed, label: text };
-                const absolute = Date.parse(text);
-                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
-              }
-              return { ts: null, label: '' };
-            };
-            const extractTitle = (node, timeLabel) => {
-              const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-                acceptNode: (textNode) => {
-                  const parent = textNode.parentElement;
-                  if (!parent) return NodeFilter.FILTER_REJECT;
-                  if (parent.closest('time')) return NodeFilter.FILTER_REJECT;
-                  return NodeFilter.FILTER_ACCEPT;
-                },
-              });
-              let text = '';
-              while (walker.nextNode()) {
-                text += ' ' + (walker.currentNode.nodeValue || '');
-              }
-              let title = text.replace(/\\s+/g, ' ').trim();
-              if (timeLabel) {
-                const escaped = timeLabel.replace(/[.*+?^$()|[\\]\\\\]/g, '\\$&');
-                title = title.replace(new RegExp(escaped, 'i'), '').trim();
-              }
-              const timeCleanRegex = /(^|\\s)\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago(\\s|$)/gi;
-              const dayCleanRegex = /(^|\\s)(yesterday|today)(\\s|$)/gi;
-              const dateCleanRegex = /(^|\\s)(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\s+[0-9]{1,2}(\\s|$)/gi;
-              title = title
-                  .replace(timeCleanRegex, '')
-                  .replace(dayCleanRegex, '')
-                  .replace(dateCleanRegex, '')
-                  .replace(/\\s+/g, ' ')
-                  .trim();
-              return title;
-            };
-            const items = Array.from(
-            dialog.querySelectorAll('[role="option"], a[href*="/c/"]')
-          );
-          const conversations = [];
-          let oldest = null;
-          for (const node of items) {
-            const href =
-              node.getAttribute('href') ||
-              node.getAttribute('data-href') ||
-              node.getAttribute('data-url') ||
-              node.dataset?.href ||
-              node.dataset?.url ||
-              '';
-            const dataValue = node.getAttribute('data-value') || node.dataset?.value || '';
-            
-            let url = '';
-            let chatId = '';
-            
-            if (dataValue.startsWith('conversation:')) {
-              chatId = dataValue.split(':')[1];
-              url = ${JSON.stringify(resolveGrokConversationUrl(''))} + chatId;
-            } else if (href) {
-              try {
-                url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-                const parsed = new URL(url);
-                chatId = parsed.searchParams.get('chat') || '';
-                if (!chatId) {
-                  const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
-                  chatId = match?.[1] || '';
-                }
-              } catch {
-                // ignore URL parse
-              }
-            }
-            
-            if (!chatId) continue;
-            if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
-              continue;
-            }
-            const row = node.closest('div,li') || node;
-            const { ts, label } = readTimestamp(row);
-            if (typeof ts === 'number') {
-              oldest = oldest === null ? ts : Math.min(oldest, ts);
-            }
-            const text = extractTitle(row, label) || (row.textContent || node.textContent || '').trim();
-            conversations.push({ id: chatId, title: text || chatId, url, timestamp: ts ?? null });
-          }
-          const scrollables = Array.from(dialog.querySelectorAll('*')).filter((el) => {
-            const element = el;
-            return element.scrollHeight > element.clientHeight + 24;
-          });
-          const scrollable =
-            scrollables.sort((a, b) => b.scrollHeight - a.scrollHeight)[0] || dialog;
-          const canScroll = scrollable.scrollHeight > scrollable.clientHeight + 24;
-          const scrollTop = scrollable.scrollTop;
-          const atBottom = scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 5;
-          if (canScroll && !atBottom) {
-            scrollable.scrollTop = scrollable.scrollHeight;
-          }
-          return {
-            items: conversations,
-            canScroll,
-            atBottom,
-            scrollTop,
-            scrollHeight: scrollable.scrollHeight,
-            oldest,
-          };
-        })()`;
-      const { result } = await client.Runtime.evaluate({
-        expression,
-        returnByValue: true,
-      });
-      const payload = (result?.value || {}) as {
-        items?: Array<{ id: string; title: string; url?: string; timestamp?: number | null }>;
-        canScroll?: boolean;
-        atBottom?: boolean;
-        scrollTop?: number;
-        scrollHeight?: number;
-        oldest?: number | null;
-        error?: string;
-      };
-      if (process.env.AURACALL_DEBUG_GROK === '1') {
-         if (!payload.items) console.log('[grok-history] RAW:', JSON.stringify(result));
-      }
-      for (const entry of payload.items ?? []) {
-        if (!entries.has(entry.id)) {
-          entries.set(entry.id, entry);
-        }
-      }
-      const oldestTimestamp = payload.oldest;
-      if (Number.isFinite(cutoffMs) && typeof oldestTimestamp === 'number' && oldestTimestamp <= cutoffMs) {
-        break;
-      }
-      if (!payload.canScroll || payload.atBottom) {
-        break;
-      }
-      if (entries.size === lastCount && payload.scrollTop === lastScrollTop) {
-        idleCount += 1;
-      } else {
-        idleCount = 0;
-      }
-      lastCount = entries.size;
-      if (typeof payload.scrollTop === 'number') {
-        lastScrollTop = payload.scrollTop;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-    return Array.from(entries.values())
-      .slice(0, maxItems)
-      .map((entry) => ({
-        id: entry.id,
-        title: entry.title,
-        provider: 'grok',
-        projectId,
-        url: entry.url,
-        updatedAt: typeof entry.timestamp === 'number' ? new Date(entry.timestamp).toISOString() : undefined,
-      }));
-  } finally {
-    await closeHistoryDialog(client);
+  if(options?.historyStartAtHead && !options.historyCursor) {
+   await readGrokDiscoveryWithAdmission(client,'provider:grok:history-head-reset',async()=>{
+    const {buildGrokHistoryHeadResetExpression}=await import('./grokHistoryInventory.js');
+    options.abortSignal?.throwIfAborted();
+    const response=await withCdpCommandAbortSignal(options.abortSignal,()=>client.Runtime.evaluate({expression:buildGrokHistoryHeadResetExpression(),returnByValue:true,awaitPromise:true}));
+    if(response.exceptionDetails || response.result?.value!==true)throw new Error('Grok history head reset was not confirmed.');
+   },options.abortSignal);
   }
+  const inventory=await collectGrokHistoryInventory({projectId,options,governor:resolveProviderTrafficGovernor(client),probeContext:client.Runtime,onProgress:publish,readPage:async(signal)=>{
+const expression = buildGrokHistoryPageExpression(projectId,resolveGrokConversationUrl(''));
+   const response=await withCdpCommandAbortSignal(signal,()=>client.Runtime.evaluate({expression,returnByValue:true}));
+   if(response.exceptionDetails)throw new Error('Grok history DOM extraction failed.');
+   const page=response.result?.value as GrokHistoryPage|undefined;
+   if(!page||!Array.isArray(page.items))throw new Error('Grok history DOM returned no inventory.');
+   return page;
+  }});
+  return inventory.items;
+ } catch(error) {
+  if(!published)await publish({state:'failed',source:'visible-chats',scope:projectId?'project':'root',reason:options?.abortSignal?.aborted?'cancelled':'history-failed',loadedCount:0,pages:0,nextCursor:null,observedAt:new Date().toISOString()});
+  throw error;
+ } finally {
+  if(!options?.historyRetainDialog || lastCoverage?.state!=='incomplete' || lastCoverage?.reason==='cursor-restart-required' || lastCoverage?.reason==='incremental-frontier')await closeHistoryDialog(client);
+ }
 }
 
 async function readGrokSerializedIdentityScriptsForTarget(
@@ -10280,7 +10336,7 @@ async function readGrokSerializedIdentityScriptsForTarget(
     await annotateClientMutationContext(client, options, 'provider:grok', targetId);
     return await readGrokSerializedIdentityScriptsWithRetry(client.Runtime);
   } finally {
-    await client.close().catch(() => undefined);
+    await closeGrokClient(client);
   }
 }
 
@@ -10413,12 +10469,7 @@ async function ensureSidebarOpen(client: ChromeClient): Promise<void> {
 }
 
 async function expandHistoryDialog(client: ChromeClient): Promise<void> {
-  await clickHistorySeeAll(client, { logPrefix: 'browser-history-expand' });
-  await waitForSelector(
-    client.Runtime,
-    'div[role="dialog"] a[href*="/c/"], div[role="dialog"] [data-value^="conversation:"]',
-    5000,
-  );
+  await clickHistorySeeAll(client, {logPrefix:'browser-history-expand'});
 }
 
 export async function isHistoryDialogOpen(client: ChromeClient): Promise<boolean> {
@@ -10427,8 +10478,7 @@ export async function isHistoryDialogOpen(client: ChromeClient): Promise<boolean
       const dialog = document.querySelector('div[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]');
       if (!dialog) return false;
       const text = (dialog.textContent || '').toLowerCase();
-      if (text.includes('show all')) return true;
-      if (text.includes('history')) return true;
+      if (/\\b(chats|history)\\b/.test(text) && dialog.querySelector('input[role="combobox"], [role="tab"]')) return true;
       const hasConversationLink = Boolean(dialog.querySelector('a[href*="/c/"], [data-value^="conversation:"]'));
       return hasConversationLink;
     })()`,
@@ -10472,7 +10522,7 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
 
   // Try opening the main sidebar/menu
   await clickMainSidebarToggle(client, { logPrefix: 'browser-history-open' });
-  await waitForSelector(client.Runtime, '[aria-label="History"]', 3000);
+  await waitForSelector(client.Runtime, '[aria-label="Chats"], [aria-label="History"]', 3000);
 
   if (await findAndClickHistory()) {
     const opened = await waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
@@ -10830,11 +10880,12 @@ async function listOpenConversations(
   const entries: Conversation[] = [];
   for (const target of targets) {
     const url = target.url ?? '';
-    if (!url.includes('grok.com')) continue;
+    let parsed:URL;try{parsed=new URL(url);if(parsed.origin!=='https://grok.com')continue;}catch{continue;}
+    const actualProjectId=parsed.pathname.match(/\/project\/([^/?#]+)/)?.[1];
     const chatId = extractChatIdFromUrl(url) ?? '';
     if (!chatId) continue;
     if (projectId) {
-      if (!url.includes(`/project/${projectId}`)) {
+      if (actualProjectId !== projectId) {
         continue;
       }
     }
@@ -10842,7 +10893,7 @@ async function listOpenConversations(
       id: chatId,
       title: target.title ?? chatId,
       provider: 'grok',
-      projectId,
+      projectId:actualProjectId,
       url,
     });
   }

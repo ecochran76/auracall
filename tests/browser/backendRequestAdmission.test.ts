@@ -1,3 +1,4 @@
+import { BrowserPerformanceDiagnostics, withBrowserPerformanceDiagnostics } from "../../src/browser/browserPerformanceDiagnostics.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -119,7 +120,11 @@ vi.mock("chrome-remote-interface", () => ({
 					for (let index = 0; index < fixture.page.bootstrapRequests; index++)
 						await state.handler({
 							requestId: `bootstrap-${index}`,
-							request: { url: "https://chatgpt.com/backend-api/conversations" },
+							request: {
+								url: fixture.page.url.startsWith("https://grok.com")
+									? "https://grok.com/rest/products"
+									: "https://chatgpt.com/backend-api/conversations",
+							},
 						});
 					return { frameId: "fixture-frame" };
 				}
@@ -127,6 +132,13 @@ vi.mock("chrome-remote-interface", () => ({
 					const expression = parameters.expression ?? "";
 					let value: unknown = [];
 					if (expression === "location.href") value = fixture.page.url;
+					else if (expression.includes("const identity = { id: null"))
+						value = {
+							email: "operator@example.test",
+							name: "Fixture",
+							source: "app",
+							guestAuthCta: false,
+						};
 					else if (expression.includes("/api/auth/session")) {
 						fixture.page.beforeIdentity?.();
 						value = { user: { id: "fixture-user", email: "operator@example.test" } };
@@ -291,6 +303,7 @@ test.each([
 	"active-action",
 	"mixed-failure",
 ])("owned backend denial releases only known custody; mode=%s", async (mode) => {
+	const diagnostic = new BrowserPerformanceDiagnostics();
 	const pendingAction = mode === "active-action";
 	const mixedFailure = mode === "mixed-failure";
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-request-admission-"));
@@ -326,12 +339,12 @@ test.each([
 				mutationAudit: async () => undefined,
 				baseOptions: {},
 			});
-			await annotateClientMutationContext(
+			await withBrowserPerformanceDiagnostics(diagnostic, () => annotateClientMutationContext(
 				client,
 				{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
 				"provider:chatgpt",
 				`target-${index}`,
-			);
+			));
 		}
 		expect(fixture.clients[0].handler).toBeTypeOf("function");
 		const firstHandler = fixture.clients[0].handler;
@@ -417,6 +430,11 @@ test.each([
 				? { state: "idle", effectState: "outcome-unknown" }
 				: { state: "released", effectState: "none" },
 		);
+    expect(diagnostic.finish()).toMatchObject({
+      observedConnections: 2,
+      backendRequests: { total: mixedFailure ? 3 : 2 },
+      admission: { attempted: mixedFailure ? 3 : 2, admitted: mixedFailure ? 2 : 1, rejected: 1, pending: 0 },
+    });
 		for (let index = 0; index < 2; index++) {
 			expect(fixture.clients[index].handler).toBeUndefined();
 			const gate = new DesktopControlGate(`fixture-${45130 + index}`);
@@ -1696,6 +1714,8 @@ test.each([
 });
 
 test("owned native-style backend burst drains before transport close", async () => {
+	let diagnosticNow = 0;
+  const diagnostic = new BrowserPerformanceDiagnostics(() => diagnosticNow);
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-request-burst-"));
 	setAuracallHomeDirOverrideForTest(home);
 	fixture.clients.length = 0;
@@ -1728,24 +1748,34 @@ test("owned native-style backend burst drains before transport close", async () 
 			mutationAudit: async () => undefined,
 			baseOptions: {},
 		});
-		await annotateClientMutationContext(
-			client,
+		const observedClient = client;
+		await withBrowserPerformanceDiagnostics(diagnostic, () => annotateClientMutationContext(
+			observedClient,
 			{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
 			"provider:chatgpt",
 			"burst-target",
-		);
+		));
 		const state = fixture.clients[0];
 		if (!state.handler) throw new Error("Missing interceptor");
 		const requests = Array.from({ length: 13 }, (_, id) =>
 			state.handler?.({
 				requestId: `burst-${id}`,
+        networkId: `network-${id}`,
 				request: { url: "https://chatgpt.com/backend-api/conversations" },
 			}),
 		);
 		await Promise.all(requests);
+    diagnosticNow = 10;
+    for (let id = 0; id < 12; id++) await state.responseHandler?.({ requestId: `network-${id}`, response: { url: "https://chatgpt.com/backend-api/conversations", status: 200 } });
+    state.loadingFailedHandler?.({ requestId: "network-12", canceled: false });
 		await client.close();
 		client = undefined;
 		expect(state.requests).toHaveLength(13);
+    expect(diagnostic.finish()).toMatchObject({
+      observedConnections: 1,
+      backendRequests: { total: 13, responses: 12, failed: 1, unresolved: 0, responseMs: { total: 120, max: 10 }, routes: { installed: 0, linked: 0, other: 13 } },
+      admission: { attempted: 13, admitted: 13, rejected: 0, pending: 0 },
+    });
 		const human = await gate.takeControl("human");
 		await gate.releaseControl(human.token, "human");
 	} finally {
@@ -2228,6 +2258,8 @@ test.each([
 	"document-before-wire",
 	"document-after-wire",
 	"foreign-document",
+	"after-wire-success",
+	"after-wire-timeout",
 ])("native request cancellation keeps exact dispatch certainty; phase=%s", async (phase) => {
 	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-native-cancel-"));
 	setAuracallHomeDirOverrideForTest(home);
@@ -2259,7 +2291,9 @@ test.each([
 				if (
 					command === "Fetch.continueRequest" &&
 					phase !== "after-wire" &&
-					phase !== "document-after-wire"
+					phase !== "document-after-wire" &&
+					phase !== "after-wire-success" &&
+					phase !== "after-wire-timeout"
 				)
 					cancelNative();
 				return gate.withAutomation("generation", effect, options);
@@ -2305,7 +2339,9 @@ test.each([
 		const afterWire = phase === "after-wire" || phase === "document-after-wire";
 		state.failContinuation = beforeWire || afterWire;
 		state.continuationError = "Invalid InterceptionId.";
-		if (afterWire) state.onContinueSent = cancelNative;
+		if (afterWire || phase === "after-wire-success" || phase === "after-wire-timeout")
+			state.onContinueSent = cancelNative;
+		if (phase === "after-wire-timeout") state.beforeContinue = () => new Promise(() => undefined);
 		if (!state.handler) throw new Error("Missing interceptor");
 		await state.handler({
 			requestId: "interception-1",
@@ -2313,7 +2349,7 @@ test.each([
 			frameId: "frame-1",
 			request: { url: "https://chatgpt.com/backend-api/conversations" },
 		});
-		if (afterWire) await expect(client.close()).rejects.toThrow();
+		if (afterWire || phase === "after-wire-timeout") await expect(client.close()).rejects.toThrow();
 		else await expect(client.close()).resolves.toBeUndefined();
 		expect(state.requests).toEqual(beforeWire ? [] : ["interception-1"]);
 		expect(state.loadingFailedHandler).toBeUndefined();
@@ -2324,10 +2360,173 @@ test.each([
 		const rows = (await ledger.list()).filter((row) => row.interactionClass === "backend-request");
 		expect(rows).toHaveLength(1);
 		expect(rows[0].effectState).toBe(
-			beforeWire ? "none" : afterWire ? "outcome-unknown" : "settled",
+			beforeWire
+				? "none"
+				: afterWire || phase === "after-wire-timeout"
+					? "outcome-unknown"
+					: "settled",
 		);
 	} finally {
 		await client?.close().catch(() => undefined);
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
+test.each([
+	"budget",
+	"warning",
+	"foreign-warning",
+	"uncertain",
+	"cancelled",
+])("Grok owned requests share account capacity and preserve %s", async (mode) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-grok-request-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	setCdpCommandAdmissionResolver(async ({ port }) => {
+		const gate = new DesktopControlGate(`grok-${port}`);
+		return {
+			run: (_command, effect) => gate.withAutomation("generation", effect),
+			hold: async () => {
+				const held = await gate.holdAutomation("generation");
+				return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+			},
+		};
+	});
+	const clients: Array<Awaited<ReturnType<typeof CDP>>> = [];
+	const cancellation = new AbortController();
+	try {
+		for (let index = 0; index < 2; index++) {
+			const client = await CDP({ host: "127.0.0.1", port: 45300 + index });
+			clients.push(client);
+			const factory = createConfiguredProviderTrafficAuthorityFactory({
+				userConfig: {
+					auracallProfile: `grok-${index}`,
+					services: {
+						grok: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 1 },
+					},
+				} as never,
+				provider: "grok",
+				managedBrowserProfile: `/fixture/grok-${index}`,
+				mutationAudit: async () => undefined,
+				baseOptions: { abortSignal: index === 1 ? cancellation.signal : undefined },
+			});
+			await annotateClientMutationContext(
+				client,
+				{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
+				"provider:grok",
+				`grok-target-${index}`,
+			);
+		}
+		const first = fixture.clients[0],
+			second = fixture.clients[1];
+		if (!first.handler || !second.handler) throw new Error("Missing Grok request admission");
+		const event = { requestId: "owned-1", request: { url: "https://grok.com/rest/products" } };
+		if (mode === "uncertain") first.failContinuation = true;
+		await Promise.all([first.handler(event), first.handler(event)]);
+		if (mode === "warning" || mode === "foreign-warning")
+			await second.responseHandler?.({
+				response: {
+					url:
+						mode === "warning"
+							? "https://grok.com/rest/products"
+							: "https://example.test/rest/products",
+					status: 429,
+				},
+			});
+		if (mode === "cancelled") cancellation.abort();
+		await second.handler({
+			requestId: "owned-2",
+			request: { url: "https://grok.com/rest/products" },
+		});
+		await first.handler({
+			requestId: "foreign",
+			request: { url: "https://example.test/rest/products" },
+		});
+		expect(first.requests).toEqual(["owned-1", "foreign"]);
+		expect(second.requests).toEqual([]);
+		expect(second.failures).toEqual(["owned-2"]);
+		expect(first.requests.filter((id) => id === "owned-1")).toHaveLength(1);
+		const runtime = createBrowserTabConcurrencyRuntime({
+			auracallProfile: "grok-0",
+			services: {
+				grok: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 1 },
+			},
+		} as never);
+		const rows = await runtime.ledger?.list();
+		expect(rows?.filter((row) => row.interactionClass === "backend-request")).toHaveLength(1);
+		if (mode === "uncertain") expect(rows?.[0].effectState).toBe("outcome-unknown");
+		const warnings = await runtime.ledger?.listActiveProviderWarnings({
+			now: new Date().toISOString(),
+		});
+		expect(warnings?.length).toBe(mode === "warning" ? 1 : 0);
+		expect((await runtime.readStatus()).providerControls?.grok).toMatchObject({
+			usedBackendRequestsLastMinute: 1,
+			remainingBackendRequests: 0,
+			maxBackendRequestsPerMinute: 1,
+			usedOperationsLastMinute: 0,
+		});
+	} finally {
+		await Promise.all(clients.map((client) => client.close().catch(() => undefined)));
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});
+
+test.each([true,false])("public Grok identity bootstrap owns request admission before first provider navigation; local ceiling=%s", async (configuredCeiling) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-grok-bootstrap-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	fixture.page = {
+		url: "about:blank",
+		navigations: [],
+		bootstrapRequests: 1,
+		payloadReads: 0,
+		closeAttempts: 0,
+	};
+	const gate = new DesktopControlGate("grok-bootstrap");
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect) => gate.withAutomation("generation", effect),
+		hold: async () => {
+			const held = await gate.holdAutomation("generation");
+			return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+		},
+	}));
+	const resolveServiceTarget = vi.fn(async () => ({
+		host: "127.0.0.1",
+		port: 45350,
+		browserProfile: "fixture",
+		browserProcessId: 1234,
+		managedBrowserProfile: "/fixture/grok-bootstrap",
+		tab: { targetId: "grok-bootstrap", url: "about:blank" },
+	}));
+	try {
+		const { GrokService } = await import("../../src/browser/llmService/providers/grokService.js");
+		const config = {
+			auracallProfile: "fixture",
+			services: {
+				grok: { identity: { email: "operator@example.test" }, ...(configuredCeiling ? {maxBackendRequestsPerMinute:1} : {}) },
+			},
+		} as never;
+		const service = GrokService.create(config, {
+			browserService: { getConfig: () => ({}), resolveServiceTarget } as never,
+		});
+		await expect(service.getUserIdentity()).resolves.toMatchObject({
+			email: "operator@example.test",
+		});
+		expect(resolveServiceTarget).toHaveBeenCalledWith(
+			expect.objectContaining({ configuredUrl: "about:blank" }),
+		);
+		expect(fixture.page.navigations).toEqual(["https://grok.com/"]);
+		expect(
+			(await createBrowserTabConcurrencyRuntime(config).ledger?.list())?.filter(
+				(row) => row.interactionClass === "backend-request",
+			),
+		).toHaveLength(1);
+	} finally {
+		fixture.page = undefined;
 		setCdpCommandAdmissionResolver(undefined);
 		setAuracallHomeDirOverrideForTest(null);
 		await rm(home, { recursive: true, force: true });

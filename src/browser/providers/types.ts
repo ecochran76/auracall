@@ -11,6 +11,7 @@ import type { ChatgptComposerCapabilityReceipt } from "../actions/chatgptCompose
 import type { LibraryFileAttachmentReceipt, LibraryFileSelector } from "../libraryFiles.js";
 import type { LibraryInventoryLifecycle } from "../libraryInventoryDiagnostics.js";
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from "./domain.js";
+import type { GrokHistoryCoverage, GrokHistoryOptions } from "./grokHistoryInventory.js";
 import type {
 	ProviderSessionAuthorization,
 	ProviderSessionProof,
@@ -45,7 +46,15 @@ export interface BrowserProviderCapabilities {
 	files?: boolean;
 }
 
-export interface BrowserProviderListOptions {
+export interface BrowserProviderListOptions extends GrokHistoryOptions {
+	/** Explicit consent to target download-policy reset after a native reference transfer. */
+	grokReferenceDownload?: { acknowledgeTargetDefaultReset: true };
+	onHistoryInventory?: (coverage: GrokHistoryCoverage) => Promise<void> | void;
+	/** Owned history custody lent to the configured traffic authority for one socket. */
+	historyOwnedLease?: {
+		claim: import("../../../packages/browser-service/src/service/tabLeaseRegistry.js").TabLeaseClaim;
+		scope: import("../../../packages/browser-service/src/service/tabLeaseRegistry.js").TabLeaseScope;
+	};
 	host?: string;
 	port?: number;
 	configuredUrl?: string | null;
@@ -86,6 +95,8 @@ export interface BrowserProviderListOptions {
 	accountMirrorInventory?: boolean;
 	/** Prevent a detail read from force-navigating an already admitted conversation route again. */
 	accountMirrorSingleConversationVisit?: boolean;
+	/** Positive index provenance, not proof of an undiscovered Bot scope. */
+	accountMirrorConversationIdentity?: { projectId?: string; botId?: string };
 	accountMirrorContextChunk?: {
 		startMessageIndex?: number | null;
 		maxMessages?: number | null;

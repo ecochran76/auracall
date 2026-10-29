@@ -28,6 +28,11 @@ test('native desktop ownership excludes actual wire commands and rejects reused 
     const binding = { desktopName: 'research', origin: 'http://127.0.0.1:19096', application: 'auracall', poolName: 'main',
       assignment: { assignmentId: 'assignment-native', desktopId: 'desktop-native', generation: 2, viewingGeneration: 7 },
       browserId: 'browser-native', managedProfileDir: profile, pid: child.pid, ...observed, display: ':77', cdpHost: '127.0.0.1', cdpPort: address.port };
+    const retired = spawn(process.execPath, ['-e', ''], { stdio: 'ignore' });
+    await once(retired, 'exit');
+    if (!retired.pid) throw new Error('missing retired fixture PID');
+    await new NativeDesktopStore().recordBrowser({ ...binding, pid: retired.pid,
+      browserId: 'retired-browser', managedProfileDir: path.join(home, 'retired') });
     await new NativeDesktopStore().recordBrowser(binding);
     client = await CDP({ target: `ws://127.0.0.1:${address.port}`, protocol: { version: { major: '1', minor: '3' }, domains: [{ domain: 'Page', commands: [{ name: 'reload', returns: [{ name: 'sequence', type: 'integer' }] }] }] } });
     expect(await client.Page.reload()).toMatchObject({ sequence: 1 });
@@ -64,6 +69,8 @@ test('native desktop ownership excludes actual wire commands and rejects reused 
     await expect(client.Page.reload()).rejects.toThrow('ownership changed');
     await expect(hold.run('Page.reload', () => heldClient.Page.reload())).rejects.toThrow('ownership changed');
     await hold.close();
+    await new NativeDesktopStore().recordBrowser({ ...binding, pid: retired.pid });
+    await expect(CDP({ target: `ws://127.0.0.1:${address.port}`, protocol: { version: { major: '1', minor: '3' }, domains: [] } })).rejects.toThrow('ownership changed');
   } finally {
     await client?.close();
     const exited = once(child, 'exit'); child.kill(); await exited;

@@ -18,6 +18,29 @@ When targeting managed Aura-Call sessions through that wrapper, prefer
 same AuraCall runtime profile and managed browser profile that the real product
 path would use.
 
+## Desktop transition crash recovery
+
+Desktop input ownership uses a short coordination transition before reading or
+changing the retained human/automation record. New transitions atomically link
+a fully written private identity file into the `.transition` path; that identity
+contains a generation UUID, PID and Linux boot ID. Normal release compares file
+identity before unlinking. Hard-link support is required; failure does not fall
+back to an unqualified lock.
+
+On Linux, a contender may recover a transition only when its boot ID matches
+and its PID is absent from `/proc`. A retained `.transition.retired-<generation>`
+hard link elects one reclaimer; inode comparison fences successor transitions.
+Keep these links: deleting an election fence while another contender can resume
+could let it unlink a successor. A recovery process dying after claiming but
+before unlinking is ambiguous and remains blocked for explicit recovery.
+
+Legacy empty directories, malformed identities, live PIDs, foreign boots and
+already-claimed recoveries are preserved. Do not remove them based on age.
+Qualify exact process/generation state and all possible contenders before an
+explicit recovery; do not clear an entire coordination directory. Human desktop
+claims, control tokens and binding checks remain independent and authoritative.
+Other platforms retain normal locking but do not infer process-death recovery.
+
 ## Agent-browser hidden RDP ownership lane
 
 When remote-view opening reports `converging`, AuraCall resolves that exact
@@ -285,6 +308,14 @@ missing targets are released, exact expired targets are closed only with a
 post-close absence census, and identity mismatches remain fenced. Status exposes content-free per-binding age and
 elapsed time since last meaningful use, idle/absolute time remaining, plus a
 restart-unverified attention count.
+TTL cleanup requires a lease established by actual AuraCall work. A browser
+census, matching account, URL or inactivity is observation, not tab ownership.
+Unregistered pages, including Agent Browser tasks in the same managed browser,
+do not receive automatic AuraCall deadlines. Historical census-only deadline
+records are preserved without closure; they do not prove ownership even when
+their recorded deadlines have elapsed. Eligible AuraCall workload leases still
+retire independently under the existing activity, audit and ownership guards.
+
 The same maintenance pass reports aggregate live, fenced, and unleased ChatGPT
 page-target counts. Unleased targets are preserved as observation-only evidence;
 the census grants no authority to adopt, navigate, focus, refresh, or close them.
@@ -734,6 +765,16 @@ Shared DevTools attachment is owned by
 - Keep reusable UI helpers in browser-service or llmService; keep Grok-specific selectors only in adapters.
 - For workflow guidance, see `docs/dev/browser-automation-playbook.md`.
 
+## Exact retained-target diagnostics
+
+Use `pnpm tsx scripts/browser-tools.ts --auracall-profile <runtime> --browser-target <provider> eval --port <verified-port> --target-id <owned-target-id> '<read-only expression>'`
+for a bounded passive inspection of a retained uncertain operation. Exact selection
+uses the guarded target transport and existing browser-operation dispatcher;
+it does not enumerate or initialize other page renderers. A missing or changed
+target fails without URL/focus fallback. Keep expressions read-only and capture
+private output outside Git. Observation does not clear an unknown provider effect
+or authorize replay, navigation, submission, deletion or runtime replacement.
+
 ## Smoke helpers
 
 - `pnpm tsx scripts/browser-service/browser-tools.ts --auracall-profile <name> --browser-target <target> start`
@@ -913,3 +954,65 @@ launcher observed child exit, otherwise `BROWSER_CDP_NOT_READY`. Recovery action
 `inspect_browser_launch_diagnostics` requires inspecting the recorded PID, exit
 code/signal and managed directory before retrying through AuraCall. Neither error
 authorizes killing an unverified owner or deleting a retained lock.
+
+
+### Reconcile a positively observed completed utility effect
+
+A trusted provider/operator reconciler can use the registry `reconcileEffect`
+compare-and-swap transition only after validating an immutable evidence artifact
+for the exact account scope, target and unknown lease revision. Idle/lost custody
+must have no owner; live/in-flight ownership cannot be cleared. The transition
+records the artifact reference and SHA-256, appends the previous uncertainty,
+and marks the effect settled. It does not release or close the target, confer a
+new claim, establish file readiness, or authorize replay. Normal acquisition and
+`releasePreserved` still reject unreconciled unknown effects. A later preserved
+release is separate from provider acceptance and must retain the source receipt.
+
+## App-list performance diagnostics
+
+For a slow successful app inventory, collect `auracall apps list --json --performance`
+on the first authorized baseline run. This observes that same command; no second
+probe, browser restart or extra provider request is needed. The single
+`[browser-performance]` JSON line is emitted on stderr after command cleanup,
+including failures after configuration resolves; inventory/failure stdout remains unchanged.
+Elapsed timing begins at queue admission, after configuration resolution. Diagnostics are
+opt-in and do not change caps, deadlines, authority or settlement.
+
+The report contains elapsed/stage durations, observed owned-connection count,
+backend request counts grouped as `installed`, `linked` and `other`, response /
+failed-before-response counts, unresolved outcomes, and admission counts/timing.
+All stage names and route groups are allowlisted. Headers, bodies, URLs, request
+IDs, target IDs and account values are absent from the report. This sanitization
+applies to the performance report, not the inventory JSON itself.
+
+Coverage is `owned-backend-interception-after-attachment`: only backend Fetch
+pauses on the command's governed ChatGPT connections are counted. Traffic before
+attachment, other tabs, workers and ungoverned connections are outside coverage.
+Zero `observedConnections` means no such interception was established, not proof
+of an idle browser. Repeated connections can observe the same underlying request;
+counts describe interception observations rather than globally unique requests.
+
+`responseMs` measures pause-to-response-headers time, including admission delay;
+it is not body download time or pure provider latency. A later body failure does
+not retract an observed response. `admission.durationMs` and `maxMs` cover completed
+attempts from governor invocation to admission/rejection; they include local
+governor work and capacity waits, exclude the preceding desktop-control hold,
+and are not pure quota waiting. `admitted` means the governor invoked the
+continuation, not proof of a successful network dispatch. Concurrent duration
+sums can exceed elapsed time. Pending admissions remain explicit at closure.
+Stage durations aggregate repeated visits to each stage.
+
+At most 1,000 unresolved requests retain timing correlation. Counters continue
+beyond this bound; `trackingLimitReached` marks incomplete outcome/timing tracking.
+`unresolved` includes missing/canceled/redirected or uncorrelated observations and
+must not be treated as proof of a still-running request. The report freezes at
+command completion; late events cannot rewrite it.
+
+## Independent dormant-tab retirement
+
+Configured ChatGPT maintenance preserves tabs whose provider activity is active
+or unknown. That per-tab deferral must allow other expired, verified inactive
+tabs in the same browser profile to retire during the same pass. A lost lease's
+inspection/retirement error is reported independently; endpoint/scope resolution
+failures still defer the scope. TTL cleanup applies to the configured AuraCall
+managed runtime, not to Agent Browser or other browsers sharing the desktop.

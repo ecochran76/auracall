@@ -1,3 +1,4 @@
+import { grokIndexProgressSchema } from './grokIndexProgressSchema.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
@@ -24,6 +25,7 @@ const metadataCountsShape = z.object({
 });
 
 const metadataEvidenceShape = z.object({
+  grokIndex: grokIndexProgressSchema,
   identitySource: z.string().nullable(),
   projectSampleIds: z.array(z.string()),
   conversationSampleIds: z.array(z.string()),
@@ -99,7 +101,7 @@ export function registerAccountMirrorRefreshTool(
     {
       title: 'Request account mirror refresh',
       description:
-        'Request one explicit Aura-Call account mirror refresh through the browser operation dispatcher. Current implementation is ChatGPT metadata-only for configured runtime profiles.',
+        'Request one explicit Aura-Call account mirror refresh through the browser operation dispatcher. Includes bounded resumable Grok index collection for configured runtime profiles.',
       inputSchema: accountMirrorRefreshInputShape,
       outputSchema: accountMirrorRefreshOutputShape,
     },

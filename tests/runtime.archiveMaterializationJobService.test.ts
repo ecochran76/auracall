@@ -13,6 +13,27 @@ describe('archive materialization job service', () => {
     setAuracallHomeDirOverrideForTest(null);
   });
 
+  it('retains explicit download-policy acknowledgement through a queued service restart', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-reference-policy-job-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const materializeItem = vi.fn(async (request: { archiveItemId: string }) => ({
+      object: 'run_archive_item_materialization' as const,
+      generatedAt: '2026-10-29T20:00:00.000Z',
+      status: 'materialized' as const,
+      item: createGeneratedArtifactItem(request.archiveItemId),
+      file: null,
+      message: 'Selected reference retained.',
+    }));
+    const first = createArchiveMaterializationJobService({
+      materializationService: { materializeItem }, schedule: () => {}, generateId: () => 'reference-policy-job',
+    });
+    const created = await first.createJob({ archiveItemId: 'native-reference', acknowledgeTargetDefaultReset: true });
+    const restarted = createArchiveMaterializationJobService({ materializationService: { materializeItem }, schedule: () => {} });
+    await restarted.runJob(created.job.id);
+    expect(materializeItem).toHaveBeenCalledWith({ archiveItemId: 'native-reference', force: false, acknowledgeTargetDefaultReset: true });
+    expect((await restarted.readJob(created.job.id))?.acknowledgeTargetDefaultReset).toBe(true);
+  });
+
   it('persists a queued job and completes it through the materialization service', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-job-'));
     setAuracallHomeDirOverrideForTest(homeDir);

@@ -88,23 +88,126 @@ export const GROK_IDENTITY_PROBE_EXPRESSION = `(() => {
   return { ...identity, guestAuthCta };
 })()`;
 
+/** Parse actual bootstrap objects without searching account fields across unrelated
+ * subtrees. This self-contained function also runs in the provider page. */
+function collectSerializedGrokUsers(scriptTexts: string[]): string[] {
+	const identities: string[] = [];
+	let scanned = 0;
+	let nodes = 0;
+ let exhausted = false;
+	const record = (value: unknown): Record<string, unknown> | null =>
+		value !== null && typeof value === "object" && !Array.isArray(value)
+			? (value as Record<string, unknown>)
+			: null;
+	const visit = (value: unknown, depth = 0): void => {
+		if (exhausted) return;
+  if (depth > 48 || ++nodes > 50000) { exhausted = true; return; }
+		if (Array.isArray(value)) {
+			for (const item of value) visit(item, depth + 1);
+			return;
+		}
+		const object = record(value);
+		if (!object) return;
+		const user = record(record(object.initialData)?.user);
+		if (user) {
+			const selected: Record<string, string> = {};
+			for (const field of [
+				"userId",
+				"id",
+				"email",
+				"xUsername",
+				"username",
+				"givenName",
+				"familyName",
+				"name",
+				"displayName",
+			]) {
+				const value = user[field];
+				if (typeof value === "string" && value.trim() && value.length <= 512)
+					selected[field] = value.trim();
+			}
+			if (
+				selected.userId ||
+				selected.id ||
+				selected.email ||
+				selected.xUsername ||
+				selected.username
+			)
+				identities.push(JSON.stringify({ initialData: { user: selected } }));
+		}
+		for (const child of Object.values(object)) visit(child, depth + 1);
+	};
+	const parsePayload = (payload: string): void => {
+		try {
+			visit(JSON.parse(payload));
+			return;
+		} catch {
+			/* Flight records have hexadecimal prefixes. */
+		}
+		for (const line of payload.split(/\r?\n/)) {
+			const match = /^[a-f0-9]+:(.*)$/i.exec(line);
+			if (!match || !match[1].includes("initialData")) continue;
+			try {
+				visit(JSON.parse(match[1]));
+			} catch {
+				/* Text and module records are not account objects. */
+			}
+		}
+	};
+	const arrayEnd = (text: string, start: number): number => {
+		let depth = 0,
+			quoted = false,
+			escaped = false;
+		for (let index = start; index < text.length; index++) {
+			const character = text[index];
+			if (quoted) {
+				if (escaped) escaped = false;
+				else if (character === "\\") escaped = true;
+				else if (character === '"') quoted = false;
+			} else if (character === '"') quoted = true;
+			else if (character === "[") depth++;
+			else if (character === "]" && --depth === 0) return index + 1;
+		}
+		return -1;
+	};
+	for (const raw of scriptTexts) {
+		if (typeof raw !== "string" || !raw.includes("initialData")) continue;
+		// Inspect at most 2 MiB per qualifying script and 8 MiB total. Return only
+		// <=8 small identity projections, never raw bootstrap/session payloads.
+		scanned += raw.length;
+		if (raw.length > 2 * 1024 * 1024 || scanned > 8 * 1024 * 1024) return [];
+		const pushes = /self\.__next_f\.push\(/g;
+		let foundPush = false;
+  let offset = 0;
+		while (offset < raw.length) {
+   pushes.lastIndex = offset;
+   const match = pushes.exec(raw);
+   if (!match) break;
+   offset = pushes.lastIndex;
+			foundPush = true;
+			let start = pushes.lastIndex;
+			while (/\s/.test(raw[start] ?? "")) start++;
+			if (raw[start] !== "[") continue;
+			const end = arrayEnd(raw, start);
+			if (end < 0) continue;
+			const encoded = raw.slice(start, end);
+   try {
+    const chunk = JSON.parse(encoded);
+    if (Array.isArray(chunk) && chunk[0] === 1 && typeof chunk[1] === "string") parsePayload(chunk[1]);
+   } catch { /* Malformed bootstrap frames cannot establish identity. */ }
+			offset = end;
+		}
+		if (!foundPush) parsePayload(raw);
+		if (identities.length > 8 || exhausted) return [];
+	}
+	return identities;
+}
+
 export const GROK_SERIALIZED_IDENTITY_SCRIPTS_EXPRESSION = `(() => {
-  return Array.from(document.scripts)
-    .map((script) => script.textContent || '')
-    .filter((text) => {
-      const candidate = String(text || '');
-      if (!candidate) return false;
-      const hasIdentityCore =
-        candidate.includes('userId') &&
-        (candidate.includes('email') || candidate.includes('xUsername') || candidate.includes('givenName'));
-      const hasInitialDataUser =
-        candidate.includes('initialData') &&
-        candidate.includes('user') &&
-        (candidate.includes('profileImageUrl') || candidate.includes('familyName') || candidate.includes('email'));
-      return hasIdentityCore || hasInitialDataUser;
-    })
-    .slice(0, 8)
-    .map((text) => text.slice(0, 16000));
+  // tsx/esbuild may preserve nested function names through this inert helper.
+  const __name = (fn) => fn;
+  const collect = ${collectSerializedGrokUsers.toString()};
+  return collect(Array.from(document.scripts).map(script => script.textContent || ''));
 })()`;
 
 export function normalizeGrokIdentityProbe(
@@ -184,42 +287,37 @@ function isPlausibleGrokHandle(value: string): boolean {
 }
 
 export function extractGrokIdentityFromSerializedScripts(
-  scriptTexts: string[] | null | undefined,
+	scriptTexts: string[] | null | undefined,
 ): ProviderUserIdentity | null {
-  if (!Array.isArray(scriptTexts) || scriptTexts.length === 0) {
-    return null;
-  }
-
-  for (const rawText of scriptTexts) {
-    const text = normalizeSerializedScriptText(rawText);
-    if (
-      !text.includes('"initialData":{"user":') &&
-      !(text.includes('"userId":"') && text.includes('"email":"'))
-    ) {
-      continue;
-    }
-
-    const givenName = matchSerializedField(text, 'givenName');
-    const familyName = matchSerializedField(text, 'familyName');
-    const name =
-      [givenName, familyName].filter(Boolean).join(' ').trim() ||
-      matchSerializedField(text, 'name') ||
-      matchSerializedField(text, 'displayName');
-    const xUsername = matchSerializedField(text, 'xUsername') || matchSerializedField(text, 'username');
-    const candidate = normalizeGrokIdentityProbe({
-      id: matchSerializedField(text, 'userId'),
-      email: matchSerializedField(text, 'email'),
-      name: name || null,
-      handle: xUsername ? `@${xUsername.replace(/^@+/, '')}` : null,
-      source: 'next-flight',
-      guestAuthCta: false,
-    });
-    if (candidate) {
-      return candidate;
-    }
-  }
-
-  return null;
+	if (!Array.isArray(scriptTexts) || scriptTexts.length === 0) return null;
+	const candidates = collectSerializedGrokUsers(scriptTexts)
+		.map((text) => {
+			const user = JSON.parse(text).initialData.user as Record<string, string>;
+			const name =
+				[user.givenName, user.familyName].filter(Boolean).join(" ").trim() ||
+				user.name ||
+				user.displayName;
+			const handle = user.xUsername || user.username;
+			return normalizeGrokIdentityProbe({
+				id: user.userId || user.id,
+				email: user.email,
+				name: name || null,
+				handle: handle ? `@${handle.replace(/^@+/, "")}` : null,
+				source: "next-flight",
+				guestAuthCta: false,
+			});
+		})
+		.filter((candidate): candidate is ProviderUserIdentity => candidate !== null);
+	const identities = new Set(
+		candidates.map((candidate) =>
+			JSON.stringify([
+				candidate.id ?? null,
+				candidate.email?.toLowerCase() ?? null,
+				candidate.handle?.toLowerCase() ?? null,
+			]),
+		),
+	);
+	return identities.size === 1 ? candidates[0] : null;
 }
 
 export async function detectGrokSignedInIdentity(
@@ -232,7 +330,13 @@ export async function detectGrokSignedInIdentity(
 }> {
   const initialProbe = await evaluateGrokIdentityProbe(Runtime);
   let identity = normalizeGrokIdentityProbe(initialProbe);
-  if (identity) {
+  // These probes scan global page labels/handles (including open Bot pickers).
+  // They provide display context only, never stable provider-account evidence.
+  if (identity && ['dom-label', 'dom-handle', 'dom-avatar'].includes(identity.source ?? '')) {
+    identity = identity.name ? { name: identity.name, source: identity.source } : null;
+  }
+  // Display labels cannot hide existing serialized stable account evidence.
+  if (identity && (identity.id || identity.email || identity.handle)) {
     return {
       identity,
       guestAuthCta: Boolean(initialProbe?.guestAuthCta),
@@ -242,7 +346,7 @@ export async function detectGrokSignedInIdentity(
 
   if (!initialProbe?.guestAuthCta) {
     const scriptTexts = await readGrokSerializedIdentityScriptsWithRetry(Runtime, options);
-    identity = extractGrokIdentityFromSerializedScripts(scriptTexts);
+    identity = extractGrokIdentityFromSerializedScripts(scriptTexts) ?? identity;
   }
 
   return {
@@ -290,26 +394,4 @@ export async function readGrokSerializedIdentityScriptsWithRetry(
     await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
   }
   return lastScripts;
-}
-
-function normalizeSerializedScriptText(rawText: string): string {
-  let normalized = rawText;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const next = normalized
-      .replace(/\\"/g, '"')
-      .replace(/\\n/g, '\n')
-      .replace(/\\u0026/g, '&')
-      .replace(/\\\\/g, '\\');
-    if (next === normalized) {
-      break;
-    }
-    normalized = next;
-  }
-  return normalized;
-}
-
-function matchSerializedField(text: string, field: string): string | undefined {
-  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = text.match(new RegExp(`"${escaped}":"([^"]+)"`, 'i'));
-  return match?.[1]?.trim() || undefined;
 }

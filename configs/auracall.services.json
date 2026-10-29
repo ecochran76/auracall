@@ -585,6 +585,7 @@
       "models": [
         { "id": "auto", "label": "Auto" },
         { "id": "fast", "label": "Fast" },
+        { "id": "build", "label": "Build" },
         {
           "id": "expert",
           "label": "Expert",

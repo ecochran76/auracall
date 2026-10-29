@@ -1,3 +1,6 @@
+import { grokReferencedFileReceipt, verifyGrokReferencedArchiveItem } from "./grokReferencedFileArchive.js";
+import { grokWorkspaceFileReceipt, verifyGrokWorkspaceArchiveItem } from './grokWorkspaceArchive.js';
+import { grokBuildArchiveProvenance, verifyGrokBuildArchiveItem } from './grokBuildArchiveBridge.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -326,6 +329,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
     async readAsset(id) {
       const item = (await readIndexedItems()).find((entry) => entry.id === id) ?? null;
       if (!item?.localPath) return null;
+      if (item.provider === 'grok' && (item.metadata.grokBuildArchive || item.metadata.grokWorkspaceFile || item.metadata.grokReferencedFile) && item.fileAvailable !== true) return null;
       const stat = await fs.stat(item.localPath).catch(() => null);
       if (!stat?.isFile()) return null;
       return {
@@ -1327,6 +1331,42 @@ async function enrichFileMetadata(
   options: { includeChecksum?: boolean } = {},
 ): Promise<RunArchiveItem[]> {
   return Promise.all(items.map(async (item) => {
+    if (item.provider === 'grok' && (item.metadata.grokBuildArchive || item.metadata.grokWorkspaceFile || item.metadata.grokReferencedFile)) {
+      const workspaceFile = Boolean(item.metadata.grokWorkspaceFile);
+      const referenceFile = Boolean(item.metadata.grokReferencedFile);
+      if ((workspaceFile || referenceFile) && !item.localPath && !item.checksumSha256) {
+        const { asset: _asset, ...links } = item.links;
+        return { ...item, status: 'metadata-only', fileAvailable: false, links,
+          metadata: { ...item.metadata, fileAvailable: false, materialization: {
+            status: 'not_materialized', source: referenceFile ? 'grok-conversation-reference' : 'grok-workspace-selection',
+          } },
+        };
+      }
+      const receipt = referenceFile ? grokReferencedFileReceipt(item) : workspaceFile ? grokWorkspaceFileReceipt(item) : grokBuildArchiveProvenance(item);
+      const stat = options.includeChecksum === false && item.localPath
+        ? await fs.lstat(item.localPath).catch(() => null) : null;
+      const available = options.includeChecksum === false
+        ? Boolean(receipt && stat?.isFile() && !stat.isSymbolicLink() && stat.size === receipt.sizeBytes)
+        : referenceFile ? await verifyGrokReferencedArchiveItem(item) : workspaceFile ? await verifyGrokWorkspaceArchiveItem(item) : await verifyGrokBuildArchiveItem(item);
+      const { asset: _asset, ...links } = item.links;
+      return {
+        ...item,
+        status: available ? 'materialized' : !item.localPath && !item.checksumSha256 && workspaceFile ? 'metadata-only' : 'unavailable',
+        fileAvailable: available,
+        links: available ? { ...links, asset: `${runArchiveItemRoute(item.id)}/asset` } : links,
+        metadata: {
+          ...item.metadata,
+          fileAvailable: available,
+          materialization: {
+            status: available ? 'materialized' : 'unavailable',
+            source: 'grok-archive-integrity-check',
+            reason: available
+              ? options.includeChecksum === false ? 'retained_file_present_checksum_pending' : 'verified_retained_bytes'
+              : 'retained_bytes_unqualified',
+          },
+        },
+      };
+    }
     const cachedConversationEvidence = item.localPath ? null : await findCachedConversationAttachmentEvidence(item);
     const cachedConversationAsset = cachedConversationEvidence?.file ?? null;
     const discoveredLocalPath =

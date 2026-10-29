@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -114,6 +116,7 @@ test("inventory projects real runtime profiles and configured account identity w
 	expect(rows[0]?.accountKey).toBe(rows[1]?.accountKey);
 	expect(rows[0]).toMatchObject({
 		accountLabel: "writer@example.test",
+		browserProfileId: "account",
 		state: "dormant",
 		wakeable: true,
 	});
@@ -283,4 +286,42 @@ test("unknown profiles, unknown desktops and failed launches never persist place
 	await expect(
 		fs.readFile(path.join(home, "desktop-profile-assignments.json")),
 	).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+test("an unavailable local profile held by a qualified process offers Recall without leaking paths or PID", async () => {
+	const c = config();
+	if (!c.browserProfiles?.account || !c.remoteView)
+		throw new Error("Fixture configuration missing");
+	c.remoteView.defaultDesktop = "research";
+	c.browserProfiles.account.chromePath = process.execPath;
+	const plan = resolveBrowserLaunchPlan({
+		source: { kind: "user-config", config: c },
+		intent: { runtimeProfileId: "writer", provider: "chatgpt" },
+	});
+	const directory = plan.managedBrowserProfile.directory;
+	await fs.mkdir(directory, { recursive: true });
+	const child = spawn(
+		process.execPath,
+		["-e", "setInterval(()=>{},1000)", "--", `--user-data-dir=${directory}`],
+		{ stdio: "ignore" },
+	);
+	try {
+		await once(child, "spawn");
+		const input = deps();
+		input.findProcess.mockResolvedValue({ pid: child.pid, port: null, commandLine: "" } as never);
+		const row = (await listDesktopRuntimeProfiles(c, input)).find(
+			(x) => x.runtimeProfileId === "writer",
+		);
+		expect(row).toMatchObject({
+			state: "unavailable",
+			wakeable: false,
+			recallToken: expect.stringMatching(/^[a-f0-9]{64}$/),
+		});
+		expect(JSON.stringify(row)).not.toContain(directory);
+		expect(row).not.toHaveProperty("pid");
+	} finally {
+		const exited = once(child, "exit");
+		child.kill();
+		await exited;
+	}
 });

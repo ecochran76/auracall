@@ -1,3 +1,4 @@
+import { currentBrowserPerformanceDiagnostics } from "../browserPerformanceDiagnostics.js";
 import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
 import type { BrowserMutationAuditSink } from "../../../packages/browser-service/src/service/mutationDispatcher.js";
 import type {
@@ -10,7 +11,7 @@ import {
 } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { OwnedBackendRequestCleanupError } from "../ownedBackendRequestAuthority.js";
 import type { ChromeClient } from "../types.js";
-import { attachOwnedChatgptBackendRequestAdmission } from "./chatgptBackendRequestAdmission.js";
+import { attachOwnedProviderBackendRequestAdmission } from "./ownedProviderBackendRequestAdmission.js";
 import type { BrowserProviderListOptions } from "./types.js";
 
 export const OWNED_PROVIDER_SOCKET_CLOSE_TIMEOUT_MS = 3_000;
@@ -58,7 +59,7 @@ export async function annotateClientMutationContext(
 	const targetId = resolvedTargetId?.trim() || options?.tabTargetId?.trim();
 	const authority =
 		!options?.providerTrafficGovernor && options?.providerTrafficAuthorityFactory && targetId
-			? await options.providerTrafficAuthorityFactory.acquire({ targetId })
+			? await options.providerTrafficAuthorityFactory.acquire({ targetId, borrowedLease: options.historyOwnedLease })
 			: undefined;
 	if (options?.providerTrafficRequired && !options.providerTrafficGovernor && !authority) {
 		throw new Error(
@@ -67,7 +68,7 @@ export async function annotateClientMutationContext(
 	}
 	const nextGovernor = options?.providerTrafficGovernor ?? authority?.governor;
 	if (
-		nextGovernor?.attribution.provider === "chatgpt" &&
+		(nextGovernor?.attribution.provider === "chatgpt" || nextGovernor?.attribution.provider === "grok") &&
 		nextGovernor.attribution.targetId &&
 		nextGovernor.attribution.targetId !== targetId
 	) {
@@ -87,14 +88,16 @@ export async function annotateClientMutationContext(
 	await extendedClient.__auracallResponseObserver?.dispose();
 	extendedClient.__auracallResponseObserver = undefined;
 	const governor = extendedClient.__auracallProviderTrafficGovernor;
+	const diagnostic = governor?.attribution.provider === "chatgpt" ? currentBrowserPerformanceDiagnostics() : undefined;
 	let observer: { dispose(): Promise<void> } | undefined;
 	let backendObserver: { dispose(): Promise<void> } | undefined;
-	if (governor?.attribution.provider === "chatgpt" && governor.attribution.targetId) {
+	if ((governor?.attribution.provider === "chatgpt" || governor?.attribution.provider === "grok") && governor.attribution.targetId) {
 		if (client.Network?.responseReceived && governor.checkWarning) {
 			const pending = new Set<Promise<void>>();
 			let failure: unknown;
 			let disposed = false;
-			const handler = (event: { response: { url: string; status: number } }) => {
+			const handler = (event: { requestId?: string; response: { url: string; status: number } }) => {
+        if (!disposed && event.requestId) diagnostic?.response(event.requestId, client);
 				if (disposed || event.response.status !== 429) return Promise.resolve();
 				const task =
 					governor
@@ -210,7 +213,7 @@ export async function annotateClientMutationContext(
 	}
 	if (governor?.admitBackendRequest) {
 		try {
-			backendObserver = await attachOwnedChatgptBackendRequestAdmission(client, governor, { abortSignal: options?.abortSignal });
+			backendObserver = await attachOwnedProviderBackendRequestAdmission(client, governor, { abortSignal: options?.abortSignal });
 			ownedClientCloseDeadlines.add(client);
 		} catch (error) {
 			try {
@@ -221,6 +224,15 @@ export async function annotateClientMutationContext(
 					"Backend admission setup and cleanup failed.",
 				);
 			}
+			throw error;
+		}
+	}
+	if (governor?.attribution.provider === "grok") {
+		try {
+			await governor.checkWarning?.(client.Runtime);
+		} catch (error) {
+			try { await client.close(); }
+			catch (cleanupError) { throw new AggregateError([error, cleanupError], "Grok warning preflight and cleanup failed."); }
 			throw error;
 		}
 	}

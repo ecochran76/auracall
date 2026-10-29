@@ -20,6 +20,7 @@ import {
 import {
 	classifyHistoryMaterializationEntryRecoverability,
 	createHistoryMaterializationService,
+	projectHistoryMaterializationJobForMonitoring,
 	createHistoryMaterializationTrafficOptions,
 	formatHistoryMaterializationFailureReason,
 	type HistoryAccountLibraryListInput,
@@ -41,6 +42,239 @@ import {
 } from "../src/runtime/historyMaterializationService.js";
 
 describe("history materialization service", () => {
+	it("preserves the Grok selected frontier transfer budget across conversations", async () => {
+		const home = await fs.mkdtemp(path.join(os.tmpdir(), "grok414-budget-"));
+		setAuracallHomeDirOverrideForTest(home);
+		let scheduled: (() => Promise<void>) | undefined;
+		const budgets: Array<number | null | undefined> = [];
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: async () => ({ ...buildReconciliationCatalog([]), entries: [] }),
+				readItem: async () => null,
+			},
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: async (target, request) => {
+				budgets.push(request.maxItems);
+				const result = buildNoMaterializableHistoryResult(target);
+				const entry = result.entries[1];
+				if (!entry) throw new Error("Missing fixture file entry");
+				return {
+					...result,
+					status: "materialized",
+					entries: [
+						{
+							...entry,
+							status: "materialized",
+							providerId: "observed-file",
+							localPath: "/fixture/retained",
+							size: 7,
+						},
+					],
+					metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+				};
+			},
+		});
+		try {
+			const created = await service.createJob({
+				provider: "grok",
+				runtimeProfile: "default",
+				reconcile: true,
+				conversationIds: ["observed-one", "observed-two", "observed-three"],
+				assetKinds: ["files"],
+				acknowledgeTargetDefaultReset: true,
+				maxItems: 2,
+			});
+			if (!scheduled) throw new Error("Expected scheduled Grok reconciliation");
+			await scheduled();
+			expect(budgets).toEqual([2, 1]);
+			// Reading through a new service proves durable progress, independently of
+			// the first service's in-memory scheduler and provider callbacks.
+			const restarted = createHistoryMaterializationService({
+				config: {},
+				schedule: () => undefined,
+			});
+			expect((await restarted.readJob(created.job.id))?.request.acknowledgeTargetDefaultReset).toBe(true);
+			expect((await restarted.readJob(created.job.id))?.result?.selectedFrontier).toEqual({
+				attemptedConversationIds: ["observed-one", "observed-two"],
+				unattemptedConversationIds: ["observed-three"],
+				providerHistoryComplete: false,
+				assetCoverage: "unknown",
+				budget: { targetLimit: 2, targetsConsumed: 2, assetsRemaining: 0 },
+			});
+			expect(
+				(await service.readJob(created.job.id))?.result?.attempts?.map(
+					(attempt) => attempt.budgetBefore.assetsRemaining,
+				),
+			).toEqual([2, 1]);
+		} finally {
+			await fs.rm(home, { recursive: true, force: true });
+		}
+	});
+
+	it("retains the completed Grok materialization cursor when the next selected conversation is interrupted", async () => {
+		const home = await fs.mkdtemp(path.join(os.tmpdir(), "grok414-cursor-"));
+		setAuracallHomeDirOverrideForTest(home);
+		let scheduled: (() => Promise<void>) | undefined;
+		let observedDuringWork: unknown;
+		let recoveredDuringWork = 0;
+		let jobId = "";
+		const restarted = createHistoryMaterializationService({
+			config: {},
+			schedule: () => undefined,
+		});
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: async () => ({ ...buildReconciliationCatalog([]), entries: [] }),
+				readItem: async () => null,
+			},
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: async (target) => {
+				if (target.conversationId === "second") {
+					observedDuringWork = (await restarted.readJob(jobId))?.materializationCursor;
+					recoveredDuringWork = await restarted.recoverInterruptedJobs();
+					throw new Error("provider interrupted after completed first conversation");
+				}
+				const result = buildNoMaterializableHistoryResult(target);
+				return {
+					...result,
+					status: "materialized",
+					entries: [
+						{
+							...result.entries[1]!,
+							status: "materialized",
+							providerId: "retained-file",
+							localPath: "/fixture/retained",
+							size: 7,
+						},
+					],
+					metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 0 },
+				};
+			},
+		});
+		try {
+			const created = await service.createJob({
+				provider: "grok",
+				reconcile: true,
+				conversationIds: ["first", "second", "third"],
+				assetKinds: ["files"],
+				maxItems: 3,
+			});
+			jobId = created.job.id;
+			if (!scheduled) throw new Error("Expected scheduled reconciliation");
+			await scheduled();
+			const expected = {
+				version: 1,
+				resumePolicy: "explicit_request_required",
+				budgetScope: "completed_attempts_only",
+				inFlight: { conversationId: "second", index: 1, budgetBefore: { assetsRemaining: 2 } },
+				remainingConversationIds: ["second", "third"],
+				budget: { targetLimit: 3, targetsConsumed: 1, assetsRemaining: 2 },
+				attempts: [
+					expect.objectContaining({ target: expect.objectContaining({ conversationId: "first" }) }),
+				],
+			};
+			expect(observedDuringWork).toMatchObject(expected);
+			expect((await restarted.readJob(jobId))?.materializationCursor).toMatchObject(expected);
+			expect(recoveredDuringWork).toBe(1);
+			const recovered = await restarted.readJob(jobId);
+			expect(recovered).toMatchObject({
+				status: "failed",
+				error: {
+					message:
+						"History materialization job was interrupted before this AuraCall API process started.",
+				},
+			});
+			if (!recovered) throw new Error("Expected recovered durable job");
+			expect(
+				projectHistoryMaterializationJobForMonitoring(recovered).materializationCursor,
+			).toMatchObject({
+				completedAttemptCount: 1,
+				remainingConversationCount: 2,
+				attempts: [],
+				remainingConversationIds: null,
+				inFlight: { conversationId: "second" },
+			});
+			expect(await restarted.recoverInterruptedJobs()).toBe(0);
+		} finally {
+			await fs.rm(home, { recursive: true, force: true });
+		}
+	});
+
+	it("accounts for the guarded Grok attempt before retaining the final frontier budget", async () => {
+		const home = await fs.mkdtemp(path.join(os.tmpdir(), "grok414-guard-budget-"));
+		setAuracallHomeDirOverrideForTest(home);
+		let scheduled: (() => Promise<void>) | undefined;
+		const service = createHistoryMaterializationService({
+			config: {},
+			catalogService: {
+				readCatalog: async () => ({ ...buildReconciliationCatalog([]), entries: [] }),
+				readItem: async () => null,
+			},
+			schedule: (work) => {
+				scheduled = work;
+			},
+			materializeConversation: async (target) => {
+				const result = buildNoMaterializableHistoryResult(target);
+				const entry = result.entries[1];
+				if (!entry) throw new Error("fixture entry missing");
+				return {
+					...result,
+					status: "materialized",
+					entries: [
+						{
+							...entry,
+							status: "materialized",
+							providerId: "selected-file",
+							localPath: "/fixture/retained",
+							size: 7,
+						},
+						{
+							...entry,
+							status: "failed",
+							providerId: null,
+							remoteUrl: null,
+							localPath: null,
+							materializationMethod: null,
+							reason: "Grok provider guard: Too many requests; making requests too quickly.",
+						},
+					],
+					metrics: { conversations: 1, materialized: 1, skipped: 0, failed: 1 },
+				};
+			},
+		});
+		try {
+			const created = await service.createJob({
+				provider: "grok",
+				runtimeProfile: "default",
+				reconcile: true,
+				conversationIds: ["guarded-one", "unattempted-two"],
+				assetKinds: ["files"],
+				maxItems: 2,
+			});
+			if (!scheduled) throw new Error("expected scheduled job");
+			await scheduled();
+			const job = await service.readJob(created.job.id);
+			expect(job?.result?.attempts?.[0]?.accounting).toMatchObject({
+				targetConsumed: true,
+				assetsAttempted: 1,
+				providerGuardObserved: true,
+			});
+			expect(job?.result?.selectedFrontier).toMatchObject({
+				attemptedConversationIds: ["guarded-one"],
+				unattemptedConversationIds: ["unattempted-two"],
+				budget: { targetLimit: 2, targetsConsumed: 1, assetsRemaining: 1 },
+			});
+		} finally {
+			await fs.rm(home, { recursive: true, force: true });
+		}
+	});
+
 	afterEach(() => {
 		setAuracallHomeDirOverrideForTest(null);
 	});
@@ -830,6 +1064,16 @@ describe("history materialization service", () => {
 		});
 		expect(chatgptOptions.configuredUrl).toBe("https://chatgpt.com/c/conv_direct_1");
 		expect(chatgptOptions.skipFeatureSignature).toBe(true);
+	});
+
+	it("grants native reference download policy scope only to an explicitly acknowledged Grok target", () => {
+		const target = { provider: "grok" as const, runtimeProfile: "default", browserProfile: "default", boundIdentityKey: null,
+			conversationId: "native-reference-conversation", providerConversationUrl: "https://grok.com/c/native-reference-conversation", projectId: null };
+		expect(resolveHistoryMaterializationProviderListOptions(target, { acknowledgeTargetDefaultReset: true })).toMatchObject({
+			grokReferenceDownload: { acknowledgeTargetDefaultReset: true },
+		});
+		expect(resolveHistoryMaterializationProviderListOptions(target)).not.toHaveProperty("grokReferenceDownload");
+		expect(resolveHistoryMaterializationProviderListOptions({ ...target, provider: "chatgpt" }, { acknowledgeTargetDefaultReset: true })).not.toHaveProperty("grokReferenceDownload");
 	});
 
 	it("persists and runs a direct conversation materialization job", async () => {

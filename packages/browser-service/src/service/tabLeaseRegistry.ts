@@ -69,6 +69,8 @@ export interface BrowserTabLease {
   scope: TabLeaseScope;
   targetId: string;
   workload: TabLeaseWorkload;
+  /** Active/retiring owners and uncertain effects exclude work; settled idle targets coexist. */
+  exclusiveGroup?: string;
   state: TabLeaseState;
   ownerOperationId: string | null;
   ownerProcessId?: number | null;
@@ -76,6 +78,11 @@ export interface BrowserTabLease {
   processBinding?: { processId: number; instanceId: string };
   retention?: 'live-follow' | 'ttl';
   effectState: TabLeaseEffectState;
+  effectReconciliations?: Array<{
+    observedAt: string;
+    previousEffectState: 'outcome-unknown';
+    evidence: { artifactRef: string; sha256: string };
+  }>;
   acquiredAt: string;
   heartbeatAt: string;
   lastMeaningfulUseAt: string;
@@ -140,10 +147,22 @@ export interface ReserveTabLeaseInput {
   idleTtlMs: number;
   absoluteTtlMs: number;
   targetFingerprint?: string | null;
+  exclusiveGroup?: string;
   processBound?: boolean;
 }
 
 export interface BrowserTabLeaseRegistry {
+  /** Trusted provider/operator reconciler supplies already validated immutable
+   * evidence. This records a known completed effect, never authorizes replay,
+   * claims a target, closes it, or releases ownership implicitly. */
+  reconcileEffect(input: {
+    leaseId: string;
+    expectedRevision: number;
+    scope: TabLeaseScope;
+    targetId: string;
+    now: string;
+    evidence: { artifactRef: string; sha256: string };
+  }): Promise<TabLeaseResult<BrowserTabLease>>;
   findByProcess(scope: TabLeaseScope): Promise<BrowserTabLease | null>;
   acquireProcess(input: {
     leaseId: string;
@@ -452,6 +471,11 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       FENCED_STATES.has(candidate.state) && sameOwnershipScope(candidate.scope, scope) &&
       sameWorkload(candidate.workload, workload));
     if (other) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(other) } };
+    if (existing.exclusiveGroup) {
+      const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
+        blocksExclusiveGroupAdmission(candidate, scope, existing.exclusiveGroup));
+      if (conflict) return { ok: false as const, conflict: { kind: 'workload-owned' as const, lease: cloneLease(conflict) } };
+    }
     const operationId = requireNonEmpty(input.operationId, 'operationId');
     const lease: BrowserTabLease = {
       ...existing, workload, revision: existing.revision + 1, state: 'active',
@@ -480,6 +504,9 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     }
     for (const existing of this.leases.values()) {
       if (!FENCED_STATES.has(existing.state)) continue;
+      if (blocksExclusiveGroupAdmission(existing, normalized.scope, normalized.exclusiveGroup)) {
+        return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(existing) } };
+      }
       if (normalized.processBound && sameOwnershipScope(existing.scope, normalized.scope) &&
         existing.processBinding?.processId === this.ownerIdentity.processId) {
         return { ok: false, conflict: { kind: 'process-owned', lease: cloneLease(existing) } };
@@ -508,6 +535,7 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       scope: normalized.scope,
       targetId: normalized.targetId,
       workload: normalized.workload,
+      ...(normalized.exclusiveGroup ? { exclusiveGroup: normalized.exclusiveGroup } : {}),
       state: 'active',
       ownerOperationId: normalized.operationId,
       ownerProcessId: this.ownerIdentity.processId,
@@ -777,6 +805,11 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     ) {
       return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
     }
+    if (existing.exclusiveGroup) {
+      const conflict = [...this.leases.values()].find(candidate => candidate.leaseId !== existing.leaseId &&
+        blocksExclusiveGroupAdmission(candidate, scope, existing.exclusiveGroup));
+      if (conflict) return { ok: false, conflict: { kind: 'workload-owned', lease: cloneLease(conflict) } };
+    }
     if (input.processBound) {
       if (existing.processBinding && !this.canAdoptProcessBinding(existing)) {
         return { ok: false, conflict: { kind: 'process-owned', lease: cloneLease(existing) } };
@@ -937,6 +970,37 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     };
     this.leases.set(released.leaseId, released);
     return { ok: true, value: cloneLease(released) };
+  }
+
+  async reconcileEffect(input: Parameters<BrowserTabLeaseRegistry['reconcileEffect']>[0]): Promise<TabLeaseResult<BrowserTabLease>> {
+    const artifactRef = requireNonEmpty(input.evidence?.artifactRef, 'evidence artifact');
+    if (artifactRef.length > 4096 || /[\x00-\x1f\x7f]/.test(artifactRef) || !/^[a-f0-9]{64}$/.test(input.evidence?.sha256 ?? '')) {
+      throw new Error('Qualified immutable reconciliation evidence is required');
+    }
+    const observedAt = new Date(parseTimestamp(input.now, 'now')).toISOString();
+    const existing = this.leases.get(input.leaseId);
+    if (!existing) return { ok: false, conflict: { kind: 'not-found' } };
+    if (existing.revision !== input.expectedRevision) {
+      return { ok: false, conflict: { kind: 'stale-claim', lease: cloneLease(existing) } };
+    }
+    const exactScope = normalizeScope(input.scope);
+    if (
+      !Object.entries(exactScope).every(([key, value]) => existing.scope[key as keyof TabLeaseScope] === value) ||
+      existing.targetId !== input.targetId ||
+      !['idle', 'lost'].includes(existing.state) ||
+      existing.ownerOperationId !== null || existing.ownerProcessId != null || existing.ownerInstanceId != null ||
+      existing.effectState !== 'outcome-unknown'
+    ) return { ok: false, conflict: { kind: 'invalid-transition', lease: cloneLease(existing) } };
+    const reconciled: BrowserTabLease = {
+      ...existing,
+      revision: existing.revision + 1,
+      effectState: 'settled',
+      effectReconciliations: [...(existing.effectReconciliations ?? []), {
+        observedAt, previousEffectState: 'outcome-unknown', evidence: {artifactRef, sha256: input.evidence.sha256},
+      }],
+    };
+    this.leases.set(reconciled.leaseId, reconciled);
+    return { ok: true, value: cloneLease(reconciled) };
   }
 
   async releasePreserved(input: {
@@ -1102,6 +1166,10 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return this.write((registry) => registry.releasePreserved(input));
   }
 
+  reconcileEffect(input: Parameters<BrowserTabLeaseRegistry['reconcileEffect']>[0]) {
+    return this.write((registry) => registry.reconcileEffect(input));
+  }
+
   findByProcess(scope: TabLeaseScope) {
     return this.read(registry => registry.findByProcess(scope));
   }
@@ -1251,6 +1319,7 @@ function normalizeReserveInput(input: ReserveTabLeaseInput): ReserveTabLeaseInpu
     idleTtlMs,
     absoluteTtlMs,
     targetFingerprint: normalizeOptional(input.targetFingerprint),
+    ...(input.exclusiveGroup === undefined ? {} : { exclusiveGroup: requireNonEmpty(input.exclusiveGroup, 'exclusiveGroup') }),
   };
 }
 
@@ -1281,6 +1350,17 @@ function normalizeWorkload(workload: TabLeaseWorkload): TabLeaseWorkload {
     case 'ephemeral':
       return { kind: workload.kind, operationId: requireNonEmpty(workload.operationId, 'workload.operationId') };
   }
+}
+
+/** Shared custody policy; callers retain their own conflict ordering and self-exclusion. */
+function blocksExclusiveGroupAdmission(
+  lease: BrowserTabLease,
+  scope: TabLeaseScope,
+  exclusiveGroup: string | undefined,
+): boolean {
+  return Boolean(exclusiveGroup) && lease.exclusiveGroup === exclusiveGroup &&
+    FENCED_STATES.has(lease.state) && sameOwnershipScope(lease.scope, scope) &&
+    (lease.state === 'active' || lease.state === 'retiring' || lease.effectState === 'outcome-unknown');
 }
 
 function sameOwnershipScope(left: TabLeaseScope, right: TabLeaseScope): boolean {
@@ -1327,6 +1407,7 @@ function cloneLease(lease: BrowserTabLease): BrowserTabLease {
     ...(lease.processBinding ? { processBinding: { ...lease.processBinding } } : {}),
     workload: { ...lease.workload } as TabLeaseWorkload,
     actionCounts: cloneActionCounts(lease.actionCounts),
+    ...(lease.effectReconciliations ? {effectReconciliations: lease.effectReconciliations.map(entry => ({...entry, evidence: {...entry.evidence}}))} : {}),
   };
 }
 

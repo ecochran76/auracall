@@ -10,7 +10,7 @@ import {
 	type TabLeaseRetirementEndpoint,
 	type TabLeaseRetirementOutcome,
 } from "../../packages/browser-service/src/service/tabLeaseRetirement.js";
-import { UNOWNED_TAB_WORKLOAD_PREFIX } from "../../packages/browser-service/src/service/tabInventory.js";
+import { isUnownedBrowserTabLease } from "../../packages/browser-service/src/service/tabInventory.js";
 
 export function retireExpiredChatgptTabLeases(input: {
 	registry: BrowserTabLeaseRegistry;
@@ -47,13 +47,7 @@ export function chatgptTargetMatchesLease(
 	lease: BrowserTabLease,
 	target: { url: string },
 ): boolean {
-	// These are observed physical pages in this exact managed browser, not a
-	// conversation binding. Their deadline survives page navigation.
-	if (
-		lease.workload.kind === "ephemeral" &&
-		lease.workload.operationId.startsWith(UNOWNED_TAB_WORKLOAD_PREFIX)
-	)
-		return true;
+	if (isUnownedBrowserTabLease(lease)) return false;
 	if (!lease.targetFingerprint) return false;
 	try {
 		const actual = new URL(target.url);

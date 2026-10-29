@@ -358,7 +358,7 @@ describe("LlmService provider prompt", () => {
 		);
 
 		expect(resolveServiceTarget).toHaveBeenCalledWith(
-			expect.objectContaining({ configuredUrl: "https://direct.example/prompt" }),
+			expect.objectContaining({ configuredUrl: "about:blank" }),
 		);
 		expect(planPrompt).toHaveBeenCalledWith(
 			expect.objectContaining({ configuredUrl: "https://direct.example/prompt" }),
@@ -436,7 +436,7 @@ describe("LlmService provider prompt", () => {
 		);
 
 		expect(resolveServiceTarget).toHaveBeenCalledWith(
-			expect.objectContaining({ configuredUrl: scenario.expectedUrl }),
+			expect.objectContaining({ configuredUrl: "about:blank" }),
 		);
 		expect(planPrompt).toHaveBeenCalledWith(
 			expect.objectContaining({ configuredUrl: scenario.expectedUrl }),

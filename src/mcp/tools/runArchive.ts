@@ -41,6 +41,7 @@ const runArchiveItemInputShape = {
 const runArchiveMaterializationCreateInputShape = {
   archiveItemId: z.string().min(1),
   force: z.boolean().optional(),
+  acknowledgeTargetDefaultReset: z.literal(true).optional(),
 } satisfies z.ZodRawShape;
 
 const runArchiveMaterializationJobInputShape = {
@@ -201,6 +202,7 @@ const archiveMaterializationJobShape = z.object({
   id: z.string(),
   archiveItemId: z.string(),
   force: z.boolean().optional(),
+  acknowledgeTargetDefaultReset: z.literal(true).optional(),
   status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled']),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -322,7 +324,7 @@ export function registerRunArchiveTools(
       {
         title: 'Queue AuraCall archive materialization',
         description:
-          'Queue a durable provider-backed job that materializes one generated artifact archive item.',
+          'Queue a durable provider-backed job for one archive item. Fresh Grok reference downloads require acknowledgeTargetDefaultReset=true; verified local reuse does not.',
         inputSchema: runArchiveMaterializationCreateInputShape,
         outputSchema: runArchiveMaterializationCreateOutputShape,
       },

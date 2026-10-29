@@ -2725,3 +2725,12 @@ describe('configured stored-step executor', () => {
     ).rejects.toThrow('completed without assistant output');
   });
 });
+
+it('serialized Grok stored steps carry complete account controls',async()=>{
+ const runBrowserModeImpl=vi.fn(async(_options:BrowserRunOptions)=>({answerText:'ok',answerMarkdown:'ok',tookMs:1,answerTokens:1,answerChars:2}));
+ const execute=createConfiguredStoredStepExecutor({auracallProfile:'default',defaultRuntimeProfile:'default',browser:{target:'grok',tabConcurrencyMode:'serialized',managedProfileRoot:'/tmp/auracall-grok-config'},runtimeProfiles:{default:{engine:'browser',defaultService:'grok',services:{grok:{identity:{email:'operator@example.test'},maxBackendRequestsPerMinute:3}}}}},{runBrowserModeImpl});
+ if(!execute)throw new Error('Missing executor');
+ await execute({record:{runId:'grok-config-fixture',revision:1,bundle:{run:{id:'grok-config-fixture'}}} as never,step:{id:'grok-config-step',agentId:'grok-fixture',runtimeProfileId:'default',service:'grok',input:{prompt:'Fixture',artifacts:[],structuredData:{},notes:[]}} as never});
+ const {resolveGrokBackendRequestsPerMinute}=await import('../src/runtime/grokTrafficLimits.js');
+ expect(resolveGrokBackendRequestsPerMinute((runBrowserModeImpl.mock.calls[0]?.[0].tabAffinityUserConfig??{}) as Record<string,unknown>,'default')).toBe(3);
+});
