@@ -308,12 +308,12 @@
     "414": {
       "title": "Grok: Materialize Grok referenced files and generated artifacts",
       "url": "https://github.com/ecochran76/auracall/issues/414",
-      "trackerState": "OPEN",
+      "trackerState": "CLOSED",
       "blockedBy": [
         410,
         413
       ],
-      "state": "running-conversation-reference-tdd",
+      "state": "validated-and-integrated",
       "scope": "original-program",
       "gate": "One approved synthetic upload/GrokSend consumed; actual native fileMetadataId/canonical human response/conversation/preview URL tuple qualified. Separate referenced-byte adapter TDD in progress; selected timer native acceptance retained. No replay.",
       "materializationEvidence": {
@@ -326,7 +326,9 @@
         "operationalArchiveStoreChanged": false,
         "referencedFiles": "not_qualified",
         "appIdentity": "unobserved"
-      }
+      },
+      "closurePr": "https://github.com/ecochran76/auracall/pull/493",
+      "mergeCommit": "6ad7ed6a6e76298db100dc28aecc3a175c102b90"
     },
     "440": {
       "title": "Grok: Preserve cursor-covered Grok rows through public discovery and mirror checkpoints",
@@ -512,12 +514,12 @@
       "base": "00a45bd0bf7df36845ba100aec2a2ddf97e72f33",
       "broadReviews": 1,
       "postReviewTddPasses": 1,
-      "state": "single review/findings phase complete;414 accepted pending PR integration;409/411 blocked",
+      "state": "414 closed via PR493;409/411 open on native gates; single review/findings phase complete",
       "focusedTests": 92,
       "focusedFiles": 9,
       "typecheck": "PASS after Ops continuation",
       "installedValidation": "not run",
-      "newTrackerClosures": 0,
+      "newTrackerClosures": 1,
       "selectedFileIntegratedCommits": [
         "d4ed8851e",
         "ae5d52f6d"
@@ -574,6 +576,14 @@
         "nativeReadOnlyReferenceRegression": "PASS;zero transfers/policy changes",
         "mergedMain": "d2217269c",
         "memoryDisposition": "forbidden"
+      },
+      "delivery": {
+        "pr": 493,
+        "mergeCommit": "6ad7ed6a6e76298db100dc28aecc3a175c102b90",
+        "issue414": "CLOSED readback",
+        "issues409411": "OPEN readback",
+        "ci": "no runs/checks reported; not claimed as passed",
+        "installedAdoption": "not performed"
       }
     }
   },
@@ -606,7 +616,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "2026-10-29 fresh configured runtime qualified; current native ZIP and selected timer bytes verified; isolated Archive APIs pass.409/411/414 remain OPEN on original gates; main unchanged.",
+  "lastCheckpoint": "2026-10-29 PR493 merged6ad7ed6a6;414CLOSED;409/411OPEN on native gates; one review/one findings-TDD consumed; no installed adoption.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",

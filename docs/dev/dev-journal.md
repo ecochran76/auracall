@@ -57218,3 +57218,8 @@ refusal. Primary53post-fix checks, full typecheck/build, independent16check
 closed-world verification and read-only native reference regression pass. Main
 d2217269c reconciled with source auto-merge and both doc histories preserved.
 414awaitsPRintegration;409/411remainopen on nativegates. Memoryforbidden,zero writes.
+
+PR493 merged6ad7ed6a6;414CLOSED readback,409/411OPEN. Main fetched and root
+fast-forwarded cleanly. No CI runs/checks reported; local validation is the
+recorded proof. Browser887430 retained, no installed adoption. Single review and
+findings-TDD phase complete; optional verifier extraction remains nonblocking.
