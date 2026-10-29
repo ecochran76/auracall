@@ -57121,3 +57121,8 @@ still requires `main`. Passive route/response/account observations confirm the
 current conversation and retained attachment. A targeted source regression/fix is
 underway. No transfer, upload or Send was retried. All three CLI acknowledgment
 flags are confirmed in source help.
+#414 native acceptance exposed a main-only context readiness assumption before
+transfer. A focused TDD slice qualifies the observed mounted region/gateway plane
+through canonical committed response ownership and reuses that inventory for text
+and file chunk offsets. 51 checks across five focused files and touched-unit lint
+pass; fresh native acceptance remains parent-owned.

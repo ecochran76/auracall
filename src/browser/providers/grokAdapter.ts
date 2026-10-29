@@ -1,3 +1,4 @@
+import { GROK_COMMITTED_REACT_PATH } from './grokCommittedReact.js';
 import { BrowserAutomationError } from "../../oracle/errors.js";
 import { readGrokWorkspaceFile, materializeGrokWorkspaceFile } from './grokWorkspaceFile.js';
 import { projectGrokAccountReference } from '../grokAccountReference.js';
@@ -87,8 +88,20 @@ const GROK_TIME_SELECTOR = cssClassContains('time');
 const GROK_TIMESTAMP_SELECTOR = cssClassContains('timestamp');
 const GROK_SOURCES_CONTENT_SELECTOR = 'div[id*="content-sources"]';
 const GROK_SOURCES_ROOT_SELECTOR = `${GROK_SOURCES_CONTENT_SELECTOR}, main`;
+const GROK_MOUNTED_PLANE_ROWS = `
+${GROK_COMMITTED_REACT_PATH}
+const planeOwn=(o,k)=>{const d=o&&typeof o==='object'?Object.getOwnPropertyDescriptor(o,k):null;return d&&'value'in d?d.value:undefined;};
+const qualifiedPlaneRow=row=>{
+ if(row.closest('[aria-hidden="true"],[inert],[role="dialog"]'))return false;
+ const key=Object.keys(row).find(k=>k.startsWith('__reactFiber$')),q=key?committedPath(planeOwn(row,key),row,row):null;if(!q)return false;
+ return q.path.some(f=>{const response=planeOwn(planeOwn(f,'memoizedProps'),'response');return 'response-'+planeOwn(response,'responseId')===row.id&&location.pathname==='/c/'+planeOwn(response,'conversationId')&&((planeOwn(response,'sender')==='human'&&String(row.getAttribute('class')).includes('items-end'))||(planeOwn(response,'sender')==='assistant'&&String(row.getAttribute('class')).includes('items-start')));});
+};
+const planeRows=Array.from(document.querySelectorAll('[role="region"] [data-plane-row^="gateway:"] [id^="response-"]')).filter(row=>qualifiedPlaneRow(row)&&row.getBoundingClientRect().width>0&&row.getBoundingClientRect().height>0&&row.querySelector('[class*="response-content-markdown"], div.message-bubble'));
+`;
 // One mounted-card inventory keeps content and chunked file offsets aligned.
-const GROK_CONTEXT_ROW_INVENTORY = `const rows = Array.from(document.querySelectorAll('main [id^="response-"]')).filter((row) => {
+const GROK_CONTEXT_ROW_INVENTORY = `${GROK_MOUNTED_PLANE_ROWS}
+const rows = Array.from(new Set([...document.querySelectorAll('main [id^="response-"]'),...planeRows])).filter((row) => {
+              if(row.closest('[aria-hidden="true"],[inert],[role="dialog"]'))return false;
               const classes = String(row.getAttribute('class') || '');
               return (classes.includes('items-end') || classes.includes('items-start')) && row.querySelector('[class*="response-content-markdown"], div.message-bubble');
             });
@@ -8182,7 +8195,8 @@ async function waitForGrokConversationSurface(
     Runtime,
     `(() => {
       const main = document.querySelector('main');
-      if (!main) return false;
+      ${GROK_MOUNTED_PLANE_ROWS}
+      if (!main&&!planeRows.length) return false;
       let isConversation = false;
       try {
         const current = new URL(location.href);
@@ -8193,7 +8207,7 @@ async function waitForGrokConversationSurface(
         isConversation = /\\/c\\//.test(location.pathname) || /(?:\\?|&)chat=/.test(location.search);
       }
       if (!isConversation) return false;
-      if (main.querySelector('[id^="response-"], div.message-bubble, [class*="response-content-markdown"]')) {
+      if (planeRows.length||main?.querySelector('[id^="response-"], div.message-bubble, [class*="response-content-markdown"]')) {
         return true;
       }
       if (${JSON.stringify(requireResponse)}) {

@@ -55,19 +55,26 @@ class Element {
 	closest(selector: string): Element | null {
 		if (selector.includes('id^="response-"') && this.id.startsWith("response-")) return this;
 		if (selector.includes("data-plane-row") && "data-plane-row" in this.attributes) return this;
+		if (selector.includes('role="region"') && this.attributes.role === "region") return this;
 		if (selector.includes("inert") && "inert" in this.attributes) return this;
 		if (selector.includes("aria-hidden") && this.attributes["aria-hidden"] === "true") return this;
 		return this.parentElement?.closest(selector) ?? null;
+	}
+	get textContent() {
+		return this.innerText;
+	}
+	querySelectorAll() {
+		return [];
 	}
 	onClick = () => {};
 	click() {
 		this.onClick();
 	}
 	querySelector() {
-		return new Element();
+		return new Element({}, this.innerText);
 	}
 }
-function fixture() {
+function fixture(nativePlane = false) {
 	const row = new Element({
 		id: `response-${responseId}`,
 		"data-plane-row": "gateway:separate-domain",
@@ -77,6 +84,20 @@ function fixture() {
 		id: "response-33333333-3333-4333-8333-333333333333",
 		class: "items-start",
 	});
+	const region = new Element({ role: "region" }),
+		gateway = new Element({ "data-plane-row": "gateway:fixture-user" }),
+		assistantGateway = new Element({ "data-plane-row": "gateway:fixture-assistant" });
+	row.parentElement = gateway;
+	gateway.parentElement = region;
+	assistantRow.parentElement = assistantGateway;
+	assistantGateway.parentElement = region;
+	row.innerText = "Synthetic reference request";
+	assistantRow.innerText = "reference-414.txt";
+	const foreignRow = new Element(
+		{ id: "response-44444444-4444-4444-8444-444444444444", class: "items-start" },
+		"Foreign unowned text",
+	);
+	foreignRow.parentElement = assistantGateway;
 	const card = new Element(
 		{ "aria-label": "Open attachment", "data-state": "closed" },
 		"reference-414.txt",
@@ -137,6 +158,16 @@ function fixture() {
 	const downloadHost: Fiber = { return: preview, stateNode: download };
 	message.sibling = preview;
 	preview.child = downloadHost;
+	const assistantMessage: Fiber = {
+			return: root,
+			memoizedProps: {
+				response: { responseId: assistantRow.id.slice(9), conversationId, sender: "assistant" },
+			},
+		},
+		assistantHost: Fiber = { return: assistantMessage, stateNode: assistantRow };
+	preview.sibling = assistantMessage;
+	assistantMessage.child = assistantHost;
+	Object.assign(assistantRow, { __reactFiber$fixture: assistantHost });
 	Object.assign(download, { __reactFiber$fixture: downloadHost });
 	download.onClick = () => {
 		transfer.downloadClicks++;
@@ -150,7 +181,7 @@ function fixture() {
 		evaluate: async ({ expression }: { expression: string }) => {
 			if (expression === "location.href")
 				return { result: { value: `https://grok.com/c/${conversationId}` } };
-			if (expression.includes("collectAccordionLinks"))
+			if (!nativePlane && expression.includes("collectAccordionLinks"))
 				return {
 					result: {
 						value: {
@@ -188,15 +219,22 @@ function fixture() {
 				};
 			if (
 				expression.includes("grok_workspace_file_") ||
-				expression.includes("grok_referenced_file_")
+				expression.includes("grok_referenced_file_") ||
+				(nativePlane &&
+					(expression.includes("const main = document.querySelector") ||
+						expression.includes("collectAccordionLinks")))
 			)
 				return {
 					result: {
 						value: await runInNewContext(expression, {
 							document: {
+								querySelector: (selector: string) => (selector === "main" ? null : null),
 								querySelectorAll: (selector: string) =>
-									selector === 'main [id^="response-"]'
-										? [row, assistantRow]
+									(selector === 'main [id^="response-"]' && !nativePlane) ||
+									(nativePlane && selector.includes('[role="region"]'))
+										? nativePlane
+											? [row, assistantRow, foreignRow]
+											: [row, assistantRow]
 										: selector.includes("Open attachment")
 											? [card]
 											: selector.includes("Download") && transfer.previewOpen
@@ -205,7 +243,11 @@ function fixture() {
 								getElementById: (id: string) => (id === row.id ? row : null),
 							},
 							HTMLElement: Element,
-							location: { origin: "https://grok.com", pathname: `/c/${conversationId}` },
+							location: {
+								href: `https://grok.com/c/${conversationId}`,
+								origin: "https://grok.com",
+								pathname: `/c/${conversationId}`,
+							},
 							getComputedStyle: () => ({ display: "block", visibility: "visible" }),
 							crypto: webcrypto,
 							TextEncoder,
@@ -610,4 +652,18 @@ test("canonical reference file listing respects the existing bounded message chu
 	} as never);
 	expect(files).toEqual([]);
 	expect(f.transfer.downloadClicks).toBe(0);
+});
+
+test("public context reads the mounted native plane outside main while rejecting arbitrary response rows", async () => {
+	const f = fixture(true),
+		adapter = createGrokAdapter();
+	const context = (await required(adapter.readConversationContext)(conversationId, undefined, {
+		...f.options,
+		accountMirrorInventory: true,
+	} as never)) as { messages: Array<{ role: string; text: string }>; files: FileRef[] };
+	expect(context.messages).toEqual([
+		{ role: "user", text: "Synthetic reference request" },
+		{ role: "assistant", text: "reference-414.txt" },
+	]);
+	expect(context.files.map((f) => f.id)).toEqual([fileId]);
 });

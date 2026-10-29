@@ -26434,3 +26434,12 @@ qualified transfer seam. Require explicit target-default-reset acknowledgment fo
 fresh transfers, retain sidecars before cleanup, and keep bytes when reset or
 transport settlement is unknown. Canonical upload inventory and verified archive
 reuse stay separate from generated workspace artifacts and broad history coverage.
+
+## 2026-10-29 — Read native mounted conversation planes outside main
+
+The current Grok Fast conversation mounts response rows under a region/gateway
+plane without a main element. Context readiness, message inventory and reference
+chunk selection now share those mounted rows, qualified by current committed
+React response ownership, exact conversation route, canonical response DOM ID,
+and matching sender/role. Hidden, inert, dialog and unowned rows remain excluded.
+The public regression executes actual browser readiness and extraction expressions.
