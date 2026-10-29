@@ -57062,3 +57062,13 @@ TTL acceptance is still incomplete: physical target removal observed, but no
 terminal lifecycle publication in150seconds. Protected peers survive, AuraCall
 issued no matching close request. Exact target-not-found retries retained; worker
 reproduces multi-session and verified-absence recovery. Remaining tickets stay open.
+
+
+### 2026-10-29 — Plan0464 qualified batch and absence recovery
+
+Agent Browser399ded40b is clean/pushed with model, runtime, host, consumer and
+strict source gates green. The second live failure is explained by logical session
+membership being mistaken for physical browser identity; batch expiry and exact
+absent-target/cache recovery now have qualified red/green proofs. Sealed build is
+active under its recorded bounded resource profile. Installed acceptance, both
+remaining ticket closures and the one reserved review/TDD phase are still pending.

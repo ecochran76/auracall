@@ -160,3 +160,32 @@ target reconciliation. No manual target close, global cleanup or database rewrit
 Agent Browser490 and AuraCall491 remain OPEN. Reserved broad review/TDD phase
 still unused. Current canonical Agent Browser main advanced independently; the
 frozen TTL branch is not claimed equivalent to that newer Auth feature source.
+
+
+## Qualified independent-retirement source repair
+
+The first8fa post-close failure is now reproduced at the composed manager plus
+real Remote View effects boundary: mutable active-session IDs were included in
+borrowed physical-browser equality. Closing the first expired task changed that
+list; a second same-browser expiry then incorrectly requested unavailable Native
+launch custody. The pass aborted before publishing. The host rollback correctly
+restored durable state, leaving the physically absent target for reconciliation.
+
+Agent Browser source399ded40b92d0aa8ba60000e39d1f1997efdd147 now compares the
+frozen physical browser identity without mutable session membership. Same-browser
+heartbeat and TTL batch cases, including blocked local authority, are green.
+Public BrowserManagerRuntime recovery uses fresh complete target inventory,
+unchanged kernel identity and CDP browser PID before accepting exact absence.
+Unknown inventory and changed PID remain refused. Its cache continuation was red
+(stale target reused), then green using the existing exact-page cache removal.
+Strict generic release and borrowed-app foreign-target behavior remain intact.
+
+Final delegated gates:396model checks;123consumer/pool passed with1existing
+live-viewer fixture ignored;29runtime passed with8existing disposable-Chrome
+fixtures ignored;11host checks; strict generic-close regression; workspace
+Clippy/format/diff checks. Ignored cases are not counted passed. Exact source is
+pushed to Agent Browser draftPR491. The sealed build for request
+ed7f164b381d90b4e8e2a60a24c932c97690b2c0309a9da0894a22b332e717e4 is active,
+operation candidate-build-d434b1ff-e155-4120-ba5a-38bbf9ee4bfc. Same reviewed
+4jobs/12GiB hard cap/16GiB host reserve. Source qualification is not installed
+acceptance. No remaining ticket closed and no reserved review performed yet.

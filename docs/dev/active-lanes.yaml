@@ -2126,5 +2126,5 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: aura490-closed-ab-candidate-installed-publication-recovery-in-progress
+    validation_status: aura490-closed-ab399ded-source-qualified-sealed-build-and-installed-acceptance-pending
     updated_at: 2026-10-29
