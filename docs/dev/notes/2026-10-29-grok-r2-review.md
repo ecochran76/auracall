@@ -71,3 +71,12 @@ and one findings-TDD phase consumed; no remaining accepted blocker.
 
 Memory disposition:forbidden; root non-write receipt retained privately, zero
 Graphiti writes attempted because no explicit memory-write request exists.
+
+## Delivery readback
+
+[PR493](https://github.com/ecochran76/auracall/pull/493) merged at
+`6ad7ed6a6e76298db100dc28aecc3a175c102b90`; GitHub414readback is CLOSED,
+409/411readback OPEN. Current remote main was fetched and the integration worktree
+fast-forwarded to that merge. Main-reconciled typecheck passed. GitHub reported
+no CI runs/checks; CI is not represented as passed. BrowserPID887430 remains
+Chrome, intentionally retained; installed runtime was not replaced.

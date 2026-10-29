@@ -2110,7 +2110,7 @@ lanes:
     overlaps: [grok398]
     reconciled_overlaps: [grok398]
     reconciliation_note: Explicit user resumes the remaining original frontier; completed review-repair lanes stay closed. Native operations serialized by primary.
-    validation_status: 406-closed-409-blocked-411-partial-414-native-accepted-findings-remediated
+    validation_status: 406-414-closed-409-native-blocked-411-publication-unqualified-review1-findings1
     updated_at: 2026-10-29
 
   - id: P464
