@@ -1,6 +1,6 @@
 # Plan0464 — Independent tab ownership and TTL
 
-State: OPEN
+State: CLOSED
 Branch: fix/ttl-ownership-integration
 Target: main
 Base: 00a45bd0bf7df36845ba100aec2a2ddf97e72f33
@@ -12,9 +12,12 @@ All three requested tickets are CLOSED with checked acceptance and current runti
 receipts. AuraCall ownership source is1cb828564; its five modules remain selected
 in the preserved diagnostic composite. Agent Browser implementation9d782cb is
 installed as SHA2560ed64bf6a1754cbf31d612cc327770e449639cdeacb6e0ed1767061754edce07;
-documentation HEADb01ac06a has no executable changes. PRs492(AuraCall) and491
-(Agent Browser) remain separate integration surfaces; main/runtime equivalence is
-not inferred from ticket closure.
+documentation HEAD b01ac06a had no executable changes. Agent Browser composed
+HEAD 1464092d passed integration gates and PR491 merged as
+fb4a776e9ec59955d5edb7160450386a4d980085. This includes newer Auth/journey source;
+the installed TTL hotfix is not claimed equivalent to that whole main tree.
+AuraCall PR492 is the guarded delivery surface for this final qualified tree; its
+exact merge receipt is captured separately at delivery.
 
 Fresh AB30second acceptance retired its task automatically in50.759seconds with
 terminal history, four protected peers and the browser generation intact, and no
@@ -34,9 +37,10 @@ than claimed as a full live cleanup benchmark.
 
 One consolidated Standards/Spec review is complete with no candidate findings.
 The single bounded findings-TDD phase is complete with no code/test changes
-required. Review count1; findings-phase count1. Remaining: canonical integration
-disposition and memory closeout. CI excluded; parent488reports and deferred
-connector work remain unchanged.
+required. Review count 1; findings-phase count 1. Required source, installed,
+tracker and review gates are complete. Delivery readbacks and the one qualified
+memory disposition are retained in the completion receipt. CI excluded; parent488
+reports and deferred connector work remain unchanged.
 
 ## Frozen outcome and seams
 
@@ -290,3 +294,28 @@ Exactly one findings phase completed after ticket closure/review. No accepted
 finding requires a regression or remediation. Valid critical source/live evidence
 was reused; no invented failing test, code refactor or second broad review. Raw
 review packet and primary adjudication remain in the user-scoped review artifact.
+
+
+## Final integration and delivery record
+
+Agent Browser PR491 merged as fb4a776e9ec59955d5edb7160450386a4d980085 after
+composition HEAD1464092d20a96e9097e77fef380bcc8753be8f73 qualified against pinned
+canonical main6c596cc648c6ee85adc95c665e19e5943c5b4514. Both additive test functions
+and both runbook states were retained. Shared constructor protections were checked.
+Composition passed400model checks,60challenge-control checks,288distinct selected
+native/MCP checks(289executions with one overlap),10provider-free scripts,
+format/strictClippy/diff. Nine existing cases remain ignored and are not passed.
+No second broad review or installed Auth/journey upgrade occurred.
+
+AuraCall's implementation remains1cb828564; subsequent commits reconcile qualified
+evidence and delivery only. The final PR492 head is guarded at merge, with its
+remote readback retained outside the self-referential source artifact. Installed
+ownership module hashes, exact Agent Browser executable, closed issues, surviving
+browser generations and scoped fixture cleanup are re-anchored in completion.
+
+Qualified durable memory: independent cleanup requires positive tab authority;
+browser inventory is observation. Borrowed-task outcomes publish before unrelated
+maintenance; uncertain Native journals remain fenced. Complete process-census
+identity can be batched without exporting argv, weakening unknown blockers or
+caching across guard boundaries. Installed helper smoke and caller-source tests
+remain distinct from a full live disposable-cleanup benchmark.

@@ -57100,3 +57100,14 @@ both reports; the single bounded findings-TDD phase required no code/test change
 Canonical Agent Browser main composition is now delegated to the existing worker,
 preserving both additive tests and runbook states; no second broad review or runtime
 upgrade is implied. AuraCall PR492 is prepared for integration.
+
+
+### 2026-10-29 — Plan0464 integration closeout
+
+All three tickets and Plan0464 are closed. One broad review returned Standards0 /
+Spec0; one findings-TDD phase required no changes. Agent Browser PR491 merged
+fb4a776e after combined-source model/native/MCP/client gates. The installed TTL
+hotfix remains9d782cb/0ed64bf6; Auth/journey main composition was not installed.
+AuraCall PR492 carries final source/evidence closure, guarded merge/readback and
+memory receipt completing delivery. Original peers and browser roots are retained;
+only the test-owned protected task was explicitly closed after automatic proofs.

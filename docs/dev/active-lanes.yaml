@@ -2120,11 +2120,11 @@ lanes:
     plan_ref: refs/heads/fix/ttl-ownership-integration
     branch: fix/ttl-ownership-integration
     target: main
-    plan_state: OPEN
+    plan_state: CLOSED
     custody_state: ACTIVE_WORKTREE
     checkpoint: 27c61aa2b173faa48988e103f4a921a8f764b3aa
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: all-three-tickets-closed-live-qualified-single-review-pending
+    validation_status: source-installed-and-three-tickets-qualified-review1-standards0-spec0
     updated_at: 2026-10-29
