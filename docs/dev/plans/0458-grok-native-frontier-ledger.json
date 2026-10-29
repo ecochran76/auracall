@@ -220,9 +220,9 @@
         404,
         408
       ],
-      "state": "blocked-native-capability",
+      "state": "blocked-native-bot-content-unavailable",
       "scope": "original-program",
-      "gate": "Exact committed Bot editor exposes only text/avatar fields; no Connector/Skill/source resource identity or persistent editing contract is observed."
+      "gate": "Fresh original-account canonical Bot route settles to shell only; no Bot identity/Settings content. One public resources read unknown; focus defect rejected. Current resource absence not established."
     },
     "410": {
       "title": "Grok: Generate Build apps and retrieve their artifacts",
@@ -275,9 +275,9 @@
       "blockedBy": [
         410
       ],
-      "state": "implemented-controls-read-native-snapshot-blocked",
+      "state": "current-workspace-archive-qualified-publish-binding-open",
       "scope": "original-program",
-      "gate": "Native controls read and sanitized Ops are implemented; earlier exact-account idle/unpublished receipt is historical. Managed runtime now absent. Fresh selected snapshot binding, publication approval/dispatch/reconciliation and genuine provider app/version readback remain unmet."
+      "gate": "Fresh current native ZIP and selected timer bytes are verified. Native controller idle/ready/unpublished. Revision-bound selected-output publishing and genuine provider app/version readback remain unqualified; no publication or terms approval."
     },
     "412": {
       "title": "Grok: Backfill Grok conversation indexes and follow changes",
@@ -313,9 +313,9 @@
         410,
         413
       ],
-      "state": "implemented-selected-file-native-inactive",
+      "state": "native-selected-timer-validated-referenced-files-open",
       "scope": "original-program",
-      "gate": "Selected native workspace-file and archive-integrity source committed; earlier native attempt refused inactive/no-URL file state before bytes. Runtime now absent. Actual selected file capture and wider native acceptance remain unmet; offline cursor/budget/foreground/public detail behavior already covered.",
+      "gate": "Selected generated timer bytes and sidecar native-accepted; real isolated Archive APIs/durable reuse and tamper refusal pass. Conversation-bound referenced uploads and installed/native history continuation remain unqualified; original issue stays open.",
       "materializationEvidence": {
         "integrationCommit": "e5b3707fcb444106948777ada0a3cb5309fa95ac",
         "primaryTests": 32,
@@ -512,7 +512,7 @@
       "base": "00a45bd0bf7df36845ba100aec2a2ddf97e72f33",
       "broadReviews": 0,
       "postReviewTddPasses": 0,
-      "state": "continued source checkpoint validated; native runtime unavailable; no new ticket closures; completed-batch review/findings TDD reserved",
+      "state": "partial native capability outcome validated; original ticket gates remain open; completed-batch review/findings TDD reserved",
       "focusedTests": 92,
       "focusedFiles": 9,
       "typecheck": "PASS after Ops continuation",
@@ -523,12 +523,24 @@
         "ae5d52f6d"
       ],
       "nativePublicationControls": "observed idle/not_published; exact account and response retained; dialog dismissal verified; overall workspace_inactive",
-      "nativeSelectedFileCapture": "one actual discovery failed before bytes; current inactive query state confirmed, no retry",
+      "nativeSelectedFileCapture": "PASS21762B SHA9c806b0f60e392ad993cc2485d1631914a8100303027dff1896fee24f6753f06; exact fresh ZIP member and sidecar match; primary independently verified five source hashes",
       "botConfiguration": "committed DTO and exact editor source observed; resource contract absent; no source change",
-      "runtimeStatus": "unavailable: prior managed browser generation absent and endpoint unreachable; reopen preflight stopped before connection; no replacement launched",
+      "runtimeStatus": "fresh normal configured managed browser qualified; original account continuous; retained Build and Bot targets preserved",
       "publicationOps": "sanitized native state/button/dismissal/unqualified snapshot flags; no name/identity/URL",
       "worker414OfflineQualification": "45 fresh selected checks passed; no new gap; existing full-detail cursor, budget, uncertainty and foreground restart contracts retained",
-      "sourceChecks": "PASS focused92/9files, full typecheck, changed-unit lint, source CLI help; no installed adoption"
+      "sourceChecks": "PASS focused92/9files, full typecheck, changed-unit lint, source CLI help; no installed adoption",
+      "nativeWorkspaceExport": "PASS1524947B;222files; actual ZIP/manifest retained privately; app/version null",
+      "nativeBotConfiguration": "original account qualified, canonical route shell-only; Bot identity/Settings unobserved; one public resources read unknown; no retry or source patch",
+      "nativeEvidenceReport": "../notes/2026-10-29-grok-native-snapshot.md",
+      "nativeProofDigests": {
+        "freshWorkspaceExport": "08330190fa4be2c2a0a06080afa0c9edafa934b4ae1f4dac996c68723abeff22",
+        "workspaceManifest": "c362b852f31f50d90fe591d98262495cf15ec48d0dbc87b65bef64fe4fb02a1d",
+        "selectedTimerCapture": "38af4f26862cb4285f866d83efa87bf0d62a5c3a6bba512f31a80af7d9dc8693",
+        "isolatedArchiveApi": "04e6303f23b145493b1474ee24f842965a0bc61874edd36b8deec972bb3ef172",
+        "botContentDiagnosis": "1eb52c6ab220175c7a37fc14ec4377fd77f4f96cbf6fed522711f8bc7c1ac7c6",
+        "publishController": "b50ae1cfeae002294a8064080e15e3311462a3b6e8addf13eb3de02dde88dd7f"
+      },
+      "validatedSourceHead": "af1bdb9ad54f5c3789dd93b3777b29ee6804f0b0"
     }
   },
   "executionControl": {
@@ -540,11 +552,21 @@
     "nativeSerialization": "one operation at a time, exact owned target/custody; no foreign-tab adoption or blind replay",
     "sourceAttemptsPerPacket": 2,
     "broadReviewLimit": 1,
-    "tddFindingsPassLimit": 1
+    "tddFindingsPassLimit": 1,
+    "nextReferenceCanary": {
+      "status": "prepared-not-approved",
+      "packet": "../notes/2026-10-29-grok414-reference-canary-packet.md",
+      "fileName": "reference-414.txt",
+      "sizeBytes": 107,
+      "sha256": "5e34ff7e9d8997af149b7a875940dce6117c1f2b73fc23e7ae159ea197d38e78",
+      "maxUploads": 1,
+      "maxGrokSends": 1,
+      "publicationApproved": false
+    }
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "2026-10-28 PR489 merged07bcf31b5;406CLOSED/COMPLETED with six criteria checked;409/411/414 remain OPEN; parent398 untouched",
+  "lastCheckpoint": "2026-10-29 fresh configured runtime qualified; current native ZIP and selected timer bytes verified; isolated Archive APIs pass.409/411/414 remain OPEN on original gates; main unchanged.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",

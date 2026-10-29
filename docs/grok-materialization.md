@@ -117,3 +117,15 @@ no asset URL and is inactive, so its first actual discovery attempt produced no
 accepted bytes or sidecar. A historical READY tree or a previously observed data
 URL cannot authorize capture from that state. Metadata-only artifacts remain
 not_materialized. Issue414 remains open.
+
+### Native selected-file acceptance, 2026-10-29
+
+The previously inactive selected-file gate now passes on a freshly qualified
+managed browser: `/src/components/timer.tsx`, 21,762 bytes, SHA-256
+`9c806b0f60e392ad993cc2485d1631914a8100303027dff1896fee24f6753f06`.
+The bytes match the fresh native ZIP member and retained sidecar. Real isolated
+Archive APIs proved materialization, verified reuse, durable restart through an
+injected foreground gate, and same-size tamper refusal. No provider recapture
+or operational-store write occurred. App/version/revision remain null.
+This accepts the selected generated-file slice; it does not complete referenced
+uploads or installed/native history continuation. Issue414 remains open.

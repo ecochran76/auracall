@@ -10,6 +10,21 @@ Parent: https://github.com/ecochran76/auracall/issues/398
 
 ## Current State
 
+### 2026-10-29 native snapshot checkpoint
+
+A fresh configured managed runtime and the original account are qualified.
+The current native ZIP is verified (1,524,947 bytes, 222 files). The selected timer
+is native-accepted (21,762 bytes), with identical bytes in the fresh ZIP and its
+retained sidecar. Actual isolated archive materialization, reuse, durable restart,
+injected foreground gating and same-size tamper refusal pass. Source unchanged.
+
+409 currently loads only an authenticated Grok shell, not Bot/Settings content.
+411 still lacks qualified revision-bound publish selection and provider app/version
+readback.414 still lacks conversation-bound referenced-upload and installed/native
+history-continuation acceptance. No new ticket closure, publication or consent.
+See [native report](../notes/2026-10-29-grok-native-snapshot.md). The one completed
+batch review/findings-TDD round remains reserved; historical counters unchanged.
+
 ### 2026-10-28 continued implementation checkpoint
 
 Sanitized Ops now preserves the publication-controls observation without proposed

@@ -1,3 +1,23 @@
+## 2026-10-29 — Native timer/ZIP and isolated archive acceptance
+
+Fresh normal configured Grok startup passed OS/profile/account qualification.
+One fresh current ZIP (1,524,947B/222files) and one selected timer capture
+(21,762B) match exactly. Primary independently verified bytes, sidecar and five
+capture-source hashes. Worker actual isolated Archive APIs proved materialize,
+reuse, durable restart/injected foreground gate and same-size tamper refusal;
+no provider recapture. See notes/2026-10-29-grok-native-snapshot.md.
+
+409's authenticated canonical Bot route settles to shell only; normal focus did
+not restore Bot/Settings content, so no speculative source fix or retry.411
+native publish callback is observed but revision-bound output selection and
+provider app/version remain unqualified.414's referenced-upload and installed/
+native history-continuation gates remain. All three issues stay OPEN; no new
+prompt/upload/Send/publication/terms acceptance. Source af1bdb9ad unchanged;
+prior matching source checks reused. One exact synthetic conversation-bound
+upload+Grok-Send packet is prepared but NOT approved; the original403 packet
+explicitly excluded Send. Review/findings-TDD reserved for completed
+validated ticket batch. Memory disposition:forbidden; no memory-write request.
+
 ## 2026-10-28 — Continued native411 Ops and offline414 qualification
 
 Root411 adds a sanitized publicationInspection observation to Ops through a
