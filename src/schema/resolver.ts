@@ -8,7 +8,8 @@ import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { normalizeConfigV1toV2 } from '../config/migrate.js';
 import { resolveRuntimeSelection } from '../config/model.js';
 import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
-import { resolveChatgptSemanticModelSelector } from '../config/modelSelector.js';
+import { isChatgptSemanticModelSelector, resolveChatgptSemanticModelSelector } from '../config/modelSelector.js';
+import { PromptValidationError } from '../oracle/errors.js';
 
 type MutableBrowserConfig = Record<string, unknown>;
 type MutableConfig = Record<string, unknown> & {
@@ -116,6 +117,12 @@ export async function resolveConfig(
 
   const semanticChatgptSelection =
     engine === 'browser' ? resolveChatgptSemanticModelSelector(cliModelArg) : null;
+  if (engine === 'browser' && isChatgptSemanticModelSelector(cliModelArg) && !semanticChatgptSelection) {
+    throw new PromptValidationError(
+      `Unknown ChatGPT model selector "${cliModelArg}". Use a supported selector such as chatgpt:reasoning (standard reasoning).`,
+      { engine: 'browser', model: cliModelArg },
+    );
+  }
   const inferredModel =
     semanticChatgptSelection
       ? resolveModelForChatgptSemanticSelection(semanticChatgptSelection)

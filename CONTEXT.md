@@ -227,6 +227,9 @@ Read-only utility stale-lease reconciliation observes the exact managed browser
 directory/service domain despite tenant metadata drift. Fresh adoption and provider
 identity remain tenant-scoped; live-owner and uncertain-effect fences remain intact.
 
+**Unknown semantic model selector**:
+An unrecognized `chatgpt:` model intent in a single-model browser CLI request. Run-option resolution rejects it before generic label inference or browser startup. `chatgpt:reasoning` carries standard/Medium effort; `chatgpt:reasoning-medium` is not a supported selector.
+
 
 **Grok Connector**:
 An external service connected to Grok through its Plugins connector surface,

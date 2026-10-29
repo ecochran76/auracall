@@ -1,3 +1,26 @@
+## 2026-10-29 — Issue374 current composer qualification
+
+Checked the updated ChatGPT workbench before revisiting the old selector defect.
+Its model submenu still offers GPT-6/Sol; candidate installed public resolution
+and real model/power actions confirm Sol + Medium, with fresh `2 of 5` readback
+and no prompt submission. Active CLI reproduced unsupported-selector fallback.
+Current-main composition passes169 focused checks, typecheck, compilation and
+scoped lint. Preserved candidate changes only two selector-validation modules;
+canonical integration precedes wrapper promotion. See Plan0449 and its retained
+activation/cleanup receipts. CI excluded; connector377 remains deferred.
+
+## 2026-10-23 | Issue374 selector validation
+
+Offline installed-run-option plus browser-label replay reproduced unsupported
+reasoning-medium selecting Terra in under one second; supported reasoning passed.
+Profile overrides and selector-table source drift ruled out. Run-option regressions failed first, but full CLI dry-run exposed a separate schema
+resolver path. Its boundary regressions also failed before repair. Both boundaries
+now reject unknown selectors. Four focused files pass 121/121; source CLI dry-run
+rejects the invalid selector and accepts the supported reasoning control.
+Plan0449 scopes source-only repair; no browser retry, warning clearance or runtime
+deployment. Installed qualification remains open.
+
+
 ## 2026-10-29 — Approved reference fixture consumed; adapter TDD
 
 User approved the exact additional107B upload plus one Grok chat Send. Both

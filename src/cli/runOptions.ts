@@ -8,6 +8,7 @@ import { resolveGeminiModelId } from '../oracle/gemini.js';
 import { PromptValidationError } from '../oracle/errors.js';
 import { normalizeChatGptModelForBrowser } from './browserConfig.js';
 import {
+  isChatgptSemanticModelSelector,
   resolveChatgptSemanticModelSelector,
   type ChatgptSemanticModelSelection,
 } from '../config/modelSelector.js';
@@ -53,6 +54,15 @@ export function resolveRunOptionsFromConfig({
     resolvedEngine === 'browser' && normalizedRequestedModels.length === 0
       ? resolveChatgptSemanticModelSelector(cliModelArg)
       : null;
+  if (
+    resolvedEngine === 'browser' && normalizedRequestedModels.length === 0 &&
+    isChatgptSemanticModelSelector(cliModelArg) && !browserModelSelection
+  ) {
+    throw new PromptValidationError(
+      `Unknown ChatGPT model selector "${cliModelArg}". Use a supported selector such as chatgpt:reasoning (standard reasoning).`,
+      { engine: 'browser', model: cliModelArg },
+    );
+  }
   const inferredModel =
     browserModelSelection
       ? resolveModelForChatgptSemanticSelection(browserModelSelection)

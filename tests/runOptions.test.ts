@@ -6,6 +6,18 @@ import { estimateRequestTokens } from '../src/oracle/tokenEstimate.js';
 describe('resolveRunOptionsFromConfig', () => {
   const basePrompt = 'This prompt is comfortably above twenty characters.';
 
+  it.each(['chatgpt:reasoning-medium', 'chatgpt:pro-long', ' ChatGPT:typo '])(
+    'rejects unknown semantic selector %s before falling back to a browser model',
+    (model) => {
+      expect(() => resolveRunOptionsFromConfig({
+        prompt: basePrompt, model, engine: 'browser', env: {},
+      })).toThrow(/Unknown ChatGPT model selector/);
+      expect(() => resolveRunOptionsFromConfig({
+        prompt: basePrompt, userConfig: { model, engine: 'browser' }, env: {},
+      })).toThrow(/Unknown ChatGPT model selector/);
+    },
+  );
+
   it('preserves a qualified API model ID through CLI run-option resolution', () => {
     const model = 'vendor/claude-sonnet-custom-v1';
     const { runOptions, resolvedEngine } = resolveRunOptionsFromConfig({
