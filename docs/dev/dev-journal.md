@@ -57126,3 +57126,8 @@ transfer. A focused TDD slice qualifies the observed mounted region/gateway plan
 through canonical committed response ownership and reuses that inventory for text
 and file chunk offsets. 51 checks across five focused files and touched-unit lint
 pass; fresh native acceptance remains parent-owned.
+
+Native public reference acceptance now PASS at040695203: canonical upload/context,
+107B expected checksum, sidecar and default-policy reset. Actual isolated archive
+APIs pass reuse/restart/injected foreground/tamper guards; installed adoption is
+not performed. Single consolidated r2 review now starts; findings-TDD remains.
