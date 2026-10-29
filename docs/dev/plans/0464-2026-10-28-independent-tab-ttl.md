@@ -8,11 +8,34 @@ Work items: ecochran76/auracall#490, CochranResearchGroup/agent-browser#490, eco
 
 ## Current State
 
-The operator approved the three-ticket graph and explicitly requested one primary
-ticket plus one worker per other unblocked ticket. Primary owns AuraCall ownership;
-one worker owns Agent Browser TTL in its independent repository integration branch.
-Shared acceptance has native blocking relationships to both repairs. No parent
-issue is modified. CI excluded. No provider prompts or broad cleanup.
+All three requested tickets are CLOSED with checked acceptance and current runtime
+receipts. AuraCall ownership source is1cb828564; its five modules remain selected
+in the preserved diagnostic composite. Agent Browser implementation9d782cb is
+installed as SHA2560ed64bf6a1754cbf31d612cc327770e449639cdeacb6e0ed1767061754edce07;
+documentation HEADb01ac06a has no executable changes. PRs492(AuraCall) and491
+(Agent Browser) remain separate integration surfaces; main/runtime equivalence is
+not inferred from ticket closure.
+
+Fresh AB30second acceptance retired its task automatically in50.759seconds with
+terminal history, four protected peers and the browser generation intact, and no
+AuraCall close request. Shared491 then used normal production maintenance: distinct
+AuraCall20second and AB30second targets both absent by65.792seconds, one pinned API
+close audit for AuraCall's own target, AB automatic terminal history, protected
+peer unchanged. Delayed Chrome removal was reconciled by the next normal API pass;
+AuraCall's exact lease is released/already-missing. The protected test task was
+explicitly closed afterward; all three original peers and four observed browser
+root generations remain. No manual close of eligible targets or manual reaper.
+
+Owner reads completed in23–55ms. The installed bounded batch helper positively
+returned the exact two own PIDs in113ms with namespace/boot/start/executable fences,
+no argv and clean child exit. The90second maintenance window had no eligible batch
+census opportunity, so production caller wiring is source/test-qualified rather
+than claimed as a full live cleanup benchmark.
+
+Remaining: exactly one consolidated Standards/Spec review against the frozen bases,
+one bounded findings-TDD phase, final integration disposition and memory closeout.
+The review count is0before dispatch; the remediation count is0. CI excluded,
+parent488reports unchanged, deferred connector work untouched.
 
 ## Frozen outcome and seams
 
@@ -32,8 +55,8 @@ proof of the responsible TTL. Preserve original peer targets and OS identities.
 | Ticket | Owner | Branch/base | State | Blockers |
 | --- | --- | --- | --- | --- |
 | AuraCall#490 | primary | fix/ttl-ownership-integration / 1cb828564 | validated; tracker CLOSED | none |
-| Agent Browser#490 | worker agent_browser_ttl | fix/issue488-tab-ttl / 7d9b4b7ad411 | running | none |
-| AuraCall#491 | primary after dependency validation | same AuraCall integration | pending | both490repairs |
+| Agent Browser#490 | worker agent_browser_ttl | fix/issue488-tab-ttl / 7d9b4b7ad411 | validated; tracker CLOSED | none |
+| AuraCall#491 | primary after dependency validation | same AuraCall integration | validated; tracker CLOSED | both490repairs validated |
 
 Primary owns AuraCall census/lease/retirement source, focused tests, operator docs,
 this ledger and lane projection. Worker owns Agent Browser code/tests/docs and its

@@ -2126,5 +2126,5 @@ lanes:
     integration: merge
     dependencies: []
     overlaps: []
-    validation_status: aura490-closed-ab9d782-source-qualified-census-seal-and-live-acceptance-pending
+    validation_status: all-three-tickets-closed-live-qualified-single-review-pending
     updated_at: 2026-10-29
