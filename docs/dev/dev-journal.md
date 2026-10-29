@@ -57072,3 +57072,12 @@ membership being mistaken for physical browser identity; batch expiry and exact
 absent-target/cache recovery now have qualified red/green proofs. Sealed build is
 active under its recorded bounded resource profile. Installed acceptance, both
 remaining ticket closures and the one reserved review/TDD phase are still pending.
+
+
+### 2026-10-29 — Plan0464 durable expiry and census latency
+
+Installed53 reconciled both interrupted targets to durable automatic-expiry history.
+Public status then timed out during all-process cleanup observation. The namespace
+batch repair9d782cb is clean/pushed with scoped source gates green and seal active.
+Fresh installed responsiveness and TTL/shared acceptance remain mandatory; both
+remaining tickets are open and the reserved consolidated review is unused.

@@ -209,3 +209,36 @@ no live database editing or manual target closure. Restart locator is the worker
 user-scoped issue490/worker-resume-latest.md; current exact runtime binding and raw
 failed warmup receipts are under the primary's ttl-integration artifacts.
 Both remaining tickets stay OPEN and the reserved broad review remains unused.
+
+
+## Durable expiry and installed availability gate
+
+Source53fd459b installed as sealed3e77c6428b. Its borrowed-task transaction
+reconciled both prior physical removals into durable heartbeat-expired terminal
+history, independently of the old Native readback failures. This qualifies that
+lifecycle repair, but does not qualify a fresh installed short-TTL test. Live
+owner-status reads then exceeded10and30seconds during later maintenance.
+
+Read-only observation sampled179namespace helper launches over162PIDs in5seconds.
+Current cleanup census scans all process identities before profile relevance and
+repeats that work per disposable allocation under shared locks; stripped stacks
+limit exact caller-name attribution. The source/live pattern and observed public
+latency are qualified. No deadlock, task success or complete profile cleanup is
+inferred. Existing exact capture also retries up to10times, amplifying this census.
+
+Agent Browser9d782cb3c463135fd83c3d37d83ea15f50b5133a is now clean/pushed with
+a fresh bounded identity-only namespace batch, exact response/PID/boot/start
+validation, local argv re-read for execve freshness, bounded concurrent output
+drain and owned-child timeout cleanup. Unknown/denied/incomplete evidence remains
+fail-closed. Exact PID capture semantics elsewhere and cleanup policy are unchanged.
+Final delegated gates pass: observer5, public guards4, resources32, identity22,
+host11, runtime29with8existingignored, consumer125with1existingignored,
+dispatcher3, strict-close1, Clippy/format/diff. The397model result remains valid
+because model code is unchanged. Catalog failure is verified at original7d9base,
+not merely an intermediate task commit; the owned P297 row parses.
+
+Sealed build requestb74433c186a063695e8bb3467b553087a42a15ec80168daf3229287302831dfb
+is active (candidate-build-40bc7eac-7a99-492e-8757-b3de13154a4b), using the same
+reviewed4jobs/12GiB hard cap/16GiB reserve and cache disabled. Installed owner
+responsiveness, bounded helper behavior, fresh AB TTL and shared491acceptance remain
+required. No additional runtime mutation, ticket closure or broad review yet.
