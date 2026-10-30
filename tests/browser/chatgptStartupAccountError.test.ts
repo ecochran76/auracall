@@ -15,9 +15,14 @@ function runtime(kind: 'model' | 'mode', heading: Heading) {
   vi.stubGlobal('HTMLElement', Heading);
   vi.stubGlobal('getComputedStyle', (node: Heading) => ({ display: 'block', visibility: 'visible', opacity: node.opacity }));
   vi.stubGlobal('document', { querySelectorAll: () => [heading] });
+  let firstObservation = true;
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
-    if (expression.includes('const BUTTON_SELECTORS')) return { result: { value: { status: 'button-missing' } } };
-    if (expression.includes('const DESIRED_MODE')) return { result: { value: { status: 'mode-not-found', availableModes: [] } } };
+    if (firstObservation) {
+      firstObservation = false;
+      return { result: { value: kind === 'model'
+        ? { status: 'button-missing' }
+        : { status: 'mode-not-found', availableModes: [] } } };
+    }
     return { result: { value: new Function(`return ${expression}`)() } };
   });
   const client = { evaluate } as never;
