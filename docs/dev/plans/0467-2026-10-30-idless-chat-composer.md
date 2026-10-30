@@ -8,6 +8,21 @@ Integration: merge
 
 ## Current State
 
+PR503 merged8723ff36a; qualified sourcee801e190b installed in immutable
+`user-runtime-idless-e801e190b` for CLI/MCP/API with657file parity.
+86focused tests, full build/typecheck/lint/runtime contract and installed
+real-CSS DOM replay pass; fresh installed MCP initialization succeeds.
+API2789921healthy, scheduler and23paused completions/config bytes unchanged.
+Native ChatGPT browser2543066verified and not restarted. Actual page proof is
+BLOCKED by DesktopControlBusyError; no lock bypass or research prompt.
+[Installed receipt](../notes/2026-10-30-idless-composer-installed.json).
+Source/integration/installation are complete. Leave this plan OPEN for the single
+remaining passive managed-page criterion once legitimate desktop control is
+available. That read is within operator-authorized verification; no provider
+prompt, browser restart or warning clearance is included.
+
+## Historical source reproduction
+
 Installed selector replay rejects an ID-less visible editable textbox with no
 mode controls; adding the legacy ID passes. The exact failure capture records
 zero legacy editors and one visible editable textbox. Earlier read-only control

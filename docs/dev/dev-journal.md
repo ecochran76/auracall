@@ -1,3 +1,14 @@
+## 2026-10-30 — ID-less composer merged and installed
+
+PR503/8723ff36a integrates the source fix with newer diagnostics. Immutable
+runtimee801e190b matches657built files;86focused tests, full build/typecheck,
+scoped lint, runtime contract, installed real-CSS DOM replay and MCP initialization
+pass. CLI/MCP/API select the new prefix. API2789921healthy; scheduler and23paused
+completion states plus config/env hashes unchanged. Native browser2543066is
+unchanged and verified. Live selector proof stopped at DesktopControlBusyError;
+no control override or research prompt. Plan0467 stays OPEN for that passive
+criterion; installed fixture success is not live acceptance.
+
 ## 2026-10-30 — ID-less Chat composer fallback
 
 Plan0467 diagnoses a confirmed legacy-ID selector defect. Installed expression
