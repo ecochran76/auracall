@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-
+import { readFile } from "node:fs/promises";
+import { withCdpCommandAbortSignal } from "../../packages/browser-service/src/guardedCdp.js";
 import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { createLedgerBackedBrowserInteractionGovernor } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 import type { BrowserMutationAuditSink } from "../../packages/browser-service/src/service/mutationDispatcher.js";
@@ -8,6 +9,7 @@ import {
 	type ProviderTrafficAuthorityFactory,
 } from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type {
+	BrowserTabLease,
 	TabLeaseClaim,
 	TabLeaseScope,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
@@ -28,6 +30,10 @@ import {
 import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
 import { probeGrokRateLimitWarning } from "./grokProviderTraffic.js";
+import type {
+	GrokUnknownConnectorObservation,
+	GrokUnknownObservationRequest,
+} from "./grokUnknownConnectorObservation.js";
 import {
 	createOwnedBackendRequestAuthority,
 	validateBackendRequestLimit,
@@ -39,7 +45,7 @@ import { createBrowserTabConcurrencyRuntime } from "./tabConcurrencyRuntime.js";
 const PROVIDER_TRAFFIC_IDLE_TTL_MS = 5 * 60_000;
 const PROVIDER_TRAFFIC_ABSOLUTE_TTL_MS = 60 * 60_000;
 
-export function createConfiguredProviderTrafficAuthorityFactory(input: {
+interface ConfiguredProviderTrafficInput {
 	userConfig: ResolvedUserConfig;
 	mutationAudit: BrowserMutationAuditSink;
 	provider: ProviderId;
@@ -47,7 +53,16 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 	baseOptions: BrowserProviderListOptions;
 	now?: () => Date;
 	backendRequestLimit?: number;
-}): ProviderTrafficAuthorityFactory {
+}
+export function createConfiguredProviderTrafficAuthorityFactory(
+	input: ConfiguredProviderTrafficInput,
+): ProviderTrafficAuthorityFactory {
+	return buildConfiguredProviderTrafficAuthorityFactory(input);
+}
+function buildConfiguredProviderTrafficAuthorityFactory(
+	input: ConfiguredProviderTrafficInput,
+	observation: { lease: BrowserTabLease; assertCurrent: () => Promise<void> } | null = null,
+): ProviderTrafficAuthorityFactory {
 	let backendRequestLimit =
 		input.backendRequestLimit ??
 		(input.provider === "chatgpt"
@@ -123,6 +138,18 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 			input.provider === "grok" ||
 			(input.provider === "chatgpt" && backendRequestLimit !== undefined),
 		async acquire({ targetId, borrowedLease }) {
+			if (observation) {
+				if (
+					borrowedLease ||
+					targetId !== observation.lease.targetId ||
+					input.provider !== "grok" ||
+					Object.entries(scope).some(
+						([key, value]) => observation.lease.scope[key as keyof TabLeaseScope] !== value,
+					)
+				)
+					throw Error("grok_unknown_observation_scope_mismatch");
+				await observation.assertCurrent();
+			}
 			const operationId = borrowedLease?.claim.operationId ?? `provider-traffic-${randomUUID()}`;
 			const workloadId = `provider-client:${operationId}`;
 			if (input.provider === "grok") {
@@ -156,8 +183,9 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 					))
 			)
 				throw new Error("Borrowed provider traffic lease does not match active target custody.");
-			const reserved =
-				borrowed && borrowedLease
+			const reserved = observation
+				? undefined
+				: borrowed && borrowedLease
 					? { ok: true as const, value: { lease: borrowed, claim: borrowedLease.claim } }
 					: await registry.reserve({
 							scope,
@@ -172,19 +200,25 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 							absoluteTtlMs: PROVIDER_TRAFFIC_ABSOLUTE_TTL_MS,
 							...(input.provider === "grok" ? { exclusiveGroup: "grok-serialized-utility" } : {}),
 						});
-			if (!reserved.ok) {
+			if (reserved && !reserved.ok) {
 				throw new Error(`Provider traffic lease reservation failed: ${reserved.conflict.kind}.`);
 			}
-			let claim: TabLeaseClaim = reserved.value.claim;
+			const pinnedLease = observation?.lease ?? (reserved?.ok ? reserved.value.lease : undefined);
+			if (!pinnedLease) throw Error("Provider traffic lease unavailable.");
+			let claim: TabLeaseClaim | undefined = reserved?.ok ? reserved.value.claim : undefined;
 			const assertOwnedLease = async () => {
+				if (observation) {
+					await observation.assertCurrent();
+					return;
+				}
 				const lease = (await registry.list({ scope, states: ["active"] })).find(
-					(candidate) => candidate.leaseId === reserved.value.lease.leaseId,
+					(candidate) => candidate.leaseId === pinnedLease.leaseId,
 				);
 				if (
 					!lease ||
 					lease.ownerOperationId !== operationId ||
 					lease.targetId !== targetId ||
-					lease.revision !== claim.revision
+					lease.revision !== claim?.revision
 				) {
 					throw new Error("Provider traffic lease ownership changed before physical action.");
 				}
@@ -202,7 +236,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 							},
 							workloadId,
 							operationId,
-							tabLeaseId: reserved.value.lease.leaseId,
+							tabLeaseId: pinnedLease.leaseId,
 							backendRequestLimit,
 							observeWithoutLocalCeiling: input.provider === "grok",
 							budgetWaitTimeoutMs,
@@ -218,7 +252,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 				scope: { provider: input.provider, tenantKey, runtimeProfileId, managedBrowserProfile },
 				workloadId,
 				operationId,
-				tabLeaseId: reserved.value.lease.leaseId,
+				tabLeaseId: pinnedLease.leaseId,
 				policy: {
 					maxConcurrentChats: null,
 					maxConversationStartsPerHour: null,
@@ -245,7 +279,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 					managedBrowserProfile,
 					workloadId,
 					operationId,
-					tabLeaseId: reserved.value.lease.leaseId,
+					tabLeaseId: pinnedLease.leaseId,
 					targetId,
 				},
 				interactionGovernor,
@@ -292,7 +326,16 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 			});
 			let closed = false;
 			return {
-				governor,
+				governor: observation
+					? {
+							...governor,
+							begin: async (action) => {
+								if (action.kind !== "provider-read")
+									throw Error("grok_unknown_observation_read_only");
+								return governor.begin(action);
+							},
+						}
+					: governor,
 				async close(settlement = {}) {
 					if (closed) return;
 					closed = true;
@@ -301,11 +344,18 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 						settlement.effectState ??
 						"settled";
 					await interactionGovernor.close({ ...settlement, effectState });
+					if (observation) {
+						await observation.assertCurrent();
+						if (effectState === "outcome-unknown")
+							throw Error("grok_unknown_observation_cleanup_unknown");
+						return;
+					}
 					if (borrowedLease) {
 						if (effectState === "outcome-unknown")
 							throw new Error("Borrowed provider traffic request cleanup remains uncertain.");
 						return;
 					}
+					if (!claim) throw Error("Provider traffic lease claim unavailable.");
 					const used = await registry.recordMeaningfulUse({
 						claim,
 						now: now().toISOString(),
@@ -342,4 +392,200 @@ function requireValue(value: string, name: string): string {
 	const normalized = value.trim();
 	if (!normalized) throw new Error(`Provider traffic authority requires ${name}.`);
 	return normalized;
+}
+
+/** Fixed read-only outcome observation. Never returns browser or mutation authority. */
+export async function observeConfiguredGrokUnknownConnectorOutcome(
+	config: ResolvedUserConfig,
+	rawRequest: unknown,
+	signal?: AbortSignal,
+) {
+	return withCdpCommandAbortSignal(signal, () =>
+		observeGrokUnknownOutcome(config, rawRequest, signal),
+	);
+}
+async function observeGrokUnknownOutcome(
+	config: ResolvedUserConfig,
+	rawRequest: unknown,
+	signal?: AbortSignal,
+) {
+	const { grokUnknownObservationRequestSchema, readGrokUnknownConnectorObservation } = await import(
+		"./grokUnknownConnectorObservation.js"
+	);
+	const request = grokUnknownObservationRequestSchema.parse(rawRequest);
+	signal?.throwIfAborted();
+	const { resolveGrokReadSessionOptions } = await import("./configuredGrokDiscovery.js");
+	const options = await resolveGrokReadSessionOptions(
+		config,
+		request.scope.runtimeProfileId,
+		signal,
+		{ ensurePort: false, tabTargetId: request.targetId },
+	);
+	const context = options.providerSessionAuthorization?.context;
+	if (
+		!context ||
+		context.providerId !== "grok" ||
+		context.auracallRuntimeProfile !== request.scope.runtimeProfileId ||
+		context.managedBrowserProfile !== request.scope.managedBrowserProfile ||
+		context.browserProcessId !== request.browserProcessId ||
+		!["127.0.0.1", "localhost"].includes(options.host ?? "") ||
+		!options.port ||
+		!options.mutationAudit
+	)
+		throw Error("grok_unknown_observation_browser_mismatch");
+	const { resolveRuntimeProfileUserConfig } = await import("./service/profileConfig.js");
+	const selected = {
+		...resolveRuntimeProfileUserConfig(config, {
+			runtimeProfileId: request.scope.runtimeProfileId,
+			provider: "grok",
+		}),
+		auracallProfile: request.scope.runtimeProfileId,
+	} as ResolvedUserConfig;
+	const registry = createBrowserTabConcurrencyRuntime(selected).registry;
+	if (!registry) throw Error("grok_unknown_observation_registry_missing");
+	const lease = (await registry.list()).find((item) => item.leaseId === request.leaseId);
+	assertObservationLease(lease, request);
+	const original = JSON.stringify(lease);
+	const assertCurrent = async () => {
+		signal?.throwIfAborted();
+		const stat = await readFile(`/proc/${request.browserProcessId}/stat`, "utf8");
+		const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+		if (fields[0] === "Z" || fields[19] !== request.browserStartTime)
+			throw Error("grok_unknown_observation_browser_mismatch");
+		const current = (await registry.list()).find((item) => item.leaseId === request.leaseId);
+		assertObservationLease(current, request);
+		if (JSON.stringify(current) !== original) throw Error("grok_unknown_observation_lease_changed");
+	};
+	await assertCurrent();
+	const factory = buildConfiguredProviderTrafficAuthorityFactory(
+		{
+			userConfig: selected,
+			provider: "grok",
+			managedBrowserProfile: request.scope.managedBrowserProfile,
+			mutationAudit: options.mutationAudit,
+			baseOptions: options,
+		},
+		{ lease, assertCurrent },
+	);
+	const { connectToGrokTab, checkGrokBrowserAuthPreflight } = await import(
+		"./providers/grokAdapter.js"
+	);
+	const connection = await connectToGrokTab({
+		...options,
+		tabTargetId: request.targetId,
+		tabUrl: undefined,
+		allowNavigation: false,
+		tabLifecycle: "retain",
+		providerTrafficRequired: true,
+		providerTrafficGovernor: undefined,
+		historyOwnedLease: undefined,
+		providerTrafficAuthorityFactory: factory,
+	});
+	const { resolveProviderTrafficGovernor } = await import("./providers/mutationAudit.js");
+	let failed: { error: unknown } | undefined;
+	let observationResult: GrokUnknownConnectorObservation | undefined;
+	try {
+		if (
+			connection.targetId !== request.targetId ||
+			connection.host !== options.host ||
+			connection.port !== options.port
+		)
+			throw Error("grok_unknown_observation_browser_mismatch");
+		const governor = resolveProviderTrafficGovernor(connection.client);
+		if (!governor || !governor.admitBackendRequest)
+			throw Error("grok_unknown_observation_governor_missing");
+		const runtime = {
+			evaluate: async (args: Parameters<typeof connection.client.Runtime.evaluate>[0]) => {
+				await assertCurrent();
+				const result = await connection.client.Runtime.evaluate(args);
+				await assertCurrent();
+				return result;
+			},
+		};
+		const action = await governor.begin({
+			kind: "provider-read",
+			interactionClass: "generic",
+			source: "provider:grok:unknown-connector-observation",
+			targetId: request.targetId,
+			abortSignal: signal,
+		});
+		const verify = async () => {
+			const proof = await checkGrokBrowserAuthPreflight(
+				runtime as typeof connection.client.Runtime,
+				options,
+			);
+			const { projectGrokAccountReference } = await import("./grokAccountReference.js");
+			if (
+				!proof.ok ||
+				projectGrokAccountReference(proof.actualIdentity, "typed-v1") !==
+					request.expectedProviderAccountRef
+			)
+				throw Error("grok_unknown_observation_account_mismatch");
+		};
+		let settlementStarted = false;
+		try {
+			await governor.checkWarning?.(runtime);
+			await verify();
+			const result = await readGrokUnknownConnectorObservation(runtime, request);
+			await verify();
+			await assertCurrent();
+			settlementStarted = true;
+			await action.settle({ outcome: "succeeded", effectState: "none", probeContext: runtime });
+			observationResult = result;
+		} catch (error) {
+			if (!settlementStarted) {
+				settlementStarted = true;
+				try {
+					await action.settle({
+						outcome: "failed",
+						effectState: "none",
+						error: "grok_unknown_observation_failed",
+					});
+				} catch (settlementError) {
+					throw new AggregateError(
+						[error, settlementError],
+						error instanceof Error ? error.message : "grok_unknown_observation_failed",
+					);
+				}
+			}
+			throw error;
+		}
+	} catch (error) {
+		failed = { error };
+	}
+	try {
+		await connection.client.close();
+		await assertCurrent();
+	} catch (cleanupError) {
+		if (failed)
+			throw new AggregateError(
+				[failed.error, cleanupError],
+				failed.error instanceof Error ? failed.error.message : "grok_unknown_observation_failed",
+			);
+		throw cleanupError;
+	}
+	if (failed) throw failed.error;
+	if (!observationResult) throw Error("grok_unknown_observation_result_missing");
+	return observationResult;
+}
+
+function assertObservationLease(
+	lease: BrowserTabLease | undefined,
+	request: GrokUnknownObservationRequest,
+): asserts lease is BrowserTabLease {
+	if (
+		!lease ||
+		lease.revision !== request.expectedRevision ||
+		lease.targetId !== request.targetId ||
+		!["idle", "lost"].includes(lease.state) ||
+		lease.effectState !== "outcome-unknown" ||
+		lease.ownerOperationId ||
+		lease.ownerProcessId ||
+		lease.ownerInstanceId ||
+		lease.processBinding ||
+		Object.entries(request.scope).some(
+			([key, value]) => lease.scope[key as keyof TabLeaseScope] !== value,
+		)
+	)
+		throw Error("grok_unknown_observation_lease_mismatch");
 }
