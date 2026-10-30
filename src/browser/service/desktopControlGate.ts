@@ -126,6 +126,57 @@ export class DesktopControlGate {
 		);
 	}
 
+	/** Temporary DEBUG-desktop-control-busy capture; never changes admission or serializes tokens. */
+	private async captureFailure(
+		binding: string,
+		observedOwner: GateOwner | undefined,
+		context: { category: "human-owned" | "busy" | "stale-scope" | "cancelled" | "admission-error"; attempts: number; cancellationSupplied: boolean; inherited?: GateOwner; ownerObservedAt?: string },
+	): Promise<void> {
+		if (process.platform !== "linux") return;
+		try {
+			const directory = path.join(getAuracallHomeDir(), "diagnostics", "desktop-control");
+			const marker = path.join(directory, "enabled");
+			const [directoryStat, markerStat] = await Promise.all([fs.lstat(directory), fs.lstat(marker)]);
+			const uid = process.getuid?.();
+			if (!directoryStat.isDirectory() || directoryStat.uid !== uid || (directoryStat.mode & 0o077) !== 0 ||
+				!markerStat.isFile() || markerStat.uid !== uid || (markerStat.mode & 0o077) !== 0 || markerStat.size > 16 ||
+				(await fs.readFile(marker, "utf8")).trim() !== "1") return;
+			let pidPresent: boolean | null = null;
+			if (observedOwner) {
+				try { await fs.access(`/proc/${observedOwner.ownerPid}`); pidPresent = true; }
+				catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") pidPresent = false; }
+			}
+			const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+			const record = {
+				schemaVersion: 1,
+				tag: "DEBUG-desktop-control-busy",
+				capturedAt: new Date().toISOString(),
+				category: context.category,
+				requestedRole: "automation",
+				requestedBindingSha256: hash(binding),
+				ownerObservedAt: context.ownerObservedAt ?? null,
+				owner: observedOwner ? {
+					role: observedOwner.role,
+					pid: observedOwner.ownerPid,
+					acquiredAt: new Date(observedOwner.acquiredAt).toISOString(),
+					bindingSha256: hash(observedOwner.binding),
+					pidPresent,
+					ownerBootVerified: false,
+					matchesRequesterPid: observedOwner.ownerPid === process.pid,
+				} : null,
+				bindingsMatch: observedOwner ? observedOwner.binding === binding : null,
+				inheritedScope: { present: Boolean(context.inherited), matchesRequesterPid: context.inherited?.ownerPid === process.pid },
+				attempts: context.attempts,
+				cancellationSupplied: context.cancellationSupplied,
+			};
+			const body = JSON.stringify(record);
+			if (Buffer.byteLength(body) > 4096) return;
+			await fs.writeFile(path.join(directory, `DEBUG-desktop-control-busy-${randomUUID()}.json`), body, { mode: 0o600, flag: "wx" });
+		} catch {
+			// Diagnostics are best effort: preserve the original refusal and ownership.
+		}
+	}
+
 	private async transition<T>(operation: () => Promise<T>): Promise<T> {
 		await fs.mkdir(path.dirname(this.lockPath), { recursive: true, mode: 0o700 });
 		const transitionPath = `${this.lockPath}.transition`;
@@ -302,26 +353,44 @@ export class DesktopControlGate {
 				!current || current.id !== inherited.id || current.role !== "automation" ||
 				current.binding !== binding || inherited.binding !== binding ||
 				current.ownerPid !== process.pid
-			) throw new Error("Desktop automation ownership changed; refusing stale scope.");
+			) {
+				await this.captureFailure(binding, current, { category: "stale-scope", attempts: 0, cancellationSupplied: Boolean(options?.abortSignal), inherited, ownerObservedAt: new Date().toISOString() });
+				throw new Error("Desktop automation ownership changed; refusing stale scope.");
+			}
 			return effect();
 		}
 		let owner: GateOwner | undefined;
-		for (let attempt = 0; options?.abortSignal !== undefined || attempt < 100; attempt += 1) {
-			options?.abortSignal?.throwIfAborted();
-			try {
-				owner = await this.acquire("automation", binding);
-				break;
-			} catch (error) {
-				if (options?.abortSignal && !(error instanceof DesktopControlBusyError)) throw error;
-				const current = await this.owner();
-				if (current?.role === "human")
-					throw new Error("AuraCall automation is paused while a human controls this desktop.");
-				if (!options?.abortSignal && attempt === 99) throw error;
+		let observedOwner: GateOwner | undefined;
+		let ownerObservedAt: string | undefined;
+		let attempts = 0;
+		try {
+			for (let attempt = 0; options?.abortSignal !== undefined || attempt < 100; attempt += 1) {
+				attempts = attempt + 1;
 				options?.abortSignal?.throwIfAborted();
-				await delay(20, undefined, { signal: options?.abortSignal });
+				try {
+					owner = await this.acquire("automation", binding);
+					break;
+				} catch (error) {
+					if (options?.abortSignal && !(error instanceof DesktopControlBusyError)) throw error;
+					observedOwner = await this.owner();
+					ownerObservedAt = new Date().toISOString();
+					if (observedOwner?.role === "human")
+						throw new Error("AuraCall automation is paused while a human controls this desktop.");
+					if (!options?.abortSignal && attempt === 99) throw error;
+					options?.abortSignal?.throwIfAborted();
+					await delay(20, undefined, { signal: options?.abortSignal });
+				}
 			}
+			if (!owner) throw new Error("Desktop automation admission unavailable.");
+		} catch (error) {
+			await this.captureFailure(binding, observedOwner, {
+				category: options?.abortSignal?.aborted ? "cancelled" : observedOwner?.role === "human" ? "human-owned" : error instanceof DesktopControlBusyError ? "busy" : "admission-error",
+				attempts,
+				cancellationSupplied: Boolean(options?.abortSignal),
+				ownerObservedAt,
+			});
+			throw error;
 		}
-		if (!owner) throw new Error("Desktop automation admission unavailable.");
 		try {
 			options?.abortSignal?.throwIfAborted();
 			const scopes = new Map(automationScopes.getStore());

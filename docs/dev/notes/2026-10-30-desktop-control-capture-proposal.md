@@ -1,6 +1,6 @@
 # Optional desktop admission failure capture
 
-Status: PROPOSED_ONLY; not implemented, installed or enabled.
+Status: APPROVED by the operator; source qualified in Plan0468, installation tracked separately.
 Source authority: diagnosing-bugs Phase1 when a trustworthy loop is unavailable.
 
 The guarded read and full unchanged installed selector now pass. The historical
@@ -13,7 +13,7 @@ At terminal refused admission in
 failed operation, without changing the original error or gate behavior:
 
 - timestamp, rejection category, requested automation/human role;
-- owner role, numeric PID, acquisition timestamp, same-boot PID liveness;
+- owner role, numeric PID, acquisition timestamp, current PID presence (owner boot identity remains unverified);
 - SHA256 of requested and observed binding, whether they match;
 - whether an inherited automation scope exists and matches the current process;
 - attempt count and whether caller cancellation was supplied.
@@ -32,5 +32,5 @@ never escape, success creates no receipt, and original error/ownership remain.
 No research prompt or browser restart is included. Remove the temporary capture
 and tag after a qualified failing observation and diagnosis.
 
-Operator approval is required before adding this temporary production capture.
+Operator approval was received in the following user turn: “yes”.
 A user-supplied failure-time owner snapshot is an alternative evidence source.

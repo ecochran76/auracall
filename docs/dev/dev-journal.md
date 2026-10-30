@@ -1,3 +1,16 @@
+## 2026-10-30 — Approved temporary desktop ownership capture
+
+Plan0468 primary serialized source lane in an isolated checkout. The operator
+approved the reviewed capture proposal. Four public-gate red/green cycles cover
+human refusal, terminal automation contention, cancelled waits and inherited
+scope refusal;29focused tests, full build/typecheck, scoped lint and final runtime
+contract pass. Only desktopControlGate.js differs from the complete active
+issue384 build; no deployed module is missing. Private failure-only capture is
+opt-in, token-free, one0600receipt per refused call; original errors and owners
+remain. Current PID presence is explicitly not boot identity. Installation and
+marker activation follow; no causal fix, provider prompt or browser restart.
+[Source receipt](notes/2026-10-30-desktop-control-capture-source.json).
+
 ## 2026-10-30 — Issue384 merged, installed and closed
 
 PR385/e30c2ef535 delivers qualified startup account errors while preserving

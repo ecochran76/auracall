@@ -1028,3 +1028,27 @@ A missing Chat/Work mode control also writes a private structural receipt under
 and bounded ready/path categories, never page text, route IDs or conversation
 contents. Capture failure preserves the original selection error. These diagnostics
 do not reload, retry, clear warnings or prove a provider incident's cause.
+
+
+## Temporary desktop admission failure capture | Plan0468
+
+The operator-approved Linux capture is off by default. To enable it for the
+installed runtime, create `~/.auracall/diagnostics/desktop-control/` with mode0700
+and an owner-only0600 regular file `enabled` containing `1`. A symlink, other
+owner, group/world permissions or different content does not opt in. Remove
+`enabled` to disable future captures; an already in-flight capture can finish.
+Run tests and replay harnesses with an isolated `AURACALL_HOME_DIR` while enabled.
+
+One failed `withAutomation` admission may write one JSON file (maximum4096bytes,
+mode0600), prefixed `DEBUG-desktop-control-busy-`. Metadata covers human ownership,
+terminal busy/cancelled waits and rejected inherited scope. It records the last
+successful owner read with its observation timestamp, PID presence, normalized
+acquisition time and hashed binding correlation. Existing owners lack a boot
+identifier, so `ownerBootVerified=false`; PID presence is not ownership proof.
+No owner ID/control token, raw binding, credential, process command line, page
+content, URL, error object or stack is recorded. Private storage failures preserve
+the original refusal. The capture does not acquire/release or override ownership.
+
+Read the next qualified natural failure with its originating operation evidence.
+Then disable and remove this temporary capture/tag as part of diagnosis cleanup.
+Controlled fixture success proves instrumentation, not the historical cause.

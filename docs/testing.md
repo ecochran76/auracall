@@ -1,3 +1,10 @@
+- Temporary ownership capture (provider-free, Plan0468):
+  `pnpm vitest run tests/browser/desktopControlFailureCapture.test.ts tests/browser/desktopControlGate.test.ts tests/browser/desktopTransitionRecovery.test.ts tests/browser/desktopCdpTransport.test.ts tests/browser/nativeDesktopCdp.test.ts --maxWorkers=1`.
+  Public gate refusals, genuine sandbox holds and permissions prove allowlisting,
+  private output, original errors/ownership, cancellation and inherited scopes;
+  default-off/success and unwritable sink controls remain. Linux capture fixtures
+  skip on other platforms. No production desktop is locked by these fixtures.
+
 - ID-less Chat composer (provider-free, Plan0467):
   `pnpm vitest run tests/browser/chatgptComposerMode.test.ts tests/browser/chatgptToolApproval.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers=1`.
   Real mode expression covers absent legacy IDs, delayed editor, hidden/disabled,
