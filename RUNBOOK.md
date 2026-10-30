@@ -22363,3 +22363,12 @@ uses a distinct result path. No provider prompt/calendarwrite.
 ## Turn 469 | 2026-10-30
 
 P469 primary/deadline owns integration and #514; category worker owns #515 in an isolated checkout. Base57df62b52; both unblocked, shared file integrated serially. See [Plan0469](docs/dev/plans/0469-2026-10-30-desktop-capture-refusal-integrity.md). No installed effects.
+
+### P469 closeout
+
+#514/#515 tracker closed with readbacks after131focused tests; source integration
+9a0eb7d3d +1b3d4c0c0. One frozen review28486ce2a vs57df62b52: Standards0,
+Spec1P2(S1). One TDD pass adds independent cancellationObserved boolean;
+31post-remediation tests and final typecheck/build/lint pass. Plan0469CLOSED
+source-only; no installation/live acceptance. Worker515 clean checkout removed
+after bundle custody; primary branch retained for publication.

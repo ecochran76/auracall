@@ -12,7 +12,8 @@ owner belongs to the current boot; the original refusal and ownership remain.
 Optional capture has a 100 ms diagnostic wait allowance across the complete
 capture attempt; an already-issued filesystem operation can settle afterward.
 Receipt categories follow the terminal refusal cause, independently of a later
-abort-signal snapshot; cancellation reasons remain private.
+abort-signal snapshot. The separate cancellationObserved boolean records signal
+state at refusal observation; cancellation reasons remain private.
 
 Control-less Chat fallback may use one visible enabled ProseMirror textbox
 without the legacy prompt editor ID after the existing bounded mode-control

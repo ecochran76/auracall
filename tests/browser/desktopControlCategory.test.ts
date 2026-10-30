@@ -9,9 +9,9 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-test.skipIf(process.platform !== "linux")(
-	"a human-control refusal keeps its category when cancellation races owner lookup",
-	async () => {
+test.skipIf(process.platform !== "linux").each([false, true])(
+	"a human refusal records concurrent cancellation separately: aborted=%s",
+	async (aborted) => {
 		const home = await fs.mkdtemp(path.join(os.tmpdir(), "auracall-category-"));
 		vi.stubEnv("AURACALL_HOME_DIR", home);
 		const directory = path.join(home, "diagnostics", "desktop-control");
@@ -23,7 +23,7 @@ test.skipIf(process.platform !== "linux")(
 		const effect = vi.fn();
 		try {
 			const admission = gate.withAutomation("binding", effect, { abortSignal: controller.signal });
-			controller.abort(new Error("PRIVATE-ABORT-REASON"));
+			if (aborted) controller.abort(new Error("PRIVATE-ABORT-REASON"));
 			await expect(admission).rejects.toThrow("paused while a human controls");
 			expect(effect).not.toHaveBeenCalled();
 			await gate.assertControl(held.token, "binding");
@@ -31,7 +31,7 @@ test.skipIf(process.platform !== "linux")(
 			expect(files).toHaveLength(1);
 			const raw = await fs.readFile(path.join(directory, files[0]), "utf8");
 			expect(raw).not.toContain("PRIVATE-ABORT-REASON");
-			expect(JSON.parse(raw)).toMatchObject({ category: "human-owned", owner: { role: "human" } });
+			expect(JSON.parse(raw)).toMatchObject({ category: "human-owned", owner: { role: "human" }, cancellationSupplied: true, cancellationObserved: aborted });
 		} finally {
 			await gate.releaseControl(held.token, "binding");
 			await fs.rm(home, { recursive: true, force: true });

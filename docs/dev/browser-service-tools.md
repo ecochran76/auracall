@@ -1043,7 +1043,10 @@ One failed `withAutomation` admission may write one JSON file (maximum4096bytes,
 mode0600), prefixed `DEBUG-desktop-control-busy-`. Metadata covers human ownership,
 terminal busy/cancelled waits and rejected inherited scope. Plan0469 categories
 follow the actual terminal refusal, so a concurrent abort cannot relabel a human
-refusal or an unrelated admission storage error as cancellation. It records the last
+refusal or an unrelated admission storage error as cancellation. The allowlisted
+boolean `cancellationObserved` records whether the supplied signal was aborted
+at refusal observation, separately from `cancellationSupplied` and the category;
+its reason is never recorded. It records the last
 successful owner read with its observation timestamp, PID presence, normalized
 acquisition time and hashed binding correlation. Existing owners lack a boot
 identifier, so `ownerBootVerified=false`; PID presence is not ownership proof.

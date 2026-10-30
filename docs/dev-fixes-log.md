@@ -26526,3 +26526,7 @@ refusal; late filesystem failure remains best effort. Select receipt categories
 at terminal refusal sites rather than a later abort snapshot. Public-gate
 red/green regressions and131combined focused tests pass; build/typecheck/lint
 pass. Plan0469 is source-only; no installed runtime acceptance is implied.
+
+The single P469 review found missing independent cancellation observation. A
+red/green pass adds only cancellationObserved boolean, preserving reason privacy
+and terminal category.31post-remediation tests/typecheck/rebuild/lint pass.

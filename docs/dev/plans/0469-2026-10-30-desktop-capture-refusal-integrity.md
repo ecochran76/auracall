@@ -1,12 +1,18 @@
 # Plan0469 — Desktop capture refusal integrity
 
-State: OPEN
+State: CLOSED
 Lane: P469
 Branch: fix/desktop-capture-followup-20261030
 Target: main
 Integration: merge
 
 ## Current State
+
+CLOSED at the finite source-only boundary: both tickets validated and tracker
+closed; one review (Standards0, Spec1P2) and one TDD remediation completed.
+31post-remediation focused tests and final typecheck/build/lint pass;131broader
+focused checks passed before the boolean-only remediation. No deployment.
+
 
 Spec https://github.com/ecochran76/auracall/issues/513; tickets #514 and #515.
 Operator approved publication, one primary ticket and one unblocked worker,
@@ -91,3 +97,24 @@ are validated on source tip1b3d4c0c0. [Curated receipt](../notes/2026-10-30-desk
 Tracker closure is next, followed by the single frozen review against57df62b52.
 No installation/live acceptance claim. Integration branch will be published
 before closure so exact source custody is remotely reviewable.
+
+## Tracker closure and one review
+
+#514 closed2026-10-30T14:07:03Z; #515 closed14:07:06Z, each with source
+commit and131-test qualification read back. Parent spec#513 is unchanged/open.
+Frozen review28486ce2a against57df62b52: Standards0; Spec1P2 accepted (S1,
+missing separately observable cancellation). Review count1/1; remediation1/1
+in progress. New public fixture red2failed/1passed before minimal boolean repair.
+Review artifact: [adjudication](../notes/2026-10-30-desktop-capture-refusal-review.md).
+Only focused verification follows; never reset discovery budget after repair.
+
+## Final custody and closeout
+
+S1 resolved by one red/green pass: red2failed/1passed; green31passed/0failed,
+final typecheck/build/scoped lint0. Source checks complete; no accepted blocker.
+Worker checkout removed after clean-state and exactc73d4c8c2readback, serialized
+integration and verified worker-515.bundle custody in the private diagnostics
+root. Its ignored dependency installation was disposable. Integration checkout
+is retained for the published branch/PR. Main and unrelated worktrees unchanged.
+Parent spec#513 remains open/unmodified as required by ticket publication skill.
+Memory disposition will be recorded for this qualified source outcome.

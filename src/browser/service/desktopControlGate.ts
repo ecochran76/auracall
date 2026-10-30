@@ -130,7 +130,7 @@ export class DesktopControlGate {
 	private async captureFailure(
 		binding: string,
 		observedOwner: GateOwner | undefined,
-		context: { category: "human-owned" | "busy" | "stale-scope" | "cancelled" | "admission-error"; attempts: number; cancellationSupplied: boolean; inherited?: GateOwner; ownerObservedAt?: string },
+		context: { category: "human-owned" | "busy" | "stale-scope" | "cancelled" | "admission-error"; attempts: number; cancellationSupplied: boolean; cancellationObserved: boolean; inherited?: GateOwner; ownerObservedAt?: string },
 	): Promise<void> {
 		if (process.platform !== "linux") return;
 		const capture = (async () => {
@@ -169,6 +169,7 @@ export class DesktopControlGate {
 					inheritedScope: { present: Boolean(context.inherited), matchesRequesterPid: context.inherited?.ownerPid === process.pid },
 					attempts: context.attempts,
 					cancellationSupplied: context.cancellationSupplied,
+					cancellationObserved: context.cancellationObserved,
 				};
 				const body = JSON.stringify(record);
 				if (Buffer.byteLength(body) > 4096) return;
@@ -365,7 +366,7 @@ export class DesktopControlGate {
 				current.binding !== binding || inherited.binding !== binding ||
 				current.ownerPid !== process.pid
 			) {
-				await this.captureFailure(binding, current, { category: "stale-scope", attempts: 0, cancellationSupplied: Boolean(options?.abortSignal), inherited, ownerObservedAt: new Date().toISOString() });
+				await this.captureFailure(binding, current, { category: "stale-scope", attempts: 0, cancellationSupplied: Boolean(options?.abortSignal), cancellationObserved: Boolean(options?.abortSignal?.aborted), inherited, ownerObservedAt: new Date().toISOString() });
 				throw new Error("Desktop automation ownership changed; refusing stale scope.");
 			}
 			return effect();
@@ -409,6 +410,7 @@ export class DesktopControlGate {
 				category: refusalCategory,
 				attempts,
 				cancellationSupplied: Boolean(options?.abortSignal),
+					cancellationObserved: Boolean(options?.abortSignal?.aborted),
 				ownerObservedAt,
 			});
 			throw error;
