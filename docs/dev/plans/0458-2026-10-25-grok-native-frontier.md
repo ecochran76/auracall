@@ -6,6 +6,35 @@ Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
 
+## Current outcome | 2026-10-30 original Bot qualified
+
+Fresh sidebar Show more exposed the original exact ID/name; native in-app entry
+and read-only Settings now pass. Configured public resources confirms scoped
+unavailability with exact original account/Bot and effectState none. The original
+identity/loading gate is resolved for this run;409 stays OPEN because persistent
+resource configuration/saved-identity gates are unmet by explicit spec. Earlier
+500causality remains unproven.411and477are unchanged;414is CLOSED. Three public
+contract checks pass. Native entry intent fences are consumed; no further entry
+or reload is authorized by this packet. See the2026-10-30identity/entry note.
+
+## Current identity check | 2026-10-30
+
+User approved read-only original-Bot inventory/identity/route qualification. Work
+continues in the sole coding checkout from9d5bf89dd; runtime/dependency holds stay
+untouched. Native current UI still contains a committed visible link matching
+both original test-Bot UUID and edited name. This is positive loaded-link evidence,
+not proof of current server availability or creator ownership. Metadata getters,
+hooks, query functions and application callbacks are not invoked for inspection.
+
+Next causal read: use the already observed home link in the dedicated blank test
+tab once, then click its qualified original Bot sidebar link once. This tests
+native in-app entry versus the failed direct-document route, preserving the
+working tab and Plugins dialog. One durable intent fence; no reload, new target,
+Bot creation/Save/grant, prompt, upload, terms, publication or installation. If
+native Bot content loads, inspect its exact Settings/resource surface read-only;
+never substitute another Bot's grants. Stop on warning, identity/route change,
+missing link or uncertainty. Existing review/findings counters remain1/1.
+
 ## Current outcome | 2026-10-29 same-browser control
 
 Working Bot browsing is verified in the same browser/account, including a composer

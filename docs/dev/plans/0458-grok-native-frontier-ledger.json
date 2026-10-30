@@ -220,9 +220,10 @@
         404,
         408
       ],
-      "state": "blocked-native-bot-content-unavailable",
+      "state": "blocked-native-capability-identity-requalified",
       "scope": "original-program",
-      "gate": "Fresh original-account canonical Bot route settles to shell only; no Bot identity/Settings content. One public resources read unknown; focus defect rejected. Current resource absence not established."
+      "gate": "Fresh original-account canonical Bot route settles to shell only; no Bot identity/Settings content. One public resources read unknown; focus defect rejected. Current resource absence not established.",
+      "identityGate": "PASS 2026-10-30 exact sidebar/native Settings/configured public resources"
     },
     "410": {
       "title": "Grok: Generate Build apps and retrieve their artifacts",
@@ -616,7 +617,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "2026-10-29 same-browser working Bot control verified;500causality unproven;409originalsubject and411publicationbinding remainOPEN;414CLOSED;onecodingcheckout plus runtimehold.",
+  "lastCheckpoint": "2026-10-30 original Bot identity/Settings qualified via expanded sidebar;409 resource-controls gate OPEN,411binding gapOPEN;414CLOSED.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
@@ -669,6 +670,22 @@
     "researchWorktree": "clean integrated patch-equivalent checkout removed;refs retained",
     "implementationWorktree": "clean runtime hold;live Chrome/Node cwd retained",
     "report": "../notes/2026-10-29-grok409-same-browser-comparison.md",
+    "reviewFindingsCounters": "unchanged1/1"
+  },
+  "identityRead20261030": {
+    "authority": "User approved exact original owned-Bot identity/inventory read",
+    "source": "9d5bf89dd05b4bfb6b3f9998e6e8684ddebc4f90",
+    "nativeIdentity": "PASS exact original ID/name/current account;Settings readback",
+    "freshSidebar": "3links before Show more;26after;one original ID/name match",
+    "entry": "one home navigation,one disclosure,one native Bot-link click;no reload",
+    "publicService": "PASS exact account/Bot scoped unavailable;effectState none",
+    "resourceGate": "OPEN per original spec;choices/granted null;no saved identities",
+    "providerWideAbsence": "not established",
+    "oldShellCause": "not isolated;API status changed500to200 over time",
+    "sourcePatch": "none;no demonstrated source defect",
+    "publicTests": "3/3 CLI/HTTP/MCP resource parity",
+    "report": "../notes/2026-10-30-grok409-identity-and-native-entry.md",
+    "newTrackerClosures": 0,
     "reviewFindingsCounters": "unchanged1/1"
   }
 }
