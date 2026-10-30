@@ -6,6 +6,15 @@ Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
 
+## Current diagnosis | 2026-10-30 shared utility custody
+
+The exact lock originates in another workflow's dispatched custom-connector Add,
+with unconfirmed saved identity and uncertain transport cleanup. Offline replay
+reproduces admission refusal;26registry/reconciliation checks pass. A later
+connection-failed observation has no canonical connector identity, so preserve
+unknown custody. No source fix or lock clearance justified. See the
+[diagnosis](../notes/2026-10-30-grok-utility-lock-diagnosis.md);409remains OPEN.
+
 ## Current execution gate | 2026-10-30 management discovery
 
 Approved read-only management discovery stopped at utility admission before any
