@@ -968,6 +968,17 @@ new claim, establish file readiness, or authorize replay. Normal acquisition and
 `releasePreserved` still reject unreconciled unknown effects. A later preserved
 release is separate from provider acceptance and must retain the source receipt.
 
+### Abandon expired unknown custody by operator decision
+
+`BrowserTabLeaseRegistry.abandonUnknownEffect` is a separate explicit operator
+recovery action. It requires the exact scope/target/revision, immutable approval
+artifact and hash, acknowledgement of the unknown outcome, expired absolute TTL,
+idle/lost state and no owner or process binding. Live-follow custody is excluded.
+It releases the reservation with the target preserved and the provider outcome
+still `outcome-unknown`; an abandonment audit survives restart. It does not claim
+success, authorize replay, alter grants or clear any other reservation. Normal
+release and evidence-based reconciliation retain their existing requirements.
+
 ## App-list performance diagnostics
 
 For a slow successful app inventory, collect `auracall apps list --json --performance`

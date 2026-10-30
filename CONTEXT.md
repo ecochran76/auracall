@@ -311,3 +311,8 @@ Composer-mode failure capture retains only qualified structural counts and bound
 ready/path categories in a private receipt. It never retains page content or
 changes the original mode-selection failure. A receipt is diagnostic evidence,
 not authority to retry or relax mode/account/ownership qualification.
+
+**Unknown-effect abandonment**: an explicit operator decision to release expired,
+ownerless utility custody while retaining the unknown provider outcome and an
+immutable approval audit. It is distinct from confirming a completed effect and
+never authorizes replay or changes the preserved browser target.

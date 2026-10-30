@@ -8,6 +8,14 @@ connection-like cancellation reason entering recovery/retry; its red/green is
 addressed. No merge, deployment, live provider call or concurrent-list sharing.
 Final validation results are recorded in the plan and private execution receipts.
 
+## 2026-10-30 — Approved unknown-effect abandonment recovery
+
+User explicitly approved adding and using exact expired-reservation abandonment.
+Public file-backed registry red/green covers owner/expiry/scope/revision refusal,
+one concurrent winner, durable unknown-outcome audit and new work admission.
+27focused checks pass; local typecheck/lint results follow in recovery receipt.
+No hosted CI. Runtime execution is separate and retains target/provider state.
+
 ## 2026-10-30 — Grok utility lock origin diagnosed
 
 Two isolated registry replays reproduce #409's workload-owned block without a

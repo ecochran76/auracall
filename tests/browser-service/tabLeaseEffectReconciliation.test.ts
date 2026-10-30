@@ -93,3 +93,79 @@ it("requires exact unknown custody and immutable evidence, preserves its audit a
 		await rm(root, { recursive: true, force: true });
 	}
 });
+
+it("abandons only expired ownerless exact unknown custody while preserving uncertainty across restart", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "lease-abandon-"));
+	try {
+		const registry = createFileBackedBrowserTabLeaseRegistry({ registryRoot: root });
+		const reserved = await registry.reserve({
+			scope,
+			targetId: "selected",
+			workload: { kind: "ephemeral", operationId: "utility" },
+			operationId: "operation",
+			now: "2026-10-25T20:00:00.000Z",
+			idleTtlMs: 60000,
+			absoluteTtlMs: 3600000,
+			exclusiveGroup: "utility",
+		});
+		if (!reserved.ok) throw Error("reserve");
+		const request = {
+			leaseId: reserved.value.lease.leaseId,
+			expectedRevision: 1,
+			scope,
+			targetId: "selected",
+			now: "2026-10-25T22:00:00.000Z",
+			acknowledgeUnknownOutcome: true as const,
+			evidence: { artifactRef: "private/operator-approval.json", sha256: "a".repeat(64) },
+		};
+		expect(await registry.abandonUnknownEffect(request)).toMatchObject({ ok: false });
+		const idle = await registry.idle({
+			claim: reserved.value.claim,
+			now: "2026-10-25T20:01:00.000Z",
+			effectState: "outcome-unknown",
+		});
+		if (!idle.ok) throw Error("idle");
+		request.expectedRevision = idle.value.revision;
+		for (const invalid of [
+			{ ...request, targetId: "other" },
+			{ ...request, scope: { ...scope, tenantKey: "other" } },
+			{ ...request, expectedRevision: 0 },
+			{ ...request, now: "2026-10-25T20:02:00.000Z" },
+			{ ...request, acknowledgeUnknownOutcome: false as never },
+		])
+			expect(await registry.abandonUnknownEffect(invalid)).toMatchObject({ ok: false });
+		const restarted = createFileBackedBrowserTabLeaseRegistry({ registryRoot: root });
+		const results = await Promise.all([
+			registry.abandonUnknownEffect(request),
+			restarted.abandonUnknownEffect(request),
+		]);
+		expect(results.filter((r) => r.ok)).toHaveLength(1);
+		const saved = (await restarted.list())[0];
+		expect(saved).toMatchObject({
+			state: "released",
+			effectState: "outcome-unknown",
+			finalDisposition: "preserved",
+			actionCounts: { closes: 0 },
+			unknownEffectAbandonment: { evidence: request.evidence, acknowledgeUnknownOutcome: true },
+		});
+		expect(saved.effectReconciliations).toBeUndefined();
+		if (!saved.unknownEffectAbandonment) throw Error("missing abandonment audit");
+		saved.unknownEffectAbandonment.evidence.sha256 = "b".repeat(64);
+		expect((await registry.list())[0].unknownEffectAbandonment?.evidence.sha256).toBe(
+			"a".repeat(64),
+		);
+		expect(
+			await restarted.reserve({
+				...reserved.value.lease,
+				scope,
+				targetId: "next",
+				operationId: "next",
+				now: request.now,
+				idleTtlMs: 60000,
+				absoluteTtlMs: 3600000,
+			}),
+		).toMatchObject({ ok: true });
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
