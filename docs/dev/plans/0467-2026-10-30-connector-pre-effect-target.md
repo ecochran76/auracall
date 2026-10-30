@@ -48,3 +48,11 @@ No historical journal/claim reset, unknown lease clearance, live Add, global ins
 Combined selected gate:58 tests across client/service/native-binding/account-reference files pass33.90s. Focused30s target missed, with22.06s imports and concurrent typecheck; first result retained, no retry. Run later gates sequentially to avoid contention. Native/system-wide suites and live replay are excluded.
 
 Primary typecheck and scoped Biome pass on the resulting source. No live replay or runtime promotion occurred.
+
+## Fixed read-only observation packet
+
+`observeConfiguredGrokUnknownConnectorOutcome` adds a strict configured, data-only interface for an exact ownerless idle/lost unknown target. A private factory branch pins its entire snapshot before each read and after cleanup; it does not reserve, manufacture a claim, heartbeat, rewrite, settle or release the old lease. Normal warnings, operation/backend limits and interception remain unchanged. Only the fixed account proof and DOM classification execute; no caller script/action/connection escapes. Linux PID/start checks intentionally bound support. Caller cancellation reaches guarded CDP admission; settle-once and aggregates preserve warning/error identity.
+
+Public observer RED workload-owned5.98s → firstGREEN5.83s using real file-backed registry byte preservation.154 affected observer/authority/governance/session/backend tests passed93.64s, dominated by existing backend cancellation/timeouts67.17s. Later wrapper/classifier-only fixes were verified with final39 observer/normal-authority tests and typecheck; parent independently reran39 checks13.93s. No heavy-backend retry erased earlier evidence.
+
+Initial native observation succeeded without altering old uncertainty but misclassified whole-container inactive failure text. Six public causal RED/GREEN fixtures now qualify rendered leaf terminal anchors using full ancestor styles/opacity, viewport and overflow containment; truly mixed panes remain inconclusive. Native verification agrees with the visible picker, then the prepared canonical custom form with one enabled Add. UI categories remain observations and all results retain the original effectState unknown. No additional native Add or runtime promotion is claimed.

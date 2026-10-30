@@ -1,3 +1,15 @@
+## 2026-10-30 — Observe uncertainty without releasing it
+
+Ordinary utility admission cannot reserve an ownerless unknown target merely
+to learn its outcome. A fixed observer privately pins that exact lease snapshot
+and reuses normal account/operation/backend governance without manufacturing
+a claim or changing the original record. It exposes no arbitrary script or
+connection. Native qualification then found whole-root text falsely reporting
+a connection failure from an inactive pane. Require rendered leaf heading,
+message and recovery control within visible/clipping bounds; mixed panes stay
+inconclusive. Successful observation is separate from effect reconciliation.
+See Plan0467.
+
 ## 2026-10-30 — Model the Custom Connector picker as a distinct stage
 
 A direct-form fixture omitted the New Connector → Custom chooser. The actual

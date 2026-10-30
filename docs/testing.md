@@ -1,3 +1,12 @@
+- Fixed unknown-target observation (provider-free, Plan0467):
+  `pnpm vitest run tests/browser/grokUnknownConnectorObservation.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts --maxWorkers=1`.
+  Real file-backed unknown custody remains byte-identical; account/scope/revision/
+  owner drift, arbitrary actions, mutation admission, cancellation and warning
+  cleanup are negative controls. Active/hidden/opaque/offscreen/clipped modal
+  panes are classified through fixed returned data. The separate broader
+  configured-authority/Grok-governance/session/backend-admission selection
+  qualifies unchanged normal background admission and configured request caps.
+
 - Custom Connector picker transition (provider-free, Plan0467):
   `pnpm vitest run tests/browser/grok405Installation.test.ts tests/browser/grok405InstallationService.test.ts tests/browser/grok405NativeConnectorBinding.test.ts tests/browser/grok444AccountReferences.test.ts --maxWorkers=1`.
   Two-step picker/form preparation commits once in the fixture; delayed Custom

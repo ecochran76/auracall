@@ -1286,6 +1286,25 @@ not expose this selector or retry preparation automatically. Unknown/dispatched
 outcomes and stale previous targets remain ineligible. Form opening waits at
 most1500ms for unique visible inputs before one fill; Add is never retried.
 
+For trusted programmatic reconciliation,
+`observeConfiguredGrokUnknownConnectorOutcome(config, request, signal)` in
+`src/browser/configuredProviderTrafficAuthority.ts` observes a fixed DOM/account
+result on an existing unknown target. The strict request pins lease ID/revision,
+exact scope/target, Linux browser PID/start, expected typed account reference
+and canonical connector name/endpoint. It accepts only ownerless idle/lost
+outcome-unknown custody. Live owners, mismatched scope/generation/revision,
+extra action/script fields, warnings and configured rate limits remain gates.
+
+The observer exports no connection, script callback or mutation authority.
+Normal background request admission remains unchanged; a blanket deny could
+interrupt the very outcome being observed. No observation initiates input,
+navigation or fetch, changes/releases the original lease, or authorizes replay.
+Its result always retains effectState=outcome-unknown. UI phase recognition uses
+visible leaf anchors and ancestor/viewport/overflow containment; simultaneous
+visible panels remain inconclusive. A connection-failed category without
+canonical identity does not attribute the original outcome. Current PID/start
+verification requires Linux; other environments are unqualified.
+
 An observed terminal `Connection failed` result on the exact owned installation
 modal returns `failed / grok_connector_install_connection_failed`. Its target
 and installation journal are retained, and `retrySafe=false` still prevents

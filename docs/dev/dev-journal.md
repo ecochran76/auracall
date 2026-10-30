@@ -1,3 +1,16 @@
+## 2026-10-30 — Fixed read-only unknown Connector observation
+
+Plan0467 source packet adds one strict configured observer for exact ownerless
+idle/lost unknown custody. Public RED workload-owned preceded the private
+snapshot-only admission path; normal warnings/rates/backend interception stay
+unchanged.154 affected checks passed; final39 observer/normal-authority checks
+and typecheck pass after guarded cancellation, settle-once and clipped-panel
+classification fixes. Parent independently ran39 checks13.93s. One native
+read exposed inactive-pane false terminal text; six public RED/GREEN cases
+fixed it. Native verification now reads picker, then prepared custom-form
+with canonical fields/enabled Add, while old unknown lease stays unchanged.
+No live Add, journal reset or global installation.
+
 ## 2026-10-30 — Source-qualify the custom Connector picker stage
 
 Plan0467 public picker reproduction failed twice before the missing Custom

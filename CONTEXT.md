@@ -238,6 +238,13 @@ Controls inside aria-hidden ancestor panels do not qualify as active form
 controls. A rendered/input-filled DOM and an actual native OAuth transition
 remain separate evidence; fixture support does not establish live acceptance.
 
+A fixed unknown-connector observer reads one exact ownerless idle/lost target
+under the configured account, browser generation and full lease snapshot. It
+adds separately attributed read work while preserving the original unknown
+effect and lease bytes. UI categories are presentation observations, not proof
+that the original operation completed. Terminal anchors must be rendered and
+unclipped; static text from inactive modal panes is not a terminal result.
+
 **Grok Connector**:
 An external service connected to Grok through its Plugins connector surface,
 including a custom MCP server. Its connected account and permissions are distinct
