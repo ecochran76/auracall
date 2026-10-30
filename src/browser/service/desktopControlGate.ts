@@ -374,10 +374,15 @@ export class DesktopControlGate {
 		let observedOwner: GateOwner | undefined;
 		let ownerObservedAt: string | undefined;
 		let attempts = 0;
+		let refusalCategory: "human-owned" | "busy" | "cancelled" | "admission-error" = "admission-error";
+		const checkCancellation = () => {
+			try { options?.abortSignal?.throwIfAborted(); }
+			catch (error) { refusalCategory = "cancelled"; throw error; }
+		};
 		try {
 			for (let attempt = 0; options?.abortSignal !== undefined || attempt < 100; attempt += 1) {
 				attempts = attempt + 1;
-				options?.abortSignal?.throwIfAborted();
+				checkCancellation();
 				try {
 					owner = await this.acquire("automation", binding);
 					break;
@@ -385,17 +390,23 @@ export class DesktopControlGate {
 					if (options?.abortSignal && !(error instanceof DesktopControlBusyError)) throw error;
 					observedOwner = await this.owner();
 					ownerObservedAt = new Date().toISOString();
-					if (observedOwner?.role === "human")
+					if (observedOwner?.role === "human") {
+						refusalCategory = "human-owned";
 						throw new Error("AuraCall automation is paused while a human controls this desktop.");
-					if (!options?.abortSignal && attempt === 99) throw error;
-					options?.abortSignal?.throwIfAborted();
-					await delay(20, undefined, { signal: options?.abortSignal });
+					}
+					if (!options?.abortSignal && attempt === 99) {
+						refusalCategory = error instanceof DesktopControlBusyError ? "busy" : "admission-error";
+						throw error;
+					}
+					checkCancellation();
+					try { await delay(20, undefined, { signal: options?.abortSignal }); }
+					catch (error) { refusalCategory = "cancelled"; throw error; }
 				}
 			}
 			if (!owner) throw new Error("Desktop automation admission unavailable.");
 		} catch (error) {
 			await this.captureFailure(binding, observedOwner, {
-				category: options?.abortSignal?.aborted ? "cancelled" : observedOwner?.role === "human" ? "human-owned" : error instanceof DesktopControlBusyError ? "busy" : "admission-error",
+				category: refusalCategory,
 				attempts,
 				cancellationSupplied: Boolean(options?.abortSignal),
 				ownerObservedAt,
