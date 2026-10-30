@@ -1,3 +1,11 @@
+## 2026-10-30 — Fenced pre-effect connector continuation
+
+Plan0467 adds an explicit expected-old/new target selector at the installation
+service API. It preserves the existing intent, provider-account checks, durable
+one-shot claim and before-Add journal fence. The regression reproduced stale
+target selection first; 31 focused tests and typecheck pass. Unknown or
+dispatched effects remain ineligible. No global runtime promotion.
+
 ## 2026-10-30 — Full runtime upgrade preparation
 
 User authorized full installed upgrade, deployed-only fix preservation and restart

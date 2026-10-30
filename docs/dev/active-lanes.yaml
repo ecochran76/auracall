@@ -4,6 +4,21 @@ work_item_tracking: optional
 historical_catalog: docs/dev/lane-history/2026-10-29-pre-reconciliation.yaml
 reconciliation_plan: docs/dev/plans/0465-2026-10-29-repository-reconciliation.md
 lanes:
+  - id: PL-GROK
+    objective: Qualify explicit fresh-target continuation for a known pre-effect connector refusal.
+    plan: docs/dev/plans/0467-2026-10-30-connector-pre-effect-target.md
+    plan_ref: refs/heads/fix/connector-pre-effect-target
+    branch: fix/connector-pre-effect-target
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE
+    integration: pull request
+    work_items: []
+    dependencies: []
+    overlaps: []
+    validation_status: focused-31-tests-and-typecheck-passed
+    disposition: Source-only API repair; no global runtime installation.
+    updated_at: 2026-10-30
   - id: P18
     objective: Adopt integrated history-materialization fairness into the installed runtime and prove one bounded wsl-chrome-3 pass without resuming continuous live follow.
     plan: docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md

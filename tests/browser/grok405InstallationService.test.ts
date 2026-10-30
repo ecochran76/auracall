@@ -555,3 +555,104 @@ it("reconciles an original journal on an explicitly verified replacement target 
 	expect(f.effects()).toBe(1);
 	expect(requests).toHaveLength(2);
 });
+
+it("continues a known no-effect refusal on an explicitly fenced fresh target without replay", async () => {
+	const f = await fixture();
+	const original = f.f.runtime.evaluate;
+	let missingEndpoint = true;
+	f.f.runtime.evaluate = async (args) => {
+		const result = await original(args);
+		const value = result.result.value as Record<string, unknown>;
+		if (missingEndpoint && value?.state === "visible" && "endpoint" in value) value.endpoint = null;
+		return result;
+	};
+	const request = { input, expectedProviderAccountRef, confirm: true };
+	const first = await createGrokConnectorInstallationService(f.options, f.deps).install(request);
+	expect(first).toMatchObject({ status: "unsupported", effectDispatched: false, retrySafe: true });
+	missingEndpoint = false;
+	const opened: string[] = [];
+	const service = createGrokConnectorInstallationService(f.options, {
+		...f.deps,
+		resolveReconciliationOptions: async (targetId) => ({ ...f.options, tabTargetId: targetId }),
+		connect: async (options) => {
+			if (!options.tabTargetId) throw new Error("fixture target missing");
+			opened.push(options.tabTargetId);
+			const connection = await f.deps.connect();
+			return {
+				...connection,
+				targetId: options.tabTargetId,
+				client: {
+					...connection.client,
+					__auracallProviderTrafficGovernor: {
+						...connection.client.__auracallProviderTrafficGovernor,
+						attribution: { provider: "grok", targetId: options.tabTargetId },
+					},
+				},
+			};
+		},
+	});
+	const continuation = {
+		...request,
+		preEffectTarget: { expectedPreviousTargetId: "fixture-target", targetId: "fresh-target" },
+	};
+	const stale = await service.install({
+		...continuation,
+		preEffectTarget: { expectedPreviousTargetId: "stale-target", targetId: "fresh-target" },
+	});
+	expect(stale).toMatchObject({
+		status: "unconfirmed",
+		code: "grok_connector_pre_effect_target_not_qualified",
+	});
+	expect(opened).toEqual([]);
+	const concurrent = await Promise.all([
+		service.install(continuation),
+		service.install(continuation),
+	]);
+	const result = concurrent.find(
+		(value) => value.status === "awaiting-human" && value.effectDispatched,
+	);
+	expect(opened).toEqual(["fresh-target"]);
+	expect(result).toMatchObject({
+		operationId: first.operationId,
+		targetId: "fresh-target",
+		status: "awaiting-human",
+		effectDispatched: true,
+	});
+	expect(f.effects()).toBe(1);
+	await service.install(continuation);
+	expect(f.effects()).toBe(1);
+});
+
+it("refuses pre-effect retargeting once Add was dispatched, before connecting any target", async () => {
+	const f = await fixture();
+	const request = { input, expectedProviderAccountRef, confirm: true };
+	const dispatched = await createGrokConnectorInstallationService(f.options, f.deps).install(
+		request,
+	);
+	expect(dispatched).toMatchObject({
+		status: "awaiting-human",
+		effectDispatched: true,
+		retrySafe: false,
+	});
+	let connects = 0;
+	const service = createGrokConnectorInstallationService(f.options, {
+		...f.deps,
+		connect: async () => {
+			connects++;
+			return f.deps.connect();
+		},
+		resolveReconciliationOptions: async (targetId) => ({ ...f.options, tabTargetId: targetId }),
+	});
+	const result = await service.install({
+		...request,
+		preEffectTarget: { expectedPreviousTargetId: "fixture-target", targetId: "fresh-target" },
+	});
+	expect(result).toMatchObject({
+		status: "unconfirmed",
+		code: "grok_connector_pre_effect_target_not_qualified",
+		retrySafe: false,
+		effectDispatched: true,
+	});
+	expect(connects).toBe(0);
+	expect(f.effects()).toBe(1);
+});

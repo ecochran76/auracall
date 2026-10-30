@@ -22,6 +22,8 @@ export interface GrokConnectorInstallationRequest {
 	input: GrokConnectorInstallationInput;
 	expectedProviderAccountRef: string;
 	confirm?: boolean;
+	/** Explicit fresh target only for the one supported, journaled pre-effect refusal. */
+	preEffectTarget?: { expectedPreviousTargetId: string; targetId: string };
 	reconciliationTarget?: { targetId: string; connectorId: string };
 }
 export interface GrokConnectorInstallationResult extends GrokConnectorInstallationOutcome {
@@ -35,6 +37,12 @@ export interface GrokConnectorInstallationService {
 	reconcile(request: GrokConnectorInstallationRequest): Promise<GrokConnectorInstallationResult>;
 }
 interface Journal {
+	preEffectRetargets?: {
+		previousTargetId: string;
+		targetId: string;
+		verifiedAt: string;
+		previousResult?: GrokConnectorInstallationResult;
+	}[];
 	reconciliations?: {
 		previousTargetId: string;
 		targetId: string;
@@ -88,6 +96,19 @@ export function createGrokConnectorInstallationService(
 		options.abortSignal?.throwIfAborted();
 		const input = validateGrokConnectorInstallationInput(request.input);
 		const recovery = request.reconciliationTarget;
+		const preEffectTarget = request.preEffectTarget;
+		if (
+			preEffectTarget !== undefined &&
+			(!preEffectTarget ||
+				mode !== "install" ||
+				recovery ||
+				typeof preEffectTarget.targetId !== "string" ||
+				typeof preEffectTarget.expectedPreviousTargetId !== "string" ||
+				!/^[A-Za-z0-9-]{1,512}$/.test(preEffectTarget.targetId) ||
+				!/^[A-Za-z0-9-]{1,512}$/.test(preEffectTarget.expectedPreviousTargetId) ||
+				preEffectTarget.targetId === preEffectTarget.expectedPreviousTargetId)
+		)
+			throw new Error("grok_connector_pre_effect_target_invalid");
 		if (
 			recovery &&
 			(mode !== "reconcile" ||
@@ -132,7 +153,7 @@ export function createGrokConnectorInstallationService(
 			...(record.targetId ? { targetId: record.targetId } : {}),
 		});
 		await fs.mkdir(directory, { recursive: true, mode: 0o700 });
-		if (mode === "install") {
+		if (mode === "install" && !preEffectTarget) {
 			try {
 				const handle = await fs.open(file, "wx", 0o600);
 				try {
@@ -181,15 +202,23 @@ export function createGrokConnectorInstallationService(
 		}
 		// An explicit confirmed install can continue exactly one recorded preparation
 		// refusal. Never reopen an uncertain, failed, incomplete or unjournaled effect.
-		if (
+		const canContinue =
 			existing &&
 			mode === "install" &&
 			!record.effectDispatched &&
 			record.result?.status === "unsupported" &&
 			record.result.retrySafe === true &&
 			record.result.effectDispatched === false &&
-			record.result.code === "grok_connector_install_existing_endpoint_unobserved"
-		) {
+			record.result.code === "grok_connector_install_existing_endpoint_unobserved";
+		if (
+			preEffectTarget &&
+			(!canContinue || preEffectTarget.expectedPreviousTargetId !== record.targetId)
+		)
+			return {
+				...base("unconfirmed", "grok_connector_pre_effect_target_not_qualified"),
+				retrySafe: false,
+			};
+		if (canContinue) {
 			try {
 				const claim = await fs.open(`${file}.continuation`, "wx", 0o600);
 				try {
@@ -219,19 +248,20 @@ export function createGrokConnectorInstallationService(
 		let dispatched = false;
 		let result: GrokConnectorInstallationResult | undefined;
 		try {
-			const sessionOptions = recovery
-				? await dependencies.resolveReconciliationOptions?.(recovery.targetId)
-				: options;
-			if (!sessionOptions || (recovery && sessionOptions.tabTargetId !== recovery.targetId))
+			const selectedTargetId = recovery?.targetId ?? preEffectTarget?.targetId ?? record.targetId;
+			const sessionOptions =
+				(recovery || preEffectTarget) && selectedTargetId
+					? await dependencies.resolveReconciliationOptions?.(selectedTargetId)
+					: options;
+			if (
+				!sessionOptions ||
+				((recovery || preEffectTarget) && sessionOptions.tabTargetId !== selectedTargetId)
+			)
 				throw new Error("grok_connector_reconciliation_options_required");
 			connection = await connect({
 				...sessionOptions,
 				providerTrafficRequired: true,
-				...(recovery
-					? { tabTargetId: recovery.targetId }
-					: record.targetId
-						? { tabTargetId: record.targetId }
-						: {}),
+				...(selectedTargetId ? { tabTargetId: selectedTargetId } : {}),
 			});
 			const activeConnection = connection;
 			const governor = resolveProviderTrafficGovernor(connection.client);
@@ -240,8 +270,7 @@ export function createGrokConnectorInstallationService(
 			if (
 				!connection.targetId ||
 				governor.attribution.targetId !== connection.targetId ||
-				((recovery?.targetId ?? record.targetId) &&
-					(recovery?.targetId ?? record.targetId) !== connection.targetId)
+				(selectedTargetId && selectedTargetId !== connection.targetId)
 			)
 				throw new Error("grok_connector_install_target_not_verified");
 			await governor.checkWarning?.(connection.client.Runtime);
@@ -272,6 +301,16 @@ export function createGrokConnectorInstallationService(
 				};
 				const providerUserId = await verify();
 				const previousTargetId = record.targetId;
+				if (preEffectTarget && previousTargetId)
+					record.preEffectRetargets = [
+						...(record.preEffectRetargets ?? []),
+						{
+							previousTargetId,
+							targetId: connection.targetId,
+							verifiedAt: new Date().toISOString(),
+							previousResult: record.result,
+						},
+					];
 				if (!recovery) record.targetId = connection.targetId;
 				const client = createGrokConnectorInstallationClient(connection.client.Runtime, {
 					providerAccountRef: request.expectedProviderAccountRef,
