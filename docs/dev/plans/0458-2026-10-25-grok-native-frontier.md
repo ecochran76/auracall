@@ -6,6 +6,15 @@ Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
 
+## Current execution gate | 2026-10-30 management discovery
+
+Approved read-only management discovery stopped at utility admission before any
+page observation/action. Corrected census finds idle unknown-effect custody on
+another Grok target; no qualified completion evidence to reconcile it. Preserve
+the fence.409 stays OPEN, resource management remains uninspected this run. See
+[admission report](../notes/2026-10-30-grok409-management-admission.md). No runtime
+replacement, provider configuration change or review/findings reset.
+
 ## Current research outcome | 2026-10-30
 
 Official docs describe account-wide apps, per-current-Bot private-Skill enablement
