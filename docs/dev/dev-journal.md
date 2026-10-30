@@ -57265,3 +57265,14 @@ User approved the ask-matt route. Root starts bounded409 symptom feedback loop;
 parallel411 research reads source and existing private controller receipts only.
 Base5f4697f85. Original review/findings counters remain consumed1/1. Browser887430
 retained; prior focus hypothesis is rejected. No new effect or installation.
+
+### 2026-10-29 —409reproduced;411contract bounded
+
+Primary loop reproduced exact-account Bot shell with no Settings. Passive current
+React inspection showed no Bot data/component. One fenced, governed reload left
+the loop RED and exposed native application HTTP500reads despite200document/session.
+No selector defect, deletion or permanent resource absence is proven. No source
+patch, mutation, publication or installation.409remains OPEN on upstream loading.
+411researchnote cherry-picked aa02a0f25; primary independently checked native
+caller and both receipt hashes. Exact revision/app-version mapping remains unknown.
+Existing review/findings counters stay1/1. Reports preserve private proof hashes.
