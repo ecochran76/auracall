@@ -75,16 +75,17 @@ lanes:
     plan_ref: refs/remotes/origin/main
     branch: fix/chatgpt-account-readiness
     target: main
-    plan_state: OPEN
-    custody_state: PAUSED_REF
-    checkpoint: 408ce37dcf17a8b044fb9607ffca404de730bee0
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 94d297e8d9f30b1cc08734950b88e2b24b9e9035
     remote_ref: refs/remotes/origin/fix/chatgpt-account-readiness
     integration: merge
     dependencies: []
     overlaps: []
     work_items: [ecochran76/auracall#384]
-    validation_status: source-and-installed-gates-remain-distinct
-    updated_at: 2026-10-29
+    validation_status: source-installed-16-dom-cases-review1-standards0-spec2-addressed
+    updated_at: 2026-10-30
+    integration_receipt: e30c2ef5357cbfadfc9c27101a6535344e66daa9
   - id: P462
     objective: Qualify read-only app selection bounds and wait diagnostics
     plan: docs/dev/plans/0462-2026-10-26-developer-app-selection-deadline.md
@@ -157,7 +158,7 @@ lanes:
     target: main
     plan_state: BLOCKED
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 9d5bf89dd05b4bfb6b3f9998e6e8684ddebc4f90
+    checkpoint: d5a1293cc5217df0736e6662bbd3e58c36655d23
     remote_ref: refs/remotes/origin/fix/grok409-browser-comparison
     integration: merge
     dependencies: []
