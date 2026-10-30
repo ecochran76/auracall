@@ -1,3 +1,10 @@
+## 2026-10-30 — Distinguish abandonment from effect confirmation
+
+An expired ownerless unknown-effect reservation can block unrelated work after
+its originating workflow moves on. Explicit operator abandonment releases custody
+without asserting provider success/failure. Exact identity, revision, expiry and
+approval evidence are mandatory; ordinary release still refuses unknown effects.
+
 ## 2026-10-30 — Retain list recovery policy through retry and reopen
 
 Forwarding options only to the inner recovery wrapper is insufficient. A structured

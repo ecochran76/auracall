@@ -6,6 +6,13 @@ Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
 
+## Approved runtime recovery | 2026-10-30
+
+Operator-approved abandonment releases the exact expired unknown reservation,
+retaining its uncertainty and immutable approval audit.27focused tests, typecheck
+and scoped lint pass. No provider mutation/target close.409resource qualification
+remains open; see [recovery](../notes/2026-10-30-grok-unknown-abandonment-recovery.md).
+
 ## Current diagnosis | 2026-10-30 shared utility custody
 
 The exact lock originates in another workflow's dispatched custom-connector Add,
