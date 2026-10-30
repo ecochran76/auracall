@@ -141,6 +141,84 @@ describe("ChatGPT composer mode", () => {
 		expect(await pending).toEqual({ status: "already-selected", mode: "chat" });
 	});
 
+	it.each([
+		["visible ID-less ProseMirror", "chat", "ProseMirror", false, false, 1, true],
+		["unrelated textbox", "chat", "other-editor", false, false, 1, false],
+		["disabled editor", "chat", "ProseMirror", true, false, 1, false],
+		["hidden editor", "chat", "ProseMirror", false, true, 1, false],
+		["ambiguous editors", "chat", "ProseMirror", false, false, 2, false],
+		["unproven Work", "work", "ProseMirror", false, false, 1, false],
+	] as const)("qualifies %s without a legacy editor ID", async (_, mode, className, disabled, hidden, count, accepted) => {
+		vi.useFakeTimers();
+		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
+		const editor = new FixtureElement("", {
+			role: "textbox",
+			contenteditable: "true",
+			class: className,
+		});
+		editor.disabled = disabled;
+		installFixtureDocument((selector) => {
+			// No ID: a selector requiring #prompt-textarea cannot match this DOM.
+			const matches = selector
+				.split(",")
+				.some(
+					(part) =>
+						!part.includes("#") &&
+						part.includes(".ProseMirror") &&
+						part.includes('[role="textbox"]') &&
+						part.includes('[contenteditable="true"]') &&
+						className === "ProseMirror",
+				);
+			return matches ? Array.from({ length: count }, () => editor) : [];
+		});
+		if (hidden)
+			vi.stubGlobal("getComputedStyle", () => ({ visibility: "hidden", display: "block" }));
+		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest(mode)}`)();
+		await vi.advanceTimersByTimeAsync(21000);
+		expect(await pending).toEqual(
+			accepted
+				? { status: "already-selected", mode: "chat" }
+				: { status: "mode-not-found", availableModes: [] },
+		);
+	});
+
+	it("rejects an ID-less editor inside an unrelated dialog", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
+		const editor = new FixtureElement("", {
+			role: "textbox",
+			contenteditable: "true",
+			class: "ProseMirror",
+		});
+		editor.closestResult = new FixtureElement("", { role: "dialog" });
+		installFixtureDocument((selector) =>
+			selector.includes('.ProseMirror[role="textbox"][contenteditable="true"]') ? [editor] : [],
+		);
+		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest("chat")}`)();
+		await vi.advanceTimersByTimeAsync(21000);
+		expect(await pending).toEqual({ status: "mode-not-found", availableModes: [] });
+	});
+
+	it("waits for the ID-less root editor within the existing composer allowance", async () => {
+		vi.useFakeTimers();
+		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });
+		const editor = new FixtureElement("", {
+			role: "textbox",
+			contenteditable: "true",
+			class: "ProseMirror",
+		});
+		let editorReads = 0;
+		installFixtureDocument((selector) => {
+			if (!selector.includes('.ProseMirror[role="textbox"][contenteditable="true"]')) return [];
+			editorReads += 1;
+			return editorReads >= 3 ? [editor] : [];
+		});
+		const pending = new Function(`return ${buildChatgptComposerModeExpressionForTest("chat")}`)();
+		await vi.advanceTimersByTimeAsync(11000);
+		expect(await pending).toEqual({ status: "already-selected", mode: "chat" });
+		expect(editorReads).toBe(3);
+	});
+
 	it("does not infer Work from the current root composer without mode controls", async () => {
 		vi.useFakeTimers();
 		vi.stubGlobal("location", { pathname: "/", href: "https://chatgpt.com/" });

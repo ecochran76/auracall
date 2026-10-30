@@ -330,3 +330,14 @@ The governor reports `Provider interaction admission denied: provider-warning`
 in this case and preserves the ledger's frozen/outcome-unknown state. Inspect
 the scoped warning and its evidence; this diagnosis does not clear warnings or
 authorize replay. A warning with no cooldownUntil has no automatic expiry.
+
+
+## Control-less Chat composer diagnosis | 2026-10-30
+
+Plan0466 source correction accepts one visible enabled ID-less ProseMirror
+textbox outside dialogs only after the existing mode-control wait. Work still
+requires its explicit authority; an empty page or ambiguous editors remain
+refused. Source qualification does not change the installed launcher. Do not
+repeat a failed/uncertain provider submission to test this correction without
+new prompt authority. Historical failure-time counts are partial DOM evidence;
+retain diagnostics and verify installed bytes before live acceptance.

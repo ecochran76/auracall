@@ -1,5 +1,11 @@
 # Aura-Call
 
+Control-less Chat fallback may use one visible enabled ProseMirror textbox
+without the legacy prompt editor ID after the existing bounded mode-control
+wait. Dialog editors, ambiguous editor sets and explicit active Work markers
+cannot establish Chat. This source contract does not establish installed/live
+acceptance of a particular provider page.
+
 Aura-Call coordinates model requests through configured provider accounts and browser runtimes while preserving explicit identity, execution, and artifact ownership.
 
 Developer-app inventory diagnostics retain browser resolution, utility/interaction

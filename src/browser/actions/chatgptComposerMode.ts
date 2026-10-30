@@ -183,13 +183,15 @@ function buildChatgptComposerModeExpression(desiredMode: ChatgptComposerMode): s
         while (performance.now() - composerStartedAt < 10000) {
           if (hasActiveConversationWorkMarker()) break;
           const promptEditors = Array.from(document.querySelectorAll(
-            '#prompt-textarea[role="textbox"][contenteditable="true"], textarea#prompt-textarea, textarea[name="prompt-textarea"]',
+            '#prompt-textarea[role="textbox"][contenteditable="true"], textarea#prompt-textarea, textarea[name="prompt-textarea"], .ProseMirror[role="textbox"][contenteditable="true"]',
           )).filter((node) =>
             visible(node) &&
+            node.closest('[role="dialog"]') === null &&
             node.getAttribute('aria-disabled') !== 'true' &&
             !('disabled' in node && node.disabled === true)
           );
-          if (promptEditors.length > 0) {
+          // Current root composers can omit the legacy ID; multiple editors are ambiguous.
+          if (promptEditors.length === 1) {
             return { status: 'already-selected', mode: DESIRED_MODE };
           }
           await new Promise((resolve) => setTimeout(resolve, 100));

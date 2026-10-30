@@ -1,5 +1,7 @@
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
 
+- P76 source-qualified correction: [Plan0466](docs/dev/plans/0466-2026-10-30-idless-chat-composer.md) closes the ID-less composer fallback packet (77focused checks and real-DOM replay); integration, installation and provider acceptance remain separate.
+
 - Completed P89: [Plan0404](docs/dev/plans/0404-2026-10-10-demand-driven-desktop-pool.md) implements automatic rail Wake, configurable native capacity and guarded shrink; PR270 installed with maximum10, five occupied desktops and one ready spare;14 original routes preserved.
 
 - Completed P88: [Plan0394](docs/dev/plans/0394-2026-10-10-memory-routing.md) makes AuraCall Graphiti routing discoverable and distinguishes unresolved routes from service failure; atlas publication and original-query retrieval verified.
