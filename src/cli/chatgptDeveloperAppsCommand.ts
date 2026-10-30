@@ -484,7 +484,7 @@ async function runChatgptDeveloperAppOperationWithDiagnostics(
 	const abortController =
 		input.action === "list" ||
 		input.action === "refresh-tools" ||
-		(input.action === "test" && input.submit)
+		input.action === "test"
 			? new AbortController()
 			: null;
 	const active: { adapter: ChatgptDeveloperAppCliAdapter | null } = { adapter: null };
@@ -594,7 +594,9 @@ async function runChatgptDeveloperAppOperationWithDiagnostics(
 		}
 	};
 	try {
-		if (input.action !== "list" && input.action !== "refresh-tools") return await operation();
+		const selectingOnly = input.action === "test" && !input.submit;
+		if (input.action !== "list" && input.action !== "refresh-tools" && !selectingOnly)
+			return await operation();
 		const timeoutMs = normalizePositiveTimeout(
 			input.action === "refresh-tools"
 				? dependencies.refreshToolsTimeoutMs
@@ -621,7 +623,7 @@ async function runChatgptDeveloperAppOperationWithDiagnostics(
 		);
 	} catch (error) {
 		operationFailure = error;
-		if (input.action !== "list" || error instanceof DeveloperAppTimeoutError) throw error;
+		if (error instanceof DeveloperAppTimeoutError) throw error;
 		const failure = error instanceof Error ? error : new Error(String(error));
 		// Diagnostics must preserve the native error class, aggregate causes and
 		// shared governor error identity used by ownership/cleanup callers.

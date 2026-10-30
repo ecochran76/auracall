@@ -1,6 +1,6 @@
 ## 2026-10-30 — ID-less Chat composer fallback
 
-Plan0466 diagnoses a confirmed legacy-ID selector defect. Installed expression
+Plan0467 diagnoses a confirmed legacy-ID selector defect. Installed expression
 and real offline Chrome CSS DOM reject the reconstructed current editor; adding
 only the legacy ID passes. A regression failed before the fix. One visible,
 enabled ID-less ProseMirror textbox outside dialogs now establishes control-less
@@ -8,6 +8,28 @@ Chat after the existing wait. Duplicate/hidden/disabled/unrelated editors and
 explicit Work remain refused.77focused tests pass; final source checks recorded
 in the diagnosis receipt. Runtime not installed or restarted; historical failure
 capture is partial and live causal attribution/acceptance remain separate.
+
+## 2026-10-30 — Full installed runtime accepted
+
+PR500/be2344da0 preserves deployed-only diagnostics in complete sourcefdc2f05ea.
+195 focused checks, typecheck/build, installed contract and657file hashes pass.
+Both wrappers and API use the new full prefix; API2521540 serves status/desktops/
+console200, with scheduler pause,23paused completions and config/env bytes intact.
+Native ChatGPT restart1414440→2543066 preserves managed data and ac2 generations;
+passive fresh-page composer proof passes, no Send. PR481 closed as superseded,
+with historical wait attribution preserved. Three idle old worktrees removed,
+refs retained. Plan0466 records rollback, remaining ac2 holds and final custody.
+
+## 2026-10-30 — Full runtime upgrade preparation
+
+User authorized full installed upgrade, deployed-only fix preservation and restart
+of non-ac2 old processes after installation. Isolated Plan0466 base7efea3746
+includes ac2 PR498/499. Preserve source changes0f7836643/c5018ca84/2cfc59231 in
+three production files; skip the already integrated historical TTL commit.195
+selected checks pass, with full typecheck and a clean base build. Composed build,
+installed contract and staged package precede canonical integration and promotion.
+Live API/browser/config baselines and rollback wrappers are retained privately.
+No provider prompt, warning clearance or ac2 process termination.
 
 ## 2026-10-29 — Repository and tracker reconciliation
 

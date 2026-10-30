@@ -1,6 +1,6 @@
 ## 2026-10-30 — ID-less Chat composer fallback
 
-Plan0466 diagnoses a confirmed legacy-ID selector defect. Installed expression
+Plan0467 diagnoses a confirmed legacy-ID selector defect. Installed expression
 and real offline Chrome CSS DOM reject the reconstructed current editor; adding
 only the legacy ID passes. A regression failed before the fix. One visible,
 enabled ID-less ProseMirror textbox outside dialogs now establishes control-less
@@ -8,6 +8,15 @@ Chat after the existing wait. Duplicate/hidden/disabled/unrelated editors and
 explicit Work remain refused.77focused tests pass; final source checks recorded
 in the diagnosis receipt. Runtime not installed or restarted; historical failure
 capture is partial and live causal attribution/acceptance remain separate.
+
+## 2026-10-30 — Preserve installed source carry during full upgrades
+
+A composite prefix can contain qualified behavior absent from main even when its
+label names a newer hotfix. Compare compiled modules and recover the original
+source/test commits before installing current main. Carry only the missing
+production changes, retain newer integrated ownership fixes, and validate one
+complete source-derived candidate rather than silently dropping deployed behavior.
+See Plan0466 for app-selection/wait and private mode-capture carry.
 
 ## 2026-10-29 — Reconcile custody before removing worktrees
 

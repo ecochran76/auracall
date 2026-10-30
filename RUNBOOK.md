@@ -1,8 +1,18 @@
+## Turn 2026103002 | 2026-10-30 | ID-less composer integration
+
+Operator authorized integration, installation and non-submitting verification.
+Plan0467 renumbers the original source packet because main independently used0466
+for its full runtime upgrade. Primary preserves both histories and newer diagnostic
+capture. Composed main9d5bf89dd passes86focused tests, full build/typecheck, scoped
+lint and runtime contract. Existing managed browser ownership verified through
+NativeDesktopStore. No research prompt or browser restart. Private installation
+and rollback evidence: `~/.auracall/diagnostics/issue427-composer-install-20261030/`.
+
 ## Turn 2026103001 | 2026-10-30 | ID-less composer source diagnosis
 
 Primary serialized owner on `fix/chatgpt-idless-composer`, isolated worktree
 `/home/ecochran76/worktrees/auracall-idless-composer`, base7efea3746. Existing
-Grok and unmerged PR481 worktrees preserved. Plan0466/P76 write set: composer
+Grok and unmerged PR481 worktrees preserved. Plan0467/P76 write set: composer
 mode/tests, domain contract, user/testing docs and governance receipts.
 [Diagnosis](docs/dev/notes/2026-10-30-idless-composer-diagnosis.json) preserves
 installed/minimal/real-CSS red, ranked hypotheses, dialog refusal red and green.

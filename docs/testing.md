@@ -1,4 +1,4 @@
-- ID-less Chat composer (provider-free, Plan0466):
+- ID-less Chat composer (provider-free, Plan0467):
   `pnpm vitest run tests/browser/chatgptComposerMode.test.ts tests/browser/chatgptToolApproval.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers=1`.
   Real mode expression covers absent legacy IDs, delayed editor, hidden/disabled,
   unrelated/dialog and duplicate editors, plus existing explicit Work controls.

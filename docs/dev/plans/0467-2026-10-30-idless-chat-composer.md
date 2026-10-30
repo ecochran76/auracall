@@ -1,6 +1,6 @@
-# Plan0466 — Qualify the ID-less Chat composer fallback
+# Plan0467 — Qualify the ID-less Chat composer fallback
 
-State: CLOSED
+State: OPEN
 Lane: P76
 Branch: fix/chatgpt-idless-composer
 Target: main
@@ -46,3 +46,24 @@ expression successfully. That harness packaging error is retained privately.
 Planning audit retains exactly the base's68errors, no new errors.
 No runtime installed, no live prompt, no service/browser recovery. Closed finite
 source packet; review/integration and live acceptance remain separate.
+
+
+## Authorized integration and installation | 2026-10-30
+
+Operator “ok go” authorizes integration with current main, preserving newer
+source diagnostics, followed by installation and non-submitting Chat-mode proof.
+The original source packet used0466; main independently allocated0466 to its
+full-runtime upgrade, so this packet is0467. Preserve both histories.
+Do not send a research prompt, clear warnings, reset profiles or restart a browser.
+Build one complete candidate, compare installed bytes, preserve API/CLI rollback,
+and activate the supported CLI/MCP runtime. Existing API process identity is
+read before deciding whether its restart is required; any restart must be exact
+and preserve config/paused work. Acceptance requires current installed selector
+against the managed page without Send, plus retained diagnostic capture behavior.
+
+
+Composed with main9d5bf89dd, preserving the complete runtime upgrade and all
+private structural capture code.86focused tests across6suites, full build,
+typecheck, scoped lint and installed-package contract pass. Both journal
+conflicts were additions and retain both histories. CLI/MCP currently select
+`user-runtime-full-fdc2f05ea`; candidate promotion and passive proof follow.

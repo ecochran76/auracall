@@ -334,7 +334,7 @@ authorize replay. A warning with no cooldownUntil has no automatic expiry.
 
 ## Control-less Chat composer diagnosis | 2026-10-30
 
-Plan0466 source correction accepts one visible enabled ID-less ProseMirror
+Plan0467 source correction accepts one visible enabled ID-less ProseMirror
 textbox outside dialogs only after the existing mode-control wait. Work still
 requires its explicit authority; an empty page or ambiguous editors remain
 refused. Source qualification does not change the installed launcher. Do not

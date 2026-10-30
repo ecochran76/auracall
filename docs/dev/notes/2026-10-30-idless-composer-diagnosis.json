@@ -1,6 +1,6 @@
 {
   "state": "SOURCE_FIX_QUALIFIED_LIVE_NOT_RUN",
-  "plan": "0466",
+  "plan": "0467",
   "base": "7efea3746db7c4ea9372db36622570af82292f9d",
   "installed_runtime": "user-runtime-issue374-4fa2f3ac9",
   "observation": {
@@ -111,5 +111,7 @@
       "exact_error_lists_match": true,
       "qualification": "pre-existing missing policy links and draft-plan metadata; no plan0466 finding"
     }
-  }
+  },
+  "original_plan_id": "0466",
+  "plan_renumber_reason": "main independently allocated0466 to full runtime upgrade"
 }
