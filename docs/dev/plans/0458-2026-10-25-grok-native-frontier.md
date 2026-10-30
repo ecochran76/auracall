@@ -6,6 +6,14 @@ Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
 
+## Current native resource discovery | 2026-10-30
+
+Fresh normal managed browser and original account/Bot are qualified. Plugins
+exposes native Connectors/Skills/Bots outside Settings; personal/built-in Skills
+are observed. Per-Bot saved associations and knowledge identity remain unqualified.
+409OPEN; next inspect explicit current-Bot Skill association read surfaces. No
+configuration changes. See [native report](../notes/2026-10-30-grok-resource-management-native.md).
+
 ## Approved runtime recovery | 2026-10-30
 
 Operator-approved abandonment releases the exact expired unknown reservation,

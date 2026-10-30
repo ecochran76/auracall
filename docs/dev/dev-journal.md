@@ -1,3 +1,12 @@
+## 2026-10-30 — Fresh Grok native resource discovery
+
+Normal managed startup and exact original-account/Bot access pass after approved
+custody recovery. Five governed read slices positively observe Plugins Connectors/
+Skills/Bots and personal/built-in Skills. Original Bot Settings remains metadata;
+More exposes template/delete only. No assignment/persistent source identity yet.
+No settings changed;409OPEN. Broad census stalled; exact own helper stopped and
+supported exact-target reads succeeded. [Native report](notes/2026-10-30-grok-resource-management-native.md).
+
 ## 2026-10-30 — Approved unknown-effect abandonment recovery
 
 User explicitly approved adding and using exact expired-reservation abandonment.
