@@ -1,3 +1,13 @@
+## 2026-10-30 — Count new history identities, retain earlier windows
+
+A rendered history rail is a window, not the complete result. Accumulate unique
+IDs across observations instead of replacing the result, and use newly observed
+IDs to establish progress. Reuse the initial snapshot before scrolling. Keep
+pagination storage/scroll bounds and cancel its timers and pending waits. Check
+caller cancellation before recovery classification and retry so a reason such
+as Connection failed cannot become more provider work. Public transport fixtures
+verify the red/green cases; they do not measure live provider HTTP savings.
+
 ## 2026-10-30 — Distinguish abandonment from effect confirmation
 
 An expired ownerless unknown-effect reservation can block unrelated work after

@@ -1,5 +1,10 @@
 # Browser Mode
 
+ChatGPT conversation-history listing retains unique conversations as scrolling
+replaces visible rows, in first-observed order up to the requested limit. It
+stops at bounded no-progress/scroll limits. Cancellation stops pagination waits
+and subsequent commands; it cannot undo commands already issued to Chrome.
+
 ChatGPT file uploads require a verified local-file action or one unambiguous
 visible composer with a visible editor and attachment trigger. When menu labels
 change, inactive or ambiguous composers are rejected; a hidden native file input
