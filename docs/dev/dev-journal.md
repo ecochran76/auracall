@@ -1,3 +1,13 @@
+## 2026-10-30 — Grok utility lock origin diagnosed
+
+Two isolated registry replays reproduce #409's workload-owned block without a
+browser. Correlated the exact lease to another workflow's custom-connector Add
+attempt: dispatched, saved identity unconfirmed, transport cleanup uncertain.
+Later terminal-failure observation lacks connector name/endpoint binding; no
+qualified clearance evidence. Two supported passive target reads did not change
+UI/state. Preserve custody; no source defect shown, no guessed fix or retry.
+26focused registry/reconciliation tests pass. [Diagnosis](notes/2026-10-30-grok-utility-lock-diagnosis.md).
+
 ## 2026-10-30 — Conversation-list recovery merged and installed
 
 PR512/57df62b52 integrates source79cb4ac9b. New immutable runtime preserves all
