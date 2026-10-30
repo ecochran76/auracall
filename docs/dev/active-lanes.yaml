@@ -16,7 +16,7 @@ lanes:
     work_items: []
     dependencies: []
     overlaps: []
-    validation_status: focused-31-tests-and-typecheck-passed
+    validation_status: affected-58-tests-and-typecheck-passed
     disposition: Source-only API repair; no global runtime installation.
     updated_at: 2026-10-30
   - id: P18

@@ -92,13 +92,15 @@ export function validateGrokConnectorInstallationInput(
 	};
 }
 const HELPERS = `
- const visible=e=>{for(let n=e;n;n=n.parentElement)if(n.getAttribute('role')==='dialog' && n.getAttribute('data-closed')!==null)return false;return e && e.getAttribute('aria-hidden')!=='true' && getComputedStyle(e).display!=='none' && getComputedStyle(e).visibility!=='hidden' && e.getBoundingClientRect().width>0 && e.getBoundingClientRect().height>0;};
+ const visible=e=>{for(let n=e;n;n=n.parentElement)if(n.getAttribute('aria-hidden')==='true' || (n.getAttribute('role')==='dialog' && n.getAttribute('data-closed')!==null))return false;return e && e.getAttribute('aria-hidden')!=='true' && getComputedStyle(e).display!=='none' && getComputedStyle(e).visibility!=='hidden' && e.getBoundingClientRect().width>0 && e.getBoundingClientRect().height>0;};
  const text=e=>String(e?.innerText||e?.textContent||'').trim();
  const dialogs=()=>Array.from(document.querySelectorAll('[role="dialog"]')).filter(visible);
  const buttons=r=>Array.from(r.querySelectorAll('button,[role="button"]')).filter(visible);
  const plugins=()=>dialogs().find(d=>Array.from(d.querySelectorAll('[role="tab"]')).some(t=>text(t)==='Connectors'));
  const inventoryOwner=()=>{const roots=Array.from(document.querySelectorAll('[role="dialog"]')).filter(d=>d.getAttribute('data-closed')===null && d.getBoundingClientRect().width>0 && getComputedStyle(d).display!=='none' && Array.from(d.querySelectorAll('[role="tab"]')).some(t=>text(t)==='Connectors'));return roots.length===1?roots[0]:null;};
  const forms=()=>dialogs().filter(d=>d!==plugins() && Array.from(d.querySelectorAll('input')).some(i=>i.getAttribute('placeholder')==='My Connector'));
+ const customChoices=root=>buttons(root).filter(b=>/^(Custom|Custom\\s+Add your own custom connector)$/.test(text(b)));
+ const customPickers=()=>dialogs().filter(d=>d!==plugins() && d.getAttribute('data-analytics-name')==='add-connector-modal' && customChoices(d).length>0);
 `;
 const expr = (body: string) => `(()=>{${HELPERS}\n${body}})()`;
 export function createGrokConnectorInstallationClient(
@@ -296,9 +298,16 @@ export function createGrokConnectorInstallationClient(
 			// never repeat New Connector or retry a fill whose readback failed.
 			const formDeadline = Date.now() + 1_500;
 			let formReady = false;
+			let customSelected = false;
 			for (let attempt = 0; attempt < 61; attempt++) {
 				const state = await evaluate<string>(
 					expr(`
+    const pickers=customPickers();
+    if(pickers.length>1)return 'invalid';
+    if(pickers.length===1){
+      if(customChoices(pickers[0]).length!==1 || dialogs().some(d=>d!==plugins() && d!==pickers[0]))return 'invalid';
+      return 'picker';
+    }
     const matches=forms();
     if(matches.length>1 || dialogs().some(d=>d!==plugins() && !matches.includes(d)))return 'invalid';
     if(matches.length!==1)return 'pending';
@@ -308,6 +317,17 @@ export function createGrokConnectorInstallationClient(
     if(names.length>1||urls.length>1)return 'invalid';
     return names.length===1&&urls.length===1?'ready':'pending';`),
 				);
+				if (state === "picker" && !customSelected) {
+					customSelected = true;
+					const selected = await evaluate<boolean>(
+						expr(`
+    const pickers=customPickers();if(pickers.length!==1)return false;
+    const root=pickers[0],choices=customChoices(root);
+    if(choices.length!==1 || choices[0].disabled || choices[0].getAttribute('aria-disabled')==='true' || dialogs().some(d=>d!==plugins() && d!==root))return false;
+    choices[0].click();return true;`),
+					);
+					if (!selected) break;
+				}
 				if (state === "ready") {
 					formReady = true;
 					break;

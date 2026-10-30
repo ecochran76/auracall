@@ -1,3 +1,10 @@
+- Custom Connector picker transition (provider-free, Plan0467):
+  `pnpm vitest run tests/browser/grok405Installation.test.ts tests/browser/grok405InstallationService.test.ts tests/browser/grok405NativeConnectorBinding.test.ts tests/browser/grok444AccountReferences.test.ts --maxWorkers=1`.
+  Two-step picker/form preparation commits once in the fixture; delayed Custom
+  selection is not repeated. Ambiguous/disabled/foreign controls and inputs below
+  aria-hidden ancestors remain unselected/unfilled. Native accessibility and
+  OAuth acceptance are separate; no live Add is part of this gate.
+
 - Connector pre-fill readiness (provider-free, Plan0467):
   `pnpm vitest run tests/browser/grok405Installation.test.ts tests/browser/grok405InstallationService.test.ts tests/browser/grok405NativeConnectorBinding.test.ts --maxWorkers=1`.
   Delayed modal mount precedes one fill; absent/ambiguous/foreign forms stop.

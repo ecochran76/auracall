@@ -231,6 +231,13 @@ identity remain tenant-scoped; live-owner and uncertain-effect fences remain int
 An unrecognized `chatgpt:` model intent in a single-model browser CLI request. Run-option resolution rejects it before generic label inference or browser startup. `chatgpt:reasoning` carries standard/Medium effort; `chatgpt:reasoning-medium` is not a supported selector.
 
 
+Grok custom Connector preparation distinguishes the New Connector picker from
+the editable custom form. When the known picker is present, select its unique
+enabled Custom choice once before waiting for form readiness and filling once.
+Controls inside aria-hidden ancestor panels do not qualify as active form
+controls. A rendered/input-filled DOM and an actual native OAuth transition
+remain separate evidence; fixture support does not establish live acceptance.
+
 **Grok Connector**:
 An external service connected to Grok through its Plugins connector surface,
 including a custom MCP server. Its connected account and permissions are distinct

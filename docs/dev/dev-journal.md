@@ -1,3 +1,13 @@
+## 2026-10-30 — Source-qualify the custom Connector picker stage
+
+Plan0467 public picker reproduction failed twice before the missing Custom
+transition was added. A separate hidden-ancestor regression and disabled-choice
+regression each failed before their fixes.58 affected checks pass33.90s, with
+22.06s import overhead while typecheck ran concurrently: the30s focused target
+was missed; retain the result and serialize later checks rather than erase it
+with a retry. Native accessibility exposes only the frame and cannot qualify
+the control role; prior actual-Add uncertainty stays preserved. No live input. Typecheck and scoped Biome pass.
+
 ## 2026-10-30 — Preserve definitive no-Add refusal in continuations
 
 Public service regression exposed existing-record OR bookkeeping retaining the

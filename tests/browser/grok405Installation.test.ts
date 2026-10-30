@@ -389,3 +389,157 @@ it.each([
 		vi.useRealTimers();
 	}
 });
+
+it("selects Custom from the connector picker before preparing the custom form", async () => {
+	const f = installFixture();
+	const custom = new N("button", "Custom\nAdd your own custom connector");
+	const picker = new N(
+		"div",
+		"New Connector",
+		{ role: "dialog", "data-analytics-name": "add-connector-modal" },
+		[custom],
+	);
+	picker.hidden = true;
+	picker.parentElement = f.document;
+	f.document.children.push(picker);
+	const open = f.plugins.children.find(
+		(node) => node.getAttribute("aria-label") === "New Connector",
+	);
+	if (!open) throw new Error("fixture missing opener");
+	let openings = 0,
+		selections = 0;
+	open.onClick = () => {
+		openings++;
+		picker.hidden = false;
+	};
+	custom.onClick = () => {
+		selections++;
+		picker.hidden = true;
+		f.form.hidden = false;
+	};
+	const client = createGrokConnectorInstallationClient(f.runtime, {
+		providerAccountRef: "account-hash",
+	});
+	const outcome = await client.prepare(input);
+	expect(outcome).toMatchObject({ status: "prepared", effectDispatched: false });
+	expect(openings).toBe(1);
+	expect(selections).toBe(1);
+	expect(f.name.value).toBe("New Example");
+	expect(f.endpoint.value).toBe("https://new.example.test/mcp");
+	expect(f.effects()).toBe(0);
+	const committed = await client.commit(requirePrepared(outcome));
+	expect(committed).toMatchObject({ status: "awaiting-human", effectDispatched: true });
+	expect(f.effects()).toBe(1);
+});
+
+it("refuses to prepare controls hidden by an ancestor panel", async () => {
+	vi.useFakeTimers();
+	try {
+		const f = installFixture();
+		const panel = new N("div", "", { "aria-hidden": "true" }, [f.form]);
+		f.document.children = f.document.children.filter((node) => node !== f.form);
+		panel.parentElement = f.document;
+		f.document.children.push(panel);
+		const pending = createGrokConnectorInstallationClient(f.runtime, {
+			providerAccountRef: "account-hash",
+		}).prepare(input);
+		await vi.advanceTimersByTimeAsync(2000);
+		expect(await pending).toMatchObject({ status: "unsupported", effectDispatched: false });
+		expect(f.name.value).toBe("");
+		expect(f.endpoint.value).toBe("");
+		expect(f.effects()).toBe(0);
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
+it.each([
+	"ambiguous",
+	"disabled",
+	"foreign",
+])("refuses the %s Custom picker without selecting or filling", async (mode) => {
+	const f = installFixture();
+	const custom = new N("button", "Custom");
+	if (mode === "disabled") custom.setAttribute("aria-disabled", "true");
+	const picker = new N(
+		"div",
+		"New Connector",
+		{ role: "dialog", "data-analytics-name": "add-connector-modal" },
+		[custom],
+	);
+	if (mode === "ambiguous") {
+		const extra = new N("button", "Custom");
+		extra.parentElement = picker;
+		picker.children.push(extra);
+	}
+	picker.hidden = true;
+	picker.parentElement = f.document;
+	f.document.children.push(picker);
+	const open = f.plugins.children.find(
+		(node) => node.getAttribute("aria-label") === "New Connector",
+	);
+	if (!open) throw new Error("fixture missing opener");
+	let selections = 0;
+	open.onClick = () => {
+		picker.hidden = false;
+		if (mode === "foreign") {
+			const foreign = new N("div", "Unrelated", { role: "dialog" });
+			foreign.parentElement = f.document;
+			f.document.children.push(foreign);
+		}
+	};
+	custom.onClick = () => {
+		selections++;
+		picker.hidden = true;
+		f.form.hidden = false;
+	};
+	const result = await createGrokConnectorInstallationClient(f.runtime, {
+		providerAccountRef: "account-hash",
+	}).prepare(input);
+	expect(result).toMatchObject({ status: "unsupported", effectDispatched: false });
+	expect(selections).toBe(0);
+	expect(f.name.value).toBe("");
+	expect(f.endpoint.value).toBe("");
+	expect(f.effects()).toBe(0);
+});
+
+it("selects Custom only once while waiting for the picker to become the form", async () => {
+	vi.useFakeTimers();
+	try {
+		const f = installFixture();
+		const custom = new N("div", "Custom", { role: "button" });
+		const picker = new N(
+			"div",
+			"New Connector",
+			{ role: "dialog", "data-analytics-name": "add-connector-modal" },
+			[custom],
+		);
+		picker.hidden = true;
+		picker.parentElement = f.document;
+		f.document.children.push(picker);
+		const open = f.plugins.children.find(
+			(node) => node.getAttribute("aria-label") === "New Connector",
+		);
+		if (!open) throw new Error("fixture missing opener");
+		open.onClick = () => {
+			picker.hidden = false;
+		};
+		let selections = 0;
+		custom.onClick = () => {
+			selections++;
+			setTimeout(() => {
+				picker.hidden = true;
+				f.form.hidden = false;
+			}, 100);
+		};
+		const pending = createGrokConnectorInstallationClient(f.runtime, {
+			providerAccountRef: "account-hash",
+		}).prepare(input);
+		await vi.advanceTimersByTimeAsync(250);
+		expect(await pending).toMatchObject({ status: "prepared", effectDispatched: false });
+		expect(selections).toBe(1);
+		expect(f.effects()).toBe(0);
+	} finally {
+		vi.useRealTimers();
+	}
+});

@@ -1269,6 +1269,12 @@ service account is a separate identity. The equivalent HTTP/MCP request is
 same input/account and `action: "reconcile"` (CLI omits `--yes`). Repeated install
 calls also reconcile; they never submit Add again for a recorded account/endpoint.
 
+The browser adapter supports both a directly opened custom form and the known
+New Connector picker. In the picker it selects exactly one enabled Custom
+button (or button role), waits for the editable form, and fills once. Ambiguous,
+disabled or foreign picker controls stop without input or Add; aria-hidden
+ancestor panels are excluded. Native provider acceptance is still required.
+
 Programmatic installation-service callers can explicitly select a verified fresh
 target with `preEffectTarget: {expectedPreviousTargetId, targetId}` after the
 known journaled pre-effect endpoint-observation refusal. A recorded unsupported

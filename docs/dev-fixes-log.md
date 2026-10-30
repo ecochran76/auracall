@@ -1,3 +1,13 @@
+## 2026-10-30 — Model the Custom Connector picker as a distinct stage
+
+A direct-form fixture omitted the New Connector → Custom chooser. The actual
+public client returned unsupported in a two-step fixture. Select a unique
+enabled Custom control in the owned picker once, wait for the form, then fill
+once. Independently, controls under aria-hidden ancestors qualified incorrectly;
+their public regression failed before the ancestor check. Negative and delayed
+fixtures retain no-Add and no-repeat guards. These source findings do not
+establish the cause or completion of an earlier native Add. See Plan0467.
+
 ## 2026-10-30 — Observe connector form readiness before one fill
 
 New Connector can mount its form after the opening click returns. Immediate

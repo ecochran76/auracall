@@ -9,7 +9,7 @@ Integration: PR; no automatic merge or global runtime install
 
 ## Current State
 
-A confirmed installation can already continue one recorded unsupported endpoint observation with a durable one-shot claim. It always selects the old target. A correctly owned fresh context cannot be selected even when the journal positively proves Add was never dispatched. This packet adds an explicit expected-old/new target selector only for that existing supported pre-effect continuation.
+Explicit fresh-target pre-effect continuation, bounded form-readiness recovery and definitive no-Add refusal bookkeeping are source-qualified. The current bounded packet diagnoses the observed New Connector picker stage: the existing direct-form fixture omitted that transition, and hidden ancestor panels could qualify as active inputs. Public-client RED/GREEN regressions cover both risks; the selected58 checks, typecheck and scoped Biome pass. Original native Add uncertainty and client acceptance remain separate; no live Add or runtime promotion occurs in this packet.
 
 ## Scope and acceptance
 
@@ -36,3 +36,15 @@ RED: public delayed-form preparation returned unsupported; public service separa
 ## Definitive final-guard refusal bookkeeping
 
 An existing continuation inherited the current attempt's provisional beforeCommit flag even when the public client explicitly returned failed/form_changed/effectDispatched=false before Add. The service now snapshots the prior effect and cancels only that affirmative guard refusal's current provisional flag. Previously dispatched and unknown transport outcomes remain fenced. Worker public-service RED/GREEN and52 affected tests/typecheck pass; primary integration validation follows. This source fix changes future execution only and does not rewrite historical journals or extend retry eligibility.
+
+## Picker-phase diagnosis packet
+
+Public-client command `pnpm vitest run tests/browser/grok405Installation.test.ts -t 'selects Custom from' --maxWorkers=1` reproduced unsupported vs expected prepared twice (2.26s/1.51s) before source changes. The minimal fixture adds the visible picker and requires its Custom selection to expose the form; the older fixture exposed the form directly. Ranked hypotheses were missing selection, inactive-panel visibility and input-state delivery. Adding one qualified Custom selection makes the first fixture green. A second public fixture returned prepared for controls below an aria-hidden ancestor (RED), then rejects after ancestor visibility correction. A disabled Custom control also failed first before the explicit enabled check.
+
+The implementation preserves direct-form compatibility and bounds readiness by the existing deadline. It selects a unique enabled known Custom choice once, never retries it while waiting for the form, and refuses ambiguous/foreign controls. Preparation remains no-Add; the two-step fixture commits exactly once through unchanged token/account/inventory/Add fencing to its simulated OAuth custody. The native screenshot informs the stage shape; native accessibility exposes only a browser frame and does not prove a specific Custom DOM role. This establishes source coverage, not historical native cause or a working native OAuth result.
+
+No historical journal/claim reset, unknown lease clearance, live Add, global installation or final whole-product review is included.
+
+Combined selected gate:58 tests across client/service/native-binding/account-reference files pass33.90s. Focused30s target missed, with22.06s imports and concurrent typecheck; first result retained, no retry. Run later gates sequentially to avoid contention. Native/system-wide suites and live replay are excluded.
+
+Primary typecheck and scoped Biome pass on the resulting source. No live replay or runtime promotion occurred.
