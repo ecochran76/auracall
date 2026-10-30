@@ -1,3 +1,12 @@
+## 2026-10-30 — Issue384 current-main review and TDD
+
+PR385 composed with d5a1293cc at e8a40c430, preserving ID-less composer/capture.
+One Standards/Spec review accepted0/2findings: article quotations and transparent
+headings produced false account errors in real DOM. One bounded TDD phase watched
+four, then two public regressions fail and pass.88selected checks and all16real-DOM
+cases now pass. Build/typecheck and installed fixture qualification precede
+integration/closure. No provider recovery, prompt or deferred377 work.
+
 ## 2026-10-23 | Issue384 account-page diagnostics
 
 Plan0450: captured-tab replay reproduced misleading missing-model failure.

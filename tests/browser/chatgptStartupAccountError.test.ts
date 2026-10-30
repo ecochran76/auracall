@@ -3,15 +3,17 @@ import { ensureModelSelection } from '../../src/browser/actions/modelSelection.j
 import { ensureChatgptComposerMode } from '../../src/browser/actions/chatgptComposerMode.js';
 
 class Heading {
-  constructor(public innerText: string, public hidden = false, public inConversation = false) {}
+  constructor(public innerText: string, public hidden = false, public inConversation = false, public container?: string, public opacity = "1") {}
   getBoundingClientRect() { return { width: this.hidden ? 0 : 100, height: 30 }; }
-  closest() { return this.inConversation ? {} : null; }
+  closest(selectors: string) {
+    return this.inConversation || (this.container && selectors.split(",").map(value => value.trim()).includes(this.container)) ? {} : null;
+  }
 }
 afterEach(() => vi.unstubAllGlobals());
 
 function runtime(kind: 'model' | 'mode', heading: Heading) {
   vi.stubGlobal('HTMLElement', Heading);
-  vi.stubGlobal('getComputedStyle', () => ({ display: 'block', visibility: 'visible' }));
+  vi.stubGlobal('getComputedStyle', (node: Heading) => ({ display: 'block', visibility: 'visible', opacity: node.opacity }));
   vi.stubGlobal('document', { querySelectorAll: () => [heading] });
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
     if (expression.includes('const BUTTON_SELECTORS')) return { result: { value: { status: 'button-missing' } } };
@@ -28,6 +30,25 @@ describe('ChatGPT startup account error diagnostics', () => {
   it.each(['model', 'mode'] as const)('reports the account page instead of missing %s controls', async (kind) => {
     await expect(runtime(kind, new Heading('We couldn’t load your account'))())
       .rejects.toMatchObject({ code: 'CHATGPT_ACCOUNT_LOAD_ERROR' });
+  });
+
+  it.each([
+    ['model', 'article'],
+    ['mode', 'article'],
+    ['model', '[role="article"]'],
+    ['mode', '[role="article"]'],
+  ] as const)('preserves missing %s diagnostics for quoted headings in %s', async (kind, container) => {
+    await expect(runtime(kind, new Heading('We couldn’t load your account', false, false, container))())
+      .rejects.toThrow(kind === 'model'
+        ? 'Unable to locate the ChatGPT model selector button.'
+        : 'Unable to find the ChatGPT Chat mode control.');
+  });
+
+  it.each(['model', 'mode'] as const)('preserves missing %s diagnostics for transparent headings', async (kind) => {
+    await expect(runtime(kind, new Heading('We couldn’t load your account', false, false, undefined, '0'))())
+      .rejects.toThrow(kind === 'model'
+        ? 'Unable to locate the ChatGPT model selector button.'
+        : 'Unable to find the ChatGPT Chat mode control.');
   });
 
   it.each([

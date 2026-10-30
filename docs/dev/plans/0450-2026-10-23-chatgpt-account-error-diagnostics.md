@@ -10,6 +10,28 @@ Integration: merge
 
 Source checkpoint408ce37dc is qualified in open PR385. The earlier source packet was CLOSED; integration and installed qualification remain OPEN. The provider account-load cause is unresolved. No automatic reload, prompt, auth reset or warning clearance is authorized by this reconciliation.
 
+## 2026-10-30 — Current-main review and findings
+
+PR385 is reconciled with maind5a1293cc at mergee8a40c430, preserving the newer
+ID-less composer and private structural diagnostics. One frozen Standards/Spec
+review found Standards0 and Spec2/P2: conversation article quotations and fully
+transparent headings were incorrectly classified as account-page failures.
+A genuine offline DOM probe through both public selectors reproduced six wrong
+classifications; ten controls, including the original visible wording, passed.
+
+One bounded findings-TDD phase added exact public negative regressions. The four
+article cases failed before article/role=article exclusion and passed afterward;
+the two opacity cases then failed before the visibility fix and passed afterward.
+88 checks across startup, model, composer, structural capture and app readiness
+pass. The original sixteen real-DOM cases are now all green. Source classification
+still runs only after missing controls; it never reloads, navigates, clicks recovery,
+clears a warning, signs out, retries or sends. Review runs1; findings phases1.
+
+Installed qualification will replay the synthetic page fixtures through the exact
+installed public detectors, keeping actual provider outage/recovery and #377/#311
+out of scope. No outage is induced and no provider-cause claim is required to
+complete the diagnostic contract in #384.
+
 ## Preserved execution history
 
 State: CLOSED

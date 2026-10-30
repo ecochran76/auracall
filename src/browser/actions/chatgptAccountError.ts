@@ -9,10 +9,10 @@ export async function assertNoChatgptAccountLoadError(Runtime: ChromeClient['Run
         'main h1, main h2, main [role="alert"], [role="main"] h1, [role="main"] h2, [role="main"] [role="alert"]'
       );
       return Array.from(headings).some((node) => {
-        if (!(node instanceof HTMLElement) || node.closest('nav, aside, [data-testid^="conversation-turn"], [data-message-author-role], [data-turn], [inert], [aria-hidden="true"]')) return false;
+        if (!(node instanceof HTMLElement) || node.closest('nav, aside, article, [role="article"], [data-testid^="conversation-turn"], [data-message-author-role], [data-turn], [inert], [aria-hidden="true"]')) return false;
         const rect = node.getBoundingClientRect();
         const style = getComputedStyle(node);
-        if (rect.width <= 0 || rect.height <= 0 || style.display === 'none' || style.visibility === 'hidden') return false;
+        if (rect.width <= 0 || rect.height <= 0 || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
         return /\\b(?:(?:we\\s+)?(?:couldn['’]t|could not) load|(?:unable|failed) to load) your account\\b|\\b(?:error|problem|trouble) (?:while )?loading your account\\b/i.test(node.innerText || '');
       });
     })()`,

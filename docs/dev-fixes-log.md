@@ -1,3 +1,11 @@
+## 2026-10-30 — Qualify account errors outside conversation content
+
+Missing controls plus matching text are insufficient if the heading belongs to
+an article quotation or is fully transparent. Preserve generic missing-control
+errors for those cases; only visible main-page account headings qualify the
+specific account-load diagnostic. Public selector regressions and real offline
+DOM reproduce the false positives and retain the original positive case.
+
 ## 2026-10-23 | Distinguish account-page failure from missing startup controls (#384)
 
 A captured account-load error screen had neither composer nor model selector.
