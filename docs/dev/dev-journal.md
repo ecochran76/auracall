@@ -57408,3 +57408,15 @@ responses changed500→200 over time.409remains open only on native resource
 configuration/saved identity, per spec. Working tab untouched; no Bot writes.
 One home/disclosure/Bot entry and read-only Settings open,0reloads. Intent fences
 consumed. No new broad review/findings phase or installation.
+
+### 2026-10-30 —409 resource research
+
+Four focused official searches/eight pages document account-wide apps, current-Bot
+private-Skill enablement and Team Bot shared setup. Official FAQ distinguishes
+Grok chat from Grok Bot app; public announcements also confirm web Skills and
+Connectors, without proving per-web-Bot persistence. Existing Settings-only label
+scan does not enumerate those management surfaces.409needs native management/
+product-type discovery, not a provider-wide unsupported inference. One cited
+research note captures scopes and next read-only path; no new browser action,
+provider change, implementation or review/findings round. Sole coding checkout
+retained; runtime/dependency holds untouched. Memoryforbidden,zero writes.

@@ -262,7 +262,13 @@ refill an empty incremental frontier.
 
 **Grok Bot**:
 A named Grok agent with its own configuration that an operator can select for a
-conversation. It is distinct from an AuraCall runtime profile or execution agent.
+conversation. It is distinct from an AuraCall runtime profile or execution agent. In this
+integration, qualify the observed `grok.com/bot/...` entity and its client/account.
+Official documentation also names a separate Grok Bot app; its Team Bot setup and
+private-Skill controls are not automatically verified web capabilities. Keep
+account-wide app connections, current-Bot skill enablement and Team Bot resources
+separate until their native association is observed. See
+[resource capability research](docs/dev/notes/2026-10-30-grok409-resource-capability-research.md).
 
 **Grok generated app**:
 An app created through Grok Build mode. Generation, preview, artifact retrieval
