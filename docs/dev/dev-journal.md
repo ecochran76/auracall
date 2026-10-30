@@ -1,3 +1,14 @@
+## 2026-10-30 — Passive installed selector accepted; historical contention unknown
+
+Primary serialized documentation-only closeout for Plan0467/P76, isolated from
+ac2's coding checkout. Exact guarded read passes342ms; full unchanged installed
+selector passes69ms on verified browser2543066. Current page has explicit mode
+controls, so this does not exercise the missing-controls fallback live. No prompt,
+navigation, restart or ownership override. Plan0467 closes its bounded passive
+criterion. DesktopControlBusyError does not reproduce; original failure-time
+owner metadata is missing. No ranked causal hypotheses or gate patch advanced
+without a red-capable historical reproducer. [Receipt](notes/2026-10-30-desktop-control-passive-acceptance.json).
+
 ## 2026-10-30 — ID-less composer merged and installed
 
 PR503/8723ff36a integrates the source fix with newer diagnostics. Immutable
