@@ -2,9 +2,32 @@
 
 State: OPEN
 Lane: P458
-Branch: feat/grok411-spec-20261028-r2
+Branch: fix/grok409-diagnosis-20261029
 Target: main
 Integration: merge
+
+## Current State | 2026-10-29 approved diagnostic continuation
+
+User approved diagnosing409 first and bounded research411 in parallel. Base
+5f4697f85;414 remains CLOSED. Primary owns409 and all serialized native work;
+a separate research branch owns411's evidence note only. No new broad review or
+findings phase is authorized or reset; completed counters remain1/1.
+
+409 feedback loop must assert the exact owned Bot Settings/content symptom,
+not merely successful browser attachment. First verify original account/runtime
+and retained target; at most two native diagnostic probes, one variable per
+probe. The previous focus hypothesis was rejected. No reload/navigation retry
+unless justified by a reproduced failure and an explicit prediction. No Bot
+Save/grant/create/delete, prompt/Send, publication, terms, install or restart.
+Stop at a precise evidence gate if the feedback loop cannot qualify current Bot
+identity. Native absence is not a source defect by itself.
+
+411 research question: does the current native publish contract bind an exact
+selected output revision, and what authentic app/version readback exists?
+Allowed sources: current repository source/spec and already retained native
+controller receipts. Output: one cited note. Stop after six relevant source
+lookups and two retained receipts, or a decisive contract. No browser/provider
+calls by the research worker and no invented revision or version aliases.
 
 ## Current State | 2026-10-29 reconciliation
 
