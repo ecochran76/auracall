@@ -1403,6 +1403,15 @@ is never reported as a saved Bot grant/source. Wrong Bot/account or ambiguous
 Settings remains unknown. No resource grant or configuration write is supported;
 those acceptance gates stay open.
 
+A loaded URL alone does not qualify Bot identity. The native sidebar may show
+only a few Bots until **Show more** is expanded; absence from that truncated view
+is not deletion evidence. In the qualified 2026-10-30 read, entering the exact
+observed Bot through its sidebar link exposed its header and Settings after an
+earlier direct entry had shown only a shell. Backend responses also changed over
+time, so this does not establish a direct-URL defect or authorize automatic
+reload/retry. Lifecycle reads still require the exact Bot to be visibly qualified
+on the retained target. See the [identity/entry evidence](dev/notes/2026-10-30-grok409-identity-and-native-entry.md).
+
 Mutations return an `operationId` and keep a private account-bound intent journal.
 Repeat calls observe the original target instead of dispatching again, including
 across process or runtime-profile changes. For an uncertain outcome use

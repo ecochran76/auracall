@@ -57314,3 +57314,22 @@ Plugins overlay, while original synthetic Bot remains a35-character shell. Prior
 unknown. Comparison performed0reloads/writes. Evidence note corrects prior report.
 Sole coding checkout is canonical workspace; research checkout removed cleanly
 with integrated/published work preserved; old implementation remains runtime-only.
+
+### 2026-10-30 — Original Bot identity read
+
+Current loaded UI contains exact original Bot ID+edited-name link. Passive React
+composer inspection needed an actual managed ancestor; failed/capped observations
+are retained without absence claims. Exact link is committed/current, but no
+creator DTO is yet qualified. Test in-app entry in the dedicated blank target
+using observed home and original sidebar links, preserving the working UI. No
+reloads or Bot writes; one fenced causal read. Source base9d5bf89dd incorporates
+other lane's full installed-runtime carry without replaying its work.
+
+Original Bot identity is now qualified. Fresh sidebar Show more expanded3→26Bot
+links; exact ID/name then opened through its native link, with exact Settings
+readback. Public configured resource read passes scoped unavailable/effectnone;
+CLI/HTTP/MCP parity3/3passes. Prior500cause/direct-entry defect is unproven because
+responses changed500→200 over time.409remains open only on native resource
+configuration/saved identity, per spec. Working tab untouched; no Bot writes.
+One home/disclosure/Bot entry and read-only Settings open,0reloads. Intent fences
+consumed. No new broad review/findings phase or installation.
