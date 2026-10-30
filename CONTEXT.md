@@ -274,3 +274,9 @@ Its sanitized aggregate stderr report preserves terminal inventory stdout and
 never changes admission or ownership. Counts are observations with explicit
 unresolved/coverage limits; admission duration includes local governor overhead.
 See `docs/dev/browser-service-tools.md#app-list-performance-diagnostics`.
+
+
+Composer-mode failure capture retains only qualified structural counts and bounded
+ready/path categories in a private receipt. It never retains page content or
+changes the original mode-selection failure. A receipt is diagnostic evidence,
+not authority to retry or relax mode/account/ownership qualification.

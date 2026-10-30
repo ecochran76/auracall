@@ -1,3 +1,14 @@
+## 2026-10-30 — Full runtime upgrade preparation
+
+User authorized full installed upgrade, deployed-only fix preservation and restart
+of non-ac2 old processes after installation. Isolated Plan0466 base7efea3746
+includes ac2 PR498/499. Preserve source changes0f7836643/c5018ca84/2cfc59231 in
+three production files; skip the already integrated historical TTL commit.195
+selected checks pass, with full typecheck and a clean base build. Composed build,
+installed contract and staged package precede canonical integration and promotion.
+Live API/browser/config baselines and rollback wrappers are retained privately.
+No provider prompt, warning clearance or ac2 process termination.
+
 ## 2026-10-29 — Repository and tracker reconciliation
 
 Plan0465 reconciles35 existing worktrees plus one stale registration. Preserved
