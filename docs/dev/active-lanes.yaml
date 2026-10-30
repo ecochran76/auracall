@@ -183,3 +183,37 @@ lanes:
     remote_ref: refs/remotes/origin/fix/ttl-ownership-integration
     integration_receipt: d2217269cd3942f74ef5e9524adf4b9f51ae757c
     disposition: Qualified three-ticket closure; worktree retained only for current browser process cwd custody
+  - id: P17
+    objective: Retain verified integrated prerequisite for the paused successor
+    plan: docs/dev/plans/0324-2026-09-01-history-materialization-fairness.md
+    plan_ref: refs/remotes/origin/main
+    branch: fix/plan0324-history-materialization-fairness
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 354716855d0d391c2353347cd00089438ae53f01
+    remote_ref: refs/remotes/origin/fix/plan0324-history-materialization-fairness
+    integration: merge
+    integration_receipt: 87fec070638981f87095f1e2830192a0ba3cd9a3
+    dependencies: []
+    overlaps: []
+    validation_status: historical-closed-prerequisite-ancestry-verified
+    disposition: Terminal dependency anchor; full execution history is in the pre-reconciliation catalog
+    updated_at: 2026-10-29
+  - id: P52
+    objective: Retain verified integrated prerequisite for the paused successor
+    plan: docs/dev/plans/0359-2026-09-23-browser-tab-affinity-multitasking.md
+    plan_ref: refs/remotes/origin/main
+    branch: feat/issue-46-browser-tab-affinity
+    target: main
+    plan_state: CLOSED
+    custody_state: INTEGRATED
+    checkpoint: 8c7f9b6b1944ca3d11cd014b304f2e326b63c055
+    remote_ref: refs/remotes/origin/feat/issue-46-browser-tab-affinity
+    integration: merge
+    integration_receipt: 46d0c0cf9725b507415b5c6a681a682a9bb35d34
+    dependencies: []
+    overlaps: []
+    validation_status: historical-closed-prerequisite-ancestry-verified
+    disposition: Terminal dependency anchor; full execution history is in the pre-reconciliation catalog
+    updated_at: 2026-10-29

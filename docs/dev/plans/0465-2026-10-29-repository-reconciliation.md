@@ -75,7 +75,9 @@ to history does not close its underlying plan, satisfy its wider acceptance or
 grant resumption authority. Reconcile the original source and live gates before
 resuming any historical packet.
 
-The current ten-row catalog describes the four open PR lanes, two paused source
+The current catalog has ten execution/custody rows plus two verified integrated
+prerequisite anchors (P17/P52), retaining the paused successors’ dependency graph.
+The ten execution/custody rows describe the four open PR lanes, two paused source
 refs, the wider desktop acceptance lane and the three integrated/live holds.
 Branch tips and remote custody are current; current planning metadata names the
 actual remaining gate. Six integration/continuation plan headers are reconciled;
