@@ -1,0 +1,557 @@
+// biome-ignore-all lint/style/useNamingConvention: CDP wire fields use provider spelling.
+
+import { createHash } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, expect, it } from "vitest";
+import { setAuracallHomeDirOverrideForTest } from "../../src/auracallHome.js";
+import { createGrokConnectorInstallationService } from "../../src/browser/grokConnectorInstallationService.js";
+import { createResponsesHttpServer } from "../../src/http/responsesServer.js";
+import {
+	connectorDomFixture,
+	fixtureConnectorServiceOptions,
+	ConnectorFixtureNode as N,
+} from "./grok404ConnectorDomFixture.js";
+
+const roots: string[] = [];
+afterEach(async () => {
+	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+const input = {
+	kind: "custom" as const,
+	name: "New Example",
+	endpoint: "https://new.example.test/mcp",
+};
+const expectedProviderAccountRef = createHash("sha256")
+	.update("grok:id:fixture-user")
+	.digest("hex");
+async function fixture() {
+	const root = await mkdtemp(path.join(tmpdir(), "grok405-"));
+	roots.push(root);
+	const f = connectorDomFixture();
+	const name = new N("input", "", { placeholder: "My Connector" });
+	const endpoint = new N("input", "", { placeholder: "https://mcp.example.com/sse" });
+	const add = new N("button", "Add Connector");
+	const form = new N("div", "New Connector", { role: "dialog" }, [name, endpoint, add]);
+	form.hidden = true;
+	const open = new N("button", "New Connector", { "aria-label": "New Connector" });
+	open.onClick = () => {
+		form.hidden = false;
+	};
+	open.parentElement = f.plugins;
+	f.plugins.children.push(open);
+	form.parentElement = f.document;
+	f.document.children.push(form);
+	let effects = 0;
+	add.onClick = () => {
+		effects++;
+		form.ownText = "Authentication required";
+	};
+	let targetCloses = 0;
+	const options = fixtureConnectorServiceOptions();
+	const deps = {
+		journalDirectory: root,
+		connect: async () => ({
+			client: {
+				Runtime: f.runtime,
+				close: async () => {},
+				__auracallProviderTrafficGovernor: {
+					attribution: { provider: "grok", targetId: "fixture-target" },
+					admitBackendRequest: async () => {},
+					begin: async () => ({ settle: async () => {} }),
+				},
+			},
+			targetId: "fixture-target",
+			shouldClose: true,
+			host: "localhost",
+			port: 1,
+		}),
+		closeTarget: async () => {
+			targetCloses++;
+		},
+	};
+	return {
+		f,
+		form,
+		add,
+		root,
+		options,
+		deps,
+		effects: () => effects,
+		targetCloses: () => targetCloses,
+	};
+}
+it("durably fences repeated installation across service restart and preserves human target", async () => {
+	const f = await fixture();
+	const first = await createGrokConnectorInstallationService(f.options, f.deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(first).toMatchObject({
+		status: "awaiting-human",
+		effectDispatched: true,
+		retrySafe: false,
+	});
+	expect(f.effects()).toBe(1);
+	expect(f.targetCloses()).toBe(0);
+	const restarted = createGrokConnectorInstallationService(f.options, f.deps);
+	const second = await restarted.install({ input, expectedProviderAccountRef, confirm: true });
+	expect(second).toMatchObject({
+		status: "awaiting-human",
+		effectDispatched: true,
+		retrySafe: false,
+	});
+	expect(f.effects()).toBe(1);
+});
+it("does not submit without exact account confirmation and reports account drift before Add", async () => {
+	const f = await fixture();
+	const service = createGrokConnectorInstallationService(f.options, f.deps);
+	await expect(service.install({ input, expectedProviderAccountRef })).rejects.toThrow(
+		"confirmation_required",
+	);
+	expect(f.effects()).toBe(0);
+	const result = await service.install({
+		input,
+		expectedProviderAccountRef: "a".repeat(64),
+		confirm: true,
+	});
+	expect(result).toMatchObject({ status: "failed", effectDispatched: false, retrySafe: false });
+	expect(f.effects()).toBe(0);
+});
+it("returns unknown custody through public command and MCP without losing the retained target", async () => {
+	const f = await fixture();
+	const { runGrokConnectorsCommand } = await import("../../src/cli/grokConnectorsCommand.js");
+	const { createGrokConnectorsToolHandler } = await import("../../src/mcp/tools/grokConnectors.js");
+	const installation = createGrokConnectorInstallationService(f.options, f.deps);
+	const service = {
+		list: async () => {
+			throw new Error("unused");
+		},
+		inspect: async () => {
+			throw new Error("unused");
+		},
+		...installation,
+	};
+	const request = { action: "install", input, expectedProviderAccountRef, confirm: true };
+	const cli = await runGrokConnectorsCommand(request, service);
+	expect(cli).toMatchObject({
+		status: "awaiting-human",
+		effectDispatched: true,
+		retrySafe: false,
+		targetId: "fixture-target",
+	});
+	const mcp = await createGrokConnectorsToolHandler(() => service)({
+		action: "reconcile",
+		input,
+		expectedProviderAccountRef,
+	});
+	expect(mcp.isError).toBe(true);
+	expect(mcp.structuredContent).toMatchObject({
+		status: "awaiting-human",
+		effectDispatched: true,
+		retrySafe: false,
+		targetId: "fixture-target",
+	});
+	expect(f.effects()).toBe(1);
+});
+it("reports a rejected final form guard as no dispatched effect", async () => {
+	const f = await fixture();
+	const evaluate = f.f.runtime.evaluate;
+	f.f.runtime.evaluate = async (args) => {
+		if (args.expression.includes("root.getAttribute('data-auracall-install-owner')")) {
+			const field = f.form.children.find(
+				(node) => node.getAttribute("placeholder") === "My Connector",
+			);
+			if (field) field.value = "Changed by operator";
+		}
+		return evaluate(args);
+	};
+	const result = await createGrokConnectorInstallationService(f.options, f.deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(result).toMatchObject({ status: "failed", effectDispatched: false });
+	expect(f.effects()).toBe(0);
+});
+it("shares unknown-install fencing across runtime profiles for the same provider account", async () => {
+	const f = await fixture();
+	const add = f.add.onClick;
+	f.add.onClick = () => {
+		add?.();
+		f.form.hidden = true;
+		throw new Error("lost after Add");
+	};
+	await createGrokConnectorInstallationService(f.options, f.deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	const otherOptions = {
+		...f.options,
+		providerSessionAuthorization: {
+			...f.options.providerSessionAuthorization,
+			context: {
+				...f.options.providerSessionAuthorization.context,
+				auracallRuntimeProfile: "other",
+			},
+		},
+	};
+	await createGrokConnectorInstallationService(otherOptions, f.deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(f.effects()).toBe(1);
+});
+it("uses the same guarded installation result over HTTP and rejects missing confirmation before service resolution", async () => {
+	const f = await fixture();
+	setAuracallHomeDirOverrideForTest(f.root);
+	const installation = createGrokConnectorInstallationService(f.options, f.deps);
+	let resolutions = 0;
+	const server = await createResponsesHttpServer(
+		{ host: "127.0.0.1", port: 0 },
+		{
+			grokConnectorsServiceResolver: () => {
+				resolutions++;
+				return {
+					list: async () => {
+						throw new Error("unused");
+					},
+					inspect: async () => {
+						throw new Error("unused");
+					},
+					...installation,
+				};
+			},
+		},
+	);
+	try {
+		const endpoint = `http://127.0.0.1:${server.port}/v1/grok/connectors/query`;
+		const invalid = await fetch(endpoint, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ action: "install", input, expectedProviderAccountRef }),
+		});
+		expect(invalid.status).toBe(400);
+		expect(resolutions).toBe(0);
+		const response = await fetch(endpoint, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ action: "install", input, expectedProviderAccountRef, confirm: true }),
+		});
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({
+			status: "awaiting-human",
+			effectDispatched: true,
+			retrySafe: false,
+			targetId: "fixture-target",
+		});
+		expect(f.effects()).toBe(1);
+	} finally {
+		await server.close();
+		setAuracallHomeDirOverrideForTest(null);
+	}
+});
+it("retains unknown cleanup outcomes and fences an unreadable journal without another Add", async () => {
+	const f = await fixture();
+	const connect = f.deps.connect;
+	const service = createGrokConnectorInstallationService(f.options, {
+		...f.deps,
+		connect: async () => {
+			const connection = await connect();
+			connection.client.close = async () => {
+				throw new Error("lost close acknowledgment");
+			};
+			return connection;
+		},
+	});
+	const first = await service.install({ input, expectedProviderAccountRef, confirm: true });
+	expect(first).toMatchObject({
+		status: "unconfirmed",
+		code: "grok_connector_install_cleanup_unknown",
+		retrySafe: false,
+		targetId: "fixture-target",
+	});
+	expect(f.targetCloses()).toBe(0);
+	const { writeFile } = await import("node:fs/promises");
+	await writeFile(path.join(f.root, `${first.operationId}.json`), "interrupted journal");
+	const second = await createGrokConnectorInstallationService(f.options, f.deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(second).toMatchObject({
+		status: "unconfirmed",
+		code: "grok_connector_install_journal_unavailable",
+		retrySafe: false,
+	});
+	expect(f.effects()).toBe(1);
+});
+it("keeps pending installation custody visible in Ops after a later inventory read", async () => {
+	const f = await fixture();
+	setAuracallHomeDirOverrideForTest(f.root);
+	try {
+		const { recordGrokConnectorProgress, readGrokConnectorProgress } = await import(
+			"../../src/browser/grokConnectorProgress.js"
+		);
+		const { summarizeGrokConnectorDiagnostics } = await import(
+			"../../src/cli/grokConnectorsCommand.js"
+		);
+		const result = await createGrokConnectorInstallationService(f.options, f.deps).install({
+			input,
+			expectedProviderAccountRef,
+			confirm: true,
+		});
+		await recordGrokConnectorProgress("default", summarizeGrokConnectorDiagnostics(result));
+		await recordGrokConnectorProgress("default", {
+			status: "incomplete",
+			code: "grok_connector_visible_inventory",
+			scope: "visible",
+			complete: false,
+			installed: 1,
+			catalog: 0,
+			tools: null,
+			hasProviderAccountIdentity: true,
+			hasEndpointIdentity: false,
+			hasAccountIdentity: false,
+			auth: null,
+		});
+		const status = await readGrokConnectorProgress("default");
+		expect(status).toMatchObject({
+			status: "incomplete",
+			installation: { status: "awaiting-human", effectDispatched: true, retrySafe: false },
+		});
+		expect(JSON.stringify(status)).not.toContain("new.example.test");
+		expect(JSON.stringify(status)).not.toContain("fixture-target");
+	} finally {
+		setAuracallHomeDirOverrideForTest(null);
+	}
+});
+
+it("allows one explicit confirmed continuation after a recorded unsupported no-effect preparation", async () => {
+	const f = await fixture();
+	const service = createGrokConnectorInstallationService(f.options, f.deps);
+	const original = f.f.runtime.evaluate;
+	let missingEndpoint = true;
+	f.f.runtime.evaluate = async (args) => {
+		const result = await original(args);
+		const value = result.result.value as Record<string, unknown>;
+		if (missingEndpoint && value?.state === "visible" && "endpoint" in value) value.endpoint = null;
+		return result;
+	};
+	const request = { input, expectedProviderAccountRef, confirm: true };
+	expect(await service.install(request)).toMatchObject({
+		status: "unsupported",
+		effectDispatched: false,
+		retrySafe: true,
+	});
+	expect(f.effects()).toBe(0);
+	missingEndpoint = false;
+	const outcomes = await Promise.all([service.install(request), service.install(request)]);
+	expect(outcomes.some((r) => r.effectDispatched)).toBe(true);
+	expect(f.effects()).toBe(1);
+	await service.install(request);
+	expect(f.effects()).toBe(1);
+});
+it("uses the governed transport keyboard to restore an Escape-only native detail before Add", async () => {
+	const f = await fixture();
+	f.f.close.hidden = true;
+	f.f.detail.onKeyDown = () => {};
+	const connect = f.deps.connect;
+	const keys: string[] = [];
+	const deps = {
+		...f.deps,
+		connect: async () => {
+			const connection = await connect();
+			return {
+				...connection,
+				client: {
+					...connection.client,
+					Input: {
+						dispatchKeyEvent: async (event: { type: string }) => {
+							keys.push(event.type);
+							if (event.type === "keyUp") f.f.close.click();
+						},
+					},
+				},
+			};
+		},
+	};
+	expect(
+		await createGrokConnectorInstallationService(f.options, deps).install({
+			input,
+			expectedProviderAccountRef,
+			confirm: true,
+		}),
+	).toMatchObject({ status: "awaiting-human", effectDispatched: true });
+	expect(keys).toEqual(["keyDown", "keyUp"]);
+	expect(f.effects()).toBe(1);
+});
+
+it("settles an owned terminal connection failure while retaining target and replay fence", async () => {
+	const f = await fixture();
+	f.form.setAttribute("data-analytics-name", "add-connector-modal");
+	const originalAdd = f.add.onClick;
+	f.add.onClick = () => {
+		originalAdd?.();
+		f.form.ownText =
+			"Custom Connector\n\nConnection failed\n\nSorry, there was a problem connecting to this MCP server.";
+		f.form.children = [new N("button", "Go Back")];
+		f.form.children[0].parentElement = f.form;
+	};
+	const settlements: unknown[] = [];
+	const deps = {
+		...f.deps,
+		connect: async () => {
+			const c = await f.deps.connect();
+			return {
+				...c,
+				client: {
+					...c.client,
+					__auracallProviderTrafficGovernor: {
+						...c.client.__auracallProviderTrafficGovernor,
+						begin: async () => ({
+							settle: async (details: unknown) => {
+								settlements.push(details);
+							},
+						}),
+					},
+				},
+			};
+		},
+	};
+	const result = await createGrokConnectorInstallationService(f.options, deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(result).toMatchObject({
+		status: "failed",
+		code: "grok_connector_install_connection_failed",
+		effectDispatched: true,
+		retrySafe: false,
+	});
+	expect(settlements).toContainEqual(
+		expect.objectContaining({ outcome: "failed", effectState: "settled" }),
+	);
+	expect(f.targetCloses()).toBe(0);
+	await createGrokConnectorInstallationService(f.options, deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	expect(f.effects()).toBe(1);
+});
+
+it("reconciles an original journal on an explicitly verified replacement target without another Add", async () => {
+	const { readFile } = await import("node:fs/promises");
+	const { runInNewContext } = await import("node:vm");
+	const f = await fixture();
+	const original = await createGrokConnectorInstallationService(f.options, f.deps).install({
+		input,
+		expectedProviderAccountRef,
+		confirm: true,
+	});
+	const id = "connector_11111111-1111-4111-8111-111111111111";
+	const requests: string[] = [];
+	const runtime = {
+		evaluate: async (args: {
+			expression: string;
+			returnByValue: boolean;
+			awaitPromise?: boolean;
+		}) => {
+			if (!args.expression.includes("/rest/connectors/get")) return f.f.runtime.evaluate(args);
+			return {
+				result: {
+					value: await runInNewContext(args.expression, {
+						location: { origin: "https://grok.com" },
+						URL,
+						AbortController,
+						setTimeout,
+						clearTimeout,
+						fetch: async (url: string) => {
+							requests.push(url);
+							return {
+								ok: true,
+								text: async () =>
+									JSON.stringify(
+										url.endsWith("/get")
+											? {
+													connector: {
+														connectorId: id,
+														name: input.name,
+														scope: "CONNECTOR_SCOPE_USER",
+														scopeId: "fixture-user",
+														connectorType: "CONNECTOR_TYPE_MCP",
+														hasValidOauthTokens: true,
+														connectorConfig: {
+															mcpConfig: {
+																isEnabled: true,
+																requiresOauth: true,
+																serverUrl: input.endpoint,
+															},
+														},
+													},
+												}
+											: {
+													mcpTools: [],
+													connectorIdsNeedingReauth: [],
+													connectorsNeedingReauth: [],
+												},
+									),
+							};
+						},
+					}),
+				},
+			};
+		},
+	};
+	const service = createGrokConnectorInstallationService(f.options, {
+		...f.deps,
+		resolveReconciliationOptions: async (targetId) => ({ ...f.options, tabTargetId: targetId }),
+		connect: async (options) => {
+			expect(options.tabTargetId).toBe("replacement-target");
+			const connection = await f.deps.connect();
+			return {
+				...connection,
+				targetId: "replacement-target",
+				client: {
+					...connection.client,
+					Runtime: runtime,
+					__auracallProviderTrafficGovernor: {
+						...connection.client.__auracallProviderTrafficGovernor,
+						attribution: { provider: "grok", targetId: "replacement-target" },
+					},
+				},
+			};
+		},
+	});
+	const result = await service.reconcile({
+		input,
+		expectedProviderAccountRef,
+		reconciliationTarget: { targetId: "replacement-target", connectorId: id },
+	});
+	expect(result).toMatchObject({
+		status: "already-connected",
+		operationId: original.operationId,
+		effectDispatched: true,
+		targetId: "replacement-target",
+	});
+	const journal = JSON.parse(
+		await readFile(path.join(f.root, `${original.operationId}.json`), "utf8"),
+	);
+	expect(journal.input).toEqual(input);
+	expect(journal.effectDispatched).toBe(true);
+	expect(journal.reconciliations).toEqual([
+		expect.objectContaining({
+			previousTargetId: "fixture-target",
+			targetId: "replacement-target",
+			connectorId: id,
+		}),
+	]);
+	expect(f.effects()).toBe(1);
+	expect(requests).toHaveLength(2);
+});

@@ -7,6 +7,833 @@ Source-only diagnostic repair; provider cause and installed acceptance remain
 open. No live prompt or source deployment occurred.
 
 
+## 2026-10-30 — ID-less composer merged and installed
+
+PR503/8723ff36a integrates the source fix with newer diagnostics. Immutable
+runtimee801e190b matches657built files;86focused tests, full build/typecheck,
+scoped lint, runtime contract, installed real-CSS DOM replay and MCP initialization
+pass. CLI/MCP/API select the new prefix. API2789921healthy; scheduler and23paused
+completion states plus config/env hashes unchanged. Native browser2543066is
+unchanged and verified. Live selector proof stopped at DesktopControlBusyError;
+no control override or research prompt. Plan0467 stays OPEN for that passive
+criterion; installed fixture success is not live acceptance.
+
+## 2026-10-30 — ID-less Chat composer fallback
+
+Plan0467 diagnoses a confirmed legacy-ID selector defect. Installed expression
+and real offline Chrome CSS DOM reject the reconstructed current editor; adding
+only the legacy ID passes. A regression failed before the fix. One visible,
+enabled ID-less ProseMirror textbox outside dialogs now establishes control-less
+Chat after the existing wait. Duplicate/hidden/disabled/unrelated editors and
+explicit Work remain refused.77focused tests pass; final source checks recorded
+in the diagnosis receipt. Runtime not installed or restarted; historical failure
+capture is partial and live causal attribution/acceptance remain separate.
+
+## 2026-10-30 — Full installed runtime accepted
+
+PR500/be2344da0 preserves deployed-only diagnostics in complete sourcefdc2f05ea.
+195 focused checks, typecheck/build, installed contract and657file hashes pass.
+Both wrappers and API use the new full prefix; API2521540 serves status/desktops/
+console200, with scheduler pause,23paused completions and config/env bytes intact.
+Native ChatGPT restart1414440→2543066 preserves managed data and ac2 generations;
+passive fresh-page composer proof passes, no Send. PR481 closed as superseded,
+with historical wait attribution preserved. Three idle old worktrees removed,
+refs retained. Plan0466 records rollback, remaining ac2 holds and final custody.
+
+## 2026-10-30 — Full runtime upgrade preparation
+
+User authorized full installed upgrade, deployed-only fix preservation and restart
+of non-ac2 old processes after installation. Isolated Plan0466 base7efea3746
+includes ac2 PR498/499. Preserve source changes0f7836643/c5018ca84/2cfc59231 in
+three production files; skip the already integrated historical TTL commit.195
+selected checks pass, with full typecheck and a clean base build. Composed build,
+installed contract and staged package precede canonical integration and promotion.
+Live API/browser/config baselines and rollback wrappers are retained privately.
+No provider prompt, warning clearance or ac2 process termination.
+
+## 2026-10-29 — Repository and tracker reconciliation
+
+Plan0465 reconciles35 existing worktrees plus one stale registration. Preserved
+and pushed the lone untracked deferred draft, verified an all-ref Git bundle,
+removed29 clean worktree directories and pruned the absent registration. Six
+remain: primary, two open diagnostic PR checkouts and three live runtime/tooling
+holds. Branches and commits retained. TTL spec488 closed; Grok and desktop
+bodies now lead with current blockers and neutral browser-home intent. Four
+unmerged PRs remain open. The prior106-row catalog is preserved as historical
+evidence; ten current custody/continuation rows replace stale active assignments.
+No product/runtime/provider/CI work or process termination occurred.
+
+## 2026-10-29 — Issue374 current composer qualification
+
+Checked the updated ChatGPT workbench before revisiting the old selector defect.
+Its model submenu still offers GPT-6/Sol; candidate installed public resolution
+and real model/power actions confirm Sol + Medium, with fresh `2 of 5` readback
+and no prompt submission. Active CLI reproduced unsupported-selector fallback.
+Current-main composition passes169 focused checks, typecheck, compilation and
+scoped lint. Preserved candidate changes only two selector-validation modules;
+canonical integration precedes wrapper promotion. See Plan0449 and its retained
+activation/cleanup receipts. CI excluded; connector377 remains deferred.
+
+## 2026-10-23 | Issue374 selector validation
+
+Offline installed-run-option plus browser-label replay reproduced unsupported
+reasoning-medium selecting Terra in under one second; supported reasoning passed.
+Profile overrides and selector-table source drift ruled out. Run-option regressions failed first, but full CLI dry-run exposed a separate schema
+resolver path. Its boundary regressions also failed before repair. Both boundaries
+now reject unknown selectors. Four focused files pass 121/121; source CLI dry-run
+rejects the invalid selector and accepts the supported reasoning control.
+Plan0449 scopes source-only repair; no browser retry, warning clearance or runtime
+deployment. Installed qualification remains open.
+
+
+## 2026-10-29 — Approved reference fixture consumed; adapter TDD
+
+User approved the exact additional107B upload plus one Grok chat Send. Both
+dispatched once behind separate durable fences on a fresh Fast root. The terminal
+response waiter timed out; same-target read-only reconciliation observed the
+filename acknowledgement without resending. Current committed human response DTO
+contains the actual uploaded fileMetadataId and conversation identity; native
+preview/cache pins the real Download URL to that metadata and principal.
+
+Worker414 implements separate conversation-reference discovery/materialization
+through public-adapter TDD. Workspace provenance is not reused or relabelled;
+raw URL/identity/effect receipts remain private. Source actions/grok.ts remains
+unchanged: the Fast native-plane terminal-control limitation is recorded, and
+Build's stricter completion contract is not weakened. No additional uploads or Sends are authorized by the consumed fixture
+approval; the standing review bound remains unchanged.
+
+## 2026-10-29 — Native timer/ZIP and isolated archive acceptance
+
+Fresh normal configured Grok startup passed OS/profile/account qualification.
+One fresh current ZIP (1,524,947B/222files) and one selected timer capture
+(21,762B) match exactly. Primary independently verified bytes, sidecar and five
+capture-source hashes. Worker actual isolated Archive APIs proved materialize,
+reuse, durable restart/injected foreground gate and same-size tamper refusal;
+no provider recapture. See notes/2026-10-29-grok-native-snapshot.md.
+
+409's authenticated canonical Bot route settles to shell only; normal focus did
+not restore Bot/Settings content, so no speculative source fix or retry.411
+native publish callback is observed but revision-bound output selection and
+provider app/version remain unqualified.414's referenced-upload and installed/
+native history-continuation gates remain. All three issues stay OPEN; no new
+prompt/upload/Send/publication/terms acceptance. Source af1bdb9ad unchanged;
+prior matching source checks reused. One exact synthetic conversation-bound
+upload+Grok-Send packet is prepared but NOT approved; the original403 packet
+explicitly excluded Send. Review/findings-TDD reserved for completed
+validated ticket batch. Memory disposition:forbidden; no memory-write request.
+
+## 2026-10-28 — Continued native411 Ops and offline414 qualification
+
+Root411 adds a sanitized publicationInspection observation to Ops through a
+public-status red/green test; proposed names and URLs stay excluded. Worker414
+checked cursor/budget/foreground/restart/public detail paths and found no new
+offline gap:45fresh selected checks pass, source unchanged. The apparent default
+monitor projection gap was rejected because full-detail/public cursor contracts
+already preserve exact remaining work and uncertainty.
+
+Fresh OS/endpoint census now finds the previously qualified managed Grok browser
+generation absent and its endpoint unreachable. The reopen probe stopped before
+connection, with zero navigation; no replacement was launched. Earlier native
+controls/cache receipts remain historical.409/411/414 remainOPEN; no current
+native acceptance is possible until the configured runtime is qualified again.
+92focused tests/9files, full typecheck and changed-unit lint pass. The one
+completed-batch review/findings-TDD round remains reserved.
+
+## 2026-10-28 — Renewed411/409/414 implementation checkpoint
+
+Root411 implements explicit CLI/HTTP/MCP native Publish-controls inspection;
+the actual committed controller is idle/not_published, native button enabled,
+dialog dismissal verified and account/response continuity retained. The overall
+Build result remains workspace_inactive. Selected414 file bytes/archive receipt
+source is integrated, but actual discovery refused current inactive/no-URL file
+state before capture; no bytes are accepted. The tooltip hypothesis was disproven
+for Filetree and no speculative fix was made. Worker409's exact committed editor
+has only text/avatar fields and no persistent resource editing contract.
+91 focused tests/8files, full typecheck and changed-unit lint pass; source CLI
+help exposes the flag. No installed adoption, regeneration, publication or new
+tracker closure. Review/findings-TDD reserved for a completed validated batch.
+Parent398 and477 untouched. Memory disposition:forbidden; no user memory request.
+## 2026-10-28 — Plan0464 independent TTL ownership execution
+
+Primary owns AuraCall490 on fix/ttl-ownership-integration from00a45bd0bf7d;
+one delegated worker owns Agent Browser490 on its separate integration branch.
+AuraCall491 has native blocking relationships to both repairs. Public maintenance
+ownership regression and legacy idle/lost/retiring cases were red, then green.
+62 focused checks pass. Source typecheck/lint and installed acceptance are being
+qualified; no source or tracker closure is claimed yet. One post-closure broad
+review and one bounded findings-TDD phase are reserved. CI excluded.
+
+## 2026-10-28 — PR489 merged;406closed
+
+PR489 merged as07bcf31b5; GitHub406isCLOSED/COMPLETED at12:14:03Z.
+All six acceptance criteria are checked after actual native qualification and
+main integration. One consolidated review found three uniqueP2defects; one TDD
+phase repaired them and closed-world verification passed.268focused tests/17files
+and full typecheck passed; no new lint debt. Fresh repaired-source read-only
+reconciliation reused the same draft operation/response without new tool calls.
+The draft is retained; no Send occurred.409/411/414 remainOPEN on native gates;
+parent398 is untouched. Graphiti disposition:forbidden, no memory write requested.
+
+## 2026-10-28 — PR489 single review and findings-TDD phase
+
+User approved4a3d63d18…68ea3e83f. Independent Standards and Spec axes returned
+three uniqueP2defects:corrupt invocation custody, stale Build React ownership,
+and initial response substitution. All were accepted and repaired through one
+bounded TDD phase. Original native read/offline CAS draft receipts are reused;
+no new provider effects. Integrated checks and closed-world verification precede
+PR489 merge and406closure.409/411/414 keep their native capability gates.
+See notes/2026-10-28-grok489-review.md for adjudication and exact red/green commands.
+
+## 2026-10-28 — Native406 journey verified; integration and review pending
+
+Root406 and independent409/411/414 source work are integrated from main4a3d63d18.
+One actual through-Grok accounts call and one retained offline draft journey are
+verified from native tool cards. Draft create/read/CAS-edit/readback retained
+one exact draft, empty recipients and revision1→2, with no Send. The read stage
+also performed a web search, recorded explicitly instead of accepting assistant
+claims. Public native trace, no-replay custody, later-response binding and Ops
+persistence are implemented.409 has no native Bot resource controls;411 current
+workspace is inactive;414 referenced bytes remain unqualified. DraftPR489 is published;406 and the remaining409/411/414 stayOPEN pending
+their distinct review/main or native-capability gates. Graphiti disposition is
+forbidden:no memory write requested; a private non-write receipt is retained. See the batch
+note for private evidence hash, failures, tests and review status.
+
+## 2026-10-27 — Parallel source integration and one review/remediation round
+
+Root Connector title/search identity repairs, independent409resource observation
+and414selected-frontier budget/progress fixes integrated. One two-axis review:
+Standards0findings; SpecS1P2accepted and repaired in one public-seam RED/GREEN
+TDD pass. Final208focused tests/12files, full typecheck andscopedlint pass.
+Exact-root native Connector metadata read hasrealID; default-target failedread
+retained. Bot editor andpublication revision unqualified; no Mailtool/draft or
+publication. Remainingticketsstayopen. Batchnote records exact evidence/limits.
+
+## 2026-10-27 — Renewed parallel ticket implementation
+
+User requests TDD implementation, independent workers per unblocked ticket, then
+one code-review and one TDD findings round. Root406; workers409/411/414, separate
+worktrees from main5d332eef0. Browser interactions and compiler serialized.477
+remains native-capability blocked. Batch note records seams and current counters.
+Root reproduced avatar-letter Connector misidentification at public CDP seam,
+then repaired exact-name/native-ID reads;54affected tests and typecheck passed.
+
+## 2026-10-27 — #414 selected archive accepted, wider criteria open
+
+Integrated verified worker bridge; primary32focused tests/typecheck passed.
+Delegated isolated exact-original-ZIP acceptance passed through actual archive
+handlers/services and a separate-process durable job restart, zero provider calls.
+Operational store untouched. Referenced-file/history-resume criteria remain open.
+See414materialization frontier for evidence hashes and scope.
+
+## 2026-10-27 — #405 closed; #406 packet preparation
+
+PR484 merged4e02b33e8; GitHub405CLOSED read back. Public source reconciliation
+returned already-connected with62tools and preserved original operation/input/Add
+fence. Parent398OPEN. MCP registration now advertises the same recovery object
+as the handler/API/CLI; its actual registration schema is regression tested.
+406 requires concrete acceptance-data/effect preparation before live execution.
+
+## 2026-10-27 — Grok #405 exact-ID reconciliation implementation
+
+Native evidence qualified the original enabled, authenticated MCP Connector and
+62 tools while the visible gallery omitted its card. Added a selected-ID metadata
+reader with actor/entity/endpoint/tool binding and no tool execution. Explicit
+replacement-target reconciliation preserves original journal input, operation ID
+and Add fence; target history changes only after verified success. Focused
+regressions cover omitted cards and original-journal recovery without another Add.
+Live public acceptance and tracker closure remain pending.
+
+## 2026-10-25 — Grok #403 two-file native acceptance packet
+
+Both approved same-basename104byte synthetic uploads are retained with distinct
+provider IDs and exact server-byte hashes. A recovered through replay-free public
+context; B completed one public source upload with local-manifest agreement.
+Current committed native submit eligibility qualifies ready without Send. The
+packet maps original criteria and preserves source/installed/native distinctions;
+Recent selection remains provider-free tested, not native-qualified by this run.
+See [acceptance packet](notes/2026-10-25-grok403-native-acceptance.md). Primary owns
+intended-main validation and tracker closure. No additional upload allowance remains.
+
+## 2026-10-25 — Qualify Grok file readiness from the actual committed submit gate (#403)
+
+Read-only native evidence showed the sole source-bound file and empty text already
+had committed isQueryable=true, native Submit enabled and aria-disabled=false.
+Actual renderer code gates Submit on isQueryable; phase-based loading labels
+apply only while metadata is absent. Readiness now requires that committed gate,
+exact same-form native control and valid metadata without private/disabled/deleted
+or error flags. False, stale, prose-like and other-form gates stay non-ready.
+Normal prompt attachment preparation now passes stable account identity into the
+same binding client and rejects drift before permitting a later Send. Source
+regressions observed the prior missing ready result and missing prompt binding;
+a mutation reproduced account drift incorrectly resolving before the guard.
+No native upload, Send, typing, navigation or modal changes were performed.
+
+## 2026-10-25 — Resolve committed Grok attachment state before interpreting props (#403)
+
+A DOM React pointer can name an inactive alternate. Previous raw phase snapshots
+remain discovery evidence; they do not establish current readiness. Source now
+locates HostRoot.current and proves the exact host through committed child/sibling
+topology, preserving the path even when shared children have stale return links.
+Cycle, duplicate-host, traversal bounds and concurrent commits fail unavailable.
+Four prior-source regressions failed before the correction. A new client can
+recover the retained selected File/metadata through context without uploading;
+its observed-native digest is explicitly distinct from local-manifest agreement.
+Native inspection waits for the next serialized slot; no provider effects here.
+
+## 2026-10-25 — Bind native Grok upload source bytes without promoting readiness (#403)
+
+Private native discovery qualified same input File object and SHA256 alongside
+actual metadata.fileMetadataId/account URI; an exact Open attachment observation
+returned server200 and rendered matching104byte content. The source now hashes
+local bytes before upload and validates the observed same-object/metadata/digest
+relationship. Processing remains unconfirmed, and later unbound native contexts
+are incomplete. A native-shaped positive regression failed on the prior source;
+17focused file tests pass with wrong bytes/account/File and conflicting props
+rejected. Native fixtures prove the observed binding shape, not final installed
+or ready-to-Send acceptance. Original upload and uncertainty history retained.
+
+## 2026-10-25 — Preserve and inspect uncertain Grok upload custody (#403)
+
+A synthetic native upload emitted a real request but omitted its body from CDP.
+It remains unqualified for exact provider-file identity; no replay or Send.
+Cleanup failure must preserve the public unknown outcome and retained target.
+The focused regression failed before that repair. Existing governed browser-tools
+now supports exact target selection without broad page initialization; URL/focus
+fallback cannot inspect another retained composer. Source tests pass; private
+native observation proves the selected File bytes, not their provider-ID binding.
+
+
+## 2026-10-25 — Grok fresh-operation target isolation (#403)
+
+Native preparation found `retain-new` could reuse an existing root tab containing
+an unsent draft or Connector dialog. The adapter now excludes existing targets
+for new-operation lifecycles and provisions a blank target through its existing
+owned acquisition and governed navigation path. Exact target overrides retain
+precedence. Two focused regressions failed on the old attachment and passed
+after the fix; the selected session/file suites pass19tests. Native uploads and
+source-to-provider-file binding remain separate open acceptance gates.
+
+## 2026-10-25 — Resume eight-ticket native frontier
+
+User assigned one primary405 and one worker each403/408/410, with descendants
+and one post-closure review/TDD pass. Current maind107e13ce is clean; only an
+unrelated retrospective landed after67fb28886. Plan0458 preserves the24-node
+graph and explicit native-effect/Terms/consent boundaries. Exact synthetic files,
+Connector endpoint, Bot canary and timer Build prompt are prepared; no effects
+executed. Register lane before workers. Read-only/source preparation proceeds;
+native writes require the bound packet approval. No new resource budget inferred.
+
+## 2026-10-25 — Plan0455 retrospective
+
+Reviewed the visible repair/deployment interval and reduced private receipts.
+Recommend explicit stateful deployment readiness with one in-flight probe,
+unique reconciliation receipt paths, and a reusable parent/start-time process
+census. Existing verifier and CLI flags are acknowledged; current fixture
+keepalive/kill-signal protections already address that lesson. CI and runtime
+changes excluded. See [report](notes/2026-10-25-plan0455-retrospective.md).
+Memory disposition: queued under standing capture authority; processing and
+retrieval remain separate.
+
+## 2026-10-25 — Issue427 inventory silence
+
+Plan0459: default CLI omitted the progress observer; verbose-only control and
+real CLI/operation/adapter/file-queue fixture isolate silence in under1s. Add
+30s stderr stage/elapsed/budget reports without changing capacity/deadline rules
+or terminal-only JSON.65 focused tests, typecheck/build and scoped test lint pass.
+An uninterrupted source-native command completes30-app inventory in347.649s
+with ten progress messages and exit0. Delay cause remains unqualified; no
+performance claim or live browser/fence reset. Wake registration was rejected
+for missing host permission policy; the source probe finished during validation.
+PR461 merged at7a38eb671; installed CLI bytes match source and the compiled
+action fixture passes progress/JSON/failure/timer checks. CLI wrapper activated;
+API PID4185922 and MCP wrapper unchanged. Plan0459 is CLOSED. Installed version
+and help smokes pass; source-native live acceptance remains distinct. CI skipped.
+
+## 2026-10-25 — Plan0457 complete after one post-closure gate
+
+PR455/main e55567f9cb4ebf28e6625180ffb311b7eb97bcd4 and fresh tracker readback
+confirm451/452/453 CLOSED. Primary172tests/17files,typecheck/build/targeted checks
+pass after actual adapter acceptance repair. Independent Standards and Spec axes
+found0candidates against92170f6d1...e55567f9c. One bounded TDD findings pass is
+complete with no remediation; no second broad review or artificial tests. Plan
+and lane CLOSED;24-node graph reconciled, original eight native gates/parent398
+OPEN. Current goal used the user-renewed manual2h/2MM allowance; no automatic
+controller enforcement, provider/native effects or installation claimed. Memory
+forbidden under developer boundary; one non-write receipt outside Git.
+Final planning audit:zero0457 findings;67 legacy findings across19files remain
+byte-unchanged from92170f6d1, without suppression or unrelated cleanup.
+
+## 2026-10-25 — Plan0457 final readiness confirmed
+
+Actual adapter source1866369dc passes172tests/17files, typecheck/build, eight-file
+scoped check and adapter lint. Final four adapter tests pass after import sorting.
+Real-file baseline/current adapter lint both exit0; their full checks have the
+same two pre-existing format/import diagnostics. An earlier stdin diagnostic
+probe did not emit JSON and was discarded, not treated as passing evidence.
+452 acceptance gap is closed; all three tickets ready for intended-main merge,
+then closure and the still-unconsumed single post-closure review/TDD gate.
+
+## 2026-10-25 — Actual public adapter gap repaired, revalidation running
+
+452 followup001c04d86 integrated1866369dc. Actual guarded adapter tests reproduced
+both timestamp enrichment and raw-row reappearance after an empty history frontier.
+Qualified root history now owns its window, matching project history; non-history
+mounted merging remains tested unchanged. Worker69focused tests plus typecheck
+pass. Primary17-file combined validation then compiler/build/lint runs serially
+before PR455 leaves draft. No source criteria narrowed or post-closure review used.
+
+## 2026-10-25 — Hold452 for actual adapter merge acceptance
+
+Primary inspection of the real root adapter found raw/sidebar/open merging can
+reintroduce relative timestamp estimates after the qualified history reader.
+Earlier125checks remain valid for covered seams but did not prove this public
+merge path. PR455 converted to draft;452 worker continues the same frozen ticket
+fromd3629f491 with a real adapter/collector regression. Qualified includeHistory
+window authority will match the existing project mode; non-history mounted reads
+retain their merge path.451/453 remain validated,452 running; no tickets closed
+or post-closure review consumed. This closes an evidence gap instead of narrowing
+or declaring acceptance from the easier core-reader fixture.
+
+## 2026-10-25 — Plan0457 combined acceptance ready for main
+
+Primary combined sourcec842ee577:125tests/15files pass, typecheck/build pass.
+Scoped check caught two test formatting/import-order findings; corrected without
+production changes,34affected tests pass and final seven-file check is clean.
+All451/452/453 validated on integration, not yet tracker-closed. Evidence453 moved
+to notes; operator/CONTEXT docs qualify relative estimates and generation refusal.
+One post-closure broad review and one bounded TDD pass remain unconsumed.
+
+## 2026-10-25 — Plan0457 source integrated
+
+RegistrationPR454/mainb509d45fa preceded worker dispatch. Primary451 c3089b363
+moves generation validation before target observation;3causalred/green cases plus
+mirror-store failure/recovery pass in41-test affected selection. Fixture port
+typing was corrected to context.devtoolsPort; combined typecheck pending. Worker
+453 da730224 integrated50e0c7ddc (49focusedtests);452 f38fbecda integratedc842ee577
+(41focused+3paritytests). Primary15-file combined check, then serialized compiler/
+build/lint, is running. Moved453 evidence from plan tree into notes to preserve
+canonical planning headers. Explicit package lint retains unchanged baseline
+3errors/1warning outside configured lint surface; no new diagnostics or suppression.
+No closures, post-closure review, native/provider effects or runtime changes yet.
+
+## 2026-10-25 — Plan0457 approved and published
+
+User cleared the completed goal, approved three final-range review tickets and
+requested a renewed2h/2MM allocation with one primary/two worker tickets. New
+manual budget is anchored to native goal1792902357; Wake enrollment held for
+unqualified original history/stale controller, without altering shared runtime.
+Tickets451/452/453 independent and published/read back; primary451, workers452/453.
+Graph extends21to24nodes and preserves parent398/eight native gates. New integration
+worktree from92170f6d1 is clean before registration docs; CodeGraph1182files/
+31872nodes/95862edges. Registration must land on main before worker dispatch.
+
+## 2026-10-25 — Plan0456 closed: five repairs and bounded review complete
+
+All440–444 are CLOSED. PR447/448 integrated foundations/follow; single frozen
+review accepted one Spec defect, one TDD pass fixed it in PR449/main69f953d77,
+and independent closed-world verification plus fresh tracker readback confirms
+443 reclosure. Primary112integrated tests before review,44affected tests after
+remediation, typecheck/build/scoped lint pass; initial concurrency timing-flake
+receipt retained with serial scheduling mitigation. Standards0hard breaches,
+1nonblocking duplication concern deferred. Plan0456/lane CLOSED. Original eight
+native-gated tickets and parent398 remain OPEN; no original-program completion
+claim, provider effect, runtime installation or Wake319 change. Memory disposition
+forbidden; one machine-readable non-write receipt outside Git.
+Planning audit: corrected State headers on the five new ticket records, leaving
+zero0456 findings.67 remaining findings span19files byte-unchanged from initial
+base69b6e889d (missing0035–0066 policy targets and older plan/draft headers);
+full repository audit remains nonzero. No unrelated cleanup or suppression.
+
+## 2026-10-25 — Grok440 public cursor custody repaired
+
+Three causal reds cover sidebar crowding, supplemental search-title replacement
+and inconsistent query trimming. Qualified history rows now precede supplemental
+rows, retain matching titles and preserve existing enrichment/conflict checks.
+Public adapter→collector→disk restart/cancellation checks pass; primary59-test
+selection and final47-test rerun pass, with typecheck/scoped lint. Worker441 and
+444 commits are ready for serial integration;442 owns retained-view lifecycle
+and real-authority/serialization gates. No tracker closure or provider effect.
+
+## 2026-10-25 — Desktop transition runtime adopted
+
+Operator authorized deployment after source acceptance. Exact canonicale1bb4dbc9
+matches the tested runtime source. Fresh installed gate/CLI/clipboard hashes and
+killed-child recovery pass; CLI/MCP wrappers adopted and API restarted without
+closing browser processes. All48 prior browser-related process-tree roots retain
+generations. Status200/ok=true after initial short-budget timeouts; desktops200.
+Auth, scheduler pause and background-drain posture preserved. No live lock
+cleanup, provider request or CI change. Plan0455 now records installed acceptance.
+Memory disposition: queued; processing/retrieval remain separate readbacks.
+
+## 2026-10-25 — Approved Grok repair graph and renewed execution
+
+Plan0456: published440–444 and verified exact actor/body/state/labels. Complete
+21-node graph retains original dependencies and corrective acceptance barriers
+for401/412. Primary440, workers441/442/444;443 waits for the three foundations.
+User reset2h/2MM allowance with manual monitoring; no Wake/controller changes.
+Review/desktop main histories preserved; no parent or provider effects.
+
+## 2026-10-25 — Grok review repair tickets drafted
+
+User invoked to-tickets for the accepted full-review findings. Five complete
+repair slices are prepared: cursor/row custody, project-scope completion,
+restart progress, incremental follow and compatible account-reference projection.
+First three and the maintenance slice have no blockers; incremental follow is
+blocked by the three history foundations. Full proposed bodies and idempotency
+markers are under `/tmp/auracall-grok-review-20261025/ticket-drafts`.
+Read-only GitHub preflight confirms canonical target, actor capability, existing
+bug/enhancement/ready-for-agent labels and no marker duplicates. Publication is
+pending the skill-required breakdown approval; no issue or parent was mutated.
+Memory forbidden: no explicit request to remember.
+
+## 2026-10-25 — User-requested full Grok code review
+
+Frozen c9beb45b...dabde7caf; independent Standards/Spec reviewers, primary
+adjudication. Three P1 Spec blockers accepted: cursor-covered rows dropped by
+adapter bounding, nonempty project scopes never completing, and bounded restart
+anchor replay stalling. P2 full-rescan follow and P3 duplicated account-reference
+projection retained as nonblocking backlog. Primary provider-free reproductions
+confirm the failures. No production fixes, browser/provider actions or tracker
+mutations. Closed401/412 tracker states do not prove the affected criteria after
+this review; the whole program remains incomplete. See
+[review and reproduction evidence](notes/2026-10-25-grok-full-code-review.md).
+Memory forbidden: no explicit request to remember.
+
+## 2026-10-24 — Desktop transition crash diagnosis
+
+Plan0455 / issue437: real child-process death inside a transition reproduces
+coordination busy; desktop owner data is unnecessary. Removing only the empty
+transition restores acquisition and normal release passes. Atomic transition
+identity and generation-fenced dead-owner recovery now pass22 focused checks
+and a full build. Review rejects malformed generation IDs via a separate red/
+green case. Human claims, live owners and delayed contenders remain protected.
+No live locks/browsers, deployment or CI changes; legacy ambiguity is preserved.
+Source8e7b1c286 integrated through PR438/merge4270f8fd3. Plan0455 CLOSED
+with source-only acceptance; runtime adoption is separate. Memory forbidden:
+no explicit save request.
+
+## 2026-10-25 — Grok native account proof restored
+
+Plan0453: actual target binding, bounded structured Flight identity projection and
+exclusion of unscoped page handles restore exact configured account proof.
+Primary112 tests/6files, full typecheck and fresh build pass. Built no-launch
+identity smoke matches email/handle; retained reads match pre/post. Bot owned/
+catalog inventory remains unknown, zero qualified IDs. Eight of16 tickets closed;
+no new closure or provider mutation. Own unsent `@` and catalog dialog retained
+because conservative restoration declined ambiguous UI state. See
+[native proof packet](notes/2026-10-25-grok-native-account-proof.md).
+Memory forbidden: no explicit request to remember.
+
+## 2026-10-24 — Grok native read provenance diagnosis
+
+Configured default Grok has stable account identifiers and a live managed-browser
+registry entry. Corrected the earlier missing-account/browser inference. One
+public owned-Bot inventory fails account verification; no-launch identity smoke
+returns `provider_session_provenance_missing` with target unknown and no
+observation. Source diagnosis/regression delegated under405;408/410 prepare
+read-only discovery. No browser launch or provider mutation. Private native
+receipts stay under `~/.auracall/private/grok/implementation-native`. Eight of16
+children remain closed; whole-program review awaits ticket completion.
+
+## 2026-10-24 — Bounded app cleanup failure diagnostics
+
+Plan0454 / fix/app-cleanup-diagnostics. Reproduced lost nested causes at the
+actual apps CLI error boundary: submitted tests threw to generic Node inspection,
+and refresh-tools omitted causes. Unified failure receipts preserve action,
+nonzero exit, unknown cleanup and retrySafe=false; sanitize URLs, credentials,
+email and opaque values; bound cycles, depth, children, expanded nodes and text.
+Red/green: 60 focused CLI tests, typecheck/build, scoped lint, docs listing and
+compiled nested-cause/redaction fixture pass. Primary Standards/Spec review
+against2d82d97d0 has no blocking findings. PR434 merged569f4b907. Fresh
+CLI-only adoption passes the actual installed catch/formatter fixture with zero
+provider calls and byte-verified modules; existing MCP wrapper is preserved.
+Plan0454 CLOSED. Private installation/qualification receipts stay user-scoped. No browser inventory or prompt was run for this slice.
+Historical intermittent cleanup causality remains unconfirmed.
+
+## 2026-10-24 — Issue368 retrospective
+
+Reviewed visible session evidence and current source/check configuration. Report
+four scoped improvements: causal CLI receipts, owner-aware transition recovery,
+execution of existing CI, and earlier use of existing diagnosis/suspension gates.
+No speculative root cause for absent CI runs; workflow is present/active, while
+readback has no runs. Recommendations only; no runtime/global-policy changes.
+See [retrospective](notes/2026-10-24-issue368-retrospective.md). Memory forbidden:
+no save request.
+
+## 2026-10-24 — Issue368 live acceptance complete
+
+Installed76aa429c0 public command returns completed. One attributable HTTP200
+refresh yields31 OpenSign tools. Independent read of its exact retained target
+matches the saved app/endpoint/connected-account/permission baseline. Account
+matches; cleanup effects settled;394 ownership reads all200. No prompt, consent,
+replacement, warning clearance or API restart. Plan0451 CLOSED; issue closure
+follows receipt integration. Historical failed/unknown evidence is retained.
+See [acceptance](notes/2026-10-24-issue368-live-acceptance.md). Memory forbidden:
+no explicit save request.
+
+## 2026-10-24 — Issue368 acceptance resumed after active desktop owner
+
+Mail Receipts submitted app test held wsl-chrome-3's display through a live
+process; do not interrupt it. It exited during resume setup. Cancel the pending
+self-wake (409612e7) before continuing. An empty transition directory stranded
+by that dead automation PID143314 was preserved by rename; normal gate acquisition
+then reconciles the dead owner. Fresh zero-navigation baseline remains healthy
+and fingerprint unchanged. The installed76aa429c0 command is now under one
+captured final acceptance run; no other provider operation is initiated.
+
+## 2026-10-24 — Issue368 retain backend continuation acknowledgment
+
+Recovery-enabled acceptance fails pre-refresh with a preserved native AbortError
+and observer-cleanup Invalid InterceptionId. New minimal after-wire-success
+phase reproduces cleanup failure despite a successful SDK acknowledgment. Opt
+backend continuation into receipt waiting after SDK send, bounded by existing3s;
+pre-wire cancellation still prevents send, rejected/missing receipts stay unknown.
+No historical ledger rewrite. Shared ChatGPT/Grok interceptor tests protect both.
+
+## 2026-10-24 — Issue368 one bounded settings-load recovery
+
+Fresh captured attempt stops pre-effect at plugin-settings error; no tool refresh.
+Operator one-reload recovery is already proved on retained page. Red public-
+adapter fixture now becomes green with one shared reload allowance, exact URL
+and account continuity. Persistent errors and approval stop; no second Refresh
+tools activation.76 focused checks and typecheck pass. README records semantics.
+
+## 2026-10-24 — Issue368 fresh captured refresh acceptance
+
+After successful read-only discovery/cleanup and normal retirement of the old
+lease, save current healthy exact OpenSign settings under a native automation
+hold with no reload. App/endpoint, connected accounts and permissions are ready;
+connection/permission fingerprint matches the recovered page. Start one installed
+public-command refresh with nested errors and progress retained, independent
+backend metadata capture and a saved baseline for post-read comparison. No more
+than this one provider refresh in the packet. Result pending.
+
+## 2026-10-24 — Issue368 cleanup reconciled through normal retirement
+
+Read-only installed public-command probe succeeds with26 apps and completes
+cleanup; no provider refresh. Prior aggregate failure does not reproduce. One
+historical request remains outcome-unknown. Normal expired-lease retirement
+moves its utility lease to lost/preserved, keeping unknown history and its tab;
+no manual fence clearance. Current probe effect is settled. The remaining #368
+gate is final catalog/preservation acceptance, not an active cleanup lease.
+No source change or speculative regression. Memory forbidden: no save request.
+
+## 2026-10-24 — Issue368 exact cleanup-effect reconciliation
+
+One settled backend record actually retains outcome-unknown;15 other failed
+requests prove no dispatch,74 succeed. Preserve the historical lease fence.
+One read-only app-list probe captures nested causes and progress stages, with
+passive backend metadata capture. No Refresh tools operation. Result pending.
+Plan0451 records the packet and evidence boundaries.
+
+## 2026-10-24 — Grok #401 core candidate and worker integration
+
+Bound Chats hydration and retain scope/cursor evidence;61 targeted tests and
+typecheck pass. Structured public history entrypoints remain. Both independent
+workers returned committed clean source slices for #402/#404; coordinator now
+owns serial integration, normal-caller wiring, review and post-completion TDD.
+No ticket closure is inferred from worker completion.
+
+## 2026-10-24 — Grok #400 source acceptance and wave2
+
+175 focused tests pass after one bounded review/remediation;2 explicit public
+bootstrap variants also pass. Build/typecheck and targeted lint pass. An unset
+local request ceiling still meters and honors shared account contributions.
+Bootstrap failure retains exact created-target cleanup. Separate operation and
+request counts remain visible. #401 primary, #402 and #404 independent workers
+are now dependency-ready. No live mutation, install or deployment is included.
+
+## 2026-10-24 — Grok #400 request admission candidate
+
+#399 merged via PR415 and tracker closure verified. Captured homepage request-path
+metadata without headers/bodies; separated REST, telemetry and static categories.
+No numeric provider ceiling inferred. Extend owned guarded interception to Grok
+REST with explicit operator caps, request/operation status separation, native429
+fencing, duplicate exclusion and cross-process restrictive limits. Public bootstrap
+red/green now establishes custody before provider navigation. Plan0453 remains
+OPEN with the original18:13:30Z stop/checkpoint deadline.
+
+## 2026-10-24 — Issue368 recovery succeeded; cleanup acceptance blocked
+
+One settings reload recovers the exact OpenSign app/endpoint, connected-account
+and permission sections. Subsequent single captured final CLI attempt stops
+before any captured refresh request: aggregate operation/owned-cleanup failure.
+All90 backend ledger records settled, while utility lease remains outcome-unknown.
+Do not equate those boundaries or clear the fence. Primary cause was not emitted
+by the CLI. No further provider action. Plan0451 records evidence and next scoped
+cleanup reconciliation. Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Issue368 settings recovery and saved-baseline acceptance
+
+Guarded browser-tools inspection failed with desktop-control busy and left its
+own dead automation owner plus an empty transition directory. Isolated native
+identity verification succeeds; the earlier bounded recovery wait was ownership
+coordination, not failed browser identity. Preserve the exact own-dead transition
+by rename, then let normal gate acquisition reconcile the dead PID. Under a
+verified exact-browser automation hold, one page reload recovers OpenSign settings:
+exact app/endpoint, connected-account section and permissions are present. No
+tools refresh in recovery. Save that current settings baseline privately, then
+start one independently captured final refresh with the installed repaired CLI.
+Result pending; do not replay an ambiguous attempt.
+
+## 2026-10-24 — Grok #399 bounded review accepted
+
+One independent Standards/Spec pass accepted three concrete blockers: fallback
+scope status, combined warning/capacity eligibility, and Imagine discovery action
+before admission. One bounded remediation preserves red/green regressions.81
+focused tests, real HTTP status and MCP readback, typecheck, build and lint pass.
+Lint retains246 repository warnings17 infos. Source validation only; no installed
+adoption or live Grok effect. Plan0453 ledger carries deadline and next #400 gate.
+
+## 2026-10-24 — Grok #399 implementation candidate
+
+Isolated integration branch from fresh c9beb45b6 plus confirmed scope. Reproduced
+Grok's unlimited generic authority and missing read-warning gate, then repaired
+shared operation caps, account-restrictive settings, cancellable capacity waits,
+owned identity/feature read admission and Ops/CLI readback.77 focused tests and
+separate-process capacity proof pass; source typecheck passed. Candidate review
+and required post-completion TDD turn remain before validation/closure. No live
+effects or installation. Plan0453 owns the timed waves and exact receipts.
+
+## 2026-10-24 — Issue368 terminal plugin-settings error
+
+Retained utility tab shows “Couldn't load plugin settings” and Try again, rather
+than connected accounts/Refresh tools. Reproduce with exact text at the public
+adapter seam: generic post-read timeout before repair, immediate explicit
+unconfirmed/no-retry after repair. Patched predicate recognizes the actual
+retained DOM read-only. No new live refresh or Try again action. Exact historical
+error transition was not captured; current error and timeout mechanism are proved.
+
+## 2026-10-24 — Issue368 timing loop red/green
+
+One captured live attempt returns690-second timeout despite HTTP200/31-action
+refresh response. No second activation. A minimized public-adapter fixture with
+25-second activation latency reproduces false unconfirmed; start observer wait
+deadline after activation, while listening beforehand. Fixture turns green.
+Do not claim this establishes historical live timeout causality or post-settings
+acceptance. Plan0451 retains both live boundaries and the source timing proof.
+
+## 2026-10-24 — Issue368 actual catalog reproduction
+
+Use Matt diagnosing-bugs for the actual missing-catalog symptom. Isolated branch
+fix/issue368-catalog-repro; source diagnostic assertions do not establish the
+live cause. One guarded OpenSign refresh on wsl-chrome-3 is under independent
+passive endpoint/status/structure capture. Result pending; no further activation
+in this packet. Plan0451 records the stopping and minimization conditions.
+
+## 2026-10-24 — Approved Grok tickets published
+
+Explicit chat approval accepted all sixteen slices. Published and individually
+verified issues #399–#414 with enhancement/ready-for-agent labels and canonical
+blocker URLs. Parent #398 unchanged; native planning mutations are not allowlisted.
+[Plan0452](plans/0452-2026-10-24-grok-upgrade-spec.md) CLOSED for specification/ticket
+publication only. Implementation and live acceptance remain open. First frontier:
+#399. No provider/runtime effects. Memory forbidden: no save request.
+
+## 2026-10-24 — Grok specification and proposed slices
+
+Final scope/test-boundary confirmation accepted without changes. Published
+[specification #398](https://github.com/ecochran76/auracall/issues/398), with exact
+actor/marker/state/label readback. [Plan0452](plans/0452-2026-10-24-grok-upgrade-spec.md)
+and sixteen separate proposed ticket drafts preserve the dependency graph.
+Ticket breakdown awaits Previews review before issue creation. No implementation
+or live effects. Memory forbidden: no save request.
+
+## 2026-10-24 — Grok scope decisions, round 2
+
+Recorded Mail Receipts draft/edit qualification with read/write/send capability
+exposure, Grok-native publication, Bot configuration fields and account-wide
+backfill. Inspected offline draft/revision contracts without executing mutations.
+Published consolidated scope/validation and one final confirmation in the existing
+Previews session. [Decision record](notes/2026-10-24-grok-ux-survey.md).
+Specification follows confirmation; no provider effects. Memory forbidden: no save request.
+
+## 2026-10-24 — Grok scope decisions, round 1
+
+Consumed complete Previews response. Build publication included; Bots inventory,
+invoke/create/edit; CLI/API/MCP/Ops; full mirror; account-shared configurable waits.
+Acceptance example is Mail Receipts installation/qualification. Public OAuth/MCP
+metadata verified; no mailbox content or provider mutations. Recorded decisions
+in the [survey](notes/2026-10-24-grok-ux-survey.md) and domain terms in CONTEXT.md.
+Round 2 remains pending. Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Grok UX survey
+
+Default Grok browser opened and inspected: Chats, composer @ and /, model menu,
+Attach/recent files, Plugins Connectors/Skills/Bots, custom MCP form and blank Bot
+creation. Recorded current DOM algorithms, History→Chats drift, missing Build
+registry entry and ChatGPT-only live-follow cooldown seam. Survey only; no prompt,
+upload, installation or Bot creation. See [survey](notes/2026-10-24-grok-ux-survey.md).
+Memory forbidden: no explicit save request.
+
+## 2026-10-24 — Issue368 refresh observation diagnosis
+
+Read-only reconciliation could not recover the prior response. Exact retained
+OpenSign settings has no terminal notice; service journal has no attempt-window
+entries. No replay. Fix the verified diagnostic defect: distinct failure classes
+previously collapsed to the same generic message. Three red assertions, then67
+focused adapter/CLI checks pass. Prior live refresh stays unconfirmed. Plan0451
+and #368 remain OPEN. Memory forbidden: no explicit save request.
+
+## 2026-10-23 — Issue368 OpenSign live qualification
+
+OpenSign on wsl-chrome-3: installed read-only discovery passes. One guarded
+refresh activates and preserves exact app settings, but exits1/unconfirmed because
+no attributable successful catalog response was observed. retrySafe=false; no
+replay. #368 and Plan0451 remain OPEN. See
+[live evidence](notes/2026-10-23-issue368-cli-governor.md#live-opensign-qualification--2026-10-23).
+Memory forbidden: no explicit save request.
+
+## 2026-10-23 — Clipboard helper deployed
+
+PR388 merged e517b8d26720b6e0403a509d172189932372c9df. The exact compiled helper
+matches the installed Recall module except clipboard permission delegation.
+Backed up and replaced that module only; SHA256466a693c64bec1dbc38ca7c7d2a14dc7034c1865a542cd28ce1e373b0277f923.
+API restarted1283976→1777322; HTTP200 /desktops serves the new helper. Unit/env/
+wrapper hashes preserved; Remote View's126 native/application births,22 slot
+snapshots and51 protected hashes still match. Existing Recall runtime retained;
+no full-package upgrade or browser/profile restart. Private rollback/provenance:
+~/.local/state/remote-view/clipboard-deploy-20261024/auracall/.
+Three focused tests and TypeScript check pass. Physical phone/Grok transfer
+remains operator acceptance. Refresh desktop page. Memory forbidden here: no
+explicit save request; Remote View owns its separate authorized closeout.
+
+## 2026-10-23 — Clipboard embed delegation
+
+User requested mobile Paste repair and continuous clipboard passthrough. Remote
+View PR628 owns the shared viewer; this slice delegates clipboard-read/write in
+AuraCall’s bundled parent helper. Preserve Recall and other installed runtime
+behavior. Focused helper regression fails before the one-line repair. Deployment
+requires exact canonical helper bytes, backup and API/runtime acceptance.
+
+
+## 2026-10-23 — Issue368 first-tab developer-app bootstrap
+
+Plan0451 / fix/issue368-app-discovery-governor. Public command through real
+serialized service dispatch reproduces exact connect-tab missing-governor error.
+Request target custody for explicit serialized utility commands through the
+existing governed ephemeral-tab pipeline. Prompt mode, affinity identity rules
+and mandatory guard remain unchanged. PR390 mergedfb026941f; installed CLI issue368-fb026941f passes compiled
+serialized utility contract and app-list help. Concurrent clipboard PR388/389
+included and active helper byte-equivalent; API PID1777322 not restarted.
+91 consumer and 103 backend checks pass in overlapping selections, as do build
+and typecheck. Live target requested; no provider discovery/catalog mutation
+or warning clearance. See [CLI boundary](notes/2026-10-23-issue368-cli-governor.md).
+
+## 2026-10-23 — Operator Browser Recall for borrowed profiles (#240)
+
+Operator explains profile was borrowed by another agent and left open after work.
+Add Recall in the rail only for an exact qualified local holder. Confirmation
+binds PID/start/boot/executable/directory; stop that holder gracefully and use
+ordinary Wake/automatic placement. Preserve profile bytes, remote/unknown guards
+and operator-only HTTP authorization. Stale confirmation cannot close a replacement
+holder. Process, inventory, rendered confirmation and HTTP tests cover this path.
+PR386 merged956dca970; installed recall-281f34102, API PID1283976. Actual
+authenticated rail shows Recall on wsl-chrome-3; confirmation cancellation sends
+zero requests and borrower fingerprint remains unchanged. Exact inspection task
+closed; all14 captured processes gone. Real Recall left to operator. See
+[installed Recall](notes/2026-10-23-browser-recall-installed.md). Memory forbidden: no explicit save request.
+
 ## 2026-10-23 — Stale endpoint history blocks a verified browser (#240)
 
 A dead default/grok receipt shares CDP port45011 with the live default/chatgpt
@@ -55793,3 +56620,747 @@ Canonical acceptance note closes scoped Plan0386; issue165closure follows the
 acceptance PR. Wider P92/Plan0411 changed-frontier and scheduler continuation stay
 open; scheduler/all17subscriptions paused,0queued/running/warnings. Memory
 disposition forbidden.
+
+
+## 2026-10-24 Grok wave 2 checkpoint (#398)
+
+#399 and #400 merged and closed. #401 history inventory, #402 strict governed text/model/composer flow, and #404 connector discovery passed bounded review remediation and provider-free acceptance. See `docs/dev/notes/2026-10-24-grok-wave2-review.md` and Plan0453 ledger for exact proof and pending integration. In-flight reads must propagate the SDK abort signal and preserve unknown effects; final account proof must finish before CDP cleanup. No installed/live acceptance claimed.
+
+
+Final tracker readback: PR418 merged as `273dc6e26892f5db5ddf2bdc851a6b22cb117175`; #401, #402 and #404 are CLOSED. Five of sixteen tickets are now merged and closed; eleven remain pending. Requested stop/checkpoint honored without dispatching another wave. Next wave: #403, #405, #407, #410, #412. Memory disposition: forbidden (explicit developer boundary; no requested memory update), non-write receipt `/tmp/grok-wave2-memory-disposition.json`.
+
+
+## 2026-10-24 Grok next wave resumed
+
+Original two-hour allocation resumes with 2MM fresh-token ceiling and deadline20:17:24Z, checkpoint20:16:24Z. Supervisor is armed after explicit user-requested accounting-fault recovery; allowance/deadline were preserved. Base87c4910ba includes merged issue368 reconciliation. Workers own #403 files, #407 existing Bots and #410 Build in separate worktrees; primary owns #405 Connector installation and all shared public wiring. #412 remains ready for next free slot. No live provider effects authorized by this implementation packet.
+
+
+## 2026-10-24 Grok resumption reconciliation
+
+No new tickets closed. The three worker runtimes for #403/#407/#410 reported terminal safety-system failures; partial uncommitted test drafts remain in their isolated worktrees and are not accepted implementation evidence. #405 had no completed source implementation before interruption. Ledger restores all four tickets to pending. Codex Wake0.20.1 controller deployment preserved original authority. A separate native thread/read timeout stopped the campaign; one exact-thread read-only recheck later succeeded in0.049seconds, which does not clear the durable stop. No additional stop flags, native goal state, shared MCP scope or provider/account state changed during this reconciliation. Original deadline20:17:24Z remains. Next-wave readiness is unchanged; execution awaits qualified supervision.
+
+
+## 2026-10-24 Grok manual-monitoring acceptance checkpoint
+
+User authorized manual resource monitoring after Codex Wake319 filed. Existing Bot listing/invocation now has CLI/API/MCP/Ops wiring, exact Bot token proof and response/artifact provenance. One review per ticket plus bounded remediation preserved unknown outcomes and target custody. Post-main merge145 tests across6 files pass;93-test presubmit plus focused causal reruns pass; build and typecheck/lint pass (249warnings18infos). No fullsuite or installed/live acceptance claimed. #407 source accepted pending merge/tracker readback. #403 stays partial with unconfirmed local uploads until actual source identity binding; #405 partial branch backed up separately. Main native-cancellation changes merged; additive testing-doc conflict preserves both intents. Original deadline20:17:24Z remains, no resource flags changed.
+
+
+Final tracker readback: PR423 merged as4986f397110a07831dfa00d1dd16544ddea83ffe; issue407 CLOSED. Six of16 tickets are now merged/closed, ten remain. #403 is integrated/partial with the source-binding acceptance gate still open; #405 partial source remains isolated and backed up. Ready next wave: #403,#405,#408,#410,#412, with partial gates carried forward. No new wave dispatched near the fixed deadline.
+
+
+## 2026-10-24 Grok412 coverage packet
+
+User resumed AuraCall with manual resource monitoring and assigned Codex Wake319 to another agent. No Wake/controller/configuration changes. Base161c74397 was clean and matched origin/main. The expired two-hour allowance remains historical; no counters or deadlines reset.
+
+Fixed a false-completeness bug: bounded mirror conversation reads now preserve provider coverage, keep incomplete or unproven Grok history partial, and reject explicit failed coverage instead of accepting returned rows as success. One bounded independent review found no blockers. TDD reproduced three failures before implementation;93 focused tests across3 files and targeted Biome lint pass. See `docs/dev/notes/2026-10-24-grok412-index-coverage.md`. Ticket412 remains partial/open; no new ticket closure, installed/live proof or account-wide completeness claim. Manual memory readback:43,150MiB available,75,065MiB swap used. Memory disposition: forbidden; developer prohibits memory writes absent an explicit request.
+
+## 2026-10-24T23:02:46.334233+00:00 — Renewed Grok implementation
+
+User reset allowance to two hours/2MM tokens. Base83e0951e8; primary412; workers405/408/410 in isolated worktrees.403 queued. Ten tickets open. Native/provider effect gates preserved; Wake319 remains with its owner.
+
+## 2026-10-24 — Grok412 source checkpoint
+
+Production root/project continuation now commits rows/cursor atomically under private account custody; foreground yield covers page/scope and new inventory phases. Public CLI/API/MCP/Ops retain sanitized progress.203 focused presubmit tests/14 files plus28 final causal tests/4 files pass; typecheck/build pass. See grok412-resumable-index note. Worker405/410 source packets and403/408 native-discovery packets await serial integration. No provider effects or runtime installation.
+
+## 2026-10-24 — Grok412 closed; serial source integration
+
+PR430 merged ae21c97c9;412 CLOSED with source criteria and explicit native/rollout distinctions. Seven children closed, nine open. Primary independently accepted worker405's44-test selection and the combined88-test/11-file source selection;405/410 source integrated through245f1554e. Added Build HTTP/CLI/MCP registration and private Ops projection, including a red/green dropped-progress case.403/408 native discovery packets integrated. Worker413 now owns the newly unblocked content ticket in isolated worktree fromae21. No other workers active; no live provider effects. Broad code-review/TDD findings pass remains pending ticket completion.
+
+## 2026-10-24 — Grok413 source qualified
+
+Accepted worker413 commits7f97ddfa2/4e08da07b; integrated as09088ea87/05fd60104. Primary qualification fixed receipt-delivery cancellation, retained-tail loss, unreadable-card advancement and later-chunk prefix alteration, with observed red/green cases. Final source checkpointf76545f7e:187 tests/10 selected files pass; extra exact project/Bot/inventory assertions, fresh typecheck/build and targeted lint pass. PR431 merged16dbd7218 for partial405/410 source; native gates remain open.413 now awaits merge/closure. No live workers, no Grok browser launch or provider effects; native account/canary authority remains pending.
+
+## 2026-10-24 — Renewed source checkpoint:8/16 closed
+
+PR432 mergedfa06a1eec;413 CLOSED. Fresh16-child GitHub readback: closed399/400/401/402/404/407/412/413; open403/405/406/408/409/410/411/414; parent398 OPEN. All workers terminal; integration clean on merged source. Remaining frontier403/405/408/410 needs native account/target/effect authority and observed provider controls; descendants stay locked. Whole-program review/TDD pass remains pending. Goal active/incomplete; no pause or completion mutation.58min/958,809 native tokens against renewed2h/2MM allowance; memory45,964MiB available, swap78,965MiB. No Grok browser startup, provider effect, runtime installation or Wake319/shared configuration changes. Memory disposition forbidden, receipt /tmp/grok-renewed-closeout-memory-disposition.json.
+
+## 2026-10-25 — Review repair foundations validated together
+
+Integrated442 retained exact-account/query history custody as600b4465d and441
+owned-target fixture followup ea64469b7. Primary reproduced missing browser PID
+allowing target listing before refusal, then guarded custody before any target I/O.
+Twelve442 restart/lease tests, three441 project tests and four440 public cursor
+tests pass on the integrated source; joint typecheck passes.440 now exercises the
+real configured traffic authority and guarded CDP over a controlled protocol
+transport; navigation settlement is modeled, not native proof.443 is ready after
+these three prerequisites;444 retains its prior combined100-test checkpoint.
+No issue closures yet; intended-main integration and the single post-closure
+review/TDD gate remain. Original eight native-gated tickets remain open.
+
+## 2026-10-25 — Retiring target fence and final ready ticket
+
+Worker442 reproduced foreground admission after an unconfirmed target close.
+Integrated813113f1 asf543e8dcb: retiring utility leases remain exclusive fences;
+worker40-test registry/factory/public-service selection and typecheck/lint pass,
+primary joint rerun in progress.443 delegated to the completed441 worker in a
+new isolated worktree from0b8eda9af. The follow design preserves completed scope
+state, observes bounded fresh heads and distinguishes unobserved older changes
+that require explicit full sweeps. Primary99tests/12files and local build pass.
+PR447 remains draft; current-main journal merge preserves both histories.
+
+## 2026-10-25 — Four repair tickets closed on main
+
+PR447 merged7586dfdf2515a9d6e3f3986e4fd4a7c2d80321e4; exact remote main
+and tracker readbacks confirm440/441/442/444 CLOSED. Primary40-test final
+retirement fence selection passes.443 remains the sole active repair; original
+eight native-gated program tickets remain open. Post-closure review comparison
+will use4ffe87be2 (main immediately before repair source landed), excluding the
+independently merged desktop deployment docs. The one review and bounded TDD
+pass remain unconsumed until443 closes. Manual allowance at54min/~1.00MM
+against2h/2MM; no reset or runtime/provider effects.
+
+## 2026-10-25 — Incremental follow qualified on integration
+
+443 source90f36eccc preserves completed backfill, fair resumable head observations
+and explicit bounded full sweeps. Native ordering remains unqualified; observed
+frontier completion reports partial/requiresFullSweep. Primary112tests/15files
+pass with compilation serialized; typecheck/build/focusedlint pass. First
+concurrent run's5s ownership-test timeout retained as timing-flake evidence;
+isolated1.35s and finalserial1.16s diagnostics support scheduling mitigation,
+without raising limits or masking a known source defect. Operator docs and
+CONTEXT now state these observation boundaries.443 intended-main merge/closure
+and then the single post-closure review/TDD pass remain.
+
+## 2026-10-25 — All five repairs closed; one frozen review running
+
+PR448 merged99e877d8acce80f59b06880f4f44df09cb131e78; remote main and443
+CLOSED readbacks verified. All five repair closures are now proved. The single
+authorized post-closure code-review is running as independent Standards and Spec
+axes against4ffe87be25d53dc5ec309ba011a7b53882f11bcf...99e877d8acce80f59b06880f4f44df09cb131e78.
+Primary will adjudicate once, then perform one bounded TDD findings pass and
+closed-world verification. No second discovery cycle. Original eight native
+gates and parent398 remain open. Manual counter1,204,283tokens/3897seconds
+against2MM/7200; original deadline preserved.
+
+## 2026-10-25 — Single review adjudicated; TDD repair source verified
+
+Standards:0hard breaches/1nonblocking duplicated-predicate concern. Spec:accepted
+POST-SPEC1,P1, discarding later changed/new rows already present after an unchanged
+fingerprint.443 reopened with readback. Single bounded TDD pass reproduced stale d
+then processes every available page row, preserving row-limit continuation.
+Actual public collector restart plus controlled-CDP service regressions pass;
+44tests/8files, typecheck/build/focusedlint green. Unavailable older rows remain
+explicit partial/full-sweep work; no global-order claim. Optional predicate
+extraction deferred. Frozen review artifact records adjudication and all causal
+receipts. Main integration/443 reclosure/final closeout remain, no broad rerun.
+
+
+### Plan0458 approved native execution —2026-10-25
+
+User approved the four prepared native canaries and fixed review baseline d107e13ce, then directed continued ticket execution. Registration PR458 merged at d468ee7a6. Primary405; isolated workers403/408/410. Fresh built public identity smoke matched configured default/grok without launch. Public405 installation stopped unsupported before Add because an existing endpoint was unobserved; no install dispatched. Native source discovery continues without weakening duplicate protection. All eight tickets remain open; reserved whole-range review/TDD counters remain zero. Publication requires a concrete generated app/version packet.
+
+
+Plan0458 native checkpoint: PR459 merged at6a712f57d (55 focused tests/full typecheck). A real synthetic A upload request reached the exact fresh composer; its result remains unconfirmed because the CDP event omitted request postData and cleanup raised an aggregate error. Preserve A and its unknown-effect lease; no replay or B upload.403 owns bounded read-only reconciliation and preserving public unknown-target outcomes.408/410 remain queued behind that reconciliation. The prior dead no-effect Escape utility owner was recovered through registry markLost/releasePreserved with exact revision/dead-owner evidence; no target was closed or history erased. All eight ticket criteria remain open; review/TDD counters zero.
+
+
+Plan0458 file-effect reconciliation: primary independently validated the composite and all linked raw receipt hashes: same configured account/target, exact selected native File digest to provider metadata ID/URI, actual selected Openattachment server response200, and rendered104-byte content SHA matching A. Processing remains incomplete; no Send/replay/B. A new registry reconcileEffect CAS seam records a qualified completed effect with immutable evidence reference/hash and appends prior uncertainty, without closing/releasing/acquiring the target. Generic acquire/release guards remain.26 registry tests and full typecheck pass; no live CAS has occurred yet. PR460 merged at85c32aa39 with74 focused tests/typecheck for exact-target diagnostics and unknown-cleanup preservation.
+
+
+Plan0458 current native frontier: one synthetic upload A is byte-verified against the actual server asset and its exact lease effect was settled/preserved through PR462, with prior uncertainty retained. No replay/B/Send. One approved Bot exists with canonical native ID; its actual settings expose Name/Title/Description and lack original Instructions/Model fields. Supported public lifecycle source is prepared without silently narrowing408. Build corrective public command is active after the unrelated live ChatGPT ledger owner exited naturally; fresh account MATCH and production fresh-target override. Connector remains before Add: native preparation exposed asynchronous detail mount and synthetic Escape cleanup weaknesses, now covered by causal source regressions and native keyboard wiring. No Connector install/OAuth or publication claimed. All eight tickets remain open; broad review/TDD counters zero.
+
+### 2026-10-25 — Plan0458 / #408 actual Bot editor
+
+Created one approved retained synthetic Bot; exact native route and Settings
+Name/Title/Description controls are now qualified. Instructions/Model controls
+are absent, so original #408 remains open and #409 stays blocked. Implementing
+public create/edit/inspect/reconcile against observed controls with account-bound
+durable intent, no duplicate dispatch and same-ID saved readback. One native
+Name/Description edit awaits serialized slot; Title/model default remain preserved.
+See `docs/dev/notes/2026-10-25-grok408-native-lifecycle.md` for private evidence
+boundaries and the corrected probe's reused-target history.
+
+### 2026-10-25 — #408 closed Settings overlay gate
+
+Before public Save, applied the independently observed BaseUI data-closed dialog
+contract to Bot visibility. Causal red/green excludes a still-mounted closed
+Settings tree and verifies saved readback actually reopens it. Unrelated field
+attributes remain active. No native #408 interaction; supported-field edit still
+awaits serialized slot and original Instructions/Model criteria remain open.
+
+### 2026-10-25 — #408 public supported-field native edit accepted
+
+Clean69e443393 public CLI made the approved one Name/Description Save on the same
+created Bot ID and returned completed. Independent account-bound Close/reopen
+reread proves saved Name/Description and preserved empty Title; target remains
+saved Settings open with no unsaved input. Failed preliminary Close-ledger flush
+is preserved and its lease was independently released/settled, not force-cleared.
+Original #408 remains open for absent separate Instructions/Model controls;
+`docs/dev/notes/2026-10-25-grok408-acceptance-decision.md` provides the concrete
+original-vs-native decision and proposed amendment, with no tracker changes.
+
+### 2026-10-25 — Plan0458 native Connector transport binding
+
+#405 preparation now reads stable Connector IDs and transport from the actual
+committed card DTO, bound to the verified Grok account and current React root.
+Native `live` integrations legitimately have no MCP URL; only positively bound
+nonmatching rows may be excluded from MCP duplicate checks. Name collisions,
+foreign metadata and unobserved transports retain the refusal. Owned detail
+cleanup focuses the exact owned dialog before native Escape. No Add or OAuth
+has been dispatched in this slice. Focused installer/service/account tests:
+40 passed; earlier discovery selection: 36 passed; typecheck and changed-file
+Biome pass. All eight ticket gates remain open; reserved final review/TDD 0/0.
+
+### 2026-10-25 — Plan0458 Connector continuation and retained completion checkpoint
+
+The source a180c902f preparation-only native run reached the exact custom form,
+matched the configured account before/after and restored it with no Add. The
+already approved public install continuation then dispatched one Add; Grok's
+Custom Connector surface reports "Connection failed" / "Sorry, there was a
+problem connecting to this MCP server." No Connector ID, OAuth grant or tool
+catalog is qualified. The journal continuation is consumed and target retained;
+cleanup was unknown. Independent guarded exact-target readonly diagnosis saved
+privately; original unsent @ remains intact. Do not replay installation.
+
+Integrated403 source f716e2a6c as daafc133e and410 source93933f99f as53cbfbb7a.
+403 is assigned only a replay-free exact-A context read. 408's one public Save
+and independent same-ID readback are verified for Name/Description; Instructions
+and Model remain unavailable and the explicit acceptance split awaits user reply.
+410's single generation completion was validated and settled through supported
+CAS with prior uncertainty retained; app/version/export remain unqualified.
+All eight original issues remain open; final review/TDD counters remain0/0.
+
+### 2026-10-25 — Plan0458 failed Connector settlement and public File readiness
+
+Primary validated the immutable native terminal Connector failure/account/target
+proof (943d53a9f10a014d572dbe447f3a09b584b2956189ec71d05fad8bfc122fb63f).
+Supported CAS settled only that failed effect and released its preserved lease
+at revision5; prior uncertainty remains audited, installation is not accepted,
+OAuth is not granted and replay remains unauthorized. Anonymous initialize
+returns401 with Bearer resource metadata; protected-resource and authorization
+metadata return200. This is endpoint diagnostic evidence, not Grok acceptance.
+
+#403's configured public context read at53cbfbb7a confirms A ready/complete with
+observed-native source hash, no replay or Send and no unreleased utility lease.
+Primary verified composite83741dd21f7620b00833bd06adb7219619f948566c0663f4c9905431f31209ca
+and linked source receipts. Worker granted only the remaining single approved B
+upload on a genuinely new empty composer; B had not dispatched at this checkpoint.
+## 2026-10-25 — Issue464 live Apps comparison
+
+Plan0460 starts the performance follow-up to427. Five retained Apps tabs include
+three healthy and two failed panels; one shows signal timed out. Exact-tab DOM
+and screenshot inspection completed in481ms. The adapter has no per-app loop;
+it observes installed/linked responses across two navigations, but its polling
+recognizes account-load errors only. Added a candidate real-adapter regression
+for the observed main Plugins failure. Historical347.649s cause remains open.
+No app mutation, prompt, peer-tab closure, browser restart or CI work.
+
+Issue464 checkpoint: real-adapter Plugins failure regression went red, then27
+focused tests passed. The old guard missed actual failed-page DOM; patched guard
+caught it in20ms. Installed baseline separately returned complete26-app inventory
+in321.643s. A10s CPU sample during inventory measured roughly25percent ledger
+load/persist,16percent GC and34percent idle. This qualifies a performance lead,
+not the whole delay. Typecheck/build and test lint pass; the successful-read
+latency remains open. Only the owned CLI process was sampled; no browser restart.
+
+PR465 merged at46e1306c2 and CLI-only activation completed. Installed adapter/bin
+bytes match source; compiled guard detects actual failed panel in16ms, while old
+guard misses it. This is direct guard/DOM proof, not a full failed transaction.
+Version/help pass, API PID4185922 and MCP wrapper unchanged, browser PID2122493
+survives. Plan0460/issue464 remain OPEN for successful-read latency; next bounded
+measurement is provider-free representative-ledger replay with durable effects
+preserved. Deployment and raw runtime evidence remain in private user state.
+
+## 2026-10-25 — Issue464 actual ledger admission replay
+
+Continued Plan0460 through real reserve/start/settle after rejecting a usage-summary
+candidate with no production inventory caller. Copied-history native admission
+sequence measured10.884s/9.957s; compact encoding8.919s/7.956s; encoding locked state
+directly without a second history clone5.202s/4.581s. Timing varies with host load;
+an8s absolute gate was rejected. Real backend-burst regression deterministically
+fails old source on encoding overhead (12151bytes vs10066.1budget) in70ms. Candidate
+retains full schema1/history and lock/fsync/atomic publication; legacy snapshot
+and cross-instance preservation checks added. Final validation and installed
+native outcome remain pending; no provider call was made for these replays.
+
+## 2026-10-25 — Issue464 native encoding result and snapshot reuse
+
+PR467/544db831f CLI activation passed hash identity and installed replay. Native
+26-app inventory still took297.628s, so it does not close464. A follow-up108ms
+real admission fixture catches three full snapshot reads across self-owned
+reserve/start/settle. Reuse now checks file identity under the existing lock,
+invalidates on peer edit/removal and failures, and treats post-commit metadata
+errors as cache misses rather than failed durable effects. Append-only event
+prefix encoding further reduces copied-history replay to2.937s/2.482s. No global
+cache or history loss; legacy schema1/lock/fsync/publication semantics remain.
+Final checks and one additional serialized installed-native read are pending.
+
+## 2026-10-25 — Issue464 whole-page churn isolated and focused read accepted
+
+Cache refinement PR468 still produced276.299s inventory. A passive trace on its
+new utility tab observed155backend requests under a30/minute cap; actual installed
+responses took about5s and optional linked-list traffic never appeared. The
+runtime recorded108capacity refusals. A22ms real-adapter regression catches two
+extra inventory navigations. CLI list now selects focused API inventory after
+owned bootstrap, fresh session email/workspace/org checks and the existing
+governed connection. Mutation preflights retain UI transport. Generic UI retry
+can defer to fresh session/HTTP authority for this read; provider limits and
+human verification still stop it. Initial guard failure was reproduced and fixed
+with a13ms regression. Source-native read succeeds in39.866s with34apps: all26
+prior entries unchanged,8linked entries added, same account. Final checks and
+installed proof remain pending; caps and provider deadlines were not changed.
+
+## 2026-10-25 — Issue464 installed acceptance complete
+
+PR469/42fb89512 focused inventory is merged and CLI-only activation is qualified
+by exact compiled bin/command/provider/ledger hashes. Installed native command
+returns complete34-app inventory in26.736s, exit0, versus321.643s/26apps initially.
+All26prior entries remain unchanged;8linked entries are added. Source/installed
+34-app metadata and account match.187focused checks, typecheck/build, scoped lint
+and docs checks pass; primary Standards/Spec review has no unresolved blockers.
+Plan0460 is CLOSED. API PID4185922/MCP wrapper and browser PID2122493/startTicks
+14652453 are preserved; CDP is HTTP200 and the native CLI exited. No provider
+capacity/deadline change, app mutation, prompt or browser restart; CI excluded.
+Runtime/trace/catalog evidence remains private. API/MCP process upgrades are not
+part of this CLI delivery. Final Graphiti capture follows qualified closeout.
+
+### 2026-10-25 — Plan0458 integrated source validation
+
+Merged current main ce91367d1 as244871611, preserving unrelated ledger/inventory
+changes and both independent documentation histories. Primary ran324focused
+checks/20files (105.25s) and full typecheck successfully; import/format hygiene
+then passed53affected checks/3files. Scoped lint has no errors and retains one
+pre-existing unused Input parameter warning. Actual source CLI invalid inspect
+returns invalid/grok_build_request_invalid with exit1 before provider work.
+
+Primary independently validated B compositec01af15efd5e3170522da1c88c3e9eb3f78ac44bfafa95bc487b9d79b978d0d1
+including linked raw metadata ID, distinct A/B identity, exact server104-byte B
+hash and consumed2/2uploads. No Send/replay. #403's recent-file behavior has source
+fixtures but native chooser selection remains a distinct gate; worker preparing
+one exact-known-B selection packet. #410 gets the next native slot after source
+integration. All eight issues remain open; reserved review/TDD counters0/0.
+
+### 2026-10-25 — Plan0458 main integration and remaining native discoveries
+
+PR471 merged as a74cb9b0f8ca2835cd73037b042b3bcba44cd744; integration worktree
+fast-forwarded cleanly. Actual source CLI retained Build inspect returns partial /
+grok_build_app_identity_unobserved while qualifying response_completed and
+cleanup complete. A broader exact-target passive census found no currently
+visible iframe across all paths; actual native controls are disabled Reload app
+preview / Mobile preview and enabled Restart preview. No restart, Code toggle,
+publication or new generation occurred; app/version/export remain unqualified.
+
+#403's subsequent known-B recent selection request stopped unconfirmed before
+chooser qualification and retained its exact target/unknown lease. No extra
+upload or Send occurred. Source-path/recorded-expression diagnosis distinguishes
+Attach/Recent opener clicks from an item selection; primary reconciliation is
+pending immutable no-selection proof. One independent operator read is granted
+only to qualify current empty composer/owned-menu/current-root row metadata.
+
+#405 read-only runtime inspection found only ChatGPT in the active external
+OAuth redirect allowlist. No Grok callback, configuration edit, grant change or
+service restart is qualified. Bounded request-time journal has no request entries;
+this prerequisite does not establish the cause of the generic Grok failure.
+Original #408 scope decision remains pending. All eight tickets stay open;
+requested final review/TDD counters remain0/0.
+
+### 2026-10-25 — Plan0458 owned Connector terminal-outcome correction
+
+Observed native failure reproduced as RED at the client public seam: expected
+connection-failed, got inventory-incomplete. Client now waits boundedly on its
+exact owned modal transition, reports only the observed native terminal failure,
+and never repeats Add. Service RED separately demonstrated that a known failed
+outcome was still marked unknown; it now settles that exact qualified failure
+while preserving target, journal and retrySafe=false. Foreign ownership stays
+unconfirmed; delayed-result and repeated-install checks pass. Primary focused
+selection24/2files and typecheck pass; changed-file Biome passes. New source has
+not been reinstalled or exercised by another native Add; #405 remains open for
+actual connection/OAuth. Reserved final review/TDD counters remain0/0.
+
+Primary also validated #403 immutable no-item-dispatch proof302af77b0a26314cff25580ae4737d22bcc3a846b32a1c87889f507c81b5e1b5
+against exact source/expression hashes and the native owner ARIA chain. Supported
+CAS settled its uncertainty and separately released the preserved lease atrev5;
+Attach/Recent menu effects/history remain, no item selection or replay authority
+is inferred. Native row metadata still awaits the corrected shared-tree probe.
+2026-10-25 — Grok403 chooser-before-selection attribution: causal public-service
+regressions cover chooser transport failure with normal and failed cleanup.
+Preserve known zero item-selection dispatch separately from unknown menu/cleanup
+effects; public unconfirmed status and target custody remain. Corrected passive
+metadata probe uses shared committed-path helper per owned host; not yet run.
+
+
+2026-10-25 — Grok403 committed portal bound correction: r20 distinguishes
+256-depth exhaustion from ownership mismatch. Shared committed-path ancestry and
+topology now bound at 512; 20,000-node limit/current-root/unique-host/scope checks
+remain fail closed. File binding imports shared helper. Native-derived deep portal
+regression observed RED before correction; exhaustion coverage retained. No native
+Recent row DTO or selection acceptance claimed; next passive read requires slot.
+
+
+2026-10-25 — Grok403 Recent parser/source recovery: r23 committed row keys join
+known synthetic IDs to the observed account-scoped asset DTO. Add owned ARIA
+chooser parsing and repeat current key/DTO/account qualification at selection.
+Metadata-only composer context carries no source digest or local-manifest proof;
+readiness retains the actual Submit gate. Public duplicate-name fixture selects
+the exact ID without upload; foreign/stale/reused rows and non-ready metadata
+remain refused/incomplete. No native selection repeated during source work.
+
+Grok403 input-scope correction: metadata-only recovery may inspect an unmarked
+sole native input only when its FileList is empty. A causal foreign-input fixture
+observed an unintended byte read before this guard; now it refuses without
+reading bytes, retaining unknown context. Owned marker/digest semantics remain.
+
+
+2026-10-25 — Grok403 r24 opener diagnosis: no Attach/Recent/item click occurred.
+Actual Attach is an ordinary button with data-state closed; overbroad visibility
+logic rejected it. Source now interprets closed-state attributes only on overlay
+roles/modal containers. Native-derived closed-trigger regression RED→GREEN;
+closed-menu descendants remain refused. Private immutable r25 source-expression
+proof links raw no-dispatch/empty-composer evidence; primary owns lease recovery.
+
+
+2026-10-25 — Grok403 partial Recent inventory correction: boolean-only native
+census proves requested B passes all predicates; four unrelated rows fail only
+the existing key-URI guard. Omit unsupported content-key URI rows with explicit partial status
+and coverage instead of blocking supported assets. Duplicate-ID/global ownership
+and committed-root guards remain fail closed; selection rechecks its exact ID.
+Causal unsupported-key regression RED→GREEN; old open chooser preserved. One
+fresh empty-root canary requires primary grant after source validation/recovery.
+
+2026-10-25 — Grok403 final native Recent acceptance packet: r30 on clean source 659d
+created a new empty owned root and selected known B exactly once. Public result
+complete/grok_files_ready, one ready B, native-metadata/observed-native without SHA;
+Native FileList 0/editor 0/chip 1, same account and enabled Submit before close. Five
+qualified inventory rows plus explicit partial coverage; no extra upload/Send.
+Immutable r31 links raw receipts, source manifest and separate A/B byte proofs.
+Worker native slot released; primary owns independent validation/issue closure.
+
+### 2026-10-25 — Plan0458 / #403 native Recent qualified
+
+Primary validated r31 composite86a80133cd8e12805618de6ed8074c0b0a7cae02c78da9526753dcaff5acf315:
+all raw links and7source Git blobs at659d71362; actual partial visible inventory
+has5qualified rows and exactlyone B; one item evaluation returns true; public
+result complete/grok_files_ready for B, native-metadata/observed-native with no
+SHA/local-manifest/fresh-byte claim. Final FileList0/chip1/editor0 and submit gate
+are positive. Original2uploads remain the separate byte proofs; no extra upload
+or Send. Fresh registry reads show both owned target leases released/settled;
+control-plane census verifies same PID/start generation and retained root target.
+
+Primary final presubmit56checks/3files pass on the runtime source; final worker
+typecheck accepted. Docs-only c692f4b88 carries the criterion mapping; no runtime
+source changed after native659. Main integration and #403 close/readback are
+next. #405 external OAuth callback boundary, #408 original scope decision and
+#410 inactive workspace/app-version/export remain open. Review/TDD counters0/0.
+
+### 2026-10-25 — Plan0458 / #403 closed on main
+
+PR473 merged as83d527869021559df8b03cfdd858f5e3cd197c35. Primary checked allfive
+unchanged criteria, posted the acceptance mapping, and closed403 as completed.
+Fresh GitHub readback confirms CLOSED/COMPLETED at2026-10-26T00:59:04Z with exactly
+one closing comment. Actor/target/body-change/close receipts remain private.
+Current24-node graph:17closed/sevenopen. Parent398 was not edited. #409 remains
+blocked by408; no unavailable Bot control or Build artifact gate was waived.
+The requested single final code-review/TDD pass remains reserved (0/0).
+
+### 2026-10-25 — Plan0458 / Build Download menu qualified
+
+Primary continued after403closure; PR474 merged6929b45 with the closure ledger.
+One passive410read qualified the exact active owned menu: Download enabled,
+Push to GitHub enabled; Files active and Workspace inactive. Account matched
+before/after, shared current-root/menu relation qualified, module hashes unchanged.
+Primary independently validated raw SHA b515469d62ded866e2acafa5c530876d77081121bda233cf22a5816988d56e0d.
+Download preparation continues; no bytes, app/version, publication or410closure
+claimed. A separate405passive current-component check found no OAuth callback
+metadata among135inspected functions; no Add or auth-service change occurred.
+Seven scoped tickets remain open;408contract decision pending; finalreview/TDD0/0.
+
+### 2026-10-25 — Plan0458 / native Build ZIP retrieved once
+
+One governed trusted Download from clean35057b5e2 captured1,524,948private ZIP
+bytes/291entries; SHA413df690fb50639a9b7ed3b3b83bf6c77e0e131fd8c73ebe3f0376db93745581.
+Primary validated raw result/byte hashes and account pre/post match. Target Page
+reset-to-default acknowledged (prior override unknown); transport cleanup complete,
+allfourtargetleases released/settled. No CAS, extraction, code execution,
+publication or regeneration.76byte app-env metadata lacks app/version. #410 stays
+open pending authenticidentity/publicexport;411/414 stayblocked. Review/TDD0/0.
+### 2026-10-25 — #410 bounded workspace export
+
+Added a public retained-target Build export action using observed native
+More options → Download ownership, target-only private capture, explicit default
+reset consent, and separate byte/app identity evidence. No publication or
+native effect was run during implementation. Causal checks cover unsupported
+or uncertain setup, account/root guards, private output, partial downloads,
+unknown effect custody and cleanup; public native acceptance remains pending.
+
+### 2026-10-25 — Plan0458 / public Build export accepted as partial
+
+Root integrated worker6ad/ef5/d3/dd with both journal histories preserved.
+Root56checks/4files passed on44397; final visibility repair2986 passed24affected
+checks/2files. Worker exactdd fulltypecheck accepted; runtime source matches.
+PublicCLI2986 retrieved1,524,948byte ZIP/291CRC-verifiedentries; SHA
+ eee702f30f5597cb8738aacd92929d72a4c5a08e7eb49243ded5788bfa766595.
+Primary validated private bytes/permissions/source hashes/exactCID+assistant,
+setup/reset/cleanup and14released/settled targetleases. Native result is partial:
+authentic app/version remain null, not invented from workspace or archive hashes.
+Retained failed hidden-root/unknownpointer receipts and qualified local-state CAS
+audits; no generation repeated. Existing ensureGrokTabVisible honors configured
+focus policy before trustedinput. No publication/terms acceptance/local execution.
+#405 bounded retained-flow read exposes a generic error handler, not an actual
+OAuth callback or connected account. No Add or external-auth configuration changed.
+Seven scoped tickets remain OPEN; parent398 untouched; finalreview/TDD0/0.
+
+
+### 2026-10-25 — Plan0458 / merged export and retained Connector validation stage
+
+PR475 merged as055d690d9; integration branch fast-forwarded and pushed to main's
+current tree. #403 is closed; seven scoped children remain open and parent398 is
+untouched. Native #405 session metadata qualifies an existing `created` session
+for the exact approved endpoint/account. Actual SDK/caller source and retained
+pending message place failure before validation advanced. Runtime config qualifies
+Grok's exact OAuth callback; missing external allowlisting remains a later
+prerequisite, not a proven cause. No Add, authentication call, external config or
+service process changed. Preserve the failed flow because cleanup can abandon its
+session. #408/#410 contract decisions remain pending; final review/TDD0/0.
+
+
+### 2026-10-26 — Approved ticket splits and checkpoint review/TDD
+
+User accepted exact OptionB408/410 splits and requested reviewnow. Workers amended
+and verified408/410 CLOSED;477OPEN preserves Instructions/Model;411OPEN retains
+provideridentity/publication acceptance. Root reconciled adjacent Plan0452 conflict
+by preserving both approved Bot and Build paragraphs; parent398 untouched.
+One review pinned d107e13…331951d: Standards0hardfindings, SpecS1blocking oldassistant
+archiveattribution accepted. SingleTDDpass reproduced and repaired unique-response
+preflight/control/capture guards;62affectedchecks/4files and fulltypecheck passed.
+No nativeeffects/retry/publication/runtimeinstallation. Review/TDD1/1; further
+verification closedworld. Root405;409and414each assigned one worker/sourceprep.
+
+
+### 2026-10-26 — #405 diagnosing-bugs feedback loops
+
+One normalgoverned existing-session validation passed isValid/authRequiredtrue;
+originalflowref unchanged, noAdd/auth/toolcall. ActualinstalledOAuth registration
+in isolatedtemporarySQLite reproducibly rejects exactGrokcallback; minimized
+request remainsred, callback-only in-memory candidate makes both forms green.
+Privateconfig/rollback prepared; exactseparateserviceactivation approvalpending.
+No realconfig/restart/clientregistration/grants. #405/#406OPEN; priorreview/TDD1/1.
+
+
+### 2026-10-26 — Approved Grok callback activation verified
+
+User explicitly approved the exact callback addition and OAuth-service restart.
+Hash-guarded candidate applied; freshPID1349156 active/running, both publicdiscovery
+endpoints200. Installed registrationloop withoutcandidate nowPASS using deployed
+config/temporarySQLite. ExistingChatGPTcallback/grants preserved; no realclient,
+consent, mailboxgrant or repeatAdd. #405/#406remainOPEN for actualOAuth/readback.
+
+
+### 2026-10-26 — #405 original Connector reaches real Cooper sign-in
+
+User directedproceed. PriorGrokprocessgone; configuredmanagedbrowser reopened,
+accountmatched. Newgallery/nativeSDK shapesqualified; failedmetadata-only read
+settled/releasedbyindependentproof/CAS (auditretained). OriginalConnectorID reused:
+validationpassed; popup-first correction preceded one actualauthURLrequest, which
+completed andopenedAuthelia login. ExactGrokcallback/S256/read-send-write request
+qualified; noAdd/replacement/journalreset/credentials/grants. Nativewaittimedout,
+loginpopupretained. Humanusername/password sign-in is actualremaininggate;
+#405/#406OPEN, noautoauthretry. Receiptsprivate/oauth-resume-20261026.
+
+
+### 2026-10-26 — Cooper skill completes original Connector OAuth
+
+Explicitskillinvocation provided correctCooperagentlogin; bothsigninsaccepted,
+no rejectedretry/cookieharvest/policychange. Expired3600secondGrokcookie replaced
+by onefreshsameIDflow; exactcallback/resource/S256/accountpolicy verified before
+one trustedApprove. GrokOAuthsuccesspage +nativeSDKauthenticatedsuccess verified.
+One originalIDcatalogRPC returned62allowedtools; no toolinvocation or mailsend.
+Cleananonymousauthorization302Cooper persists. Publicvisibleinventory remains
+incomplete/noexactmatch afterqualifiedrefetch;405/406remainOPEN pendingpublic
+reconciliation repair, originaljournal preserved. Privateimmutableproof retained.
+
+## 2026-10-26 — Plan0461
+
+Building opt-in app-list performance diagnostics from the issue464 retrospective. First seam: sanitized aggregate report under deterministic protocol/time fixtures. No live provider run or CI.
+
+Plan0461 source acceptance: 161 selected tests pass, plus four overlapping
+admission-boundary checks after adding diagnostic assertions. Typecheck/build,
+scoped lint, docs and compiled help pass. Earlier Grok timeout passed isolated
+and complete reruns without changed budgets. Source-only checkpoint; CI and
+installed/live activation excluded. Primary Standards/Spec review has no blocker.
+
+## 2026-10-26 — Plan0461 deployed
+
+PR479 merged at b2ecae89a. CLI-only runtime activated after five compiled module
+hashes and help matched the validated build. One installed native read completed
+34apps in26.601s, with one performance stderr report and terminal-only stdout.
+Fresh OS/CDP readback preserved browser generation, active API process and MCP
+wrapper; command process exited. CI excluded. Plan/lane closed and integrated.
+
+## 2026-10-26 — Plan0463 dormant tab TTL
+
+Read-only tab/lease census and activity probes complete. Building real configured-maintenance regression for independent cleanup despite a preserved lost tab. No tabs closed; deferred issue377 remains deferred.
+
+Plan0463 accepted:31source checks plus typecheck/build/lint/docs pass. PR482
+merged c59dfcd5a. Hash-qualified CLI/API runtime activated after quiescing local
+drain; all browser generations preserved. Real periodic maintenance closed2
+inactive expired AuraCall tabs (4→2) and preserved2unknown tabs; no manual close.
+HTTP200 status retains23paused completions,0running/0queued, scheduler paused,
+drain restored idle/unpaused. The17Agent Browser pages remain a separate runtime
+scope. MCP wrapper unchanged; CI excluded. Plan/lane CLOSED and INTEGRATED.
+
+### 2026-10-29 — #414 conversation reference source slice
+
+Implemented the separately qualified native attachment-card/Download path, canonical
+upload references, explicit default-reset acknowledgment, isolated download custody,
+and archive integrity/reuse guards. TDD covered public adapter, context/files and
+archive seams, including failed reset/transport cleanup and same-size corruption.
+Native public-adapter acceptance remains a separate integration gate; no additional
+upload or Send was performed by this implementation slice.
+
+Integrated reference source at `32cb0f2da` with public acknowledgment propagation
+`f98eb0a71`. Primary full typecheck and 392 tests across nine affected files pass.
+CLI, HTTP, MCP and durable archive/history jobs preserve explicit scope. Native
+public-adapter acceptance is in progress; upload and Send are already consumed
+and are not replayed. Review/findings-TDD counters remain unchanged.
+
+First public native reference acceptance stopped before transfer: Fast conversation
+rows render in the native gateway plane outside `main`; the shared context reader
+still requires `main`. Passive route/response/account observations confirm the
+current conversation and retained attachment. A targeted source regression/fix is
+underway. No transfer, upload or Send was retried. All three CLI acknowledgment
+flags are confirmed in source help.
+#414 native acceptance exposed a main-only context readiness assumption before
+transfer. A focused TDD slice qualifies the observed mounted region/gateway plane
+through canonical committed response ownership and reuses that inventory for text
+and file chunk offsets. 51 checks across five focused files and touched-unit lint
+pass; fresh native acceptance remains parent-owned.
+
+Native public reference acceptance now PASS at040695203: canonical upload/context,
+107B expected checksum, sidecar and default-policy reset. Actual isolated archive
+APIs pass reuse/restart/injected foreground/tamper guards; installed adoption is
+not performed. Single consolidated r2 review now starts; findings-TDD remains.
+
+### 2026-10-29 — Plan0464 installed continuation
+
+Sealed Agent Browser TTL candidate83888301/bf0bcd3d installed through accepted
+preserve transaction; current owner bytes match and all four observed browser-root
+generations survive. AuraCall normal Native resolver verifies shared wsl-chrome-3.
+Live Agent Browser task creation returned idle publication conflict; exact task
+readback retained for reconciliation, without another task or cleanup. Worker
+traces store custody fences. Both remaining tickets stay open; reserved review
+and findings-TDD phase have not started.
+
+
+### 2026-10-29 — Plan0464 replacement runtime observation
+
+Production-shaped c3a83438b/8fa17247d candidate is installed and accepted; all four
+observed browser roots survived. Ordinary task recovery now succeeds. Independent
+TTL acceptance is still incomplete: physical target removal observed, but no
+terminal lifecycle publication in150seconds. Protected peers survive, AuraCall
+issued no matching close request. Exact target-not-found retries retained; worker
+reproduces multi-session and verified-absence recovery. Remaining tickets stay open.
+
+
+### 2026-10-29 — Plan0464 qualified batch and absence recovery
+
+Agent Browser399ded40b is clean/pushed with model, runtime, host, consumer and
+strict source gates green. The second live failure is explained by logical session
+membership being mistaken for physical browser identity; batch expiry and exact
+absent-target/cache recovery now have qualified red/green proofs. Sealed build is
+active under its recorded bounded resource profile. Installed acceptance, both
+remaining ticket closures and the one reserved review/TDD phase are still pending.
+
+
+### 2026-10-29 — Plan0464 durable expiry and census latency
+
+Installed53 reconciled both interrupted targets to durable automatic-expiry history.
+Public status then timed out during all-process cleanup observation. The namespace
+batch repair9d782cb is clean/pushed with scoped source gates green and seal active.
+Fresh installed responsiveness and TTL/shared acceptance remain mandatory; both
+remaining tickets are open and the reserved consolidated review is unused.
+
+
+### 2026-10-29 — Plan0464 ticket closure and reserved review
+
+All three requested tickets are closed with observed acceptance. Fresh AB task
+expired in50.759seconds; production shared acceptance completed by65.792seconds.
+Delayed AuraCall closure reconciled to a released lease on the next normal pass.
+The protected fixture task was ended and three original peers/four browser roots
+remain. Source/runtime identities and namespace-smoke limitations are in Plan0464.
+Exactly one consolidated Standards/Spec review and one findings-TDD phase remain.
+
+
+### 2026-10-29 — Plan0464 review and findings phase
+
+One consolidated independent review completed: Standards0, Spec0. Primary accepted
+both reports; the single bounded findings-TDD phase required no code/test changes.
+Canonical Agent Browser main composition is now delegated to the existing worker,
+preserving both additive tests and runbook states; no second broad review or runtime
+upgrade is implied. AuraCall PR492 is prepared for integration.
+
+
+### 2026-10-29 — Plan0464 integration closeout
+
+All three tickets and Plan0464 are closed. One broad review returned Standards0 /
+Spec0; one findings-TDD phase required no changes. Agent Browser PR491 merged
+fb4a776e after combined-source model/native/MCP/client gates. The installed TTL
+hotfix remains9d782cb/0ed64bf6; Auth/journey main composition was not installed.
+AuraCall PR492 carries final source/evidence closure, guarded merge/readback and
+memory receipt completing delivery. Original peers and browser roots are retained;
+only the test-owned protected task was explicitly closed after automatic proofs.
+
+### 2026-10-29 — #414 bounded review remediation
+
+Single Standards/Spec review accepted mixed-inventoryP2 and stale documentation.
+One findings-TDD phase preserved both upload/workspace families and foreign-owner
+refusal. Primary53post-fix checks, full typecheck/build, independent16check
+closed-world verification and read-only native reference regression pass. Main
+d2217269c reconciled with source auto-merge and both doc histories preserved.
+414awaitsPRintegration;409/411remainopen on nativegates. Memoryforbidden,zero writes.
+
+PR493 merged6ad7ed6a6;414CLOSED readback,409/411OPEN. Main fetched and root
+fast-forwarded cleanly. No CI runs/checks reported; local validation is the
+recorded proof. Browser887430 retained, no installed adoption. Single review and
+findings-TDD phase complete; optional verifier extraction remains nonblocking.
+
+### 2026-10-29 — Approved409 diagnosis and411 research
+
+User approved the ask-matt route. Root starts bounded409 symptom feedback loop;
+parallel411 research reads source and existing private controller receipts only.
+Base5f4697f85. Original review/findings counters remain consumed1/1. Browser887430
+retained; prior focus hypothesis is rejected. No new effect or installation.
+
+### 2026-10-29 —409reproduced;411contract bounded
+
+Primary loop reproduced exact-account Bot shell with no Settings. Passive current
+React inspection showed no Bot data/component. One fenced, governed reload left
+the loop RED and exposed native application HTTP500reads despite200document/session.
+No selector defect, deletion or permanent resource absence is proven. No source
+patch, mutation, publication or installation.409remains OPEN on upstream loading.
+411researchnote cherry-picked aa02a0f25; primary independently checked native
+caller and both receipt hashes. Exact revision/app-version mapping remains unknown.
+Existing review/findings counters stay1/1. Reports preserve private proof hashes.
+
+### 2026-10-29 — Same-browser comparison and worktree reconciliation
+
+User clarified that normal Grok browsing works; prior HTTP500capture does not
+establish a browser-wide or causal upstream failure. Begin bounded same-account
+Bot/reference comparison. Canonical checkout fast-forwarded121b3a0c1 and is sole
+coding location.411research is already integrated/patch-equivalent, clean and
+removed; published ref retained.406implementation remains clean runtime-only
+because live Chrome roots and launcher have that cwd. No process terminated.
+
+Same-browser comparison confirmed working Bot content plus composer outside the
+Plugins overlay, while original synthetic Bot remains a35-character shell. Prior
+500causality/browser-wide inference withdrawn; original identity/loading remains
+unknown. Comparison performed0reloads/writes. Evidence note corrects prior report.
+Sole coding checkout is canonical workspace; research checkout removed cleanly
+with integrated/published work preserved; old implementation remains runtime-only.
+
+### 2026-10-30 — Original Bot identity read
+
+Current loaded UI contains exact original Bot ID+edited-name link. Passive React
+composer inspection needed an actual managed ancestor; failed/capped observations
+are retained without absence claims. Exact link is committed/current, but no
+creator DTO is yet qualified. Test in-app entry in the dedicated blank target
+using observed home and original sidebar links, preserving the working UI. No
+reloads or Bot writes; one fenced causal read. Source base9d5bf89dd incorporates
+other lane's full installed-runtime carry without replaying its work.
+
+Original Bot identity is now qualified. Fresh sidebar Show more expanded3→26Bot
+links; exact ID/name then opened through its native link, with exact Settings
+readback. Public configured resource read passes scoped unavailable/effectnone;
+CLI/HTTP/MCP parity3/3passes. Prior500cause/direct-entry defect is unproven because
+responses changed500→200 over time.409remains open only on native resource
+configuration/saved identity, per spec. Working tab untouched; no Bot writes.
+One home/disclosure/Bot entry and read-only Settings open,0reloads. Intent fences
+consumed. No new broad review/findings phase or installation.

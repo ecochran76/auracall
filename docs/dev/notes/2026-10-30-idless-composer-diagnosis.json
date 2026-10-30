@@ -1,0 +1,117 @@
+{
+  "state": "SOURCE_FIX_QUALIFIED_LIVE_NOT_RUN",
+  "plan": "0467",
+  "base": "7efea3746db7c4ea9372db36622570af82292f9d",
+  "installed_runtime": "user-runtime-issue374-4fa2f3ac9",
+  "observation": {
+    "mode_controls": 0,
+    "legacy_editors": 0,
+    "visible_editors": 1,
+    "route": "root",
+    "failure": "Unable to find the ChatGPT Chat mode control."
+  },
+  "limits": [
+    "Failure-time capture contains counts, not complete DOM/attributes/ancestry.",
+    "Earlier private control capture supplies ID-less ProseMirror shape; replay is reconstructed.",
+    "Source selector defect confirmed; complete causal attribution and installed/live acceptance remain unproven.",
+    "No managed Chrome for the original profile was alive at diagnosis readback; no recovery attempted."
+  ],
+  "feedback_loop": {
+    "command": "node ~/.auracall/diagnostics/issue427-composer-20261030/replay.mjs observed-editor",
+    "installed_result": "mode-not-found",
+    "legacy_id_control": "already-selected",
+    "no_editor_control": "mode-not-found",
+    "virtual_ms": 20000,
+    "elapsed_ms": 5,
+    "real_css_dom_red": {
+      "kind": "real CSS DOM reconstructed fixture",
+      "result": {
+        "status": "mode-not-found",
+        "availableModes": []
+      },
+      "chromeExit": 0,
+      "pass": false
+    },
+    "real_css_dom_green": {
+      "kind": "real CSS DOM reconstructed fixture",
+      "result": {
+        "status": "already-selected",
+        "mode": "chat"
+      },
+      "chromeExit": 0,
+      "pass": true
+    },
+    "real_dom_command": "pnpm exec tsx ~/.auracall/diagnostics/issue427-composer-20261030/real-dom-replay.mjs /home/ecochran76/worktrees/auracall-idless-composer/src/browser/actions/chatgptComposerMode.ts"
+  },
+  "hypotheses": [
+    {
+      "rank": 1,
+      "hypothesis": "legacy ID requirement rejects current ID-less editor",
+      "prediction": "adding only legacy ID passes; current ProseMirror selector restores control-less Chat",
+      "result": "confirmed for reconstructed failure class and real CSS DOM"
+    },
+    {
+      "rank": 2,
+      "hypothesis": "explicit Work marker blocks Chat",
+      "prediction": "current active Work marker still refuses Chat",
+      "result": "existing Work controls pass; original failure-time marker contents were not captured"
+    },
+    {
+      "rank": 3,
+      "hypothesis": "unusable or unrelated editor",
+      "prediction": "hidden, disabled, unrelated, dialog and duplicate editors stay rejected",
+      "result": "negative regressions pass; dialog red observed before bounded exclusion"
+    },
+    {
+      "rank": 4,
+      "hypothesis": "delayed hydration",
+      "prediction": "editor arriving inside existing allowance passes",
+      "result": "delayed mount passes; timeouts unchanged"
+    }
+  ],
+  "regression_red": {
+    "passed": 29,
+    "failed": 1,
+    "failed_case": "visible ID-less ProseMirror without a legacy editor ID"
+  },
+  "dialog_red": {
+    "failed": 1,
+    "reason": "new fallback initially matched an unrelated dialog editor; corrected before closeout"
+  },
+  "final_tests": {
+    "passed": 77,
+    "failed": 0,
+    "files": [
+      "tests/browser/chatgptComposerMode.test.ts",
+      "tests/browser/chatgptToolApproval.test.ts",
+      "tests/browser/chatgptComposerTool.test.ts"
+    ]
+  },
+  "cleanup": {
+    "new_production_debug_logs": 0,
+    "offline_browser_profiles": "test-only profiles removed after each real DOM run",
+    "installed_instrumentation": "preserved; runtime not modified",
+    "prototype_custody": "private diagnostic folder only"
+  },
+  "source_sha256": {
+    "src/browser/actions/chatgptComposerMode.ts": "5868d3c228199015410a6d9a6b88c53616bc130555ea5aa548fb828b37d2d9c9",
+    "tests/browser/chatgptComposerMode.test.ts": "911da09bd56bec283b36240d42c56329551b867a4a966a52098fd045ac23edec"
+  },
+  "validation": {
+    "typecheck_exit": 0,
+    "typescript_compile_exit": 0,
+    "scoped_biome_exit": 0,
+    "diff_check": "passed",
+    "planning_audit": {
+      "exit": 1,
+      "baseline_exit": 1,
+      "baseline_errors": 68,
+      "current_errors": 68,
+      "new_errors": 0,
+      "exact_error_lists_match": true,
+      "qualification": "pre-existing missing policy links and draft-plan metadata; no plan0466 finding"
+    }
+  },
+  "original_plan_id": "0466",
+  "plan_renumber_reason": "main independently allocated0466 to full runtime upgrade"
+}

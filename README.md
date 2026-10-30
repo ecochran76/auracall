@@ -12,6 +12,8 @@
 
 Aura-Call bundles your prompt and files so another AI can answer with real context. Its default API model is the durable `openai:frontier` alias, currently backed by GPT-6 Astra; exact provider model IDs remain available as explicit pins. Browser automation uses capability-oriented selectors such as `chatgpt:fast`, `chatgpt:reasoning-high`, and `chatgpt:premium`, or `--browser-model-strategy current` to preserve the active ChatGPT model. GPT-5.2 and Sol/Terra/Luna spellings remain compatibility inputs but are no longer advertised as durable configuration. API remains the most reliable path, and `--copy` is an easy manual fallback.
 
+For ChatGPT Medium effort, use `--model chatgpt:reasoning` (standard reasoning). Unknown `chatgpt:` selectors, including `chatgpt:reasoning-medium`, are rejected before browser startup instead of falling back to another model.
+
 Configured [automatic desktop pools or named AuraCall desktops](docs/configuration.md#named-auracall-desktops)
 use Remote View's native viewer in the dedicated `/desktops` client. Viewing is
 passive by default; explicit takeover coordinates human input with AuraCall
@@ -165,8 +167,19 @@ auracall --profile wsl-chrome-3 skills delete <32-hex-skill-id> \
 
 # Guarded ChatGPT developer-app lifecycle on the selected AuraCall runtime profile
 auracall --profile wsl-chrome-3 apps --target chatgpt list --json
+# After browser identity/bootstrap, list reads installed and linked inventory
+# without additional Plugins/Home page navigation. Developer mode stays unknown.
 # The read-only list operation has a 45-second base outer deadline, extended by
-# configured backend capacity waiting. Observed account-load failure returns
+# configured backend capacity waiting. Long list waits report the current stage,
+# elapsed time and declared budget to stderr every30seconds, including --json.
+# JSON stdout stays terminal-only. Global --verbose before apps reports each
+# stage immediately. Progress does not prove a particular cause for the wait.
+# A visible Plugins load failure stops inventory with developer_app_inventory_load_error.
+# App operation failures emit bounded,
+# sanitized diagnostics (nested Error.cause and AggregateError.errors): JSON to
+# stdout with --json, otherwise JSON to stderr; exit status remains nonzero.
+# Unknown cleanup stays unknown and non-list failures retain retrySafe=false.
+# Observed account-load failure returns
 # developer_app_account_load_error promptly; recover the page before retrying.
 # A disabled Plugins Add dropdown gets one refresh before form input, with
 # account continuity/readiness checked again. Persistent disablement stops create;
@@ -208,6 +221,8 @@ auracall --profile wsl-chrome-3 apps --target chatgpt test Corel33t \
 auracall --profile wsl-chrome-3 apps --target chatgpt refresh-tools Corel33t \
   --server-url https://litscout.example.test/mcp \
   --expected-account eric.cochran@soylei.com --yes --json
+# A visible plugin-settings load error permits one page reload, with verified
+# account continuity. Persistent errors stop; Refresh tools is never repeated.
 # The URL must match the existing app settings. One trusted Refresh tools
 # activation is verified by its attributable catalog response and unchanged
 # app identity, endpoint, connected accounts and permission setting.
@@ -215,7 +230,7 @@ auracall --profile wsl-chrome-3 apps --target chatgpt refresh-tools Corel33t \
 # after activation, within bounded read deadlines.
 # JSON returns catalog.toolCount, toolNames and SHA-256 under outcome.
 # Human approval returns awaiting-human; uncertain activation/catalog/identity
-# returns unconfirmed. Both are nonzero and never auto-consent or retry.
+# returns unconfirmed. Both are nonzero and never auto-consent or repeat Refresh tools.
 # The operation has a 90-second ceiling, including inventory qualification.
 # --yes authorizes refresh only, never new permissions or prompt submission.
 # Replacement remains a separate, destructive operation:
@@ -388,6 +403,12 @@ auracall tui
 Engine auto-picks API when `OPENAI_API_KEY` is set, otherwise browser; browser is stable on macOS and works on Linux and Windows. On Linux pass `--browser-chrome-path/--browser-cookie-path` if detection fails; on Windows prefer `--browser-manual-login` or inline cookies if decryption is blocked. From WSL, integrated Windows Chrome runs now use an auto-assigned DevTools port plus Aura-Call’s built-in `windows-loopback` relay by default, so firewall rules and `portproxy` are only for manual direct-CDP debugging.
 
 Current browser-mode default posture:
+- desktop coordination publishes transition ownership atomically. On Linux,
+  a proven-dead transition owner from the same boot can be recovered without
+  clearing human desktop control. Legacy empty, invalid or foreign-boot
+  transitions and interrupted recovery claims require explicit qualification.
+  Elapsed time alone never clears ownership. See
+  [desktop transition recovery](docs/dev/browser-service-tools.md#desktop-transition-crash-recovery).
 - browser runs still default to Aura-Call-managed profile launch
 - a browser profile can opt into an agent-browser-owned hidden RDP/Guacamole
   process with `agentBrowserRdp.enabled: true`; AuraCall still owns and passes
@@ -2716,3 +2737,27 @@ automation only after control-grant revocation is confirmed.
 Open the AuraCall root URL to reach the console, then select **Desktops** to open the browser client. Console, operator dashboard and desktop client share AuraCall's glowing halo favicon.
 
 If ChatGPT startup reports `CHATGPT_ACCOUNT_LOAD_ERROR`, the selected page could not load the account. Recover that page before a new attempt; this error alone does not mean your login expired. AuraCall does not automatically reload, sign out or resubmit the prompt.
+
+### Grok Connector reconciliation after browser loss
+
+`grok-connectors --action inspect --id <observed-connector-id>` can read an exact
+personal MCP Connector and its tool metadata even when the visible gallery omits it.
+This does not invoke a tool or establish the remote account identity or granted scopes.
+
+For an existing installation journal whose browser target disappeared, use
+`--action reconcile --reconcile-target <current-target-id> --reconcile-connector
+<original-connector-id>` with the original name, endpoint and expected provider
+account. The API/MCP equivalent is `reconciliationTarget: {targetId, connectorId}`.
+Keep the original installation input unchanged. This path verifies configured
+browser/account custody, performs metadata reads, preserves the operation ID and
+Add fence, and records target history only after exact successful reconciliation.
+It does not repeat Add or OAuth. A supplied connected-account selector remains strict.
+
+### App-list performance diagnostics
+
+Run `auracall apps list --json --performance` to include one
+`[browser-performance] {…}` aggregate JSON line on stderr at command completion,
+including operation failure after configuration resolves. Normal inventory or failure JSON stays on stdout.
+The flag is off by default and adds no provider requests or admission bypass.
+See [the browser debugging guide](docs/dev/browser-service-tools.md#app-list-performance-diagnostics)
+for timing and coverage interpretation.

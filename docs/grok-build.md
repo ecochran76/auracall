@@ -1,0 +1,169 @@
+# Grok Build generation
+
+The Build operation discovers the visible Build menu entry and its advertised
+account gate. `available` means that entry is available; it does not prove an app
+was generated or that an export exists.
+
+The CLI, HTTP and MCP registrations use the same request contract:
+
+```sh
+auracall grok-build --action discover --runtime-profile default --json
+```
+
+Generation requires a separate explicit confirmation and an empty root composer.
+It acquires a new retained target and clears inherited target affinity; an
+existing draft, selected files or Connector dialog remains on its original target.
+AuraCall checks the empty root before opening the modal model picker, then
+selects and verifies Build, closes that picker, and checks again before inserting
+the prompt. A draft or selected file arriving during selection prevents Send:
+
+```sh
+auracall grok-build --action generate --runtime-profile default --yes \
+  --prompt 'Create a static one-page timer for local inspection. Do not publish or deploy it.' \
+  --timeout-ms 300000 --json
+```
+
+For `POST /v1/grok/build/query` and the `grok_build` MCP tool, use
+`{"action":"generate","prompt":"...","confirmed":true,"runtimeProfile":"default"}`.
+The HTTP route requires operator configuration access. The response observation
+timeout defaults to 120000 milliseconds and can be set up to 7200000. Cancellation
+or timeout after Send retains the exact target and forbids automatic resubmission.
+
+A `response_completed` generation result proves a terminal assistant response
+with conversation/response identity. The current source returns `partial` with
+`grok_build_app_identity_unobserved`: app ID, app version, preview and exported
+app bytes have not been qualified. `artifacts.entries=[]` with
+`artifacts.status=unavailable` is missing app/export evidence, not a successful
+empty export. No arbitrary response link is treated as an app or downloaded.
+
+`publication.requested=false` records that AuraCall did not invoke publication.
+The actual provider publication state remains `unknown`; terminal text or a
+preview does not prove publication. App publication is a separate operation under
+issue 411 and is not implemented by this command.
+
+Invalid/unconfirmed requests, missing/gated Build, nonempty drafts, selected native files (including files without a provider chip),
+and preflight refusals send nothing. Completed/uncertain submissions have `retrySafe=false`.
+Cleanup failure is separately reported and retains a completed response when one
+was already proved. The target is retained for operator reconciliation.
+
+These operations are source implementations covered by provider-free tests.
+The CLI/API/MCP registration and Ops projection are integrated by the Plan0453
+coordinator. Installed-runtime and native Build/app/export acceptance are separate
+pending gates; issue 410 remains open until all its acceptance criteria are met.
+
+
+Retained Build results can be read without generating again:
+
+```sh
+auracall grok-build --action inspect --runtime-profile default \
+  --target-id '<retained-target-id>' --conversation-id '<exact-conversation-id>' \
+  --response-id '<optional-exact-assistant-response-id>' --json
+```
+
+For the existing HTTP/MCP surfaces, use
+`{"action":"inspect","targetId":"...","conversationId":"...","responseId":"..."}`;
+`responseId` is optional when exactly one assistant message is mounted. Inspection
+requires an existing configured browser endpoint and the exact retained target.
+Default inspection never launches a browser, opens a model menu, navigates, edits, sends, downloads
+or settles an unknown-effect lease. A still-fenced target requires supported
+operator reconciliation before ordinary inspection can acquire it.
+
+For an explicit native publication-control read, add
+`--inspect-publication-controls` to the inspect command, or set
+`"inspectPublicationControls":true` in its HTTP/MCP request. This opens the
+exact conversation's owned Publish dialog, reads its committed controller, and
+focuses that dialog before sending Escape. The result includes controls only
+after dismissal is verified. It never clicks the final Publish button, edits a
+name, generates a cover, or changes access. Default inspection performs no input.
+
+`publication.controls` reports the observed native phase, whether a deployment
+object exists, the native Publish button's enabled state, and a proposed name
+when qualified. A proposed name is not a published URL. App/version identity
+remains unobserved and `snapshotBinding` remains `unqualified`; this read creates
+no publication authority or dispatch path. Inactive workspace status still takes
+precedence even if the native dialog shows an enabled button. Unverified dialog
+cleanup returns `grok_build_publication_dialog_cleanup_unknown`, with
+`cleanupState=unknown` and `retrySafe=false`; preserve the target for inspection.
+
+The observed Build plane has provider response IDs under separate user and
+assistant gateway rows, rather than under `main`. Inspection accepts assistant
+messages only and verifies native completed-work UI outside the generated prose
+plus absence of an active Stop control. A marker quoted in prose is insufficient.
+Fresh account or route drift discards unattributable content.
+
+A visible authenticated preview is reported as `preview.status=available` and
+`preview.url=null`, with `grok_build_preview_session_required`: view it in the
+retained managed tab. Its bearer URL never enters public results or Ops. App ID,
+version and exported bytes remain unqualified; a completed response or preview
+therefore still returns `partial`. `operation=inspect` and `effectState=none`
+describe this read, while `generation.uiState` reports the observed generation.
+They never authorize resending the original generation.
+
+
+Generation also observes the native Build plane when it is present outside
+`main`, using only assistant messages and the same native completed-work marker
+as inspection. Legacy main-based text handling retains its existing behavior.
+An active Stop control takes precedence over an older completed-work marker;
+ambiguous plane roots cannot supply completion. Qualified preview presence may
+be returned with the completed response, while app/version/export remain partial.
+The observation timeout never authorizes restarting a still-running generation.
+
+## Retrieve a retained workspace archive
+
+`grok-build --action export --target-id <retained-target> --conversation-id <conversation> --response-id <assistant-response> --output-dir /absolute/private-directory --acknowledge-target-default-reset --json`
+
+The same `export` action is available through `POST /v1/grok/build/query` and
+`grok_build` MCP with `outputDir` and `acknowledgeTargetDefaultReset: true`.
+The output directory must already exist, belong to the current user, and have
+no group/other permission bits (for example, mode0700). Each call creates a
+private child directory and captures one native workspace ZIP, up to25MiB,
+within60seconds. It opens only the owned More options menu when needed and
+clicks its exact Download item once. It never generates, restarts, publishes,
+pushes to GitHub, executes generated code, or automatically retries.
+
+Export requires an existing configured browser and exact completed assistant
+ownership. Account, conversation, current component tree, menu control relations,
+and trusted pointer dispatch are verified. Before pointer input, export uses
+Grok's existing tab-visibility helper, honoring the configured focus suppression
+policy. A page still hidden afterward is refused before pointer input; export
+never overrides hidden-window policy. Account, route and current control
+ownership are rechecked after allowed focus. It uses the target-scoped legacy
+`Page.setDownloadBehavior` capability; unsupported capability stops before
+Download. It never changes Browser-wide download policy. Explicit consent
+accepts resetting that target policy to `default` afterward. There is no CDP
+getter proving the previous setting: this is a default reset, not restoration
+of an unknown custom override. Use a retained AuraCall-created canary target
+whose download policy you control. `exportCapture.setup`, `exportCapture.reset`,
+and `cleanupState` report separate outcomes.
+
+`artifacts.status=retrieved` includes a private local path, byte count, SHA256,
+ZIP media type, and exact target/conversation/response provenance. App/version
+IDs remain null when unobserved; a retrieved archive still returns partial
+status and a nonzero CLI exit code when app identity is unqualified. A filename,
+package version, task ID, or artifact hash is never promoted to app identity.
+An unconfirmed More-menu or Download action preserves the target and returns unknown effect
+custody with `retrySafe=false`; reconcile before another effect, including when Download was never dispatched. Known preflight refusals remain pre-effect. Partial files
+may remain in the private output directory for diagnosis. A final policy reset
+or transport-close failure is reported without discarding verified bytes.
+
+
+Workspace export currently requires a single observed assistant response in the
+conversation. An explicit response ID must match it. Multiple assistant turns
+cannot establish which snapshot the current workspace Download represents, so
+export refuses them; selecting an older response does not establish that binding.
+If response/gateway ownership changes during capture, bytes are not reported as
+an attributed artifact and the outcome remains unknown without automatic retry.
+
+Configured exports also report `materialization`: verified retained workspace
+archives are indexed in the existing run archive, with local archive item IDs
+and selected-scope byte counts. The existing public archive/job interfaces can
+reuse those bytes without another provider download. Missing or changed bytes
+are unavailable rather than silently rehashed or re-exported. See
+[Grok materialization](grok-materialization.md) for coverage limits and the
+still-unqualified referenced-file retrieval gate.
+
+Ops retains a sanitized `publicationInspection` observation with native state,
+native button enablement, verified dismissal and `snapshotBinding=unqualified`.
+It excludes the proposed name, account identity, app identifiers and URLs. Its
+`observedAt` describes the saved observation; it does not prove that the browser
+or workspace is still available. Overall inactive/unknown status is preserved.

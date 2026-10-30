@@ -1,3 +1,4 @@
+import { mergeObservedGrokContext } from "../providers/grokContext.js";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -872,9 +873,10 @@ export abstract class LlmService {
 			? (overrides.configuredUrl ?? null)
 			: this.getConfiguredUrl();
 		const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
+		const grokOwnedBootstrap = this.providerId === "grok";
 		const resolvedTarget = await this.browserService.resolveServiceTarget({
 			serviceId: this.providerId,
-			configuredUrl,
+			configuredUrl: grokOwnedBootstrap ? "about:blank" : configuredUrl,
 			ensurePort: overrides.tabTargetId || hasExplicitEndpoint ? false : options.ensurePort,
 			abortSignal: overrides.abortSignal,
 			onStage: options.onPreflightStage,
@@ -961,7 +963,7 @@ export abstract class LlmService {
 				resolvedOptions.providerTrafficAuthorityFactory =
 					overrides.providerTrafficAuthorityFactory ??
 					createConfiguredProviderTrafficAuthorityFactory({
-						userConfig: this.userConfig,
+						userConfig: this.providerId === "grok" ? {...this.userConfig,auracallProfile:this.resolveActiveProfileName() ?? "default"} : this.userConfig,
 						mutationAudit,
 						provider: this.providerId,
 						managedBrowserProfile,
@@ -2972,8 +2974,11 @@ export abstract class LlmService {
 			const refresh = options?.refresh !== false;
 			if (!refresh) {
 				const cached = await this.cacheStore.readConversationContext(cacheContext, conversationId);
+				controller.signal.throwIfAborted();
 				if (cached.items.messages.length > 0) {
-					return cached.items;
+					return this.providerId === "grok"
+						? { ...cached.items, metadata: { ...cached.items.metadata, contextReadSource: "cache" } }
+						: cached.items;
 				}
 				if (options?.cacheOnly) {
 					throw new Error(
@@ -3008,7 +3013,8 @@ export abstract class LlmService {
 			);
 			lastStage = "provider:readConversationContext.complete";
 			let normalized = this.normalizeConversationContext(context, conversationId);
-			if (typeof options?.projectId === "string" && options.projectId.trim().length > 0) {
+			if (typeof options?.projectId === "string" && options.projectId.trim().length > 0 &&
+				!(this.providerId === "grok" && (scopedListOptions.accountMirrorContextChunk?.startMessageIndex ?? 0) > 0)) {
 				const cachedInstructions = await this.cacheStore.readProjectInstructions(
 					cacheContext,
 					options.projectId.trim(),
@@ -3021,10 +3027,17 @@ export abstract class LlmService {
 					);
 				}
 			}
+			controller.signal.throwIfAborted();
 			lastStage = "cache:writeConversationContext";
-			await this.cacheStore.writeConversationContext(cacheContext, conversationId, normalized);
+			const cachePayload = this.providerId === "grok" && scopedListOptions.accountMirrorContextChunk
+				? mergeObservedGrokContext((await this.cacheStore.readConversationContext(cacheContext, conversationId)).items, normalized)
+				: normalized;
+			controller.signal.throwIfAborted();
+			await this.cacheStore.writeConversationContext(cacheContext, conversationId, cachePayload);
+			controller.signal.throwIfAborted();
 			lastStage = "complete";
 			await writeReceipt("succeeded", null);
+			if (this.providerId === "grok") controller.signal.throwIfAborted();
 			return normalized;
 		} catch (error) {
 			let terminalError = abortError ?? error;
@@ -3068,12 +3081,14 @@ export abstract class LlmService {
 			const outcome: ConversationContextReadOutcome =
 				terminalError instanceof ConversationContextReadError ? terminalError.outcome : "failed";
 			await writeReceipt(outcome, terminalError);
-			if (options?.allowCacheFallback === false || hasUnknownOwnedRequestCleanup(terminalError)) {
+			if (options?.allowCacheFallback === false || (this.providerId === "grok" && controller.signal.aborted) || hasUnknownOwnedRequestCleanup(terminalError)) {
 				throw terminalError;
 			}
 			const cached = await this.cacheStore.readConversationContext(cacheContext, conversationId);
 			if (cached.items.messages.length > 0) {
-				return cached.items;
+				return this.providerId === "grok"
+					? { ...cached.items, metadata: { ...cached.items.metadata, contextReadSource: "cache", freshReadOutcome: outcome } }
+					: cached.items;
 			}
 			throw terminalError;
 		} finally {

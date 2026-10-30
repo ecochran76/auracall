@@ -1,3 +1,4 @@
+import type { GrokIndexProgress } from "../accountMirror/grokIndexProgress.js";
 import type {
 	LiveFollowMaterializationBacklogState,
 	LiveFollowRoutineDecisionState,
@@ -89,6 +90,7 @@ export interface LiveFollowActualTargetRollup {
 }
 
 export interface LiveFollowTargetAccountSummary {
+	grokIndex?: GrokIndexProgress | null;
 	provider: string;
 	tenantKey: string | null;
 	bindingKey: string;

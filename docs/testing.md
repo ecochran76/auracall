@@ -1,3 +1,44 @@
+- ID-less Chat composer (provider-free, Plan0467):
+  `pnpm vitest run tests/browser/chatgptComposerMode.test.ts tests/browser/chatgptToolApproval.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers=1`.
+  Real mode expression covers absent legacy IDs, delayed editor, hidden/disabled,
+  unrelated/dialog and duplicate editors, plus existing explicit Work controls.
+  Offline Chrome real-CSS reconstruction corroborates the red/green; neither
+  fixture nor source tests prove live acceptance. See
+  [diagnosis](dev/notes/2026-10-30-idless-composer-diagnosis.json).
+
+- Independent tab cleanup ownership (provider-free, issue490):
+  `pnpm vitest run tests/browser/configuredChatgptTabMaintenance.test.ts tests/browser/activeChatRetirement.test.ts tests/accountMirror/liveFollowTabCoordinator.test.ts tests/browser-service/tabLeaseRetirement.test.ts tests/browser/tabAffinityMaintenanceLoop.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts --maxWorkers=1`.
+  Public configured maintenance preserves unregistered and legacy census-only
+  idle/lost/retiring targets while retiring actual expired AuraCall work. Cold
+  startup leaves restored peers unclaimed. Native shared-browser acceptance is
+  a separate gate and must attribute the close to the responsible runtime.
+
+- Default app-list waiting diagnostics (provider-free, issue427):
+  `pnpm vitest run tests/cli/developerAppWaitingDiagnostics.test.ts tests/cli/developerAppTerminalExit.test.ts tests/cli/developerAppFailureDiagnostics.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/cli/chatgptDeveloperAppsGovernor.test.ts --maxWorkers=1`.
+  Real CLI action/public operation/adapter/file dispatch with a stalled SDK read
+  proves default stderr progress, verbose continuity, terminal-only JSON and
+  timer disposal using virtual time. Source fixtures do not establish provider
+  response readiness or resolve a native inventory delay.
+
+- Desktop transition crash recovery (provider-free, issue437):
+  `pnpm vitest run tests/browser/desktopTransitionRecovery.test.ts tests/browser/desktopControlGate.test.ts tests/browser/nativeDesktopCdp.test.ts tests/browser/desktopCdpTransport.test.ts --maxWorkers=1`.
+  Real child-process death covers acquisition/release; live-owner, human-token,
+  delayed-contender, foreign-boot, malformed and claimed-recovery controls retain
+  custody. Linux-only crash recovery cases are skipped on other platforms;
+  ordinary gate behavior remains covered separately. No live lock is removed.
+
+- Grok account operation governance (#399, provider-free):
+  `pnpm vitest run tests/browser/grokTrafficGovernance.test.ts tests/browser/configuredProviderTrafficAuthority.test.ts tests/browser-service/ledgerInteractionGovernor.test.ts tests/browser/grokAdapter.test.ts tests/browser/chatgptProofSession.test.ts tests/browser/tabConcurrencyRuntime.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers=2`.
+  Actual GrokService reads, configured authority, isolated durable stores and
+  separate OS processes cover shared caps, restrictive runtime settings, warnings,
+  cancellation and sanitized readback. No live provider request is implied.
+
+- Developer-app first-tab authority (#368, provider-free):
+  `pnpm vitest run tests/cli/chatgptDeveloperAppsGovernor.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts tests/browser/configuredChatgptUtilityAffinity.test.ts --maxWorkers=1`.
+  Real serialized utility dispatch and physical target admission reproduce the
+  missing-governor failure before the repair; list/confirmed refresh exercise
+  exact governed custody. Source fixtures do not qualify live catalog refresh.
+
 - Long ChatGPT result preservation (#134, provider-free):
   `pnpm vitest run tests/browser/chatgptAffinityExecutor.test.ts tests/browser/chatgptAffinityRuntime.test.ts tests/browser/legacyChatgptAffinityRuntime.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts tests/terminalSessionReceipts.test.ts --maxWorkers=1`
   Controlled1703.3-second completions across maintenance preserve the exact answer,
@@ -63,7 +104,14 @@
   `pnpm vitest run tests/browser/chatgptDeveloperAppRefreshTools.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts`.
   Protects exact account/app/endpoint qualification, trusted single activation,
   attributable tool catalog metadata, identity/connection preservation, human
-  approval and uncertain failure outcomes. Three adapter cases cover temporary
+  approval and uncertain failure outcomes. Failure diagnostics distinguish missing
+  expected request, wrong connection, HTTP error and malformed catalog without
+  changing the one-click/no-replay boundary. A fake-timer activation-latency
+  regression protects catalog observation from expiring before governed release.
+  Exact plugin-settings load-error cases terminate immediately before/after
+  activation, preserving zero/one click and unconfirmed/no-retry respectively.
+  One qualified reload can recover settings with account continuity; changed
+  accounts stop without activation and a later error cannot reload again. Three adapter cases cover temporary
   disabled controls and loading account data before/after the one activation.
   Existing replacement tests retain
   delete/recreate coverage. Native acceptance is recorded separately in Plan0433.
@@ -2605,7 +2653,7 @@
 - ChatGPT context/artifact read paths now also have local dialog recovery inside the provider adapter itself: if ChatGPT throws a visible rate-limit modal during `conversations context get` or `conversations artifacts fetch`, Aura-Call dismisses that modal, pauses briefly, and retries once before letting the higher-level persisted guard take over.
 - Remaining Grok breadth work after the acceptance bar is archived in `docs/dev/plans/legacy-archive/0024-2026-04-08-grok-remaining-crud-plan.md`. Conversation-scoped file read/list/cache parity is now live for both project and non-project conversations via `auracall conversations files list <conversationId> --target grok [--project-id <id>]`; any resumed mutation follow-up should treat that archive note as background only.
 - Interactive browser onboarding: `pnpm tsx bin/auracall.ts wizard` (preferred first-run path; detects candidate browser/profile sources, writes a browser-profile-backed `~/.auracall/config.json` entry using `browserFamilies.<name>` + `profiles.<name>.browserFamily`, then hands off to the normal setup/login/verification flow). On WSL, prefer the WSL Chrome choice first and keep that primary setup on the Aura-Call `default` profile; treat Windows Chrome as an advanced/manual-debug path in a separate named profile until a live DevTools endpoint is proven.
-- Browser profile/setup inspection: `pnpm tsx bin/auracall.ts doctor --target grok --local-only --prune-browser-state` reports browser provenance and Chrome Google sign-in separately. Omit `--local-only` to obtain provider-app account evidence and a session-bound provider-session proof. Contract version 2 treats Chrome sign-in as informational only; it cannot satisfy configured-provider-account authorization.
+- Browser profile/setup inspection: `pnpm tsx bin/auracall.ts doctor --target grok --local-only --prune-browser-state` reports browser provenance and Chrome Google sign-in separately. Omit `--local-only` to obtain provider-app account evidence and a session-bound provider-session proof. Contract version 2 treats Chrome sign-in as informational only; it cannot satisfy configured-provider-account authorization. Grok identity reads project bounded structured bootstrap account fields; display labels and unscoped page handles cannot satisfy configured account expectations.
 - Provider-session authority regression: `pnpm vitest run tests/browser/providerSessionAuthority.test.ts tests/browser/providerSessionAuthorityStructure.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/browser/profileDoctor.test.ts`. This provider-free packet covers browser/account cross-products, missing versus conflicting dimensions, ChatGPT vocabulary normalization, process/target invalidation, old-path removal, and persisted redacted proof summaries.
 - Scriptable browser onboarding: `pnpm tsx bin/auracall.ts setup --target grok` (inspects the managed profile, opens the managed login profile if needed, preserves existing managed profile state, then sends a real verification prompt through that same profile). The setup report now includes the detected signed-in account for managed ChatGPT/Grok sessions. Add `--force-reseed-managed-profile` if you explicitly want to rebuild the managed profile from the source profile before login. Add `--json` for a machine-readable `auracall.browser-setup` contract; it embeds the before/after `auracall.browser-doctor` reports plus explicit login/verification step status.
 - Alternate-source bootstrap test: add `--browser-bootstrap-cookie-path <path>` to `auracall setup` / `auracall login` when you want to seed the managed Aura-Call profile from a different Chromium profile (for example Windows Brave) while still launching WSL Chrome at runtime.
@@ -3770,3 +3818,126 @@ public progress reports 557 chars (matching snapshot) and the public collector r
 the full authoritative answer in 10832 ms. Compare non-whitespace content because
 rendered table cells introduce whitespace; retain the initial overly strict oracle
 as a false positive. This does not prove completion before the historical deadline.
+
+- Backend native-cancellation receipt regression (provider-free):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'native request cancellation keeps exact dispatch certainty'`.
+  After-wire success must settle despite native cancellation; rejection and
+  missing acknowledgment retain unknown effects, and before-wire cancellation
+  proves no SDK send. This does not repair historical unknown outcomes.
+
+### Grok files and existing Bots (issues403/407)
+
+Focused presubmit: `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grok402Text.test.ts tests/browser/grok402Orchestration.test.ts tests/browser/grok403Files.test.ts tests/browser/grok407Bots.test.ts tests/browser/grokEcosystemProgress.test.ts tests/browser/grokConfiguredProgressFailure.test.ts tests/http.grokFilesBots.test.ts --maxWorkers=2`.
+
+Controlled CDP fixtures prove exact recent IDs, readiness/error/progress,
+project changes, retained unknown targets, Bot token identity drift before
+preparation and during dispatch, and public request/output parity. Public HTTP
+checks include malformed-input redaction and unchanged prompt whitespace.
+Diagnostic persistence failure cannot erase unknown upload custody. A reproduced
+foreign ready-file counterexample means local-upload acceptance is still open:
+new IDs/counts and native basenames do not bind selected bytes to provider IDs.
+The implementation reports this gap as unconfirmed; do not classify it as a
+successful attachment or a completed issue403. No installed/live provider smoke
+or artifact byte materialization is implied by these fixtures.
+
+
+
+### Grok mirror index coverage (#412, partial source slice)
+
+Run `pnpm vitest run tests/accountMirror/grokIndexCoverage.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/browser/grokHistoryInventory.test.ts`.
+
+Incomplete provider coverage keeps the mirror pending even when rows fit within its limit. A Grok read without coverage evidence also stays partial; explicit failed coverage fails the read instead of turning retained rows into fresh success. These fixtures establish source behavior only. They do not prove account-wide discovery, persisted row/cursor restart recovery, project/Bot scope coverage, installed behavior or a live crawl.
+
+- Grok native Bot lifecycle (#408, focused/provider-free):
+  `pnpm vitest run tests/browser/grok408BotLifecycle.test.ts tests/browser/grok407Bots.test.ts tests/browser/grok444AccountReferences.test.ts --maxWorkers=1`.
+  Sanitized controls derive from the observed New Bot/Settings structure, not
+  copied private DOM. Coverage includes animated aria-label selection, singular
+  Bot route, exact ID/readback, preserved Title, unavailable Instructions/Model
+  before mutation, and durable ambiguous Save reconciliation without replay.
+  These checks do not supply the missing native Instructions/Model controls or
+  close #408's original full criteria.
+App inventory latency: `tests/browser/chatgptDeveloperAppReadiness.test.ts` drives
+the real adapter with visible Plugins failure text observed on the live page.
+Immediate and delayed main failures terminate, while hidden/sidebar-only failures
+remain nonblocking. This proves prompt failure detection, not faster successful
+inventory or attribution of the historical347.649s read (issue464/Plan0460).
+
+Ledger admission serialization (issue464): run `tests/browser-service/interactionLedger.test.ts`
+with `tests/browser-service/providerTrafficGovernor.test.ts` and
+`tests/browser/backendRequestAdmission.test.ts`. The backend-burst case bounds
+encoding overhead and durable-write count while retaining account admission.
+Legacy indented snapshots retain all records, warnings and event history across
+restart and a cross-instance race. Performance replay timings are supporting
+measurements, not default wall-clock test assertions or a product latency SLO.
+
+The ledger suite also checks warm self-owned admissions, peer replacement and
+same-size edit, file deletion, aborted mutation invalidation, metadata errors
+after successful commit and complete append-only event serialization. Reuse
+must never skip the cross-process lock or a durable publication boundary.
+
+`tests/browser/chatgptDeveloperAppDirectInventory.test.ts` exercises the real
+inventory adapter and its browser expression in a VM with HTTP fixtures. CLI list
+selects API transport explicitly; UI lifecycle observation remains the default
+for mutation preflights. Cover fresh email/workspace mismatch, unavailable
+session, HTTP/malformed inventory, optional linked failure, generic UI retry,
+provider rate limits and human verification. No extra inventory navigation or
+browser credentials may appear in returned data. Source-native and installed
+acceptance remain separate receipts.
+
+
+- Opt-in app-list performance report (Plan0461, provider-free):
+  `pnpm vitest run tests/browser/browserPerformanceDiagnostics.test.ts tests/cli/developerAppWaitingDiagnostics.test.ts --maxWorkers=1`
+  proves aggregate churn/timing, redaction by allowlisting, bounded incomplete
+  tracking, frozen reports, opt-in stderr-only reporting and failure output.
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'owned native-style backend burst' --maxWorkers=1`
+  drives the actual owned admission and response/failure listeners through a fake
+  CDP boundary, preserving request continuation and cleanup. Installed/live
+  traffic coverage is separate; these commands contact no provider.
+
+- Independent TTL cleanup after a lost-tab deferral (Plan0463):
+  `pnpm vitest run tests/browser/activeChatRetirement.test.ts tests/browser/configuredChatgptTabMaintenance.test.ts tests/browser-service/tabLeaseRetirement.test.ts --maxWorkers=1`.
+  Real configured maintenance with the public registry proves an active/unknown
+  expired lost tab remains open while a separate inactive expired tab closes.
+  Existing ownership, endpoint, audit and active-response controls remain covered.
+
+### Grok invocation, inactive Build state and materialization restart
+
+`grok-connectors --action invoke --target-id <retained-target> --id <observed-id>
+--name <exact-name> --endpoint <exact-https-mcp-url> --expected-provider-account
+<typed-account-reference> --prompt <exact-prompt> --yes` submits through Grok
+once after exact account, endpoint and enabled native composer-row checks.
+CLI, HTTP and `grok_connectors` use the same invocation request. It does not
+enable disabled Connectors or substitute another service. The private durable
+intent fence is written before submit; repeating an uncertain request observes
+its retained target without another submission. Assistant text is returned as
+unconfirmed until native tool/result attribution is qualified. Sending mail is
+a distinct effect and is not part of the acceptance read/draft canary.
+
+Exact current Files state `inactive` makes Build inspection unavailable and
+blocks export before capture/control activation. Historical overflow visibility
+is not current workspace readiness; no automatic revival occurs.
+
+Grok history materialization persists completed attempt receipts, remaining
+budgets and an in-flight checkpoint before provider work. Restart retains
+completed progress and unknown in-flight custody; an explicit new request is
+required and unknown work is never automatically replayed. Monitoring exposes
+a bounded cursor summary; full receipts remain on the job/MCP result.
+
+### Grok native publication-controls inspection (2026-10-28)
+
+Focused provider-free selection:
+`pnpm vitest run tests/browser/grok411PublicationControls.test.ts tests/browser/grok410Build.test.ts tests/http.grokBuild.test.ts`.
+The public request-schema red rejected the explicit flag; the native observer red
+returned unobserved instead of the actual idle controller. The greens accept the
+strict opt-in request and read native state without invoking provider callbacks.
+Committed-root and closed-overlay failures return no observed controls. Native
+acceptance is separate: source execution against the retained managed target
+must retain exact account/response identity, observe the controller and verify
+dialog dismissal. No generation, publication, provider ID aliases or installed
+runtime claim follows from these tests.
+
+The Ops public-status regression was red when `publicationInspection` disappeared
+from the saved Build summary, then green after the strict aggregate projection.
+`pnpm vitest run tests/http.grokBuild.test.ts tests/browser/grokEcosystemProgress.test.ts tests/browser/grok411PublicationControls.test.ts`
+passed7checks. The projection retains native state/button/dismissal/binding flags
+and omits the proposed name, response content and URLs.

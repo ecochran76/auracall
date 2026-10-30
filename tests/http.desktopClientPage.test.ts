@@ -14,6 +14,8 @@ test("browser rail hides allocation records, groups browser profiles and launche
 		page.on("pageerror", (error) => errors.push(String(error)));
 		const launches: unknown[] = [];
 		let launched = false;
+		let recallable = false;
+		const recalls: unknown[] = [];
 		await page.setRequestInterception(true);
 		page.on("request", (request) => {
 			const url = new URL(request.url());
@@ -23,6 +25,16 @@ test("browser rail hides allocation records, groups browser profiles and launche
 					contentType: "text/html",
 					body: renderDesktopClientPage(),
 				});
+			if (url.pathname.endsWith("/recall")) {
+				recalls.push(JSON.parse(request.postData() ?? "{}"));
+				recallable = false;
+				launched = true;
+				return void request.respond({
+					status: 200,
+					contentType: "application/json",
+					body: JSON.stringify({ desktopName: "running", browserId: "browser-two" }),
+				});
+			}
 			if (url.pathname.endsWith("/wake")) {
 				launches.push(JSON.parse(request.postData() ?? "{}"));
 				launched = true;
@@ -71,7 +83,8 @@ test("browser rail hides allocation records, groups browser profiles and launche
 								provider: "grok",
 								accountKey: "account",
 								accountLabel: "Personal account",
-								state: launched ? "ready" : "dormant",
+								state: recallable ? "unavailable" : launched ? "ready" : "dormant",
+								...(recallable ? { recallToken: "a".repeat(64) } : {}),
 								wakeable: !launched,
 								...(launched ? { desktopName: "running", browserId: "browser-two" } : {}),
 							},
@@ -124,6 +137,19 @@ test("browser rail hides allocation records, groups browser profiles and launche
 		expect(await page.$eval(".retry-view", (node) => getComputedStyle(node).display)).toBe("block");
 		await page.click(".retry-view");
 		await page.waitForSelector("#native-view section[data-state=connecting]");
+		recallable = true;
+		launched = false;
+		await page.reload();
+		await page.waitForSelector('[data-runtime-profile="grok"] .recall');
+		page.once("dialog", (dialog) => void dialog.dismiss());
+		await page.click('[data-runtime-profile="grok"] .recall');
+		expect(recalls).toEqual([]);
+		page.once("dialog", (dialog) => void dialog.accept());
+		await page.click('[data-runtime-profile="grok"] .recall');
+		await page.waitForFunction(
+			() => !document.querySelector('[data-runtime-profile="grok"] .recall'),
+		);
+		expect(recalls).toEqual([{ recallToken: "a".repeat(64), confirmed: true }]);
 		expect(errors).toEqual([]);
 	} finally {
 		await browser.close();

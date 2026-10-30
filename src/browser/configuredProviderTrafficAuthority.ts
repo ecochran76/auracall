@@ -11,15 +11,23 @@ import type {
 	TabLeaseClaim,
 	TabLeaseScope,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import { getCurrentTabLeaseOwnerIdentity } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { resolveConfiguredServiceAccountId } from "../config/serviceAccountIdentity.js";
 import type { ResolvedUserConfig } from "../config.js";
 import {
-	resolveChatgptBackendRequestsPerMinute,
+	resolveGrokBackendRequestBudgetWaitMs,
+	resolveGrokBackendRequestsPerMinute,
+	resolveGrokOperationBudgetWaitMs,
+	resolveGrokOperationsPerMinute,
+} from "../runtime/grokTrafficLimits.js";
+import {
 	resolveChatgptBackendRequestBudgetWaitMs,
+	resolveChatgptBackendRequestsPerMinute,
 	resolveChatgptInteractionsPerMinute,
 } from "../runtime/tenantExecutionLimits.js";
 import { probeChatgptRateLimitWarning } from "./chatgptProviderTraffic.js";
 import { recordChatgptRateLimitDetection } from "./chatgptRateLimitGuard.js";
+import { probeGrokRateLimitWarning } from "./grokProviderTraffic.js";
 import {
 	createOwnedBackendRequestAuthority,
 	validateBackendRequestLimit,
@@ -40,19 +48,52 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 	now?: () => Date;
 	backendRequestLimit?: number;
 }): ProviderTrafficAuthorityFactory {
-	const backendRequestLimit =
+	let backendRequestLimit =
 		input.backendRequestLimit ??
 		(input.provider === "chatgpt"
 			? resolveChatgptBackendRequestsPerMinute(
 					input.userConfig as Record<string, unknown>,
 					input.userConfig.auracallProfile?.trim() || "default",
 				)
-			: undefined);
-	const budgetWaitTimeoutMs = resolveChatgptBackendRequestBudgetWaitMs(
-		input.userConfig as Record<string, unknown>,
-		input.userConfig.auracallProfile?.trim() || "default",
-	);
+			: input.provider === "grok"
+				? resolveGrokBackendRequestsPerMinute(
+						input.userConfig as Record<string, unknown>,
+						input.userConfig.auracallProfile?.trim() || "default",
+					)
+				: undefined);
+	if (input.provider === "grok") {
+		const configuredLimit = resolveGrokBackendRequestsPerMinute(
+			input.userConfig as Record<string, unknown>,
+			input.userConfig.auracallProfile?.trim() || "default",
+		);
+		if (configuredLimit !== undefined)
+			backendRequestLimit = Math.min(backendRequestLimit ?? configuredLimit, configuredLimit);
+	}
+	const budgetWaitTimeoutMs =
+		input.provider === "grok"
+			? resolveGrokBackendRequestBudgetWaitMs(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				)
+			: resolveChatgptBackendRequestBudgetWaitMs(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				);
 	validateBackendRequestLimit(backendRequestLimit);
+	const grokOperationLimit =
+		input.provider === "grok"
+			? resolveGrokOperationsPerMinute(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				)
+			: null;
+	const grokOperationWaitMs =
+		input.provider === "grok"
+			? resolveGrokOperationBudgetWaitMs(
+					input.userConfig as Record<string, unknown>,
+					input.userConfig.auracallProfile?.trim() || "default",
+				)
+			: 0;
 	const now = input.now ?? (() => new Date());
 	const runtime = createBrowserTabConcurrencyRuntime(input.userConfig);
 	if (!runtime.registry || !runtime.ledger) {
@@ -79,19 +120,58 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 
 	return {
 		backendRequestAdmissionEnabled:
-			input.provider === "chatgpt" && backendRequestLimit !== undefined,
-		async acquire({ targetId }) {
-			const operationId = `provider-traffic-${randomUUID()}`;
+			input.provider === "grok" ||
+			(input.provider === "chatgpt" && backendRequestLimit !== undefined),
+		async acquire({ targetId, borrowedLease }) {
+			const operationId = borrowedLease?.claim.operationId ?? `provider-traffic-${randomUUID()}`;
 			const workloadId = `provider-client:${operationId}`;
-			const reserved = await registry.reserve({
-				scope,
-				targetId: requireValue(targetId, "target ID"),
-				workload: { kind: "ephemeral", operationId },
-				operationId,
-				now: now().toISOString(),
-				idleTtlMs: PROVIDER_TRAFFIC_IDLE_TTL_MS,
-				absoluteTtlMs: PROVIDER_TRAFFIC_ABSOLUTE_TTL_MS,
-			});
+			if (input.provider === "grok") {
+				const legacy = (await registry.list({ scope })).find(
+					(lease) =>
+						lease.state !== "released" &&
+						!lease.exclusiveGroup &&
+						lease.workload.kind === "ephemeral" &&
+						lease.workload.operationId === "grok-serialized-utility",
+				);
+				if (legacy)
+					throw new Error("Legacy Grok utility custody must settle before new utility admission.");
+			}
+			const borrowed = borrowedLease
+				? (await registry.list({ scope, states: ["active"] })).find(
+						(lease) => lease.leaseId === borrowedLease.claim.leaseId,
+					)
+				: undefined;
+			if (
+				borrowedLease &&
+				(!borrowed ||
+					input.provider !== "grok" ||
+					borrowed.exclusiveGroup !== "grok-serialized-utility" ||
+					borrowed.targetId !== targetId ||
+					borrowed.ownerProcessId !== getCurrentTabLeaseOwnerIdentity().processId ||
+					borrowed.ownerInstanceId !== getCurrentTabLeaseOwnerIdentity().instanceId ||
+					borrowed.revision !== borrowedLease.claim.revision ||
+					borrowed.ownerOperationId !== borrowedLease.claim.operationId ||
+					Object.entries(scope).some(
+						([key, value]) => borrowedLease.scope[key as keyof TabLeaseScope] !== value,
+					))
+			)
+				throw new Error("Borrowed provider traffic lease does not match active target custody.");
+			const reserved =
+				borrowed && borrowedLease
+					? { ok: true as const, value: { lease: borrowed, claim: borrowedLease.claim } }
+					: await registry.reserve({
+							scope,
+							targetId: requireValue(targetId, "target ID"),
+							workload: {
+								kind: "ephemeral",
+								operationId: input.provider === "grok" ? "grok-serialized-utility" : operationId,
+							},
+							operationId,
+							now: now().toISOString(),
+							idleTtlMs: PROVIDER_TRAFFIC_IDLE_TTL_MS,
+							absoluteTtlMs: PROVIDER_TRAFFIC_ABSOLUTE_TTL_MS,
+							...(input.provider === "grok" ? { exclusiveGroup: "grok-serialized-utility" } : {}),
+						});
 			if (!reserved.ok) {
 				throw new Error(`Provider traffic lease reservation failed: ${reserved.conflict.kind}.`);
 			}
@@ -110,7 +190,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 				}
 			};
 			const backendRequests =
-				input.provider === "chatgpt" && backendRequestLimit !== undefined
+				input.provider === "grok" ||
+				(input.provider === "chatgpt" && backendRequestLimit !== undefined)
 					? createOwnedBackendRequestAuthority({
 							ledger,
 							scope: {
@@ -123,6 +204,7 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 							operationId,
 							tabLeaseId: reserved.value.lease.leaseId,
 							backendRequestLimit,
+							observeWithoutLocalCeiling: input.provider === "grok",
 							budgetWaitTimeoutMs,
 							abortSignal: input.baseOptions.abortSignal,
 							assertOwnedLease,
@@ -130,6 +212,8 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 						})
 					: undefined;
 			const interactionGovernor = createLedgerBackedBrowserInteractionGovernor({
+				admissionWaitTimeoutMs: grokOperationWaitMs,
+				assertAdmission: assertOwnedLease,
 				ledger,
 				scope: { provider: input.provider, tenantKey, runtimeProfileId, managedBrowserProfile },
 				workloadId,
@@ -145,7 +229,9 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 									input.userConfig as Record<string, unknown>,
 									runtimeProfileId,
 								)
-							: null,
+							: input.provider === "grok"
+								? grokOperationLimit
+								: null,
 				},
 				baseGovernor:
 					input.baseOptions.interactionGovernor ??
@@ -167,12 +253,18 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 				settleInteraction: (settlement) => interactionGovernor.finish(settlement),
 				assertLease: assertOwnedLease,
 				admitBackendRequest:
-					input.provider === "chatgpt" && backendRequestLimit !== undefined
+					input.provider === "grok" ||
+					(input.provider === "chatgpt" && backendRequestLimit !== undefined)
 						? backendRequests?.admit
 						: undefined,
-				probeWarning: input.provider === "chatgpt" ? probeChatgptRateLimitWarning : undefined,
-				persistWarning:
+				probeWarning:
 					input.provider === "chatgpt"
+						? probeChatgptRateLimitWarning
+						: input.provider === "grok"
+							? probeGrokRateLimitWarning
+							: undefined,
+				persistWarning:
+					input.provider === "chatgpt" || input.provider === "grok"
 						? async (warning) => {
 								const observedAt = now();
 								await ledger.recordProviderWarning({
@@ -187,13 +279,14 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 									observedAt: observedAt.toISOString(),
 									cooldownUntil: warning.cooldownUntil,
 								});
-								await recordChatgptRateLimitDetection({
-									profileName: runtimeProfileId,
-									managedProfileDir: managedBrowserProfile,
-									action: `provider-traffic:${operationId}`,
-									reason: warning.reason,
-									now: observedAt.getTime(),
-								});
+								if (input.provider === "chatgpt")
+									await recordChatgptRateLimitDetection({
+										profileName: runtimeProfileId,
+										managedProfileDir: managedBrowserProfile,
+										action: `provider-traffic:${operationId}`,
+										reason: warning.reason,
+										now: observedAt.getTime(),
+									});
 							}
 						: undefined,
 			});
@@ -208,6 +301,11 @@ export function createConfiguredProviderTrafficAuthorityFactory(input: {
 						settlement.effectState ??
 						"settled";
 					await interactionGovernor.close({ ...settlement, effectState });
+					if (borrowedLease) {
+						if (effectState === "outcome-unknown")
+							throw new Error("Borrowed provider traffic request cleanup remains uncertain.");
+						return;
+					}
 					const used = await registry.recordMeaningfulUse({
 						claim,
 						now: now().toISOString(),

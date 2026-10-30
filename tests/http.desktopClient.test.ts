@@ -41,6 +41,10 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 						wakeable: true,
 					},
 				],
+				recallProfile: async (id, token) => {
+					calls.push(`recall:${id}:${token}`);
+					return { runtimeProfileId: id, desktopName: "research", browserId: "recalled-browser" };
+				},
 				wakeProfile: async (id, desktopName) => {
 					calls.push(`wake:${id}:${desktopName}`);
 					return {
@@ -184,6 +188,34 @@ test("the dedicated desktop app serves an owned inventory and passive frames thr
 		});
 		expect(calls.at(-1)).toBe("wake:writer:research");
 		refusal = new NativeDesktopControlError("Another controller owns this desktop.", false);
+		const recallUrl = `${base}/v1/desktops/profiles/writer/recall`;
+		const recallBody = JSON.stringify({ recallToken: "a".repeat(64), confirmed: true });
+		expect((await fetch(recallUrl, { method: "POST", body: recallBody })).status).toBe(401);
+		expect(
+			(
+				await fetch(recallUrl, {
+					method: "POST",
+					body: recallBody,
+					headers: { authorization: "Bearer scoped-api-key" },
+				})
+			).status,
+		).toBe(403);
+		const beforeRecall = calls.length;
+		expect(
+			(
+				await fetch(recallUrl, {
+					method: "POST",
+					body: JSON.stringify({ recallToken: "a".repeat(64) }),
+					headers: operatorHeaders,
+				})
+			).status,
+		).toBe(409);
+		expect(calls.length).toBe(beforeRecall);
+		expect(
+			(await fetch(recallUrl, { method: "POST", body: recallBody, headers: operatorHeaders }))
+				.status,
+		).toBe(200);
+		expect(calls.at(-1)).toBe(`recall:writer:${"a".repeat(64)}`);
 		const rejected = await fetch(controlUrl, { method: "POST", body, headers: operatorHeaders });
 		expect(rejected.status).toBe(409);
 		expect(await rejected.json()).toMatchObject({ error: { claimRetained: false } });

@@ -42,14 +42,15 @@ export function createOwnedBackendRequestAuthority(input: {
 	workloadId: string;
 	operationId: string;
 	tabLeaseId: string;
-	backendRequestLimit: number;
+	backendRequestLimit?: number;
+	observeWithoutLocalCeiling?: boolean;
 	parentReservationId?: string;
 	budgetWaitTimeoutMs?: number;
 	abortSignal?: AbortSignal;
 	assertOwnedLease: () => Promise<void>;
 	now?: () => Date;
 }) {
-	if (input.backendRequestLimit === undefined)
+	if (input.backendRequestLimit === undefined && !input.observeWithoutLocalCeiling)
 		throw new Error("Owned backend request authority requires an explicit limit.");
 	validateBackendRequestLimit(input.backendRequestLimit);
 	const budgetWaitTimeoutMs = input.budgetWaitTimeoutMs ?? 0;

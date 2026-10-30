@@ -78,6 +78,7 @@ export type HistoryMaterializationAssetKind = "artifacts" | "files" | "media" | 
 export type HistoryMaterializationAssetSource = "account-library";
 
 export interface HistoryMaterializationCreateRequest {
+  acknowledgeTargetDefaultReset?: true;
 	provider?: ProviderId | null;
 	runtimeProfile?: string | null;
 	browserProfile?: string | null;
@@ -299,6 +300,15 @@ export interface HistoryMaterializationProviderListOptions extends BrowserProvid
 	skipFeatureSignature?: boolean;
 }
 
+/** Progress within an explicit caller-selected frontier, never provider-wide coverage. */
+export interface HistoryMaterializationSelectedFrontier {
+	attemptedConversationIds: string[];
+	unattemptedConversationIds: string[];
+	providerHistoryComplete: false;
+	assetCoverage: "unknown";
+	budget: { targetLimit: number; targetsConsumed: number; assetsRemaining: number };
+}
+
 export interface HistoryMaterializationResult {
 	object: "history_materialization_result";
 	generatedAt: string;
@@ -309,6 +319,7 @@ export interface HistoryMaterializationResult {
 	entries: HistoryMaterializationManifestEntry[];
 	archiveItems: RunArchiveItem[];
 	pendingAssetCount?: number;
+	selectedFrontier?: HistoryMaterializationSelectedFrontier;
 	snapshotRefreshes?: HistoryMaterializationSnapshotRefresh[] | null;
 	attempts?: HistoryMaterializationAttemptReceipt[] | null;
 	scrapeTelemetry?: BrowserScrapeTelemetrySnapshot | null;
@@ -352,6 +363,23 @@ export interface HistoryMaterializationCandidateFunnel {
 	selected: number;
 }
 
+export interface HistoryMaterializationCursor {
+	version: 1;
+	checkpointedAt: string;
+	budgetScope: "completed_attempts_only";
+	inFlight: {
+		conversationId: string;
+		index: number;
+		budgetBefore: HistoryMaterializationAttemptReceipt["budgetBefore"];
+	} | null;
+	completedAttemptCount: number;
+	remainingConversationCount: number | null;
+	resumePolicy: "explicit_request_required";
+	attempts: HistoryMaterializationAttemptReceipt[];
+	remainingConversationIds: string[] | null;
+	budget: HistoryMaterializationAttemptReceipt["budgetBefore"];
+}
+
 export interface HistoryMaterializationJob {
 	object: "history_materialization_job";
 	id: string;
@@ -385,6 +413,7 @@ export interface HistoryMaterializationJob {
 	} | null;
 	message: string;
 	scheduler?: HistoryMaterializationJobSchedulerDiagnostics | null;
+	materializationCursor?: HistoryMaterializationCursor | null;
 }
 
 export function projectHistoryMaterializationJobForMonitoring(
@@ -429,6 +458,9 @@ export function projectHistoryMaterializationJobForMonitoring(
 		error: job.error ? { ...job.error, message: job.error.message.slice(0, 500) } : null,
 		message: job.message.slice(0, 500),
 		scheduler: job.scheduler,
+		materializationCursor: job.materializationCursor
+			? { ...job.materializationCursor, attempts: [], remainingConversationIds: null }
+			: null,
 	};
 }
 
@@ -657,9 +689,28 @@ function createHistoryMaterializationAttemptExecutor(input: {
 		request: HistoryMaterializationCreateRequest,
 	) => HistoryMaterializationProviderWorkContext;
 	now: () => Date;
+	beginAttempt: (attempt: HistoryMaterializationAttempt) => Promise<void>;
+	checkpoint: (
+		attempt: HistoryMaterializationAttempt,
+		outcome: HistoryMaterializationAttemptOutcome,
+	) => Promise<void>;
 }): HistoryMaterializationAttemptExecutor {
 	return {
 		async execute(attempt) {
+			const finish = async (
+				result: HistoryMaterializationResult,
+				writes: HistoryMaterializationAttemptReceipt["evidence"]["writes"],
+			) => {
+				const outcome = projectHistoryMaterializationAttemptOutcome(
+					attempt,
+					result,
+					writes,
+					input.now,
+				);
+				if (attempt.candidate.target.provider === "grok") await input.checkpoint(attempt, outcome);
+				return outcome;
+			};
+			if (attempt.candidate.target.provider === "grok") await input.beginAttempt(attempt);
 			const jobContext = input.providerWorkContext(attempt.jobId, attempt.request);
 			const context: HistoryMaterializationProviderWorkContext = {
 				...jobContext,
@@ -721,12 +772,7 @@ function createHistoryMaterializationAttemptExecutor(input: {
 						shouldReuseCollectorSnapshot(attempt.candidate.target, attempt.request)
 					) {
 						result = initialMaterialization;
-						return projectHistoryMaterializationAttemptOutcome(
-							attempt,
-							result,
-							evidenceWrites,
-							input.now,
-						);
+						return finish(result, evidenceWrites);
 					}
 				}
 				let snapshotRefresh: HistoryMaterializationSnapshotRefresh;
@@ -760,12 +806,7 @@ function createHistoryMaterializationAttemptExecutor(input: {
 					result = withSnapshotRefreshPhase(materialization, snapshotRefresh);
 				}
 			}
-			return projectHistoryMaterializationAttemptOutcome(
-				attempt,
-				result,
-				evidenceWrites,
-				input.now,
-			);
+			return finish(result, evidenceWrites);
 		},
 	};
 }
@@ -1024,6 +1065,76 @@ export function createHistoryMaterializationService(
 		recordConversationEvidence,
 		providerWorkContext,
 		now,
+		beginAttempt: async (attempt) => {
+			const job = await store.readJob(attempt.jobId);
+			if (!job || job.status !== "running")
+				throw new Error("Materialization attempt lost running job ownership.");
+			const previous = job.materializationCursor;
+			await store.upsertJob({
+				...job,
+				materializationCursor: {
+					version: 1,
+					checkpointedAt: now().toISOString(),
+					budgetScope: "completed_attempts_only",
+					resumePolicy: "explicit_request_required",
+					attempts: previous?.attempts ?? [],
+					completedAttemptCount: previous?.attempts.length ?? 0,
+					remainingConversationIds:
+						previous?.remainingConversationIds ?? job.request.conversationIds ?? null,
+					remainingConversationCount:
+						previous?.remainingConversationIds?.length ??
+						job.request.conversationIds?.length ??
+						null,
+					budget: previous?.budget ?? attempt.budgetBefore,
+					inFlight: {
+						conversationId: attempt.candidate.target.conversationId,
+						index: attempt.candidate.index,
+						budgetBefore: attempt.budgetBefore,
+					},
+				},
+			});
+		},
+		checkpoint: async (attempt, outcome) => {
+			const job = await store.readJob(attempt.jobId);
+			if (!job || job.status !== "running")
+				throw new Error("Materialization checkpoint lost running job ownership.");
+			const attempts = [...(job.materializationCursor?.attempts ?? []), outcome.receipt];
+			const selected = job.request.conversationIds;
+			const consumed =
+				outcome.receipt.budgetBefore.targetsConsumed + (outcome.accounting.targetConsumed ? 1 : 0);
+			const remaining = outcome.receipt.budgetBefore.assetsRemaining;
+			await store.upsertJob({
+				...job,
+				updatedAt: outcome.receipt.generatedAt,
+				materializationCursor: {
+					version: 1,
+					checkpointedAt: outcome.receipt.generatedAt,
+					budgetScope: "completed_attempts_only",
+					inFlight: null,
+					completedAttemptCount: attempts.length,
+					remainingConversationCount: selected
+						? selected.filter(
+								(id) => !attempts.some((receipt) => receipt.target.conversationId === id),
+							).length
+						: null,
+					resumePolicy: "explicit_request_required",
+					attempts,
+					remainingConversationIds: selected
+						? selected.filter(
+								(id) => !attempts.some((receipt) => receipt.target.conversationId === id),
+							)
+						: null,
+					budget: {
+						targetLimit: outcome.receipt.budgetBefore.targetLimit,
+						targetsConsumed: consumed,
+						assetsRemaining:
+							remaining === null
+								? null
+								: Math.max(0, remaining - outcome.accounting.assetsAttempted),
+					},
+				},
+			});
+		},
 	});
 	const materializeMediaGeneration =
 		deps.materializeMediaGeneration ??
@@ -1267,7 +1378,7 @@ export function createHistoryMaterializationService(
 				}
 				const completedAt = now().toISOString();
 				const completed: HistoryMaterializationJob = {
-					...running,
+					...(current ?? running),
 					status:
 						result.status === "failed"
 							? "failed"
@@ -1297,7 +1408,7 @@ export function createHistoryMaterializationService(
 				}
 				const completedAt = now().toISOString();
 				const failed: HistoryMaterializationJob = {
-					...running,
+					...(current ?? running),
 					status: "failed",
 					updatedAt: completedAt,
 					completedAt,
@@ -2814,7 +2925,7 @@ async function materializeReconciliation(input: {
 			return 0;
 		});
 		for (const conversationId of orderedConversationIds) {
-			if (consumedTargetBudget >= maxTargets) break;
+			if (consumedTargetBudget >= maxTargets || remainingAssetBudget <= 0) break;
 			const assetFamilySignatures = selectedCatalogAssetFamilySignatures.get(conversationId) ?? [];
 			if (
 				assetFamilySignatures.length > 0 &&
@@ -2843,7 +2954,7 @@ async function materializeReconciliation(input: {
 			};
 			const outcome = await input.materializationAttemptExecutor.execute({
 				jobId: input.jobId,
-				request: input.request,
+				request: { ...input.request, maxItems: remainingAssetBudget },
 				candidate: {
 					origin: "selected_conversation_id",
 					index: selectedCandidates,
@@ -2860,10 +2971,12 @@ async function materializeReconciliation(input: {
 			attemptReceipts.push(outcome.receipt);
 			selectedCandidates += 1;
 			if (outcome.accounting.candidateMaterialized) materializedCandidates += 1;
-			if (outcome.accounting.providerGuardObserved) break;
+			remainingAssetBudget =
+				decrementRemaining(remainingAssetBudget, outcome.accounting.assetsAttempted) ?? 0;
 			if (outcome.accounting.targetConsumed) {
 				consumedTargetBudget += 1;
 			}
+			if (outcome.accounting.providerGuardObserved) break;
 		}
 	} else if (
 		selectedKinds.includes("artifacts") ||
@@ -3097,6 +3210,25 @@ async function materializeReconciliation(input: {
 		archiveItems,
 		snapshotRefreshes,
 		attempts: attemptReceipts,
+		...(selectedConversationIds.length > 0
+			? {
+					selectedFrontier: {
+						attemptedConversationIds: attemptReceipts.map(
+							(attempt) => attempt.target.conversationId,
+						),
+						unattemptedConversationIds: selectedConversationIds.filter(
+							(id) => !attemptReceipts.some((attempt) => attempt.target.conversationId === id),
+						),
+						providerHistoryComplete: false as const,
+						assetCoverage: "unknown" as const,
+						budget: {
+							targetLimit: maxTargets,
+							targetsConsumed: consumedTargetBudget,
+							assetsRemaining: remainingAssetBudget,
+						},
+					},
+				}
+			: {}),
 		metrics,
 		phases: {
 			snapshotRefresh: snapshotRefreshes.length === 1 ? snapshotRefreshes[0] : null,
@@ -4306,7 +4438,7 @@ async function materializeConversationTarget(input: {
 		},
 	);
 	const listOptions = {
-		...resolveHistoryMaterializationProviderListOptions(input.target),
+		...resolveHistoryMaterializationProviderListOptions(input.target, input.request),
 		...(input.interactionGovernor ? { interactionGovernor: input.interactionGovernor } : {}),
 		...createHistoryMaterializationTrafficOptions(
 			input.target.conversationId,
@@ -4543,6 +4675,7 @@ function normalizeCreateRequest(
 		maxItems: normalizeMaxItems(request.maxItems),
 		providerWorkTimeoutMs: normalizeProviderWorkTimeoutMs(request.providerWorkTimeoutMs),
 		force: request.force === true,
+		...(request.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}),
 	};
 	if (normalized.conversationId && !normalized.provider) {
 		throw new HistoryMaterializationError("Provider is required when conversationId is provided.");
@@ -6616,6 +6749,7 @@ function normalizeConversationIds(value: string[] | null | undefined): string[] 
 
 export function resolveHistoryMaterializationProviderListOptions(
 	target: HistoryMaterializationTarget,
+	request?: Pick<HistoryMaterializationCreateRequest, "acknowledgeTargetDefaultReset">,
 ): HistoryMaterializationProviderListOptions {
 	const providerConversationUrl =
 		target.providerConversationUrl ??
@@ -6623,6 +6757,8 @@ export function resolveHistoryMaterializationProviderListOptions(
 		undefined;
 	return {
 		configuredUrl: resolveHistoryMaterializationConfiguredUrl(target, providerConversationUrl),
+		...(target.provider === "grok" && request?.acknowledgeTargetDefaultReset === true
+			? { grokReferenceDownload: { acknowledgeTargetDefaultReset: true as const } } : {}),
 		tabUrl: providerConversationUrl,
 		projectId: target.projectId ?? undefined,
 		allowNavigation: true,

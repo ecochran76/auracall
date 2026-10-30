@@ -1,3 +1,4 @@
+import { grokIndexProgressSchema } from "./grokIndexProgressSchema.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
@@ -88,6 +89,7 @@ const accountMirrorStatusEntryShape = z.object({
 	}),
 	metadataEvidence: z
 		.object({
+			grokIndex: grokIndexProgressSchema,
 			identitySource: z.string().nullable(),
 			projectSampleIds: z.array(z.string()),
 			conversationSampleIds: z.array(z.string()),

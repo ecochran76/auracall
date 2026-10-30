@@ -1,0 +1,128 @@
+// biome-ignore-all lint/style/useNamingConvention: Public Zod schemas follow repository naming.
+import { z } from "zod";
+import {
+	type GrokBuildResult,
+	type GrokBuildService,
+	grokBuildUnknown,
+} from "../browser/grokBuildService.js";
+import { BrowserAutomationError } from "../oracle/errors.js";
+
+const retainedId = z.string().regex(/^[A-Za-z0-9:_-]{1,200}$/);
+export const GrokBuildRequestSchema = z.discriminatedUnion("action", [
+	z
+		.object({
+			action: z.literal("export"),
+			targetId: retainedId,
+			conversationId: retainedId,
+			responseId: retainedId.optional(),
+			outputDir: z.string().min(1).max(4096),
+			acknowledgeTargetDefaultReset: z.literal(true),
+			runtimeProfile: z.string().trim().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			action: z.literal("inspect"),
+			inspectPublicationControls: z.literal(true).optional(),
+			targetId: retainedId,
+			conversationId: retainedId,
+			responseId: retainedId.optional(),
+			runtimeProfile: z.string().trim().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			action: z.literal("discover"),
+			runtimeProfile: z.string().trim().min(1).max(200).optional(),
+		})
+		.strict(),
+	z
+		.object({
+			action: z.literal("generate"),
+			prompt: z
+				.string()
+				.min(1)
+				.max(100000)
+				.refine((value) => value.trim().length > 0),
+			confirmed: z.literal(true),
+			timeoutMs: z.number().int().min(1).max(7200000).optional(),
+			runtimeProfile: z.string().trim().min(1).max(200).optional(),
+		})
+		.strict(),
+]);
+export type GrokBuildRequest = z.infer<typeof GrokBuildRequestSchema>;
+export type GrokBuildServiceResolver = (
+	request: GrokBuildRequest,
+) => GrokBuildService | Promise<GrokBuildService>;
+export async function runGrokBuildCommand(
+	input: unknown,
+	service: GrokBuildService,
+): Promise<GrokBuildResult> {
+	const parsed = GrokBuildRequestSchema.safeParse(input);
+	if (!parsed.success)
+		return { ...grokBuildUnknown("grok_build_request_invalid"), status: "invalid" };
+	const request = parsed.data;
+	try {
+		if (request.action === "export") return await service.export(request);
+		if (request.action === "inspect") return await service.inspect(request);
+		return request.action === "discover"
+			? await service.discover()
+			: await service.generate(request);
+	} catch (error) {
+		const result = grokBuildUnknown("grok_build_request_failed");
+		if (request.action === "inspect" || request.action === "export") {
+			result.operation = request.action;
+			result.targetId = request.targetId;
+		}
+		if (request.action === "generate") {
+			const noSend =
+				error instanceof BrowserAutomationError && error.details?.effectState === "pre_effect";
+			if (!noSend) {
+				result.effectState = "unknown";
+				result.retrySafe = false;
+				result.generation.status = "unknown";
+			}
+			if (error instanceof BrowserAutomationError && typeof error.details?.targetId === "string")
+				result.targetId = error.details.targetId;
+		}
+		return result;
+	}
+}
+/** Ops excludes prompts, response content, URLs, account keys and app identifiers. */
+export function summarizeGrokBuildDiagnostics(result: GrokBuildResult) {
+	return {
+		status: result.status,
+		code: result.code,
+		complete: false,
+		count: result.materialization?.itemIds.length ?? null,
+		ready: result.materialization
+			? result.materialization.status === "indexed"
+				? result.materialization.itemIds.length
+				: 0
+			: null,
+		...(result.publication.controls
+			? {
+					publicationInspection: {
+						nativeState: result.publication.controls.state,
+						nativePublishEnabled: result.publication.controls.publishEnabled,
+						dialogDismissed: result.publication.controls.dialogDismissed,
+						snapshotBinding: result.publication.controls.snapshotBinding,
+					},
+				}
+			: {}),
+		...(result.materialization
+			? {
+					materialization: {
+						status: result.materialization.status,
+						indexedAssets: result.materialization.itemIds.length,
+						verifiedBytes: result.materialization.verifiedBytes,
+						...result.materialization.coverage,
+					},
+				}
+			: {}),
+		hasProviderAccountIdentity: result.providerAccountRef !== null,
+		hasConversationIdentity: result.conversationId !== null,
+		hasResponseIdentity: result.generation.responseId !== null,
+		effectState: result.effectState,
+	};
+}

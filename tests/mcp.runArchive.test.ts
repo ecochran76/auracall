@@ -5,9 +5,27 @@ import {
   createRunArchiveBackfillToolHandler,
   createRunArchiveItemToolHandler,
   createRunArchiveSearchToolHandler,
+  createRunArchiveMaterializationCreateToolHandler,
 } from '../src/mcp/tools/runArchive.js';
 
 describe('mcp run archive tools', () => {
+  it('preserves explicit reference download acknowledgement when queuing a materialization', async () => {
+    const createJob = vi.fn(async () => ({
+      object: 'run_archive_materialization_job_create_result' as const,
+      generatedAt: '2026-10-29T20:00:00.000Z', reused: false,
+      job: { object: 'run_archive_materialization_job' as const, id: 'native-reference-job', archiveItemId: 'native-reference',
+        acknowledgeTargetDefaultReset: true as const, status: 'queued' as const,
+        createdAt: '2026-10-29T20:00:00.000Z', updatedAt: '2026-10-29T20:00:00.000Z',
+        startedAt: null, completedAt: null, attemptCount: 0, result: null, error: null, message: 'Queued.' },
+    }));
+    const handler = createRunArchiveMaterializationCreateToolHandler({ service: {
+      createJob, listJobs: vi.fn(), readJob: vi.fn(), cancelJob: vi.fn(), runJob: vi.fn(), recoverInterruptedJobs: vi.fn(),
+    } });
+    await handler({ archiveItemId: 'native-reference', acknowledgeTargetDefaultReset: true });
+    expect(createJob).toHaveBeenCalledWith({ archiveItemId: 'native-reference', acknowledgeTargetDefaultReset: true });
+    await expect(handler({ archiveItemId: 'native-reference', acknowledgeTargetDefaultReset: false })).rejects.toThrow();
+  });
+
   it('searches the run archive through the shared archive service', async () => {
     const listItems = vi.fn(async () => ({
       object: 'run_archive' as const,

@@ -3765,6 +3765,7 @@ describe("http responses adapter", () => {
 						refreshSnapshot: true,
 						assetKinds: ["artifacts"],
 						maxItems: 1,
+						acknowledgeTargetDefaultReset: true,
 					}),
 				},
 			);
@@ -3793,6 +3794,7 @@ describe("http responses adapter", () => {
 				assetKinds: ["artifacts"],
 				maxItems: 1,
 				force: false,
+				acknowledgeTargetDefaultReset: true,
 			});
 
 			const listResponse = await fetch(
@@ -4149,6 +4151,7 @@ describe("http responses adapter", () => {
 				`http://127.0.0.1:${server.port}/v1/archive/items/b64/${encoded}/materialize`,
 				{
 					method: "POST",
+					body: JSON.stringify({ acknowledgeTargetDefaultReset: true }),
 				},
 			);
 			expect(response.status).toBe(200);
@@ -4162,7 +4165,7 @@ describe("http responses adapter", () => {
 					},
 				},
 			});
-			expect(materializeItem).toHaveBeenCalledWith({ archiveItemId, force: false });
+			expect(materializeItem).toHaveBeenCalledWith({ archiveItemId, force: false, acknowledgeTargetDefaultReset: true });
 		} finally {
 			await server.close();
 		}
@@ -4244,6 +4247,7 @@ describe("http responses adapter", () => {
 					body: JSON.stringify({
 						archiveItemId: "generated-artifact:resp_1:artifact_1",
 						force: true,
+						acknowledgeTargetDefaultReset: true,
 					}),
 				},
 			);
@@ -4279,6 +4283,7 @@ describe("http responses adapter", () => {
 			expect(createJob).toHaveBeenCalledWith({
 				archiveItemId: "generated-artifact:resp_1:artifact_1",
 				force: true,
+				acknowledgeTargetDefaultReset: true,
 			});
 			expect(listJobs).toHaveBeenCalledWith({
 				status: "active",
@@ -23880,6 +23885,7 @@ describe("http responses adapter", () => {
 					leaseStates: { active: 0, idle: 0, lost: 0 },
 					workloads: { conversations: 0, liveFollow: 0 },
 					providerWarnings: { active: 0 },
+                    providerControls: { grok: { maxOperationsPerMinute: null, operationBudgetWaitMs: 0, usedOperationsLastMinute: 0, remainingOperations: null, nextEligibleAt: null, blockedReason: null } },
 				},
 				liveFollow: {
 					severity: "attention-needed",

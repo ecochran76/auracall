@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import type { TabLeaseClaim, TabLeaseScope } from "./tabLeaseRegistry.js";
 
 import type { BrowserInteractionClass, BrowserInteractionGovernor } from "./interactionGovernor.js";
 import type { ProviderWarningClassification } from "./interactionLedger.js";
@@ -51,6 +52,7 @@ export interface ProviderTrafficActionInput {
 }
 
 export interface ProviderTrafficActionSettlement {
+ effectState?: "none" | "settled" | "outcome-unknown";
 	outcome: BrowserMutationOutcome;
 	toUrl?: string | null;
 	targetId?: string | null;
@@ -106,7 +108,7 @@ export interface ProviderTrafficAuthority {
 export interface ProviderTrafficAuthorityFactory {
 	/** Request-aware factories report true before acquisition; this grants no lease or governor. */
 	readonly backendRequestAdmissionEnabled?: boolean;
-	acquire(input: { targetId: string }): Promise<ProviderTrafficAuthority>;
+	acquire(input: { targetId: string; borrowedLease?: { claim: TabLeaseClaim; scope: TabLeaseScope } }): Promise<ProviderTrafficAuthority>;
 }
 
 /** Match client authority precedence without taking or borrowing its lease. */
@@ -320,7 +322,7 @@ export function createProviderTrafficGovernor(input: {
 					if (recentEffects.length > 20) recentEffects.splice(0, recentEffects.length - 20);
 					await input.settleInteraction?.({
 						outcome: details.outcome === "succeeded" ? "succeeded" : "failed",
-						effectState: "settled",
+						effectState: details.effectState ?? "settled",
 						reason: details.error ?? details.reason ?? null,
 					});
 

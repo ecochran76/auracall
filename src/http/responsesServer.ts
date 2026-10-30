@@ -1,7 +1,17 @@
+import { GrokBuildRequestSchema, runGrokBuildCommand, type GrokBuildServiceResolver } from "../cli/grokBuildCommand.js";
+import { createConfiguredGrokBuildService } from "../browser/configuredGrokBuild.js";
+import { grokBuildUnknown } from "../browser/grokBuildService.js";
+import { GrokFilesRequestSchema, runGrokFilesCommand, type GrokFilesServiceResolver } from "../cli/grokFilesCommand.js";
+import { grokFilesFailure } from "../browser/providers/grokFiles.js";
+import { GrokBotsRequestSchema, runGrokBotsCommand, grokBotsFailureResult, type GrokBotsServiceResolver } from "../cli/grokBotsCommand.js";
+import { createConfiguredGrokFilesService, createConfiguredGrokBotsService } from "../browser/configuredGrokDiscovery.js";
+import { GrokConversationsRequestSchema, runGrokConversationsCommand, grokConversationsFailureResult, type GrokConversationsServiceResolver } from "../cli/grokConversationsCommand.js";
+import { GrokConnectorsRequestSchema, runGrokConnectorsCommand, grokConnectorsFailureResult, type GrokConnectorsServiceResolver } from "../cli/grokConnectorsCommand.js";
+import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../browser/configuredGrokDiscovery.js";
 import { RemoteViewConfigSchema } from '../schema/types.js';
 import { maintainDesktopPool } from '../browser/service/nativeDesktopPool.js';
 import { applyDesktopProfileAssignments } from "../browser/service/desktopProfileAssignments.js";
-import { listDesktopRuntimeProfiles, wakeDesktopRuntimeProfile } from '../browser/service/desktopRuntimeProfiles.js';
+import { listDesktopRuntimeProfiles, wakeDesktopRuntimeProfile, recallDesktopRuntimeProfile } from '../browser/service/desktopRuntimeProfiles.js';
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -373,10 +383,16 @@ export interface ResponsesHttpServerOptions {
 }
 
 export interface ResponsesHttpServerDeps {
+ grokFilesServiceResolver?: GrokFilesServiceResolver;
+ grokBotsServiceResolver?: GrokBotsServiceResolver;
+ grokBuildServiceResolver?: GrokBuildServiceResolver;
+ grokConnectorsServiceResolver?: GrokConnectorsServiceResolver;
+ grokConversationsServiceResolver?: GrokConversationsServiceResolver;
   desktopClient?: {
     list: () => ReturnType<typeof listDesktopViews>;
     profiles?: () => ReturnType<typeof listDesktopRuntimeProfiles>;
     wakeProfile?: (id: string, desktopName?: string) => ReturnType<typeof wakeDesktopRuntimeProfile>;
+    recallProfile?: (id: string, token: string) => ReturnType<typeof recallDesktopRuntimeProfile>;
     closeBrowser?: (name: string, browserId: string) => ReturnType<typeof closeDesktopBrowser>;
     capture: (name: string, browserId: string) => ReturnType<typeof captureDesktopView>;
     view?: (name: string, browserId: string) => ReturnType<typeof openDesktopView>;
@@ -901,6 +917,11 @@ interface HttpStatusResponse {
 		teamRunsCreate: string;
 		teamRunInspection: string;
 		projectEnsure: string;
+        grokConnectors?: string;
+        grokFiles?:string;
+        grokBots?:string;
+        grokBuild?:string;
+        grokConversations?: string;
 		tenantPoolTeamEnsure: string;
 		agentSetupPackagesCreate: string;
 		agentSetupHandoffsCreate: string;
@@ -1929,6 +1950,18 @@ export async function createResponsesHttpServer(
         } catch(error) {sendJson(res,409,{error:{message:error instanceof Error?error.message:'Browser close was not confirmed.'}},{'Cache-Control':'no-store'});}
         return;
       }
+      const runtimeProfileRecall = url.pathname.match(/^\/v1\/desktops\/profiles\/([^/]+)\/recall$/);
+      if (req.method === 'POST' && runtimeProfileRecall) {
+        try {
+          const input=z.object({recallToken:z.string().regex(/^[a-f0-9]{64}$/),confirmed:z.literal(true)}).strict().parse(JSON.parse(await readRequestBody(req)));
+          const id=decodeURIComponent(runtimeProfileRecall[1]);
+          const result=deps.desktopClient?.recallProfile ? await deps.desktopClient.recallProfile(id,input.recallToken)
+            : resolvedUserConfig ? await recallDesktopRuntimeProfile(resolvedUserConfig,id,input.recallToken) : undefined;
+          if (!result) throw new Error('Runtime profile configuration is unavailable.');
+          sendJson(res,200,result,{'Cache-Control':'no-store'});
+        } catch(error) { sendJson(res,409,{error:{message:error instanceof Error?error.message:'Browser Recall unavailable.'}}); }
+        return;
+      }
       const runtimeProfileWake = url.pathname.match(/^\/v1\/desktops\/profiles\/([^/]+)\/wake$/);
       if (req.method === 'POST' && runtimeProfileWake) {
         try {
@@ -2611,7 +2644,7 @@ export async function createResponsesHttpServer(
 					const result: ArchiveItemMaterializationResult =
 						await archiveMaterializationService.materializeItem({
 							archiveItemId: itemId,
-							force: payload.force,
+							...payload,
 						});
 					sendJson(
 						res,
@@ -3877,6 +3910,81 @@ export async function createResponsesHttpServer(
 				}
 			}
 
+
+
+            if (req.method === "POST" && url.pathname === "/v1/grok/conversations/query") {
+                const permissionError=authorizeOperatorConfigAccess(apiAuthContext);
+                if(permissionError){sendJson(res,403,{error:{message:permissionError,type:"permission_error"}});return;}
+                let request:import("../cli/grokConversationsCommand.js").GrokConversationsRequest;
+                try{request=GrokConversationsRequestSchema.parse(JSON.parse((await readRequestBody(req))||"{}"));}catch{sendJson(res,400,{error:{message:"Invalid Grok conversation inventory request.",type:"invalid_request_error"}});return;}
+                if(!deps.grokConversationsServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:"Grok inventory requires configured runtime authority.",type:"configuration_error"}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once("close",onClose);
+                try{const service=deps.grokConversationsServiceResolver?await deps.grokConversationsServiceResolver(request):await createConfiguredGrokConversationsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);sendJson(res,200,await runGrokConversationsCommand(request,service));return;}
+                catch{sendJson(res,200,grokConversationsFailureResult(request.projectId));return;}finally{res.removeListener("close",onClose);finish();}
+            }
+            if (req.method === "POST" && url.pathname === "/v1/grok/connectors/query") {
+                const permissionError=authorizeOperatorConfigAccess(apiAuthContext);
+                if(permissionError){sendJson(res,403,{error:{message:permissionError,type:"permission_error"}});return;}
+                let request: import("../cli/grokConnectorsCommand.js").GrokConnectorsRequest;
+                try {request=GrokConnectorsRequestSchema.parse(JSON.parse((await readRequestBody(req))||"{}"));}
+                catch {sendJson(res,400,{error:{message:"Invalid Grok Connector discovery request.",type:"invalid_request_error"}});return;}
+                const configuredResolver=deps.grokConnectorsServiceResolver ?? (resolvedUserConfig ? (request: import("../cli/grokConnectorsCommand.js").GrokConnectorsRequest)=>createConfiguredGrokConnectorsService(resolvedUserConfig,request.runtimeProfile,undefined,request.action==='invoke'?request.targetId:undefined) : undefined);
+                if(!configuredResolver){sendJson(res,503,{error:{message:"Grok discovery requires configured runtime authority.",type:"configuration_error"}});return;}
+                const finish=beginForegroundAuraCallWork();
+                const cancellation=new AbortController();const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once("close",onClose);
+                try {
+                    const service=deps.grokConnectorsServiceResolver ? await configuredResolver(request) : await createConfiguredGrokConnectorsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal,request.action==='invoke'?request.targetId:undefined);
+                    sendJson(res,200,await runGrokConnectorsCommand(request,service));return;
+                } catch {sendJson(res,200,grokConnectorsFailureResult());return;} finally {res.removeListener("close",onClose);finish();}
+            }
+
+            if(req.method==='POST'&&url.pathname==='/v1/grok/files/query'){
+                const denied=authorizeOperatorConfigAccess(apiAuthContext);
+                if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
+                let request: import("../cli/grokFilesCommand.js").GrokFilesRequest;
+                try{request=GrokFilesRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
+                catch{sendJson(res,400,{error:{message:'Invalid Grok files request.',type:'invalid_request_error'}});return;}
+                if(!deps.grokFilesServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();
+                const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once('close',onClose);
+                try{
+                    const service=deps.grokFilesServiceResolver?await deps.grokFilesServiceResolver(request):await createConfiguredGrokFilesService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    sendJson(res,200,await runGrokFilesCommand(request,service));return;
+                }catch{sendJson(res,200,grokFilesFailure());return;}
+                finally{res.removeListener('close',onClose);finish();}
+            }
+
+            if(req.method==='POST'&&url.pathname==='/v1/grok/build/query'){
+                const denied=authorizeOperatorConfigAccess(apiAuthContext);
+                if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
+                let request: import("../cli/grokBuildCommand.js").GrokBuildRequest;
+                try{request=GrokBuildRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
+                catch{sendJson(res,400,{error:{message:'Invalid Grok Build request.',type:'invalid_request_error'}});return;}
+                if(!deps.grokBuildServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();
+                const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once('close',onClose);
+                try{
+                    const service=deps.grokBuildServiceResolver?await deps.grokBuildServiceResolver(request):await createConfiguredGrokBuildService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    sendJson(res,200,await runGrokBuildCommand(request,service));return;
+                }catch{sendJson(res,200,grokBuildUnknown('grok_build_configuration_failed'));return;}
+                finally{res.removeListener('close',onClose);finish();}
+            }
+
+            if(req.method==='POST'&&url.pathname==='/v1/grok/bots/query'){
+                const denied=authorizeOperatorConfigAccess(apiAuthContext);
+                if(denied){sendJson(res,403,{error:{message:denied,type:'permission_error'}});return;}
+                let request: import("../cli/grokBotsCommand.js").GrokBotsRequest;
+                try{request=GrokBotsRequestSchema.parse(JSON.parse((await readRequestBody(req))||'{}'));}
+                catch{sendJson(res,400,{error:{message:'Invalid Grok bots request.',type:'invalid_request_error'}});return;}
+                if(!deps.grokBotsServiceResolver&&!resolvedUserConfig){sendJson(res,503,{error:{message:'Grok operation requires configured runtime authority.',type:'configuration_error'}});return;}
+                const finish=beginForegroundAuraCallWork();const cancellation=new AbortController();
+                const onClose=()=>{if(!res.writableEnded)cancellation.abort();};res.once('close',onClose);
+                try{
+                    const service=deps.grokBotsServiceResolver?await deps.grokBotsServiceResolver(request):await createConfiguredGrokBotsService(resolvedUserConfig as ResolvedUserConfig,request.runtimeProfile,cancellation.signal);
+                    sendJson(res,200,await runGrokBotsCommand(request,service));return;
+                }catch{sendJson(res,200,grokBotsFailureResult());return;}
+                finally{res.removeListener('close',onClose);finish();}
+            }
 			if (req.method === "POST" && url.pathname === "/v1/projects/ensure") {
 				const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
 				if (operatorAuthError) {
@@ -5320,6 +5428,11 @@ function createHttpStatusResponse(input: {
 			teamRunInspection:
 				"/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}",
 			projectEnsure: "POST /v1/projects/ensure",
+            grokConnectors: "POST /v1/grok/connectors/query",
+            grokFiles:"POST /v1/grok/files/query",
+            grokBots:"POST /v1/grok/bots/query",
+            grokBuild:"POST /v1/grok/build/query",
+            grokConversations: "POST /v1/grok/conversations/query",
 			tenantPoolTeamEnsure: "POST /v1/tenant-pool-teams/ensure",
 			agentSetupPackagesCreate: "POST /v1/agent-setup-packages",
 			agentSetupHandoffsCreate: "POST /v1/agent-setup-handoffs",
@@ -6837,6 +6950,7 @@ function createLiveFollowTargetRollup(
 			latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
 			materializationOutcome: summarizeLiveFollowMaterializationOutcome(operation),
 			scrapeBudget: entry.metadataEvidence?.scrapeBudget ?? null,
+			grokIndex: entry.metadataEvidence?.grokIndex ?? null,
 			accountLibraryCatchup,
 			metadataCounts: entry.metadataCounts,
 			metadataCountEvidence: entry.metadataEvidence?.countEvidence ?? null,
@@ -9678,22 +9792,24 @@ function parseRunArchiveMaterializationCreateBody(value: unknown) {
 			archiveItemId: z.string().trim().min(1).optional(),
 			archive_item_id: z.string().trim().min(1).optional(),
 			force: z.boolean().optional(),
+			acknowledgeTargetDefaultReset: z.literal(true).optional(),
 		})
 		.parse(value);
 	const archiveItemId = parsed.archiveItemId ?? parsed.archive_item_id;
 	if (!archiveItemId) {
 		throw new ArchiveMaterializationError("Archive item id is required.");
 	}
-	return { archiveItemId, force: parsed.force ?? false };
+	return { archiveItemId, force: parsed.force ?? false, ...(parsed.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}) };
 }
 
 function parseRunArchiveItemMaterializeBody(value: unknown) {
 	const parsed = z
 		.object({
 			force: z.boolean().optional(),
+			acknowledgeTargetDefaultReset: z.literal(true).optional(),
 		})
 		.parse(value);
-	return { force: parsed.force ?? false };
+	return { force: parsed.force ?? false, ...(parsed.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}) };
 }
 
 function parseRunArchiveMaterializationJobListQuery(searchParams: URLSearchParams) {
@@ -9773,6 +9889,7 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 			providerWorkTimeoutMs: z.number().int().positive().optional(),
 			provider_work_timeout_ms: z.number().int().positive().optional(),
 			force: z.boolean().optional(),
+			acknowledgeTargetDefaultReset: z.literal(true).optional(),
 		})
 		.parse(value);
 	return {
@@ -9799,6 +9916,7 @@ function parseHistoryMaterializationCreateBody(value: unknown) {
 		maxItems: parsed.maxItems ?? parsed.max_items,
 		providerWorkTimeoutMs: parsed.providerWorkTimeoutMs ?? parsed.provider_work_timeout_ms,
 		force: parsed.force ?? false,
+		...(parsed.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true as const } : {}),
 	};
 }
 
@@ -12027,6 +12145,7 @@ function createOperatorBrowserDashboardHtml(
 
     function renderTabConcurrency(status) {
       const concurrency = status.tabConcurrency || {};
+      const grokControls = concurrency.providerControls && concurrency.providerControls.grok;
       const leaseStates = concurrency.leaseStates || {};
       const workloads = concurrency.workloads || {};
       const warnings = concurrency.providerWarnings || {};
@@ -12047,6 +12166,14 @@ function createOperatorBrowserDashboardHtml(
         ['Rollback', '<code>browser.tabConcurrencyMode = serialized</code>'],
         ['Leases', escapeHtml('active=' + Number(leaseStates.active || 0) + ' idle=' + Number(leaseStates.idle || 0) + ' retiring=' + Number(leaseStates.retiring || 0) + ' lost=' + Number(leaseStates.lost || 0))],
         ['Workloads', escapeHtml('conversation=' + Number(workloads.conversations || 0) + ' new=' + Number(workloads.newConversations || 0) + ' live-follow=' + Number(workloads.liveFollow || 0) + ' utility=' + Number(workloads.ephemeral || 0))],
+        ...(grokControls ? [
+          ...(grokControls.connectorInventory ? [['Grok Connectors', escapeHtml('status=' + grokControls.connectorInventory.status + ' installed=' + grokControls.connectorInventory.installed + ' catalog=' + grokControls.connectorInventory.catalog + ' tools=' + grokControls.connectorInventory.tools + ' reason=' + grokControls.connectorInventory.code)]] : []),
+          ...(grokControls.historyInventory ? [['Grok history', escapeHtml('state=' + grokControls.historyInventory.state + ' count=' + grokControls.historyInventory.loadedCount + ' pages=' + grokControls.historyInventory.pages + ' reason=' + grokControls.historyInventory.reason)]] : []),
+          ['Grok backend requests', escapeHtml('limit=' + (grokControls.maxBackendRequestsPerMinute == null ? 'unconfigured' : grokControls.maxBackendRequestsPerMinute) + ' used=' + Number(grokControls.usedBackendRequestsLastMinute || 0) + ' remaining=' + (grokControls.remainingBackendRequests == null ? 'unlimited' : grokControls.remainingBackendRequests) + ' wait limit=' + Number(grokControls.backendRequestBudgetWaitMs || 0) + 'ms')],
+          ['Grok operation limit', escapeHtml(grokControls.maxOperationsPerMinute == null ? 'Unconfigured' : String(grokControls.maxOperationsPerMinute) + '/minute')],
+          ['Grok operation capacity', escapeHtml('remaining=' + (grokControls.remainingOperations == null ? 'unlimited' : grokControls.remainingOperations) + ' wait limit=' + Number(grokControls.operationBudgetWaitMs || 0) + 'ms')],
+          ['Grok admission', escapeHtml((grokControls.blockedReason || 'clear') + ' next=' + (grokControls.nextEligibleAt || 'none'))],
+        ] : []),
         ['Aggregate Usage', escapeHtml('active chats=' + Number(usage.activeChats || 0) + ' chats/hour=' + Number(usage.chatsLastHour || 0) + ' chats/day=' + Number(usage.chatsLastDay || 0) + ' interactions/min=' + Number(usage.interactionsLastMinute || 0))],
         ['Provider Guards', renderStatusText(guardCount > 0 ? String(guardCount) + ' active' : 'clear', guardCount > 0 ? 'bad' : 'ok')],
         ['Admission Rejections', escapeHtml(String(Number(rejections.total || 0)) + (rejections.latestReason ? ' latest=' + rejections.latestReason : ''))],
@@ -14145,6 +14272,7 @@ function createOperatorBrowserDashboardHtml(
         nextAttemptAt: target.nextAttemptAt || null,
         completeness: target.mirrorCompleteness || null,
         counts: target.metadataCounts || null,
+        grokIndex: target.grokIndex || null,
       };
     }
 

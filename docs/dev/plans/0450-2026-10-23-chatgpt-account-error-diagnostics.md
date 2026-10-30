@@ -1,5 +1,17 @@
 # Plan0450 | Account-page startup diagnostics
 
+State: OPEN
+Lane: P450
+Branch: fix/chatgpt-account-readiness
+Target: main
+Integration: merge
+
+## Current State | 2026-10-29 reconciliation
+
+Source checkpoint408ce37dc is qualified in open PR385. The earlier source packet was CLOSED; integration and installed qualification remain OPEN. The provider account-load cause is unresolved. No automatic reload, prompt, auth reset or warning clearance is authorized by this reconciliation.
+
+## Preserved execution history
+
 State: CLOSED
 Issue: https://github.com/ecochran76/auracall/issues/384
 Owner: Eric Cochran / Codex

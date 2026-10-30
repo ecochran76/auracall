@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 
 export type BrowserMutationKind =
+	  | 'input'
+	  | 'provider-read'
 	  | 'navigate'
 	  | 'reload'
 	  | 'location-assign'

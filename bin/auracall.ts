@@ -1,4 +1,15 @@
 #!/usr/bin/env node
+import { BrowserPerformanceDiagnostics } from "../src/browser/browserPerformanceDiagnostics.js";
+import { GrokBuildRequestSchema, runGrokBuildCommand } from "../src/cli/grokBuildCommand.js";
+import { createConfiguredGrokBuildService } from "../src/browser/configuredGrokBuild.js";
+import { grokBuildUnknown } from "../src/browser/grokBuildService.js";
+import { createConfiguredGrokFilesService, createConfiguredGrokBotsService } from "../src/browser/configuredGrokDiscovery.js";
+import { GrokFilesRequestSchema, runGrokFilesCommand } from "../src/cli/grokFilesCommand.js";
+import { grokFilesFailure } from "../src/browser/providers/grokFiles.js";
+import { GrokBotsRequestSchema, runGrokBotsCommand, grokBotsFailureResult } from "../src/cli/grokBotsCommand.js";
+import { GrokConversationsRequestSchema, runGrokConversationsCommand, grokConversationsFailureResult } from "../src/cli/grokConversationsCommand.js";
+import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../src/browser/configuredGrokDiscovery.js";
+import { runGrokConnectorsCommand, grokConnectorsFailureResult, grokConnectorsResultIsError, GrokConnectorsRequestSchema } from "../src/cli/grokConnectorsCommand.js";
 import 'dotenv/config';
 import { resolveBrowserLoginLaunchOptions, type BrowserLoginLaunchOptions } from '../src/cli/browserLoginLaunch.js';
 import { spawn } from 'node:child_process';
@@ -1518,12 +1529,13 @@ apiCommand
 
 apiCommand
   .command('archive-materialize')
-  .description('Ask the provider runtime to materialize one missing generated artifact archive item.')
+  .description('Ask the provider runtime to materialize one missing archive item.')
   .argument('<id>', 'Run archive item id.')
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
   .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 60000)
   .option('--force', 'Refresh from the provider even when the archive item already has a readable local asset.', false)
+  .option('--acknowledge-target-default-reset', 'Accept the Grok reference download policy reset to default after a fresh native transfer.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1538,6 +1550,7 @@ apiCommand
       port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
       force: commandOptions.force,
+      acknowledgeTargetDefaultReset: commandOptions.acknowledgeTargetDefaultReset === true ? true : undefined,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
@@ -1548,12 +1561,13 @@ apiCommand
 
 apiCommand
   .command('archive-materialization-create')
-  .description('Queue a durable provider-backed archive materialization job for one generated artifact archive item.')
+  .description('Queue a durable provider-backed archive materialization job for one archive item.')
   .argument('<id>', 'Run archive item id.')
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
   .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 10000)
   .option('--force', 'Refresh from the provider even when the archive item already has a readable local asset.', false)
+  .option('--acknowledge-target-default-reset', 'Accept the Grok reference download policy reset to default after a fresh native transfer.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1568,6 +1582,7 @@ apiCommand
       port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
       force: commandOptions.force,
+      acknowledgeTargetDefaultReset: commandOptions.acknowledgeTargetDefaultReset === true ? true : undefined,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
@@ -1780,6 +1795,7 @@ apiCommand
   .option('--max-items <count>', 'Maximum assets or reconciliation conversations to process.', parseIntOption)
   .option('--provider-work-timeout-ms <ms>', 'Provider browser work timeout in milliseconds.', parseIntOption)
   .option('--force', 'Refresh through the provider even when related local evidence already exists.', false)
+  .option('--acknowledge-target-default-reset', 'Accept the Grok reference download policy reset to default after each fresh native transfer.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1810,6 +1826,7 @@ apiCommand
       maxItems: commandOptions.maxItems,
       providerWorkTimeoutMs: commandOptions.providerWorkTimeoutMs,
       force: commandOptions.force,
+      acknowledgeTargetDefaultReset: commandOptions.acknowledgeTargetDefaultReset === true ? true : undefined,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
@@ -3420,6 +3437,89 @@ filesCommand
       console.log(`Removed account file ${fileId}.`);
     }
   });
+
+
+
+program.command('grok-files').description('Inspect exact Grok composer files, list recent IDs, select or upload without submitting a prompt.')
+ .option('--action <context|recent|select|upload>','Operation.','context').option('--id <id>','Exact recent file ID.')
+ .option('--paths <paths...>','Explicit local upload paths.').option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async(options,command)=>{
+  let result;
+  try {
+   if(options.action!=='upload'&&options.paths || options.action!=='select'&&options.id)throw new Error('Unexpected file selectors.');
+   const request=GrokFilesRequestSchema.parse({action:options.action,runtimeProfile:options.runtimeProfile,...(options.action==='select'?{id:options.id}:options.action==='upload'?{paths:options.paths}:{})});
+   const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+   result=await runGrokFilesCommand(request,await createConfiguredGrokFilesService(config,request.runtimeProfile));
+  }catch{result=grokFilesFailure();}
+  console.log(JSON.stringify(result,null,2));if(result.status==='failed'||result.status==='unconfirmed')process.exitCode=1;
+ });
+program.command('grok-bots').description('Discover/invoke Grok Bots and operate confirmed native Bot lifecycle settings.')
+ .option('--request-json <json>','Exact shared Grok Bots request, including confirmed create/edit, inspect/resources or reconcile.')
+ .option('--action <list|invoke>','Operation.','list').option('--source <owned|catalog>','Bot inventory source.','owned')
+ .option('--id <id>','Stable observed Bot ID.').option('--author <author>','Exact observed catalog author.').option('--prompt <text>','Exact prompt text.')
+ .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async(options,command)=>{
+  let result;
+  try {
+   if(options.action==='list'&&(options.id||options.author||options.prompt))throw new Error('Use invoke with a Bot selector.');
+   const request=GrokBotsRequestSchema.parse(options.requestJson?JSON.parse(options.requestJson):options.action==='list'?{action:'list',source:options.source,runtimeProfile:options.runtimeProfile}:{action:options.action,selector:{id:options.id,source:options.source,author:options.author},prompt:options.prompt,runtimeProfile:options.runtimeProfile});
+   const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+   result=await runGrokBotsCommand(request,await createConfiguredGrokBotsService(config,request.runtimeProfile));
+  }catch{result=grokBotsFailureResult();}
+  console.log(JSON.stringify(result,null,2));if(result.status!=='supported')process.exitCode=1;
+ });
+
+program.command('grok-build').description('Discover Grok Build mode or request one confirmed generation; app/version artifacts remain separately qualified.')
+ .option('--action <discover|generate|inspect|export>','Operation.','discover').option('--prompt <text>','Exact generation prompt.')
+ .option('--target-id <id>','Exact retained target for inspection or export.').option('--conversation-id <id>','Exact conversation for inspection or export.').option('--response-id <id>','Optional exact assistant response.')
+ .option('--output-dir <path>','Existing private0700 export directory.').option('--acknowledge-target-default-reset','Accept target download policy reset to default after export.')
+ .option('--inspect-publication-controls','Inspect and dismiss the owned native Publish dialog; never publish.')
+ .option('--yes','Confirm one generation.').option('--timeout-ms <milliseconds>','Response observation deadline (default 120000).',Number)
+ .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async(options,command)=>{
+  let result: import('../src/browser/grokBuildService.js').GrokBuildResult={...grokBuildUnknown('grok_build_request_invalid'),status:'invalid' as const};
+  try {
+   if(options.action!=='generate'&&(options.prompt!==undefined||options.yes||options.timeoutMs!==undefined))throw new Error('Generation inputs require --action generate.');
+   if(!['inspect','export'].includes(options.action)&&(options.targetId!==undefined||options.conversationId!==undefined||options.responseId!==undefined))throw new Error('Retained target inputs require --action inspect or export.');
+   if(options.action!=='inspect'&&options.inspectPublicationControls)throw new Error('Publication control inspection requires --action inspect.');
+   if(options.action!=='export'&&(options.outputDir!==undefined||options.acknowledgeTargetDefaultReset))throw new Error('Export inputs require --action export.');
+   const request=GrokBuildRequestSchema.parse(options.action==='export'?{action:'export',targetId:options.targetId,conversationId:options.conversationId,responseId:options.responseId,outputDir:options.outputDir,acknowledgeTargetDefaultReset:options.acknowledgeTargetDefaultReset===true,runtimeProfile:options.runtimeProfile}:options.action==='discover'?{action:'discover',runtimeProfile:options.runtimeProfile}:options.action==='inspect'?{action:'inspect',targetId:options.targetId,conversationId:options.conversationId,responseId:options.responseId,inspectPublicationControls:options.inspectPublicationControls===true?true:undefined,runtimeProfile:options.runtimeProfile}:{action:options.action,prompt:options.prompt,confirmed:options.yes===true,timeoutMs:options.timeoutMs,runtimeProfile:options.runtimeProfile});
+   result=grokBuildUnknown('grok_build_configuration_failed');
+   const config=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+   result=await runGrokBuildCommand(request,await createConfiguredGrokBuildService(config,request.runtimeProfile));
+  }catch{}
+  console.log(JSON.stringify(result,null,2));if(result.status!=='available')process.exitCode=1;
+ });
+
+program.command('grok-conversations').description('Read bounded Grok Chats inventory and coverage as JSON.')
+ .option('--runtime-profile <id>','Configured AuraCall runtime profile.').option('--project-id <id>','Require positive project membership.')
+ .option('--query <text>','Search Chats.').option('--cursor <cursor>','Resume a scope-bound inventory cursor.')
+ .option('--limit <count>','Maximum returned rows.',Number).option('--since <date>','Restrict observed timestamps.')
+ .option('--max-pages <count>','Bound history pages.',Number).option('--timeout-ms <ms>','Bound page hydration time.',Number).option('--json','Print JSON.')
+ .action(async(commandOptions,command)=>{
+  const request=GrokConversationsRequestSchema.parse({runtimeProfile:commandOptions.runtimeProfile,projectId:commandOptions.projectId,query:commandOptions.query,cursor:commandOptions.cursor,limit:commandOptions.limit,since:commandOptions.since,maxPages:commandOptions.maxPages,timeoutMs:commandOptions.timeoutMs});
+  const userConfig=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+  let result;try{result=await runGrokConversationsCommand(request,await createConfiguredGrokConversationsService(userConfig,request.runtimeProfile));}catch{result=grokConversationsFailureResult(request.projectId);}
+  console.log(JSON.stringify(result,null,2));if(result.coverage.state==='failed')process.exitCode=1;
+ });
+
+program.command('grok-connectors').description('Discover, install, reconcile or invoke Grok Connectors as JSON.')
+ .option('--action <list|inspect|install|reconcile|invoke>','Connector operation.','list').option('--query <text>','Search visible Connector inventory.')
+ .option('--id <id>','Exact observed Connector ID.').option('--name <name>','Exact name; ambiguity rejects.')
+ .option('--endpoint <url>','Exact endpoint identity.').option('--kind <installed|catalog|custom>','Inventory kind; install defaults to custom.')
+ .option('--expected-provider-account <sha256>','Exact Grok account reference from discovery.').option('--connected-account-ref <sha256>','Exact expected connected account reference.').option('--yes','Confirm a Connector installation or invocation.')
+ .option('--target-id <id>','Exact retained browser target for invocation.').option('--prompt <text>','Exact through-Grok Connector invocation prompt.')
+ .option('--reconcile-target <targetId>','Explicit read-only replacement browser target.').option('--reconcile-connector <id>','Original provider Connector ID for reconciliation.')
+ .option('--runtime-profile <id>','Select configured AuraCall runtime profile.').option('--json','Print JSON.')
+ .action(async (commandOptions,command)=>{
+  const userConfig=await resolveConfig(command.optsWithGlobals(),process.cwd(),process.env);
+  const request=commandOptions.action==='invoke'?{action:'invoke',runtimeProfile:commandOptions.runtimeProfile,targetId:commandOptions.targetId,selector:{id:commandOptions.id,name:commandOptions.name,endpoint:commandOptions.endpoint},prompt:commandOptions.prompt,expectedProviderAccountRef:commandOptions.expectedProviderAccount,confirm:commandOptions.yes===true}:['install','reconcile'].includes(commandOptions.action) ? {action:commandOptions.action,runtimeProfile:commandOptions.runtimeProfile,...(commandOptions.reconcileTarget||commandOptions.reconcileConnector?{reconciliationTarget:{targetId:commandOptions.reconcileTarget,connectorId:commandOptions.reconcileConnector}}:{}),input:{kind:commandOptions.kind??'custom',name:commandOptions.name,endpoint:commandOptions.endpoint,connectorId:commandOptions.id,accountRef:commandOptions.connectedAccountRef},expectedProviderAccountRef:commandOptions.expectedProviderAccount,...(commandOptions.action==='install'?{confirm:commandOptions.yes===true}:{})} : commandOptions.action==='inspect' ? {action:'inspect',runtimeProfile:commandOptions.runtimeProfile,selector:{id:commandOptions.id,name:commandOptions.name,endpoint:commandOptions.endpoint,kind:commandOptions.kind}} : {action:commandOptions.action,query:commandOptions.query,runtimeProfile:commandOptions.runtimeProfile};
+  if(commandOptions.action==='list' && [commandOptions.id,commandOptions.name,commandOptions.endpoint,commandOptions.kind].some(Boolean))throw new Error('Use --action inspect with Connector selectors.');
+  const validated=GrokConnectorsRequestSchema.parse(request);
+  let result;
+  try {result=await runGrokConnectorsCommand(validated,await createConfiguredGrokConnectorsService(userConfig,commandOptions.runtimeProfile,undefined,validated.action==='invoke'?validated.targetId:undefined));} catch {result=grokConnectorsFailureResult();}
+  console.log(JSON.stringify(result,null,2));if(grokConnectorsResultIsError(result))process.exitCode=1;
+ });
 
 const conversationsCommand = program
   .command('conversations')
@@ -5508,8 +5608,18 @@ async function runChatgptDeveloperAppsCliAction(
     lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
   });
   const input = buildInput(commandOptions);
+  const performanceDiagnostic = input.action === "list" && commandOptions.performance ? new BrowserPerformanceDiagnostics() : undefined;
+  performanceDiagnostic?.stage("queue-admission");
   let acquired: Awaited<ReturnType<typeof dispatcher.acquireQueued>> | undefined;
   let receiptEmitted = false;
+  let waitingStage = 'queue-admission';
+  let waitingBudgetMs = 10 * 60 * 1000;
+  const waitingSince = Date.now();
+  const reportsWaiting = input.action === 'list' || input.action === 'refresh-tools' || (input.action === 'test' && !input.submit);
+  const waitingReporter = reportsWaiting && !commandOptions.verbose
+    ? setInterval(() => console.error(`[apps:${input.action}] waiting stage=${waitingStage} elapsedMs=${Date.now() - waitingSince} budgetMs=${waitingBudgetMs}`), 30_000)
+    : undefined;
+  waitingReporter?.unref();
   try {
     if (commandOptions.verbose) console.error(`[apps:${input.action}] stage=queue-admission timeoutMs=600000`);
     acquired = await dispatcher.acquireQueued({
@@ -5525,8 +5635,13 @@ async function runChatgptDeveloperAppsCliAction(
       throw new Error(formatBrowserOperationBusyResult(acquired));
     }
     const result = await runChatgptDeveloperAppOperationForCli(userConfig, input, {
+      performanceDiagnostics: performanceDiagnostic,
       browserOperationOwned: true,
-      onProgress: commandOptions.verbose ? (progress) => console.error(`[apps:${input.action}] stage=${progress.stage}${progress.timeoutMs === undefined ? '' : ` timeoutMs=${progress.timeoutMs}`}`) : undefined,
+      onProgress: (progress) => {
+        waitingStage = progress.stage;
+        if (progress.timeoutMs !== undefined) waitingBudgetMs = progress.timeoutMs;
+        if (commandOptions.verbose) console.error(`[apps:${input.action}] stage=${progress.stage}${progress.timeoutMs === undefined ? '' : ` timeoutMs=${progress.timeoutMs}`}`);
+      },
     });
     if (result.action !== 'list' && (result.status === 'failed' || (result.action === 'refresh-tools' && result.status !== 'completed'))) process.exitCode = 1;
     if (commandOptions.json) {
@@ -5537,19 +5652,18 @@ async function runChatgptDeveloperAppsCliAction(
     console.log(formatChatgptDeveloperAppOperationResult(result));
     receiptEmitted = true;
   } catch (error) {
-    if (input.action === 'list' && commandOptions.json) {
-      process.exitCode = 1;
-      console.log(formatChatgptDeveloperAppListFailure(error));
-      receiptEmitted = true;
-      return;
-    }
-    if (input.action !== 'refresh-tools' || !commandOptions.json) throw error;
     process.exitCode = 1;
-    console.log(JSON.stringify({ action: input.action, status: 'unconfirmed', retrySafe: false,
-      message: error instanceof Error ? error.message : String(error) }, null, 2));
+    const diagnostic = formatChatgptDeveloperAppListFailure(error, input.action);
+    if (commandOptions.json) console.log(diagnostic);
+    else console.error(diagnostic);
     receiptEmitted = true;
   } finally {
-    if (acquired?.acquired) await acquired.release();
+    clearInterval(waitingReporter);
+    try {
+      if (acquired?.acquired) await acquired.release();
+    } finally {
+      if (performanceDiagnostic) console.error(`[browser-performance] ${JSON.stringify(performanceDiagnostic.finish())}`);
+    }
     if (receiptEmitted) await exitAfterCompletedBrowserUtilityCommand();
   }
 }
@@ -5736,6 +5850,7 @@ const appsCommand = program
 appsCommand
   .command('list')
   .description('List installed apps, connection state, and Developer mode without mutation.')
+  .option('--performance', 'Emit sanitized request and stage timing diagnostics on stderr.', false)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async function (this: Command) {
     await runChatgptDeveloperAppsCliAction(this, () => ({ action: 'list' }));

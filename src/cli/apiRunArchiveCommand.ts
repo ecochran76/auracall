@@ -28,10 +28,12 @@ export interface ApiRunArchiveItemCliOptions {
 
 export interface ApiRunArchiveItemMaterializeCliOptions extends ApiRunArchiveItemCliOptions {
   force?: boolean | null;
+  acknowledgeTargetDefaultReset?: true;
 }
 
 export interface ApiRunArchiveMaterializationJobCliOptions extends ApiRunArchiveItemCliOptions {
   force?: boolean | null;
+  acknowledgeTargetDefaultReset?: true;
 }
 
 export interface ApiRunArchiveMaterializationJobStatusCliOptions {
@@ -147,7 +149,7 @@ export async function materializeApiRunArchiveItemForCli(
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ force: options.force === true }),
+      body: JSON.stringify({ force: options.force === true, ...(options.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true } : {}) }),
       signal: controller.signal,
     }, fetchImpl);
     if (!response.ok) {
@@ -175,7 +177,7 @@ export async function createApiRunArchiveMaterializationJobForCli(
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ archiveItemId: id, force: options.force === true }),
+      body: JSON.stringify({ archiveItemId: id, force: options.force === true, ...(options.acknowledgeTargetDefaultReset === true ? { acknowledgeTargetDefaultReset: true } : {}) }),
       signal: controller.signal,
     }, fetchImpl);
     if (!response.ok) {

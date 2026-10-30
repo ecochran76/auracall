@@ -741,6 +741,13 @@ If embedded viewing cannot connect, use **Open in Remote View** to complete
 any required sign-in in a top-level tab, then **Retry view after signing in**.
 Login pages that prohibit framing cannot be completed inside the viewer.
 
+**Recall** replaces Launch when a qualified local process is holding a managed
+browser profile outside AuraCall. Confirming Recall closes that browser and its
+open tabs, preserves the profile data, and launches it through ordinary AuraCall
+placement. If the holder changed, refresh and review the new state before retrying.
+Unknown, ambiguous, remote and Windows holders do not offer Recall. Recall never
+resets profile data or force-kills a browser that refuses graceful termination.
+
 **Launch** opens a dormant local browser runtime profile on its configured native
 desktop, or the selected existing desktop when no placement is configured. It
 uses the same managed browser directory, browser family, provider and configured
@@ -1159,6 +1166,12 @@ Browser and new-target opening are independent of desktop input ownership. Autom
 
 Desktop input-control ownership records are validated before automation. An invalid or incomplete record blocks interaction with an explicit recovery error and is preserved for diagnosis. Ownership is published by atomic rename so readers cannot observe a partially written owner.json. Browser opening remains independent of input ownership. Recovery of existing unknown ownership requires qualifying the retained control state; no automatic deletion is performed.
 
+Explicit ChatGPT utility commands, including app discovery and catalog refresh,
+acquire an exact utility tab and traffic governor even with serialized prompt
+concurrency. First-tab creation uses existing pre-lease acquisition before
+provider navigation. These commands keep their ordinary lease lifetime and
+cleanup; selecting serialized prompts does not disable traffic admission.
+
 Developer-mode visibility is an independent, optional observation. `apps list` reads installed-app inventory without navigating Developer mode settings, so unobserved Developer mode remains unknown. If that bounded predicate evaluation expires, the inventory retains Developer mode as unknown. Existing-app tests still require exact account/app identity and complete inventory; creating or replacing an app requires confirmed enabled Developer mode. Transport, navigation and cancellation failures remain errors.
 
 A retained native browser can open a replacement tab/window when its existing window has closed. Opening verifies exact retained process identity and current desktop assignment/display. Existing-page interactions still require current desktop window proof and input ownership. A live retained process cannot be silently moved to root by changing configuration.
@@ -1184,3 +1197,235 @@ Developer-app submission defaults to preserving the model on its fresh composer.
 Developer-app inventory can reconcile safe retained leases on cold startup only
 when native process verification proves the managed browser absent. An unavailable
 CDP endpoint alone does not authorize lease deletion or browser replacement.
+
+
+### Grok shared-account operation controls
+
+`services.grok.liveFollow.maxBrowserInteractionsPerMinute` sets the shared
+browser-operation ceiling for governed Grok reads and physical UI actions, not
+just live-follow. Runtime bindings use the same field under
+`runtimeProfiles.<name>.services.grok`. The effective ceiling is the smallest
+configured value for the same configured Grok account, including the global
+ceiling. Recent ledger contributions also prevent a higher-cap caller in another
+process from bypassing an observed lower ceiling. No backend-request quota is
+inferred from this operation setting; Grok backend request admission is a separate
+implementation slice.
+
+`services.grok.operationBudgetWaitMs` (or the runtime binding field) sets a
+nonnegative safe-integer capacity-wait bound; zero/default yields immediately.
+Waiting rechecks shared warnings, exact lease ownership and cancellation. A
+provider warning is a hard stop, not ordinary capacity exhaustion. An unset
+operation ceiling remains unconfigured; no provider capacity is guessed.
+
+Grok identity and feature discovery now charge a `provider-read` operation before
+probing the selected page. Visible warning preflight excludes conversation prose
+and persists the warning in the existing shared account ledger. Configuration
+must still establish the expected provider account, and existing provider-session
+identity checks remain authoritative.
+
+`/status.tabConcurrency.providerControls.grok` reports effective operation limit,
+wait bound, used/remaining capacity, reason and next eligible time for the
+configured selected account, without exposing account/target identifiers.
+`auracall api ops-browser-status` and its MCP equivalent preserve that JSON;
+text output and Browser Ops display the same controls. Grok remains serialized;
+this does not enable tab-affinity execution or deploy the source to an installed
+runtime. Source fixture acceptance is separate from native/provider acceptance.
+
+Grok owned REST backend requests are always metered, with a separate optional ceiling:
+`services.grok.maxBackendRequestsPerMinute` and
+`services.grok.backendRequestBudgetWaitMs` (also supported on runtime service
+bindings). Same-account ceilings combine restrictively across configured runtime
+bindings and durable callers. Wait defaults to zero. No request ceiling is guessed
+when unset; metering still honors active account ceilings contributed by other
+callers. `backendAdmissionEnabled=true` reports owned REST admission.
+The setting is an operator budget, not a measured Grok subscription quota.
+Requests under `https://grok.com/rest/` on the continuously owned target get one
+pre-dispatch permit per Fetch interception ID. Static assets, telemetry, other
+origins and other targets are excluded. Status separates request and operation
+usage, with bounded cancellation and conservative uncertain-effect fencing.
+
+Grok Connector discovery returns privacy-bounded JSON through
+`auracall grok-connectors --action list --query <text>`,
+`auracall grok-connectors --action inspect --endpoint <url>`,
+MCP `grok_connectors`, and operator-authorized POST
+`/v1/grok/connectors/query`. The HTTP/MCP body is `{ "action": "list" }` or
+`{ "action": "inspect", "selector": { "endpoint": "https://example.test/mcp" } }`;
+`runtimeProfile` selects a configured AuraCall runtime profile. Inventory status
+distinguishes visible incomplete coverage, account-gated and failed reads.
+Catalog entries are separate from installed connections. Discovery never installs,
+authenticates, invokes, or removes a Connector. Ops shows counts and bounded
+reason codes; exact endpoints are returned only when safe, with stable hashes
+available for identity. Source tests do not establish installed/live acceptance.
+
+Grok custom Connector installation is explicit:
+`auracall grok-connectors --action install --name "Example" --endpoint
+https://example.test/mcp --expected-provider-account <discovery-account-sha256>
+--yes --json`. The endpoint must be canonical HTTPS without credentials, query or
+fragment. Use the discovery result's exact Grok account reference; a connected
+service account is a separate identity. The equivalent HTTP/MCP request is
+`{ "action": "install", "input": { "kind": "custom", "name": "Example",
+"endpoint": "https://example.test/mcp" }, "expectedProviderAccountRef":
+"<64-hex-discovery-account-reference>", "confirm": true }`. Reconcile with the
+same input/account and `action: "reconcile"` (CLI omits `--yes`). Repeated install
+calls also reconcile; they never submit Add again for a recorded account/endpoint.
+
+An observed terminal `Connection failed` result on the exact owned installation
+modal returns `failed / grok_connector_install_connection_failed`. Its target
+and installation journal are retained, and `retrySafe=false` still prevents
+another Add. This confirms a failed connection, not installation or OAuth grants.
+Transport, ownership and cleanup uncertainty remain separate fenced outcomes.
+
+Awaiting-human and unconfirmed results retain their exact target and return
+`retrySafe=false`. Incomplete installation returns a nonzero CLI exit and MCP
+`isError=true`; HTTP retains the structured status in its response. Complete
+OAuth/consent manually on that target, then reconcile;
+AuraCall does not click consent or infer grants from advertised tools. The private
+installation journal fences restart and cross-runtime-profile duplicates; use the
+original AuraCall runtime profile to reconcile its target. Missing/corrupt custody
+stops the operation, with no automatic journal reset or replacement installation.
+Ops keeps installation status independently from subsequent inventory reads,
+without endpoint, target or account details. Built-in catalog installation remains `unsupported` until its native controls and
+stable identity are observed. The current source path does not prove saved
+entity/account/grants or satisfy ticket #405's installed/live acceptance gate.
+
+Grok Connector invocation is a separate explicit `action: "invoke"` on the same
+CLI, HTTP and MCP operation. Supply `targetId`, an exact `selector` containing
+`id`, `name` and `endpoint`, `prompt`, `expectedProviderAccountRef` and
+`confirm: true`. CLI uses `--target-id`, `--id`, `--name`, `--endpoint`,
+`--prompt`, `--expected-provider-account` and `--yes`. The selected enabled
+native composer row must match the current committed provider ID; AuraCall
+never toggles unrelated or disabled Connectors to satisfy selection. Existing
+composer drafts are preserved. A private durable intent fence precedes submit;
+repeating that exact request only observes its retained target. Corrupt or
+unreadable intent custody returns an unconfirmed operation with its original
+deterministic identity and `retrySafe: false`; it never resets the fence. Assistant text
+alone returns `unconfirmed` with `toolTrace: null` and `retrySafe: false`,
+because it cannot establish that the selected Connector executed a tool. Native
+settled MCP cards populate `toolTrace` with actual arguments/results for the
+current retained response; additional tool activity is explicit. Business custody
+remains unconfirmed until the journey evidence is independently validated.
+
+Grok Chats inventory has a structured read path: `auracall grok-conversations
+--limit 100 --max-pages 20 --json`, MCP `grok_conversations`, and operator-authorized
+POST `/v1/grok/conversations/query`. Request fields: `runtimeProfile`, `projectId`,
+`query`, `cursor`, `limit`, `since`, `maxPages`, `timeoutMs`. The result's `coverage`
+distinguishes visible complete, explicit empty, incomplete and failed reads;
+complete means the bounded visible UI, never account-wide backfill. Use returned
+opaque cursors only with the same project/search/since scope. An unseen cursor
+anchor remains incomplete. Project rows require positive membership; observed
+Bot provenance stays distinct. Ops stores only count/reason/continuation presence.
+Account-mirror checkpoint and foreground-yield behavior is documented in
+[Grok index mirroring](grok-mirroring.md).
+
+Grok browser operations requesting a new tab (`retain-new` or `dispose-new`)
+create a distinct target rather than reusing a root tab that may contain an
+unsent draft, attachments or a dialog. An explicit target override remains exact.
+
+Grok composer files are available through `auracall grok-files --action context`,
+`--action recent`, `--action select --id <observed-id>`, MCP `grok_files`, and
+operator-authorized POST `/v1/grok/files/query`. Bodies use `action`, optional
+`runtimeProfile`, and either `id` for selection or `paths` for explicit local
+uploads. Recent selections require an exact unique provider file ID and explicit
+readiness in the same composer/project context. A duplicate basename is not an
+identity selector. Native Recent rows with unsupported content-key URIs are omitted with
+`status: incomplete`, `code: grok_recent_partial` and partial visible-only
+coverage; a supported row can still be selected by its exact provider ID.
+Duplicate-ID ambiguity, foreign ownership and global current-root failures block
+selection. Local upload hashes readable source bytes before dispatch.
+The native attachment component can bind the same selected File object and digest
+to its observed provider metadata ID, with matching account/source URI. These
+files report `sourceBinding: native-file-object`, `sourceSha256`, and
+`sourceAgreement: local-manifest`. Context reads can recover the retained native
+File/metadata relationship after a process restart without another upload; they
+report `sourceAgreement: observed-native`, which does not assert agreement with
+a caller's local path. Recent files also use committed menu-item keys joined to
+account-scoped native asset metadata, with the key/DTO/account relationship
+revalidated immediately before item selection. A context attachment without a
+selected native File can report `sourceBinding: native-metadata` and
+`sourceAgreement: observed-native`; in this case the agreement describes only
+native metadata association. Interpret it with `sourceBinding`: this branch
+provides identity/readiness only, has no `sourceSha256`, and establishes neither
+local-manifest agreement nor server-byte qualification. A sole unmarked input
+is eligible only with an empty FileList; a nonempty input still requires the
+retained owned marker before byte observation. Metadata and phases come only from the proven committed
+React tree, with root consistency checked across digest observation. Ready
+requires the same form's committed `isQueryable` gate plus an explicitly enabled
+native Submit control and valid metadata without error/private/disabled/deleted
+flags. A phase label alone does not establish loading or readiness. Missing,
+false or unknown gates stay non-ready, and unbound native chips make context
+reads incomplete. Normal prompt attachment preparation applies the same source
+binding and checks stable account identity again before permitting submission. The local upload path returns `unconfirmed` when provider
+evidence cannot bind the selected native File to its observed provider ID; it does not permit a prompt to proceed on that evidence. Reconcile the
+retained target instead of retrying an uncertain upload. Limits, observed file
+states and provenance accompany results. Diagnostics contain counts and codes.
+
+Existing Grok Bots are available through `auracall grok-bots --action list
+--source owned`, `--source catalog`, and `--action invoke --source owned --id
+<observed-id> --prompt <text>`; MCP uses `grok_bots`, and operator-authorized POST
+`/v1/grok/bots/query` uses `action`, `runtimeProfile`, `source` for listing or
+`selector: {id,source,author?}` plus `prompt` for invocation. Selection requires an
+empty root composer and verifies the intended stable Bot token again atomically
+at prompt preparation and dispatch. Exact prompt whitespace is preserved.
+Catalog listing does not install a Bot; catalog invocation is explicitly blocked.
+Completed results include account/Bot/conversation/response custody. Artifact
+references are response-scoped and explicitly incomplete, without materialized
+bytes. Unknown outcomes retain the exact target and must not be resubmitted.
+Ops exposes whitelisted file/Bot progress. If diagnostic persistence fails, the
+original operation outcome is preserved; a returned outcome may include
+`progressPersistence: "failed"`. These source contracts do not establish installed
+or live Grok UI acceptance. Connector installation remains a separate open slice.
+
+Grok Bot lifecycle requests share `auracall grok-bots --request-json '<request>'`,
+MCP `grok_bots`, and POST `/v1/grok/bots/query`. Native discovery qualified the
+singular `/bot/<uuid>` route and the Settings fields Name, optional Title, and
+Description. Instructions and Model defaults are unavailable on the observed
+editor: requesting either returns an explicit unavailable code before input or
+Save. Description is not treated as Instructions.
+
+`create` requires `name`, `expectedProviderAccountRef`, `confirm: true`, and
+`acceptTerms: true`; the latter explicitly covers the displayed Grok Bot Terms.
+Creation uses a fresh empty owned root and one Create Bot action. `inspect` uses
+`selector: {id,name}`, `targetId`, and `expectedProviderAccountRef`. `edit` adds
+`patch: {name?,title?,description?}` and `confirm: true`; omitted fields are
+preserved. The exact retained target must already display the selected Bot.
+Saved readback reopens that same Bot's Settings after Save. No Bot invocation,
+Connector grant, deletion, or publication is included in lifecycle configuration.
+
+`resources` takes the same exact selector, target and account fields as `inspect`.
+It opens only that Bot's Settings and observes Connector/tool, Skill and knowledge
+configuration controls. Results explicitly scope observations to
+`resources.scope: "exact-bot-settings"`: missing controls are `unavailable` on
+that editor; a resource section/control whose persistent semantics are unqualified
+is `unknown`. This does not prove provider-wide absence or account gating.
+`choices` and `granted` remain `null` until exact persistent identities can be
+qualified. A global Plugins catalog, a listed service or a conversation attachment
+is never reported as a saved Bot grant/source. Wrong Bot/account or ambiguous
+Settings remains unknown. No resource grant or configuration write is supported;
+those acceptance gates stay open.
+
+A loaded URL alone does not qualify Bot identity. The native sidebar may show
+only a few Bots until **Show more** is expanded; absence from that truncated view
+is not deletion evidence. In the qualified 2026-10-30 read, entering the exact
+observed Bot through its sidebar link exposed its header and Settings after an
+earlier direct entry had shown only a shell. Backend responses also changed over
+time, so this does not establish a direct-URL defect or authorize automatic
+reload/retry. Lifecycle reads still require the exact Bot to be visibly qualified
+on the retained target. See the [identity/entry evidence](dev/notes/2026-10-30-grok409-identity-and-native-entry.md).
+
+Mutations return an `operationId` and keep a private account-bound intent journal.
+Repeat calls observe the original target instead of dispatching again, including
+across process or runtime-profile changes. For an uncertain outcome use
+`{action:"reconcile",operationId,expectedProviderAccountRef}`; do not create a
+replacement. Missing identity, changed account, absent controls, or unavailable
+saved readback remains explicit. Source/fixture success and native canary evidence
+remain distinct from installed-runtime and full ticket acceptance.
+
+If the retained unknown-effect utility lease blocks ordinary reconciliation,
+AuraCall returns `grok_bot_operator_reconciliation_required` with the original
+operation and target. It does not bypass admission. An operator must first gather
+qualified immutable proof through the supported read-only exact-target diagnostic,
+then use the custody registry's qualified effect compare-and-set settlement, and
+only then repeat the public same-ID reconciliation. Queue/lease settlement is
+separate from native saved-state proof. An already-open Settings buffer can hold
+unsaved input and never establishes persisted reconciliation; it remains unknown
+until the original target can be safely reopened and inspected.

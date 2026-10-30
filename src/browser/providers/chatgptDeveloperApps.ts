@@ -174,7 +174,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 	) {}
 
 	async readState(
-		options: { includeDeveloperMode?: boolean } = {},
+		options: { includeDeveloperMode?: boolean; inventoryTransport?: "api" | "ui" } = {},
 	): Promise<ChatgptDeveloperAppBrowserState> {
 		this.throwIfAborted();
 		debugDeveloperApps("reading ChatGPT identity");
@@ -188,7 +188,10 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		try {
 			debugDeveloperApps("reading installed and linked app signals");
 			this.submissionOptions.onInventoryStage?.("inventory");
-			const featureSignature = await this.captureInventoryFeatureSignature(client);
+			const featureSignature = await this.captureInventoryFeatureSignature(client, {
+				inventoryOnly: options.inventoryTransport === "api",
+				identity,
+			});
 			this.throwIfAborted();
 			debugDeveloperApps(
 				options.includeDeveloperMode === false
@@ -197,7 +200,9 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			);
 			this.submissionOptions.onInventoryStage?.("developer-mode");
 			const developerMode =
-				options.includeDeveloperMode === false ? null : await readChatgptDeveloperMode(client);
+				options.includeDeveloperMode === false || options.inventoryTransport === "api"
+					? null
+					: await readChatgptDeveloperMode(client);
 			this.throwIfAborted();
 			debugDeveloperApps("developer-app inventory complete");
 			return deriveChatgptDeveloperAppState({
@@ -207,7 +212,11 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				observedAt: new Date().toISOString(),
 			});
 		} finally {
-			if (!this.abortSignal?.aborted && originalUrl?.startsWith("https://chatgpt.com/")) {
+			if (
+				options.inventoryTransport !== "api" &&
+				!this.abortSignal?.aborted &&
+				originalUrl?.startsWith("https://chatgpt.com/")
+			) {
 				this.submissionOptions.onInventoryStage?.("restore-navigation");
 				await navigateChatgpt(client, originalUrl).catch(() => undefined);
 			}
@@ -216,7 +225,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 
 	private async openCreateDialog(client: ChromeClient): Promise<void> {
 		this.throwIfAborted();
-		await assertNoChatgptAccountLoadError(client, this.abortSignal);
+		await assertNoChatgptInventoryLoadError(client, this.abortSignal);
 		await assertNoChatgptBlockingSurface(client, "create developer app");
 		let control = await readDeveloperAppCreateControl(client, this.abortSignal);
 		if (control?.disabled) {
@@ -231,7 +240,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			});
 			if (!reloaded.ok) throw new Error("ChatGPT Plugins recovery refresh did not settle.");
 			this.throwIfAborted();
-			await assertNoChatgptAccountLoadError(client, this.abortSignal);
+			await assertNoChatgptInventoryLoadError(client, this.abortSignal);
 			await assertNoChatgptBlockingSurface(client, "create developer app");
 			const after = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
 			this.throwIfAborted();
@@ -472,6 +481,54 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		);
 		const settingsReadTimeoutMs = 8_000 + budgetWaitMs;
 		const settingsUrl = `https://chatgpt.com/settings/plugins-settings/${encodeURIComponent(app.pluginId)}`;
+		let settingsRecoveryUsed = false;
+		const readSettings = async (stage: "before" | "after") => {
+			let settings = await readChatgptDeveloperAppRefreshSettings(
+				client,
+				stage,
+				settingsReadTimeoutMs,
+				this.abortSignal,
+			);
+			if (
+				!settings.settingsLoadError ||
+				settings.humanApproval ||
+				settingsRecoveryUsed ||
+				settings.url !== settingsUrl
+			)
+				return settings;
+			settingsRecoveryUsed = true;
+			const identity = await this.browser.getUserIdentity({
+				abortSignal: this.abortSignal,
+				preserveActiveTab: true,
+			});
+			if (!identity?.email?.trim()) return settings;
+			this.throwIfAborted();
+			const reloaded = await reloadAndSettle(client, {
+				ignoreCache: false,
+				timeoutMs: 10_000 + budgetWaitMs,
+				mutationSource: "chatgpt-developer-apps:settings-load-recovery",
+			});
+			if (!reloaded.ok) return settings;
+			const afterIdentity = await this.browser.getUserIdentity({
+				abortSignal: this.abortSignal,
+				preserveActiveTab: true,
+			});
+			this.throwIfAborted();
+			if (
+				!afterIdentity?.email?.trim() ||
+				identity.email.trim().toLowerCase() !== afterIdentity.email.trim().toLowerCase()
+			)
+				throw new Error(
+					"ChatGPT account changed or became unavailable during settings recovery; refresh stopped.",
+				);
+			settings = await readChatgptDeveloperAppRefreshSettings(
+				client,
+				stage,
+				settingsReadTimeoutMs,
+				this.abortSignal,
+			);
+			return settings;
+		};
 		const observation = observeChatgptToolRefresh(client, app, this.abortSignal);
 		try {
 			await observation.start();
@@ -482,12 +539,9 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				mutationSource: "chatgpt-developer-apps:refresh-tools-settings",
 			});
 			if (!navigation.ok) throw new Error("Exact app refresh settings navigation did not settle.");
-			const before = await readChatgptDeveloperAppRefreshSettings(
-				client,
-				"before",
-				settingsReadTimeoutMs,
-				this.abortSignal,
-			);
+			const before = await readSettings("before");
+			if (before.settingsLoadError)
+				throw new Error("Couldn't load plugin settings; Refresh tools was not activated.");
 			if (before.humanApproval)
 				return {
 					status: "awaiting-human",
@@ -505,6 +559,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				requireVisible: true,
 				timeoutMs: 8_000,
 			});
+			observation.activationFinished();
 			if (!activated.ok)
 				return {
 					status: "unconfirmed",
@@ -514,12 +569,14 @@ export class ChatgptDeveloperAppBrowserAdapter {
 				};
 			const catalog = await observation.result;
 			this.throwIfAborted();
-			const after = await readChatgptDeveloperAppRefreshSettings(
-				client,
-				"after",
-				settingsReadTimeoutMs,
-				this.abortSignal,
-			);
+			const after = await readSettings("after");
+			if (after.settingsLoadError)
+				return {
+					status: "unconfirmed",
+					message: `Refresh ${catalog ? "catalog response" : "activation"} observed, but Couldn't load plugin settings; preservation could not be verified. Inspect before retrying.`,
+					app,
+					retrySafe: false,
+				};
 			if (after.humanApproval)
 				return {
 					status: "awaiting-human",
@@ -546,8 +603,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 			if (!catalog)
 				return {
 					status: "unconfirmed",
-					message:
-						"No attributable successful refreshed tool catalog was observed. Inspect before retrying.",
+					message: `No attributable successful refreshed tool catalog was observed. ${observation.failureReason()} Inspect before retrying.`,
 					app,
 					retrySafe: false,
 				};
@@ -665,12 +721,23 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		debugDeveloperApps("developer-app browser client closed");
 	}
 
-	private captureInventoryFeatureSignature(client: ChromeClient): Promise<string> {
+	private captureInventoryFeatureSignature(
+		client: ChromeClient,
+		options: { inventoryOnly?: boolean; identity?: ProviderUserIdentity | null } = {},
+	): Promise<string> {
 		const config = this.browser.userConfig;
 		const budgetWaitMs = resolveChatgptBackendRequestBudgetWaitMs(
 			config as Record<string, unknown>,
 			config.auracallProfile ?? "default",
 		);
+		if (options.inventoryOnly) {
+			return readChatgptDeveloperAppInventory(
+				client,
+				options.identity ?? null,
+				budgetWaitMs,
+				this.abortSignal,
+			);
+		}
 		return captureChatgptDeveloperAppFeatureSignature(
 			client,
 			12_000 + budgetWaitMs,
@@ -973,6 +1040,101 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
+async function readChatgptDeveloperAppInventory(
+	client: ChromeClient,
+	identity: ProviderUserIdentity | null,
+	budgetWaitMs: number,
+	signal?: AbortSignal,
+): Promise<string> {
+	const expectedEmail = identity?.email?.trim().toLowerCase();
+	if (!expectedEmail) {
+		throw Object.assign(new Error("ChatGPT account identity is unavailable for app inventory."), {
+			code: "developer_app_account_load_error",
+		});
+	}
+	await assertNoChatgptBlockingSurface(client, "read app inventory", { authenticatedRead: true });
+	const result = await runDeveloperAppAttachmentStage(
+		client.Runtime.evaluate({
+			expression: `(async () => {
+      if (location.origin !== 'https://chatgpt.com') return { ok: false, code: 'origin' };
+      const request = async (url, timeoutMs, headers = {}) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(url, {
+            method: 'GET', credentials: 'include',
+            headers: { accept: 'application/json', ...headers }, signal: controller.signal,
+          });
+          if (!response.ok) return { ok: false, status: response.status };
+          return { ok: true, status: response.status, data: await response.json() };
+        } catch {
+          return { ok: false, status: 0 };
+        } finally { clearTimeout(timer); }
+      };
+      const session = await request('/api/auth/session', 8000);
+      const email = session.data?.user?.email ?? session.data?.account?.email;
+      if (!session.ok || typeof email !== 'string') return { ok: false, code: 'account' };
+      const expected = ${JSON.stringify({ email: expectedEmail, accountId: identity?.accountId ?? null, organizationId: identity?.organizationId ?? null })};
+      if (email.trim().toLowerCase() !== expected.email ||
+          (expected.accountId && session.data?.account?.id !== expected.accountId) ||
+          (expected.organizationId && session.data?.account?.organizationId !== expected.organizationId)) {
+        return { ok: false, code: 'identity' };
+      }
+      // Do not include browser credentials in the evaluation result.
+      const headers = {};
+      if (typeof session.data.accessToken === 'string' && session.data.accessToken) {
+        headers.authorization = 'Bearer ' + session.data.accessToken;
+      }
+      if (typeof session.data?.account?.id === 'string' && session.data.account.id) {
+        headers['chatgpt-account-id'] = session.data.account.id;
+      }
+      const [installed, linked] = await Promise.all([
+        request('/backend-api/ps/plugins/installed', ${12_000 + budgetWaitMs}, headers),
+        request('/backend-api/aip/connectors/links/list_accessible', 12000, headers),
+      ]);
+      if (!installed.ok) return { ok: false, code: 'inventory', status: installed.status };
+      return { ok: true, installed: installed.data, linked: linked.ok ? linked.data : null };
+    })()`,
+			awaitPromise: true,
+			returnByValue: true,
+		}),
+		{
+			stage: "developer-app inventory API read",
+			timeoutMs: 20_000 + budgetWaitMs,
+			abortSignal: signal,
+		},
+	);
+	const probe = isRecord(result.result?.value) ? result.result.value : {};
+	if (result.exceptionDetails || probe.ok !== true) {
+		const code =
+			probe.code === "identity"
+				? "developer_app_account_mismatch"
+				: probe.code === "account"
+					? "developer_app_account_load_error"
+					: "developer_app_inventory_read_failed";
+		const status = typeof probe.status === "number" ? probe.status : 0;
+		throw Object.assign(
+			new Error(
+				`ChatGPT app inventory read failed (${String(probe.code ?? "browser")}, HTTP ${status}).`,
+			),
+			{ code },
+		);
+	}
+	if (!isCompleteChatgptInstalledAppsPayload(probe.installed)) {
+		throw Object.assign(
+			new Error("ChatGPT installed-app response did not contain a complete inventory."),
+			{ code: "developer_app_inventory_incomplete" },
+		);
+	}
+	const installed = isRecord(probe.installed) ? probe.installed : {};
+	const linked = isRecord(probe.linked) ? probe.linked : {};
+	return JSON.stringify({
+		inventory_complete: true,
+		installed_apps: normalizeChatgptInstalledAppProbes(installed.plugins),
+		linked_apps: normalizeChatgptLinkedAppProbes(linked.links),
+	});
+}
+
 async function captureChatgptDeveloperAppFeatureSignature(
 	client: ChromeClient,
 	timeoutMs: number,
@@ -1110,7 +1272,7 @@ async function captureChatgptDeveloperAppFeatureSignature(
 			},
 		);
 		while (!ready) {
-			await assertNoChatgptAccountLoadError(client, signal);
+			await assertNoChatgptInventoryLoadError(client, signal);
 			let pollTimer: NodeJS.Timeout | undefined;
 			try {
 				await Promise.race([
@@ -1522,7 +1684,7 @@ async function readDeveloperAppCreateControl(
 		: null;
 }
 
-async function assertNoChatgptAccountLoadError(
+async function assertNoChatgptInventoryLoadError(
 	client: ChromeClient,
 	signal?: AbortSignal,
 ): Promise<void> {
@@ -1545,6 +1707,14 @@ async function assertNoChatgptAccountLoadError(
 		{ stage: "developer-app account readiness", timeoutMs: 10_000, abortSignal: signal },
 	);
 	const text = readString(result.result?.value) ?? "";
+	if (/\bfailed to load plugins\b/i.test(text)) {
+		throw Object.assign(
+			new Error(
+				"ChatGPT could not load the Plugins inventory. Recover the Plugins page, then retry inventory; no app was changed.",
+			),
+			{ code: "developer_app_inventory_load_error" },
+		);
+	}
 	if (
 		/\b(?:error|problem|trouble) (?:while )?loading your account\b|\b(?:unable|failed) to load your account\b/i.test(
 			text,
@@ -1561,7 +1731,11 @@ async function assertNoChatgptAccountLoadError(
 	}
 }
 
-async function assertNoChatgptBlockingSurface(client: ChromeClient, action: string): Promise<void> {
+async function assertNoChatgptBlockingSurface(
+	client: ChromeClient,
+	action: string,
+	options: { authenticatedRead?: boolean } = {},
+): Promise<void> {
 	const result = await client.Runtime.evaluate({
 		expression: `(() => {
       const visible = (element) => {
@@ -1596,7 +1770,19 @@ async function assertNoChatgptBlockingSurface(client: ChromeClient, action: stri
 		ariaLabel: readString(probe.ariaLabel),
 		buttonLabels: readStringArray(probe.buttonLabels),
 	});
-	if (match) {
+	if (
+		options.authenticatedRead &&
+		/verify (?:that )?you are (?:a )?human|confirm (?:that )?you are (?:a )?human|complete (?:the )?captcha|checking your browser/i.test(
+			readString(probe.text) ?? "",
+		)
+	) {
+		throw Object.assign(new Error(`Cannot ${action}: human verification is required.`), {
+			code: "developer_app_human_verification_required",
+		});
+	}
+	// A failed UI bootstrap is not account authority for a focused read: the
+	// fresh session and inventory HTTP result decide. Provider limits still stop it.
+	if (match && (!options.authenticatedRead || match.kind === "rate-limit")) {
 		throw new Error(`Cannot ${action}: ${match.summary}`);
 	}
 }
@@ -1714,6 +1900,7 @@ function debugDeveloperApps(message: string): void {
 }
 
 interface ChatgptDeveloperAppRefreshSettings {
+	settingsLoadError?: boolean;
 	url: string;
 	text: string;
 	refreshButtonCount: number;
@@ -1735,10 +1922,11 @@ async function readChatgptDeveloperAppRefreshSettings(
 				refreshButtonCount: buttons.filter(el => el.innerText.trim().toLowerCase() === 'refresh tools' && !el.disabled && el.getAttribute('aria-disabled') !== 'true').length,
 				humanApproval: [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')].filter(visible).some(el => /approv|consent|permission|authoriz|connect account/i.test(el.innerText))};
 			const lines = state.text.split('\\n').map(line => line.trim()).filter(Boolean);
+			state.settingsLoadError = lines.includes("Couldn't load plugin settings");
 			const start = lines.indexOf('Connected accounts');
 			const end = lines.indexOf('About', start + 1);
 			const accountsReady = start >= 0 && end > start + 1 && lines.slice(start + 1, end).some(line => !/^(connect another account|loading[.\\s…]*|no connected accounts)$/i.test(line));
-			return state.humanApproval || (state.refreshButtonCount === 1 && accountsReady) ? state : null;
+			return state.settingsLoadError || state.humanApproval || (state.refreshButtonCount === 1 && accountsReady) ? state : null;
 		})()`,
 		{
 			timeoutMs,
@@ -1812,6 +2000,7 @@ function observeChatgptToolRefresh(
 	type Catalog = NonNullable<ChatgptDeveloperAppBrowserMutationOutcome["catalog"]>;
 	let active = true;
 	let armed = false;
+	let failureReason = "No request to the expected refresh endpoint was observed.";
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const requests = new Map<string, { status: number | null; identity: Promise<boolean> }>();
 	const linkResponses = new Set<string>();
@@ -1840,6 +2029,8 @@ function observeChatgptToolRefresh(
 			url.pathname !== "/backend-api/aip/connectors/mcp/refresh_actions"
 		)
 			return;
+		failureReason =
+			"Refresh request observed, but no completed attributable response was observed.";
 		const identity = (async () => {
 			try {
 				const postData =
@@ -1851,9 +2042,13 @@ function observeChatgptToolRefresh(
 				debugDeveloperApps(
 					`refresh request keys=${isRecord(body) ? Object.keys(body).join(",") : "none"}; attributable=${matched}`,
 				);
+				if (active && !matched)
+					failureReason =
+						"Observed refresh request connection identity did not match the exact app.";
 				return matched;
 			} catch {
 				debugDeveloperApps("refresh request identity unavailable");
+				if (active) failureReason = "Observed refresh request identity could not be read.";
 				return false;
 			}
 		})();
@@ -1901,6 +2096,9 @@ function observeChatgptToolRefresh(
 		if (!request || !(await request.identity) || !active) return;
 		const status = request.status;
 		if (!status || status < 200 || status >= 300) {
+			failureReason = status
+				? `Attributable refresh response returned HTTP ${status}.`
+				: "Attributable refresh response status was unavailable.";
 			settle(null);
 			return;
 		}
@@ -1920,11 +2118,13 @@ function observeChatgptToolRefresh(
 						isRecord(action) && typeof action.name === "string" && action.name.trim().length > 0,
 				)
 			) {
+				failureReason = "Attributable refresh response contained an invalid catalog.";
 				settle(null);
 				return;
 			}
 			const toolNames = body.actions.map((action) => (action as { name: string }).name).sort();
 			if (new Set(toolNames).size !== toolNames.length) {
+				failureReason = "Attributable refresh response contained duplicate tool names.";
 				settle(null);
 				return;
 			}
@@ -1934,11 +2134,13 @@ function observeChatgptToolRefresh(
 				sha256: createHash("sha256").update(JSON.stringify(body.actions)).digest("hex"),
 			});
 		} catch {
+			failureReason = "Attributable refresh response body could not be read or parsed.";
 			settle(null);
 		}
 	});
 	return {
 		result,
+		failureReason: () => failureReason,
 		start: async () => {
 			await client.Network.enable();
 		},
@@ -1959,7 +2161,9 @@ function observeChatgptToolRefresh(
 					"Exact app connection identity unavailable; Refresh tools was not activated.",
 				);
 			armed = true;
-			timer = setTimeout(() => settle(null), 20_000);
+		},
+		activationFinished: () => {
+			if (active) timer = setTimeout(() => settle(null), 20_000);
 		},
 		close: () => {
 			settle(null);

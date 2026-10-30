@@ -1,5 +1,7 @@
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
 
+- P76 installed correction: [Plan0467](docs/dev/plans/0467-2026-10-30-idless-chat-composer.md), merged through [PR503](https://github.com/ecochran76/auracall/pull/503), passes86focused checks and installed real-DOM replay with657file parity. Actual managed-page verification is blocked by desktop ownership; no research prompt sent.
+
 - Completed P89: [Plan0404](docs/dev/plans/0404-2026-10-10-demand-driven-desktop-pool.md) implements automatic rail Wake, configurable native capacity and guarded shrink; PR270 installed with maximum10, five occupied desktops and one ready spare;14 original routes preserved.
 
 - Completed P88: [Plan0394](docs/dev/plans/0394-2026-10-10-memory-routing.md) makes AuraCall Graphiti routing discoverable and distinguishes unresolved routes from service failure; atlas publication and original-query retrieval verified.
@@ -4519,3 +4521,7 @@ acceptance is separate from source integration and installed/live adoption.
 ## P90 | Plan0405 | Developer-app affinity configuration
 
 State: OPEN. [Plan0405](docs/dev/plans/0405-2026-10-11-developer-app-affinity-config.md), issue #253. Selected resolved configuration forwarding; source validation in progress, LitScout installed acceptance pending.
+
+## App cleanup diagnostics — bounded follow-on
+
+[Plan0454](docs/dev/plans/0454-2026-10-24-app-cleanup-diagnostics.md) is CLOSED: bounded, sanitized nested CLI failure causes are merged and qualified in the installed CLI. Historical transport failure causality remains unconfirmed.

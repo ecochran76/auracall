@@ -230,7 +230,10 @@ describe("executeChatgptDeveloperAppOperation", () => {
 		);
 		expect(result.status).toBe("completed");
 		expect(refreshTools).toHaveBeenCalledWith(original.apps[0], "https://fixture.example/mcp");
-		expect(readState).toHaveBeenCalledWith({ includeDeveloperMode: false });
+		expect(readState).toHaveBeenCalledWith({
+			includeDeveloperMode: false,
+			inventoryTransport: "api",
+		});
 	});
 
 	it("forwards explicit model strategy only to the submission adapter", async () => {

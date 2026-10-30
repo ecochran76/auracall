@@ -1,0 +1,135 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { expect, test, vi } from "vitest";
+import { setAuracallHomeDirOverrideForTest } from "../src/auracallHome.js";
+import { grokBuildUnknown } from "../src/browser/grokBuildService.js";
+import { recordGrokEcosystemProgress } from "../src/browser/grokEcosystemProgress.js";
+import { createBrowserTabConcurrencyRuntime } from "../src/browser/tabConcurrencyRuntime.js";
+import { summarizeGrokBuildDiagnostics } from "../src/cli/grokBuildCommand.js";
+import { createResponsesHttpServer } from "../src/http/responsesServer.js";
+
+test("Build HTTP validates confirmation before resolving and preserves partial generation outcome", async () => {
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "grok-build-http-"));
+	setAuracallHomeDirOverrideForTest(root);
+	const result = {
+		...grokBuildUnknown("grok_build_app_version_not_observed"),
+		status: "partial" as const,
+		effectState: "completed" as const,
+		retrySafe: false,
+	};
+	const generate = vi.fn(async () => result);
+	const inspection = { ...result, operation: "inspect" as const, effectState: "none" as const };
+	const inspect = vi.fn(async () => inspection);
+	const resolver = vi.fn(async () => ({
+		export: async () => ({ ...result, operation: "export" as const }),
+		discover: async () => result,
+		generate,
+		inspect,
+	}));
+	const server = await createResponsesHttpServer(
+		{ host: "127.0.0.1", port: 0 },
+		{ grokBuildServiceResolver: resolver },
+	);
+	try {
+		const endpoint = `http://127.0.0.1:${server.port}/v1/grok/build/query`;
+		const request = {
+			action: "generate",
+			prompt: "Synthetic unpublished Build",
+			runtimeProfile: "default",
+			timeoutMs: 1000,
+		};
+		const denied = await fetch(endpoint, { method: "POST", body: JSON.stringify(request) });
+		expect(denied.status).toBe(400);
+		expect(resolver).not.toHaveBeenCalled();
+		const response = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({ ...request, confirmed: true }),
+		});
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual(result);
+		expect(generate).toHaveBeenCalledWith({ ...request, confirmed: true });
+		expect(resolver).toHaveBeenCalledTimes(1);
+		const selected = {
+			action: "inspect",
+			targetId: "retained-target",
+			conversationId: "exact-conversation",
+			responseId: "response-selected",
+		};
+		const read = await fetch(endpoint, { method: "POST", body: JSON.stringify(selected) });
+		expect(read.status).toBe(200);
+		expect(await read.json()).toEqual(inspection);
+		expect(inspect).toHaveBeenCalledWith(selected);
+		expect(generate).toHaveBeenCalledTimes(1);
+		const invalidRead = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({ ...selected, confirmed: true }),
+		});
+		expect(invalidRead.status).toBe(400);
+		expect(resolver).toHaveBeenCalledTimes(2);
+		const exported = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({
+				...selected,
+				action: "export",
+				outputDir: root,
+				acknowledgeTargetDefaultReset: true,
+			}),
+		});
+		expect(exported.status).toBe(200);
+		expect((await exported.json()).operation).toBe("export");
+		expect(generate).toHaveBeenCalledTimes(1);
+	} finally {
+		await server.close();
+		setAuracallHomeDirOverrideForTest(null);
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});
+
+test("Ops projects partial Build state without retaining response text or private URLs", async () => {
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "grok-build-ops-"));
+	setAuracallHomeDirOverrideForTest(root);
+	try {
+		await recordGrokEcosystemProgress("build", "default", {
+			...summarizeGrokBuildDiagnostics({
+				...grokBuildUnknown(),
+				publication: {
+					requested: false,
+					status: "unknown",
+					controls: {
+						state: "not_published",
+						phase: "idle",
+						publishEnabled: true,
+						proposedName: "PRIVATE_PROPOSED_NAME",
+						snapshotBinding: "unqualified",
+						dialogDismissed: true,
+					},
+				},
+			}),
+			status: "partial",
+			code: "grok_build_app_version_not_observed",
+			effectState: "completed",
+			text: "PRIVATE_BUILD_TEXT",
+			url: "https://private.example/result",
+			hasResponseIdentity: true,
+		});
+		const status = await createBrowserTabConcurrencyRuntime({} as never).readStatus();
+		expect(status.providerControls?.grok.build).toMatchObject({
+			status: "partial",
+			effectState: "completed",
+			hasResponseIdentity: true,
+			publicationInspection: {
+				nativeState: "not_published",
+				nativePublishEnabled: true,
+				dialogDismissed: true,
+				snapshotBinding: "unqualified",
+			},
+		});
+		expect(JSON.stringify(status.providerControls)).not.toContain("PRIVATE_BUILD_TEXT");
+		expect(JSON.stringify(status.providerControls)).not.toContain("private.example");
+		expect(JSON.stringify(status.providerControls)).not.toContain("PRIVATE_PROPOSED_NAME");
+	} finally {
+		setAuracallHomeDirOverrideForTest(null);
+		await fs.rm(root, { recursive: true, force: true });
+	}
+});

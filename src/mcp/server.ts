@@ -1,4 +1,12 @@
 #!/usr/bin/env node
+import { registerGrokBuildTool } from "./tools/grokBuild.js";
+import { createConfiguredGrokBuildService } from "../browser/configuredGrokBuild.js";
+import { registerGrokFilesTool } from "./tools/grokFiles.js";
+import { registerGrokBotsTool } from "./tools/grokBots.js";
+import { createConfiguredGrokFilesService, createConfiguredGrokBotsService } from "../browser/configuredGrokDiscovery.js";
+import { registerGrokConversationsTool } from "./tools/grokConversations.js";
+import { registerGrokConnectorsTool } from "./tools/grokConnectors.js";
+import { createConfiguredGrokConnectorsService, createConfiguredGrokConversationsService } from "../browser/configuredGrokDiscovery.js";
 import 'dotenv/config';
 import process from 'node:process';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -148,6 +156,11 @@ export async function startMcpServer(): Promise<void> {
     },
   );
 
+  registerGrokConversationsTool(server,request=>createConfiguredGrokConversationsService(services.resolvedUserConfig,request.runtimeProfile));
+  registerGrokConnectorsTool(server, request => createConfiguredGrokConnectorsService(services.resolvedUserConfig,request.runtimeProfile,undefined,request.action==='invoke'?request.targetId:undefined));
+  registerGrokFilesTool(server,request=>createConfiguredGrokFilesService(services.resolvedUserConfig,request.runtimeProfile));
+  registerGrokBotsTool(server,request=>createConfiguredGrokBotsService(services.resolvedUserConfig,request.runtimeProfile));
+  registerGrokBuildTool(server,request=>createConfiguredGrokBuildService(services.resolvedUserConfig,request.runtimeProfile));
   registerConsultTool(server);
   registerResponseCreateTool(server, {
     responsesService: services.responsesService,

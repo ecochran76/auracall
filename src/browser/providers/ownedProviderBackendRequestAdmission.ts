@@ -1,3 +1,4 @@
+import { currentBrowserPerformanceDiagnostics } from "../browserPerformanceDiagnostics.js";
 import { createHash, randomUUID } from "node:crypto";
 import type Protocol from "devtools-protocol";
 import {
@@ -11,7 +12,7 @@ import {
 } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type { ChromeClient } from "../types.js";
 
-export async function attachOwnedChatgptBackendRequestAdmission(
+export async function attachOwnedProviderBackendRequestAdmission(
 	client: ChromeClient,
 	governor: ProviderTrafficGovernor,
 	options?: { abortSignal?: AbortSignal },
@@ -19,6 +20,15 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	const admit = governor.admitBackendRequest?.bind(governor);
 	if (!admit || !governor.attribution.targetId)
 		throw new Error("Owned backend request admission is unavailable.");
+	const provider = governor.attribution.provider;
+	const diagnostic = provider === "chatgpt" ? currentBrowserPerformanceDiagnostics() : undefined;
+	const patterns =
+		provider === "grok"
+			? ["https://grok.com/rest/*"]
+			: provider === "chatgpt"
+				? ["https://chatgpt.com/backend-api/*", "https://chat.openai.com/backend-api/*"]
+				: [];
+	if (!patterns.length) throw new Error("Owned backend request provider is unsupported.");
 	const hold = await holdCdpCommandAdmission(client, options);
 	const namespace = randomUUID();
 	const requests = new Map<string, Promise<void>>();
@@ -42,6 +52,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 		: undefined;
 	const cancelledNativeRequests = new Set<string>();
 	const nativeFailure = (event: Protocol.Network.LoadingFailedEvent) => {
+		diagnostic?.failure(event.requestId, client);
 		if (event.canceled !== true) return;
 		cancelledNativeRequests.add(event.requestId);
 		for (const controller of nativeRequests.get(event.requestId) ?? [])
@@ -85,6 +96,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 			);
 		const existing = requests.get(event.requestId);
 		if (existing) return existing;
+		diagnostic?.request(event.networkId ?? event.requestId, event.request.url, client);
 		const nativeCancellation = new AbortController();
 		const requestSignal = AbortSignal.any([cancellation.signal, nativeCancellation.signal]);
 		if (event.frameId) {
@@ -109,8 +121,10 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 				}
 				const url = new URL(event.request.url);
 				if (
-					!["https://chatgpt.com", "https://chat.openai.com"].includes(url.origin) ||
-					!url.pathname.startsWith("/backend-api/")
+					!(provider === "grok"
+						? url.origin === "https://grok.com" && url.pathname.startsWith("/rest/")
+						: ["https://chatgpt.com", "https://chat.openai.com"].includes(url.origin) &&
+							url.pathname.startsWith("/backend-api/"))
 				) {
 					await client.Fetch.continueRequest({ requestId: event.requestId });
 					return;
@@ -125,10 +139,12 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 						]),
 					)
 					.digest("hex")}`;
+				const finishAdmission = diagnostic?.admission();
 				try {
 					await admit(
 						key,
 						async () => {
+							finishAdmission?.("admitted");
 							try {
 								await withCdpCommandTimeout(
 									client,
@@ -136,6 +152,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 										timeoutMs: 3_000,
 										timeoutMessage: "Owned backend request continuation timed out.",
 										abortSignal: requestSignal,
+										awaitReceiptAfterSend: true,
 									},
 									() => client.Fetch.continueRequest({ requestId: event.requestId }),
 								);
@@ -149,6 +166,7 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 						client.Runtime,
 					);
 				} catch (error) {
+          finishAdmission?.("rejected");
 					if (!(error instanceof ProviderBackendRequestCancelledBeforeDispatchError))
 						failures.push(error);
 					await failPausedRequest(
@@ -232,11 +250,9 @@ export async function attachOwnedChatgptBackendRequestAdmission(
 	};
 	try {
 		await client.Fetch.enable({
-			patterns: [
-				{ urlPattern: "https://chatgpt.com/backend-api/*", requestStage: "Request" },
-				{ urlPattern: "https://chat.openai.com/backend-api/*", requestStage: "Request" },
-			],
+			patterns: patterns.map((urlPattern) => ({ urlPattern, requestStage: "Request" })),
 		});
+    diagnostic?.attached(client);
 	} catch (error) {
 		try {
 			await dispose();

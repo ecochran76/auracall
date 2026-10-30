@@ -1,3 +1,4 @@
+import { type BrowserPerformanceDiagnostics, withBrowserPerformanceDiagnostics } from "../browser/browserPerformanceDiagnostics.js";
 import type { DeveloperAppSubmissionEvidence } from "../browser/chatgptDeveloperAppSubmission.js";
 import { BrowserAutomationClient } from "../browser/client.js";
 import { hasUnknownOwnedRequestCleanup } from "../browser/ownedBackendRequestAuthority.js";
@@ -41,21 +42,84 @@ export class DeveloperAppTimeoutError extends Error {
 	}
 }
 
-/** Stable JSON receipt; never serialize browser objects or raw error causes. */
-export function formatChatgptDeveloperAppListFailure(error: unknown): string {
-	const detail = error as { code?: string; stage?: string; timeoutMs?: number } | null;
+/** Bounded metadata only: never serialize stacks, requests, browser objects or bodies. */
+function developerAppErrorDiagnostics(error: unknown): Record<string, unknown> {
+	const seen = new Set<Error>();
+	let remaining = 32;
+	const text = (value: string, limit = 512): string =>
+		value
+			.slice(0, 8192)
+			.replace(/https?:\/\/[^\s<>"']+/gi, "<redacted-url>")
+			.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "<redacted-email>")
+			.replace(/(?:authorization|set-cookie|cookie)\s*:[^\r\n]*/gi, "<redacted-header>")
+			.replace(/\bBearer\s+[^\s,"']+/gi, "Bearer <redacted>")
+			.replace(
+				/\b(authorization|set-cookie|cookie|password|passwd|token|access_token|refresh_token|id_token|secret|csrf|api[_-]?key|code)["']?\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;}]+)/gi,
+				"$1=<redacted>",
+			)
+			.replace(/\b[A-Za-z0-9_-]{32,}\b/g, "<redacted-opaque-value>")
+			.slice(0, limit);
+	const visit = (value: unknown, depth = 0): Record<string, unknown> => {
+		if (depth >= 6 || remaining-- <= 0) return { truncated: true };
+		if (!(value instanceof Error))
+			return { name: "NonError", message: "Non-Error failure details omitted" };
+		if (seen.has(value)) return { truncated: true };
+		seen.add(value);
+		const code = (value as Error & { code?: unknown }).code;
+		const result: Record<string, unknown> = {
+			name: text(value.name, 64),
+			message: text(value.message),
+		};
+		if (typeof code === "string") result.code = text(code, 64);
+		else if (typeof code === "number" && Number.isFinite(code)) result.code = code;
+		if (value.cause !== undefined) result.cause = visit(value.cause, depth + 1);
+		if (value instanceof AggregateError) {
+			result.errors = value.errors.slice(0, 8).map((item) => visit(item, depth + 1));
+			if (value.errors.length > 8) result.truncated = true;
+		}
+		return result;
+	};
+	return visit(error);
+}
+
+/** Historical name retained for callers; all app actions use the same failure receipt. */
+export function formatChatgptDeveloperAppListFailure(
+	error: unknown,
+	action: ChatgptDeveloperAppOperationInput["action"] = "list",
+): string {
+	const detail = error as { stage?: unknown; timeoutMs?: unknown } | null;
+	const stages = [
+		"identity",
+		"attachment",
+		"inventory",
+		"developer-mode",
+		"restore-navigation",
+		"browser-resolution",
+		"utility-admission",
+		"interaction-admission",
+		"cleanup",
+		"queue-admission",
+	];
+	const stage =
+		typeof detail?.stage === "string" && stages.includes(detail.stage) ? detail.stage : undefined;
+	const diagnostics = developerAppErrorDiagnostics(error);
 	return JSON.stringify(
 		{
-			action: "list",
-			status: "failed",
-			code: detail?.code ?? "developer_app_failed",
+			action,
+			status: action === "refresh-tools" ? "unconfirmed" : "failed",
+			...(action === "list" ? {} : { retrySafe: false }),
+			code: diagnostics.code ?? "developer_app_failed",
 			stage:
-				detail?.stage ??
+				stage ??
 				(error instanceof Error ? listFailureStages.get(error) : undefined) ??
 				"queue-admission",
-			timeoutMs: detail?.timeoutMs,
-			message: error instanceof Error ? error.message : String(error),
+			timeoutMs:
+				typeof detail?.timeoutMs === "number" && Number.isFinite(detail.timeoutMs)
+					? detail.timeoutMs
+					: undefined,
+			message: diagnostics.message,
 			cleanup: hasUnknownOwnedRequestCleanup(error) ? "unknown" : "not-qualified",
+			diagnostics,
 		},
 		null,
 		2,
@@ -93,7 +157,10 @@ export interface ChatgptDeveloperAppState {
 }
 
 export interface ChatgptDeveloperAppAdapter {
-	readState(options?: { includeDeveloperMode?: boolean }): Promise<ChatgptDeveloperAppState>;
+	readState(options?: {
+		includeDeveloperMode?: boolean;
+		inventoryTransport?: "api" | "ui";
+	}): Promise<ChatgptDeveloperAppState>;
 	create(input: ChatgptDeveloperAppCreateInput): Promise<ChatgptDeveloperAppMutationOutcome>;
 	refreshTools(
 		app: ChatgptDeveloperApp,
@@ -110,6 +177,7 @@ type ChatgptDeveloperAppCliAdapter = ChatgptDeveloperAppAdapter & {
 };
 
 export interface ChatgptDeveloperAppCliDependencies {
+  performanceDiagnostics?: BrowserPerformanceDiagnostics;
 	onProgress?: (progress: { stage: DeveloperAppStage; timeoutMs?: number }) => void;
 	browserOperationOwned?: boolean;
 	listTimeoutMs?: number;
@@ -216,7 +284,7 @@ export async function executeChatgptDeveloperAppOperation(
 		adapter,
 		await adapter.readState(
 			input.action === "list" || input.action === "refresh-tools"
-				? { includeDeveloperMode: false }
+				? { includeDeveloperMode: false, inventoryTransport: "api" }
 				: undefined,
 		),
 	);
@@ -395,17 +463,28 @@ async function executeChatgptDeveloperAppOperationWithState(
 	throw new Error("Unsupported ChatGPT developer-app action.");
 }
 
-export async function runChatgptDeveloperAppOperationForCli(
-	userConfig: ResolvedUserConfig,
-	input: ChatgptDeveloperAppOperationInput,
-	dependencies: ChatgptDeveloperAppCliDependencies = {},
+export function runChatgptDeveloperAppOperationForCli(
+  userConfig: ResolvedUserConfig,
+  input: ChatgptDeveloperAppOperationInput,
+  dependencies: ChatgptDeveloperAppCliDependencies = {},
+): Promise<ChatgptDeveloperAppOperationResult> {
+  const operation = () => runChatgptDeveloperAppOperationWithDiagnostics(userConfig, input, dependencies);
+  return dependencies.performanceDiagnostics
+    ? withBrowserPerformanceDiagnostics(dependencies.performanceDiagnostics, operation)
+    : operation();
+}
+
+async function runChatgptDeveloperAppOperationWithDiagnostics(
+  userConfig: ResolvedUserConfig,
+  input: ChatgptDeveloperAppOperationInput,
+  dependencies: ChatgptDeveloperAppCliDependencies,
 ): Promise<ChatgptDeveloperAppOperationResult> {
 	const createBrowser = dependencies.createBrowser ?? BrowserAutomationClient.fromConfig;
 	const createAdapter = dependencies.createAdapter ?? createChatgptDeveloperAppBrowserAdapter;
 	const abortController =
 		input.action === "list" ||
 		input.action === "refresh-tools" ||
-		(input.action === "test" && input.submit)
+		input.action === "test"
 			? new AbortController()
 			: null;
 	const active: { adapter: ChatgptDeveloperAppCliAdapter | null } = { adapter: null };
@@ -414,6 +493,7 @@ export async function runChatgptDeveloperAppOperationForCli(
 	let operationFailure: unknown;
 	const reportStage = (nextStage: DeveloperAppStage) => {
 		stage = nextStage;
+		dependencies.performanceDiagnostics?.stage(stage);
 		dependencies.onProgress?.({ stage });
 	};
 	const operation = async () => {
@@ -514,7 +594,9 @@ export async function runChatgptDeveloperAppOperationForCli(
 		}
 	};
 	try {
-		if (input.action !== "list" && input.action !== "refresh-tools") return await operation();
+		const selectingOnly = input.action === "test" && !input.submit;
+		if (input.action !== "list" && input.action !== "refresh-tools" && !selectingOnly)
+			return await operation();
 		const timeoutMs = normalizePositiveTimeout(
 			input.action === "refresh-tools"
 				? dependencies.refreshToolsTimeoutMs
@@ -525,6 +607,7 @@ export async function runChatgptDeveloperAppOperationForCli(
 					userConfig.auracallProfile ?? "default",
 				),
 		);
+		dependencies.performanceDiagnostics?.stage(stage);
 		dependencies.onProgress?.({ stage, timeoutMs });
 		return await withChatgptDeveloperAppDeadline(
 			operation(),
@@ -540,7 +623,7 @@ export async function runChatgptDeveloperAppOperationForCli(
 		);
 	} catch (error) {
 		operationFailure = error;
-		if (input.action !== "list" || error instanceof DeveloperAppTimeoutError) throw error;
+		if (error instanceof DeveloperAppTimeoutError) throw error;
 		const failure = error instanceof Error ? error : new Error(String(error));
 		// Diagnostics must preserve the native error class, aggregate causes and
 		// shared governor error identity used by ownership/cleanup callers.
