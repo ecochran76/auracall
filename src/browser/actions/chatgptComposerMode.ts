@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { getAuracallHomeDir } from "../../auracallHome.js";
 import type { BrowserLogger, BrowserModelStrategy, ChromeClient } from "../types.js";
 import { buildClickDispatcher } from "./domEvents.js";
+import { assertNoChatgptAccountLoadError } from "./chatgptAccountError.js";
 
 export type ChatgptComposerMode = "chat" | "work";
 
@@ -49,6 +50,7 @@ export async function ensureChatgptComposerMode(
 	}
 	await captureModeFailure(Runtime, desiredMode, result?.status, logger);
 	if (result?.status === "mode-not-found") {
+		await assertNoChatgptAccountLoadError(Runtime);
 		const available = result.availableModes.filter(Boolean);
 		const hint = available.length > 0 ? ` Available: ${available.join(", ")}.` : "";
 		throw new Error(`Unable to find the ChatGPT ${label} mode control.${hint}`);

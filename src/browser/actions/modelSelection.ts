@@ -7,6 +7,7 @@ import {
 import { logDomFailure } from '../domDebug.js';
 import { ensureThinkingTime } from './thinkingTime.js';
 import { buildClickDispatcher } from './domEvents.js';
+import { assertNoChatgptAccountLoadError } from './chatgptAccountError.js';
 
 const MODEL_SELECTION_EVALUATE_TIMEOUT_MS = 35_000;
 const ANIMATED_SLIDER_TRIGGER_SELECTOR = '[data-animated-slider-trigger="true"]';
@@ -87,6 +88,7 @@ export async function ensureModelSelection(
       throw new Error(`Unable to find model option matching "${desiredModel}" in the model switcher.${availableHint}${tempHint}`);
     }
     default: {
+      await assertNoChatgptAccountLoadError(Runtime);
       await logDomFailure(Runtime, logger, 'model-switcher-button');
       throw new Error('Unable to locate the ChatGPT model selector button.');
     }

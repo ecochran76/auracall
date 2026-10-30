@@ -2736,6 +2736,8 @@ automation only after control-grant revocation is confirmed.
 
 Open the AuraCall root URL to reach the console, then select **Desktops** to open the browser client. Console, operator dashboard and desktop client share AuraCall's glowing halo favicon.
 
+If ChatGPT startup reports `CHATGPT_ACCOUNT_LOAD_ERROR`, the selected page could not load the account. Recover that page before a new attempt; this error alone does not mean your login expired. AuraCall does not automatically reload, sign out or resubmit the prompt.
+
 ### Grok Connector reconciliation after browser loss
 
 `grok-connectors --action inspect --id <observed-connector-id>` can read an exact
