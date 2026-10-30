@@ -1,3 +1,15 @@
+## 2026-10-29 — Repository and tracker reconciliation
+
+Plan0465 reconciles35 existing worktrees plus one stale registration. Preserved
+and pushed the lone untracked deferred draft, verified an all-ref Git bundle,
+removed29 clean worktree directories and pruned the absent registration. Six
+remain: primary, two open diagnostic PR checkouts and three live runtime/tooling
+holds. Branches and commits retained. TTL spec488 closed; Grok and desktop
+bodies now lead with current blockers and neutral browser-home intent. Four
+unmerged PRs remain open. The prior106-row catalog is preserved as historical
+evidence; ten current custody/continuation rows replace stale active assignments.
+No product/runtime/provider/CI work or process termination occurred.
+
 ## 2026-10-29 — Issue374 current composer qualification
 
 Checked the updated ChatGPT workbench before revisiting the old selector defect.

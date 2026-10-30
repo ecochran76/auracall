@@ -1,3 +1,12 @@
+## 2026-10-29 — Reconcile custody before removing worktrees
+
+An integrated HEAD and clean status do not prove a worktree is unused. Current
+browsers/tools retain working directories and dependency paths in three old
+checkouts. Keep those paths, preserve unmerged refs and checkpoint untracked
+source before removal. Treat historical lane snapshots as history rather than
+current active assignments; ticket closure still requires its own acceptance.
+See [Plan0465](dev/plans/0465-2026-10-29-repository-reconciliation.md).
+
 ## 2026-10-23 | Reject unknown ChatGPT CLI selectors (#374)
 
 `chatgpt:reasoning-medium` was not a supported semantic selector. The CLI accepted

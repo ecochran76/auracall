@@ -1,5 +1,17 @@
 # Plan0453 — Grok implementation waves
 
+State: CANCELLED
+Lane: P453
+Branch: feat/grok-upgrade-integration
+Target: main
+Integration: merge
+
+## Current State | 2026-10-29 reconciliation
+
+The original source-wave execution is superseded by Plan0458. This CANCELLED state retires that execution packet, not the parent Grok requirements. Parent398 remains OPEN with409,411 and477 unmet. Integrated source remains on main. The old worktree is retained solely because live tools and dependency paths still reference it; do not remove it or stop those processes as a repository-cleanup shortcut.
+
+## Preserved execution history
+
 State: OPEN
 Branch: feat/grok-upgrade-integration
 Target: main

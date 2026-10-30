@@ -1,6 +1,18 @@
 # Plan0458 — remaining Grok native frontier
 
 State: OPEN
+Lane: P458
+Branch: feat/grok411-spec-20261028-r2
+Target: main
+Integration: merge
+
+## Current State | 2026-10-29 reconciliation
+
+Current tracker readback:406 and414 CLOSED through PR494 and PR493;409 remains blocked on missing exact Bot resource controls,411 on current workspace/publication qualification, and477 on separate Instructions/Model defaults. Parent398 stays OPEN. One consolidated review and one findings-TDD phase are already complete. No new native action, publication, consent, installation or review is initiated. The exact worktree remains a live browser/tooling hold.
+
+## Preserved execution history
+
+State: OPEN
 Branch: feat/grok411-spec-20261028-r2
 Target: main
 Owner: ecochran76
