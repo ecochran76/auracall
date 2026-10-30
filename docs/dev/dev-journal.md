@@ -57258,3 +57258,10 @@ PR493 merged6ad7ed6a6;414CLOSED readback,409/411OPEN. Main fetched and root
 fast-forwarded cleanly. No CI runs/checks reported; local validation is the
 recorded proof. Browser887430 retained, no installed adoption. Single review and
 findings-TDD phase complete; optional verifier extraction remains nonblocking.
+
+### 2026-10-29 — Approved409 diagnosis and411 research
+
+User approved the ask-matt route. Root starts bounded409 symptom feedback loop;
+parallel411 research reads source and existing private controller receipts only.
+Base5f4697f85. Original review/findings counters remain consumed1/1. Browser887430
+retained; prior focus hypothesis is rejected. No new effect or installation.

@@ -152,18 +152,36 @@ lanes:
   - id: P458
     objective: Qualify remaining Grok native capability gates
     plan: docs/dev/plans/0458-2026-10-25-grok-native-frontier.md
-    plan_ref: refs/remotes/origin/main
-    branch: feat/grok411-spec-20261028-r2
+    plan_ref: refs/heads/fix/grok409-diagnosis-20261029
+    branch: fix/grok409-diagnosis-20261029
     target: main
     plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 624930ff70b589cea6e868d6c14f782c1c6bdad8
-    remote_ref: refs/remotes/origin/feat/grok411-spec-20261028-r2
+    checkpoint: 5f4697f854037c79c66f9f88d68ce2a2336fd37e
+    remote_ref: refs/remotes/origin/fix/grok409-diagnosis-20261029
     integration: merge
     dependencies: []
     overlaps: []
     work_items: [ecochran76/auracall#398]
-    validation_status: source-and-installed-gates-remain-distinct
+    validation_status: approved-409-diagnosis-411-read-only-research
+    updated_at: 2026-10-29
+  - id: P458411
+    objective: Qualify the native publication revision and app/version contract without effects
+    plan: docs/dev/plans/0458-2026-10-25-grok-native-frontier.md
+    plan_ref: refs/heads/research/grok411-publication-contract-20261029
+    branch: research/grok411-publication-contract-20261029
+    target: main
+    plan_state: OPEN
+    custody_state: ACTIVE_WORKTREE
+    checkpoint: 5f4697f854037c79c66f9f88d68ce2a2336fd37e
+    remote_ref: refs/remotes/origin/research/grok411-publication-contract-20261029
+    integration: merge
+    dependencies: []
+    overlaps: [P458]
+    reconciled_overlaps: [P458]
+    reconciliation_note: Research worker owns one evidence note only; primary owns all native operations and shared plan/journal/ledger.
+    work_items: [ecochran76/auracall#411]
+    validation_status: research-only-no-provider-effects
     updated_at: 2026-10-29
   - id: P464
     objective: Close independent tab ownership and TTL tickets with attributed shared-browser acceptance
