@@ -1,0 +1,85 @@
+{
+  "plan": "0468",
+  "status": "SOURCE_QUALIFIED_INSTALL_PENDING",
+  "base": "12a229d6f",
+  "authority": "Operator yes to the reviewed failure-only ownership capture proposal",
+  "seam": "public DesktopControlGate.takeControl/holdAutomation/withAutomation; isolated AURACALL_HOME_DIR and genuine filesystem permissions",
+  "red_green_cycles": [
+    {
+      "red_report": "red1.json",
+      "red_passed": 0,
+      "red_failed": 1,
+      "green_report": "green1.json",
+      "green_passed": 1,
+      "green_failed": 0
+    },
+    {
+      "red_report": "red2.json",
+      "red_passed": 1,
+      "red_failed": 1,
+      "green_report": "green2.json",
+      "green_passed": 2,
+      "green_failed": 0
+    },
+    {
+      "red_report": "red3.json",
+      "red_passed": 2,
+      "red_failed": 1,
+      "green_report": "green3.json",
+      "green_passed": 3,
+      "green_failed": 0
+    },
+    {
+      "red_report": "red4.json",
+      "red_passed": 3,
+      "red_failed": 1,
+      "green_report": "green4.json",
+      "green_passed": 4,
+      "green_failed": 0
+    }
+  ],
+  "focused": {
+    "passed": 29,
+    "failed": 0,
+    "files": [
+      "desktopControlFailureCapture.test.ts",
+      "desktopControlGate.test.ts",
+      "desktopTransitionRecovery.test.ts",
+      "desktopCdpTransport.test.ts",
+      "nativeDesktopCdp.test.ts"
+    ]
+  },
+  "typecheck_exit": 0,
+  "full_build_exit": 0,
+  "scoped_lint_exit": 0,
+  "runtime_contract_exit": 0,
+  "initial_contract": {
+    "exit": 1,
+    "reason": "Check launched before full build finished copying generated configs; retained failed log; rerun after build passed."
+  },
+  "deployed_comparison": {
+    "baseline_prefix": "/home/ecochran76/.auracall/user-runtime-issue384-2ff65e7b8",
+    "changed": [
+      "src/browser/service/desktopControlGate.js"
+    ],
+    "missing": [],
+    "baseline_dist": "/home/ecochran76/.auracall/user-runtime-issue384-2ff65e7b8/node_modules/auracall/dist"
+  },
+  "privacy": {
+    "raw_tokens_bindings_error_objects_excluded": true,
+    "file_mode": "0600",
+    "directory_and_marker_require_private_owner_mode": true,
+    "maximum_json_bytes": 4096,
+    "default": "off unless owner-only enabled marker contains1",
+    "linux_only": true,
+    "one_receipt_per_terminal_refused_call": true,
+    "owner_boot_identity": "not recorded by existing owners; explicit ownerBootVerified=false",
+    "pid_presence": "current /proc observation only"
+  },
+  "gate_semantics": "Original errors rethrown, held owners preserved, no production ownership record changed by capture",
+  "private_evidence": "~/.auracall/diagnostics/desktop-control-capture-20261030/",
+  "source_sha256": {
+    "src/browser/service/desktopControlGate.ts": "251e01d9e6f2b2729d4f76a6bce4ddbac7c0dd3e310c328127f988885175e381",
+    "tests/browser/desktopControlFailureCapture.test.ts": "a86559aeaa8e878329ca6571d682eb470d795517540fbbe11fa90a8be8d8c4d0"
+  }
+}

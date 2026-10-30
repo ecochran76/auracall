@@ -1,5 +1,10 @@
 # Aura-Call
 
+Opt-in temporary desktop admission failure receipts are diagnostic observations,
+not ownership authority. They retain allowlisted metadata and binding hashes,
+never control tokens or raw bindings. PID presence does not prove the recorded
+owner belongs to the current boot; the original refusal and ownership remain.
+
 Control-less Chat fallback may use one visible enabled ProseMirror textbox
 without the legacy prompt editor ID after the existing bounded mode-control
 wait. Dialog editors, ambiguous editor sets and explicit active Work markers
