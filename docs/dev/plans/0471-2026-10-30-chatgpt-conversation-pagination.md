@@ -60,7 +60,7 @@ findings. Spec: this contract and Plan0469 pagination findings; one accepted P2
 cancellation-classification finding, addressed by a public red/green regression.
 Closed-world remediation only; no additional broad discovery or refactoring.
 
-Local focused validation (Linux/WSL, Node22 toolchain, virtual time, one worker):
+Local focused validation (Linux/WSL, Node24.18.0, virtual time, one worker):
 - pnpm exec vitest run tests/browser/chatgptConversationPagination.test.ts tests/browser/chatgptConversationListRecovery.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProofSession.test.ts --maxWorkers=1:216passed,4files,9.19s.
 - pnpm exec tsc --noEmit:pass.
 - pnpm exec biome lint src/browser/providers/chatgptAdapter.ts tests/browser/chatgptConversationPagination.test.ts:pass.
