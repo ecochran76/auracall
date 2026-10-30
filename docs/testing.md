@@ -1,3 +1,9 @@
+- ChatGPT list recovery policy (provider-free, Plan0470):
+  `pnpm vitest run tests/browser/chatgptConversationListRecovery.test.ts --maxWorkers=1`.
+  Public adapter with external Chrome transport fixtures proves account-mirror
+  rate limits stop without recovery or repeated identity requests, and transient
+  recovery cannot reopen when navigation is forbidden. No live429claim.
+
 - Temporary ownership capture (provider-free, Plan0468):
   `pnpm vitest run tests/browser/desktopControlFailureCapture.test.ts tests/browser/desktopControlGate.test.ts tests/browser/desktopTransitionRecovery.test.ts tests/browser/desktopCdpTransport.test.ts tests/browser/nativeDesktopCdp.test.ts --maxWorkers=1`.
   Public gate refusals, genuine sandbox holds and permissions prove allowlisting,

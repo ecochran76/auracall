@@ -1387,13 +1387,25 @@ function buildChatgptConversationReopen(
 function buildChatgptListReopen(
 	client: ChromeClient,
 	projectId?: string | null,
+	options?: BrowserProviderListOptions,
 ): () => Promise<ChatgptRecoveryActionResult> {
 	return async () => {
+		if (
+			!providerNavigationAllowed(options) ||
+			options?.accountMirrorSingleConversationVisit === true
+		) {
+			return {
+				action: "reopen-list",
+				outcome: "skipped",
+				summary: `${normalizeChatgptProjectId(projectId) ?? "root"}:navigation-forbidden`,
+			};
+		}
 		try {
 			await navigateToChatgptUrl(
 				client,
 				resolveChatgptConversationListUrl(projectId),
 				normalizeChatgptProjectId(projectId) ?? undefined,
+				options,
 			);
 			return {
 				action: "reopen-list",
@@ -8142,7 +8154,8 @@ async function scrapeChatgptConversations(
 		},
 		{
 			debugContext,
-			reopen: buildChatgptListReopen(client, projectId),
+			reopen: buildChatgptListReopen(client, projectId, options),
+			providerOptions: options,
 		},
 	);
 }
@@ -13945,6 +13958,17 @@ export function createChatgptAdapter(): Pick<
 			try {
 				return await attempt(options);
 			} catch (error) {
+				if (
+					error &&
+					typeof error === "object" &&
+					"blockingSurface" in error &&
+					isChatgptAccountMirrorHardStop(
+						error.blockingSurface as ChatgptBlockingSurfaceMatch,
+						options,
+					)
+				) {
+					throw error;
+				}
 				if (!isRetryableConnectionError(error)) {
 					throw error;
 				}

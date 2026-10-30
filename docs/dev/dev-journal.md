@@ -1,3 +1,13 @@
+## 2026-10-30 — Conversation-list recovery constraints, source TDD
+
+Plan0470 fixes the Plan0469 recovery finding through the public adapter boundary.
+The first qualified red observed eight forbidden effects. Passing recovery options
+removed those effects but exposed a repeated identity read; the account-mirror
+rate-limit error now bypasses connection retry. A second red caught forbidden
+reopen navigation for transient errors; the reopen callback now retains caller
+options and navigation policy. 207 selected tests pass. No live provider calls,
+installation, pagination changes or concurrent-list sharing in this packet.
+
 ## 2026-10-30 — Grok409 management discovery admission block
 
 User approved native resource discovery after PR509. Two connections stopped at
