@@ -21,4 +21,13 @@ Exact approved reservation transitioned revision3to4, state released,
 effectState outcome-unknown, finalDisposition preserved. Its approval audit and
 original history remain. No browser/account/grant change or target close occurs.
 Private immutable approval/result: `~/.auracall/private/grok/recovery-20261030/`.
+Recovery receipt SHA256:
+`96c265c6074a4c0490cb2daf9893c8de60a5cbdce9d604f06cc213ae1826f59d`.
+
+Post-recovery governed Bot-read attempt stopped before connection: the retained
+Chrome PID887430 no longer exists. No replacement browser, navigation or retry
+was started. Thus custody release is verified; fresh Bot/native admission is not.
+The next runtime step is to qualify current managed browser generation through
+normal service discovery, preserving any peers and stored account state.
+
 Memory disposition:forbidden; no explicit user memory-write request.
