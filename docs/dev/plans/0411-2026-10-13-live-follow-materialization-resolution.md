@@ -1,5 +1,17 @@
 # Plan 0411 — live-follow/materialization resolution
 
+State: OPEN
+Lane: P411
+Branch: fix/plan0411-owned-warning-contention
+Target: main
+Integration: merge
+
+## Current State | 2026-10-29 reconciliation
+
+Draft PR335 retains unmerged request-ownership, startup and ledger-contention work. Its source gates passed but the recorded live acceptance failed. Cleanup of only its own crawler was qualified separately; no scheduler resume, warning clearance, provider retry or new acceptance is scheduled. The branch is paused in refs with no active worktree.
+
+## Preserved execution history
+
 ## 2026-10-16 | Issue165 scoped archive reads retain verification hashes
 
 A real archive-service/public-job regression proved the mocked checksum case was
