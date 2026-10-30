@@ -1,3 +1,13 @@
+## 2026-10-30 — ChatGPT conversation-list efficiency audit
+
+Plan0469 audits source563faa1a7 without provider traffic or runtime changes.
+The executable offline probe measures7DOM reads/5scrolls for24rows atlimit25;
+three independent calls repeat21/15. Virtualized batches lose earlier IDs;
+history ignores cancellation locally. Listing also omits recovery providerOptions,
+preventing its account-mirror-specific rate-limit refusal at that wrapper.
+See the research note for source citations, HTTP-count limits and ranked repairs.
+No source fix, ticket closure or cause claim for concurrent429s.
+
 ## 2026-10-30 — Grok409 management discovery admission block
 
 User approved native resource discovery after PR509. Two connections stopped at
