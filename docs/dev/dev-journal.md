@@ -1,3 +1,12 @@
+## 2026-10-30 — Grok409 management discovery admission block
+
+User approved native resource discovery after PR509. Two connections stopped at
+workload-owned before page observation/action. Corrected registry census shows
+an idle unknown-effect Grok utility reservation on another target; no owner or
+qualified completion receipt. Preserve fence and runtime holds; no provider
+absence inference, settings change, installation or review reset. Exact own helper
+trees cleaned. [Evidence and next gate](notes/2026-10-30-grok409-management-admission.md).
+
 ## 2026-10-30 — Desktop ownership capture installed and enabled
 
 PR508/372465aaf source10c4e06c5 is active for CLI/MCP/API with658-file parity.
