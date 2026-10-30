@@ -1,3 +1,10 @@
+- ChatGPT history pagination (provider-free, Plan0471):
+  `pnpm vitest run tests/browser/chatgptConversationPagination.test.ts --maxWorkers=1`.
+  Public adapter with external Chrome transport fixtures covers changing-window
+  retention/new-ID progress, redundant-read removal, row/no-progress bounds,
+  cancellation during sleep and stalled commands, and connection-like reasons.
+  Virtual time makes deadline and timer-disposal checks deterministic.
+
 - ChatGPT list recovery policy (provider-free, Plan0470):
   `pnpm vitest run tests/browser/chatgptConversationListRecovery.test.ts --maxWorkers=1`.
   Public adapter with external Chrome transport fixtures proves account-mirror
