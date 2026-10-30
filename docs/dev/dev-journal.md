@@ -1,3 +1,14 @@
+## 2026-10-30 — Full installed runtime accepted
+
+PR500/be2344da0 preserves deployed-only diagnostics in complete sourcefdc2f05ea.
+195 focused checks, typecheck/build, installed contract and657file hashes pass.
+Both wrappers and API use the new full prefix; API2521540 serves status/desktops/
+console200, with scheduler pause,23paused completions and config/env bytes intact.
+Native ChatGPT restart1414440→2543066 preserves managed data and ac2 generations;
+passive fresh-page composer proof passes, no Send. PR481 closed as superseded,
+with historical wait attribution preserved. Three idle old worktrees removed,
+refs retained. Plan0466 records rollback, remaining ac2 holds and final custody.
+
 ## 2026-10-30 — Full runtime upgrade preparation
 
 User authorized full installed upgrade, deployed-only fix preservation and restart
