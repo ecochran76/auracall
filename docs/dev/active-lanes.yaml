@@ -171,7 +171,7 @@ lanes:
     plan_ref: refs/remotes/origin/main
     branch: fix/grok409-diagnosis-20261029
     target: main
-    plan_state: BLOCKED
+    plan_state: CLOSED
     custody_state: INTEGRATED
     checkpoint: 7efea3746db7c4ea9372db36622570af82292f9d
     remote_ref: refs/remotes/origin/fix/grok409-diagnosis-20261029
