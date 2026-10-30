@@ -1,5 +1,10 @@
 # Aura-Call
 
+Conversation-list recovery retains caller policy through the recovery wrapper and
+reopen callback. Account-mirror rate-limit hard stops are terminal to the adapter's
+connection retry; they do not authorize another identity request or browser
+recovery. Navigation-forbidden listings cannot reopen through recovery.
+
 Opt-in temporary desktop admission failure receipts are diagnostic observations,
 not ownership authority. They retain allowlisted metadata and binding hashes,
 never control tokens or raw bindings. PID presence does not prove the recorded
