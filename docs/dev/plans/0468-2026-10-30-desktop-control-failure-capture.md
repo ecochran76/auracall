@@ -1,12 +1,30 @@
 # Plan0468 — Temporary desktop admission failure capture
 
-State: OPEN
+State: CLOSED
 Lane: P468
 Branch: diag/desktop-control-failure-capture
 Target: main
 Integration: merge
 
 ## Current State
+
+CLOSED for the finite instrumentation delivery. PR508 merged372465aaf; source
+10c4e06c5 installed in immutable `user-runtime-control-capture-10c4e06c5` for
+CLI/MCP/API.658files match the full build, dependency versions match, and only
+desktopControlGate.js differs from the previous complete issue384 runtime.
+The private0600enabled marker is active under a0700diagnostic directory.
+29focused tests, full build/typecheck, scoped lint, runtime contract, installed
+public-gate fixture and fresh MCP initialization pass. API1559161healthy,
+config/env and all23paused completion identities/states preserved, native browser
+2543066unchanged. [Installed receipt](../notes/2026-10-30-desktop-control-capture-installed.json).
+
+No natural failure receipt exists yet. The historical cause remains unqualified.
+Inspect the next qualified natural refusal with its originating operation, then
+remove the enabled marker and clean up the temporary DEBUG-desktop-control-busy
+code/tag in a bounded diagnosis packet. That later causal outcome does not reopen
+or expand this completed instrumentation delivery. No research prompt authorized.
+
+## Approved starting state
 
 Operator approved the explicit failure-only capture proposal after historical
 DesktopControlBusyError could not be reproduced. Implement diagnostic evidence,

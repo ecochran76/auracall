@@ -1,0 +1,79 @@
+{
+  "plan": "0468",
+  "status": "INSTALLED_ENABLED_NATURAL_CAUSE_PENDING",
+  "source_commit": "10c4e06c5f8b048b13b02733a2693bf9da726c31",
+  "merge_commit": "372465aafb42e69ed818d988c1b30747e3d90684",
+  "installed_prefix": "~/.auracall/user-runtime-control-capture-10c4e06c5",
+  "installed_files_matched": 658,
+  "dependency_version_differences": [],
+  "compiled_difference_from_deployed_issue384": [
+    "src/browser/service/desktopControlGate.js"
+  ],
+  "installed_fixture": {
+    "installedFixturePassed": true,
+    "records": 1,
+    "originalRefusalPreserved": true,
+    "heldOwnerPreserved": true,
+    "tokenAndBindingExcluded": true,
+    "mode": "0600",
+    "successAddsNoRecord": true,
+    "realDesktopTouched": false,
+    "promptSubmitted": false
+  },
+  "mcp": {
+    "initialized": true,
+    "serverInfo": {
+      "name": "auracall-mcp",
+      "version": "0.1.1"
+    },
+    "tools_advertised": true,
+    "prompt_submitted": false
+  },
+  "activation": {
+    "api_ok": true,
+    "api_pid": 1559161,
+    "old_api_pid": 1260954,
+    "new_api_process_uses_prefix": true,
+    "old_api_exited": true,
+    "scheduler_paused": true,
+    "paused_completions": 23,
+    "paused_completion_identities_states_match": true,
+    "config_env_hashes_match": true,
+    "capture_enabled": true,
+    "marker_mode": "0o600",
+    "directory_mode": "0o700",
+    "marker_owner_matches_api_user": true,
+    "natural_failure_receipts": 0,
+    "browser_pid_unchanged": 2543066,
+    "browser_ownership_verified_after_activation": true,
+    "prompt_submitted": false,
+    "browser_restarted": false,
+    "health": {
+      "status_code": 200,
+      "elapsed_ms": 5242,
+      "ok": true
+    },
+    "initial_health_timeout": {
+      "endpoint": "http://127.0.0.1:18095/status",
+      "timeout_seconds": 8,
+      "outcome": "TimeoutError after API restart; attribution unqualified; no restart retry performed"
+    }
+  },
+  "enable_marker": "~/.auracall/diagnostics/desktop-control/enabled",
+  "capture_pattern": "~/.auracall/diagnostics/desktop-control/DEBUG-desktop-control-busy-*.json",
+  "disable": "Remove only the enabled marker. Keep captured evidence and all actual ownership records intact.",
+  "rollback": "Prior issue384 prefix and exact CLI/MCP wrappers retained in private installation evidence; disable the capture marker when rolling back.",
+  "private_evidence": "~/.auracall/diagnostics/desktop-control-capture-20261030/",
+  "limits": [
+    "No natural failure has been captured yet; original contention cause remains unqualified.",
+    "PID presence is not boot identity or control authority.",
+    "Installed fixture uses its own temporary AURACALL_HOME_DIR and never touches a real desktop.",
+    "The first post-restart status read timed out8seconds; a bounded follow-up returned200 in5242ms. No extra restart and no cause attributed."
+  ],
+  "planning_audit": {
+    "errors": 68,
+    "prior_baseline_errors": 68,
+    "same_error_list": true,
+    "new_errors": []
+  }
+}
