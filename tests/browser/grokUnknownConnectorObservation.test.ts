@@ -64,7 +64,13 @@ async function fixture(active = false, backendLimit?: number) {
 	const raw = {
 		send: async () => {},
 		Page: { enable: async () => {} },
-		Runtime: { ...dom.runtime, enable: async () => {} },
+		Runtime: {
+			evaluate: async ({ expression }: { expression: string }) =>
+				dom.runtime.evaluate({
+					expression: `(()=>{window.innerWidth=1000;window.innerHeight=700;return ${expression};})()`,
+				}),
+			enable: async () => {},
+		},
 		Network: {
 			enable: async () => {},
 			responseReceived: () => () => {},
@@ -471,4 +477,118 @@ test("retains a provider warning raised during fixed observation settlement", as
 		"provider-warning",
 	);
 	expect(await fs.readFile(f.file)).toEqual(before);
+});
+
+/** Controlled multi-panel DOM at the Runtime boundary. Panels keep text mounted
+ * while their real geometry/style can make them inactive. */
+async function panelFixture() {
+	const f = await fixture();
+	const { runInNewContext } = await import("node:vm");
+	const styles = new Map<N, Record<string, string>>();
+	const box = (node: N, left: number, top: number, width = 120, height = 24) => {
+		node.getBoundingClientRect = () => ({
+			left,
+			top,
+			x: left,
+			y: top,
+			width,
+			height,
+			right: left + width,
+			bottom: top + height,
+		});
+	};
+	const computed = (node: N) => ({
+		display: node.hidden ? "none" : "block",
+		visibility: "visible",
+		opacity: "1",
+		overflow: "visible",
+		overflowX: "visible",
+		overflowY: "visible",
+		...styles.get(node),
+	});
+	box(f.modal, 0, 0, 500, 300);
+	const carousel = new N("div");
+	carousel.parentElement = f.modal;
+	box(carousel, 0, 0, 500, 300);
+	styles.set(carousel, { overflow: "hidden", overflowX: "hidden", overflowY: "hidden" });
+	const picker = new N("div", "", {}, [new N("button", "Custom")]);
+	picker.parentElement = carousel;
+	box(picker, 0, 0, 500, 300);
+	box(picker.children[0], 30, 70);
+	const failed = new N("div", "", {}, [
+		new N("h2", "Connection failed"),
+		new N("p", "Sorry, there was a problem connecting to this MCP server."),
+		new N("button", "Go Back"),
+	]);
+	failed.parentElement = carousel;
+	const placeFailed = (left: number) => {
+		box(failed, left, 0, 500, 300);
+		failed.children.forEach((node, index) => {
+			box(node, left + 20, 40 + index * 40, 300, 24);
+		});
+	};
+	placeFailed(0);
+	carousel.children = [picker, failed];
+	f.modal.children = [carousel];
+	f.raw.Runtime.evaluate = async ({ expression }) => ({
+		result: {
+			value: runInNewContext(expression, {
+				document: Object.assign(f.dom.document, { body: f.dom.document, title: "Grok" }),
+				location: { href: "https://grok.com/" },
+				HTMLElement: N,
+				HTMLInputElement: N,
+				Event: class {},
+				getComputedStyle: computed,
+				window: {
+					innerWidth: 1000,
+					innerHeight: 700,
+					getComputedStyle: computed,
+					__NEXT_DATA__: {
+						props: { pageProps: { user: { id: "fixture-user", email: "operator@example.test" } } },
+					},
+				},
+			}),
+		},
+	});
+	return { ...f, styles, box, picker, failed, placeFailed };
+}
+test.each([
+	"aria-hidden",
+	"opacity",
+	"offscreen",
+	"clipped",
+])("ignores inactive failed-pane text behind the active picker (%s)", async (kind) => {
+	const f = await panelFixture();
+	const before = await fs.readFile(f.file);
+	// Simulate whole-root static text and a mounted but inactive failure panel.
+	f.modal.ownText =
+		"New Connector Connection failed Sorry, there was a problem connecting to this MCP server.";
+	if (kind === "aria-hidden") f.failed.setAttribute("aria-hidden", "true");
+	if (kind === "opacity") f.styles.set(f.failed, { opacity: "0" });
+	if (kind === "offscreen") f.placeFailed(1500);
+	if (kind === "clipped") f.placeFailed(600);
+	expect(await observeConfiguredGrokUnknownConnectorOutcome(f.config, f.request)).toMatchObject({
+		category: "connector-picker",
+		customControlCount: 1,
+		effectState: "outcome-unknown",
+	});
+	expect(await fs.readFile(f.file)).toEqual(before);
+});
+test("observes visible terminal anchors while the Custom picker pane is clipped", async () => {
+	const f = await panelFixture();
+	f.box(f.picker, 600, 0, 500, 300);
+	f.box(f.picker.children[0], 620, 70);
+	expect(await observeConfiguredGrokUnknownConnectorOutcome(f.config, f.request)).toMatchObject({
+		category: "connection-failed",
+		customControlCount: 0,
+		effectState: "outcome-unknown",
+	});
+});
+test("keeps simultaneously visible picker and failure panels inconclusive", async () => {
+	const f = await panelFixture();
+	expect(await observeConfiguredGrokUnknownConnectorOutcome(f.config, f.request)).toMatchObject({
+		category: "inconclusive",
+		customControlCount: 1,
+		effectState: "outcome-unknown",
+	});
 });
