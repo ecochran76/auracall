@@ -1,12 +1,29 @@
 # Plan0467 — Qualify the ID-less Chat composer fallback
 
-State: OPEN
+State: CLOSED
 Lane: P76
 Branch: fix/chatgpt-idless-composer
 Target: main
 Integration: merge
 
 ## Current State
+
+CLOSED at the bounded passive managed-page criterion. Installed selector bytes
+remain unchanged from qualified sourcee801e190b. Exact guarded visibility read
+passed342ms; full installed composer probe passed69ms on owned browser2543066,
+without prompt, navigation, browser restart or control override. The current root
+has one ID-less ProseMirror editor and two explicit mode controls. This proves
+normal installed Chat selection, not a live missing-controls fallback replay.
+[Passive receipt](../notes/2026-10-30-desktop-control-passive-acceptance.json).
+
+The earlier DesktopControlBusyError does not reproduce now. Its failure-time
+owner metadata was not captured, so historical contention cause remains
+unqualified. No speculative gate patch or new instrumentation was installed.
+The source/installation receipt and original failed probe remain preserved.
+Possible future capture is a separate, bounded proposal requiring approval before
+production instrumentation; it does not keep this finite acceptance plan open.
+
+## Prior installed checkpoint
 
 PR503 merged8723ff36a; qualified sourcee801e190b installed in immutable
 `user-runtime-idless-e801e190b` for CLI/MCP/API with657file parity.
