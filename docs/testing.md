@@ -1,3 +1,11 @@
+- ID-less Chat composer (provider-free, Plan0467):
+  `pnpm vitest run tests/browser/chatgptComposerMode.test.ts tests/browser/chatgptToolApproval.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers=1`.
+  Real mode expression covers absent legacy IDs, delayed editor, hidden/disabled,
+  unrelated/dialog and duplicate editors, plus existing explicit Work controls.
+  Offline Chrome real-CSS reconstruction corroborates the red/green; neither
+  fixture nor source tests prove live acceptance. See
+  [diagnosis](dev/notes/2026-10-30-idless-composer-diagnosis.json).
+
 - Independent tab cleanup ownership (provider-free, issue490):
   `pnpm vitest run tests/browser/configuredChatgptTabMaintenance.test.ts tests/browser/activeChatRetirement.test.ts tests/accountMirror/liveFollowTabCoordinator.test.ts tests/browser-service/tabLeaseRetirement.test.ts tests/browser/tabAffinityMaintenanceLoop.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts --maxWorkers=1`.
   Public configured maintenance preserves unregistered and legacy census-only
