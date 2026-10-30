@@ -1,0 +1,39 @@
+{
+  "spec": "https://github.com/ecochran76/auracall/issues/513",
+  "tickets": [
+    514,
+    515
+  ],
+  "base": "57df62b52f88affdf28486f456af23be3d3c2fc9",
+  "source_tip": "1b3d4c0c0",
+  "primary_commit": "9a0eb7d3d",
+  "worker_commit": "c73d4c8c20502d03065d3f55d4116ef8c70ed681",
+  "integrated_worker_commit": "1b3d4c0c0",
+  "seam": "Public desktop automation admission; isolated temporary home and ownership directory",
+  "red_green": {
+    "deadline": "red1 failed pending after100ms; green1 passed; green2 deadline and capture9passed",
+    "category": "red1 human refusal incorrectly cancelled; green1-corrected8passed; final28passed; transcription error retained"
+  },
+  "checks": {
+    "primary_typecheck": 0,
+    "worker_typecheck": 0,
+    "combined_build": 0,
+    "combined_scoped_lint": 0,
+    "integration_tests": {
+      "passed": 131,
+      "failed": 0,
+      "skipped": 0,
+      "files": 9,
+      "tier": "focused",
+      "maxWorkers": 1
+    }
+  },
+  "plan_audit": {
+    "current_errors": 67,
+    "prior_baseline_errors": 68,
+    "new_errors": 0,
+    "passed": false
+  },
+  "runtime_effects": "None; no installation, browser/service operations or provider prompts",
+  "private_artifacts": "~/.auracall/diagnostics/pr508-followup-spec-20261030/"
+}

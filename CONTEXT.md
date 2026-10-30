@@ -11,6 +11,8 @@ never control tokens or raw bindings. PID presence does not prove the recorded
 owner belongs to the current boot; the original refusal and ownership remain.
 Optional capture has a 100 ms diagnostic wait allowance across the complete
 capture attempt; an already-issued filesystem operation can settle afterward.
+Receipt categories follow the terminal refusal cause, independently of a later
+abort-signal snapshot; cancellation reasons remain private.
 
 Control-less Chat fallback may use one visible enabled ProseMirror textbox
 without the legacy prompt editor ID after the existing bounded mode-control

@@ -1041,7 +1041,9 @@ Run tests and replay harnesses with an isolated `AURACALL_HOME_DIR` while enable
 
 One failed `withAutomation` admission may write one JSON file (maximum4096bytes,
 mode0600), prefixed `DEBUG-desktop-control-busy-`. Metadata covers human ownership,
-terminal busy/cancelled waits and rejected inherited scope. It records the last
+terminal busy/cancelled waits and rejected inherited scope. Plan0469 categories
+follow the actual terminal refusal, so a concurrent abort cannot relabel a human
+refusal or an unrelated admission storage error as cancellation. It records the last
 successful owner read with its observation timestamp, PID presence, normalized
 acquisition time and hashed binding correlation. Existing owners lack a boot
 identifier, so `ownerBootVerified=false`; PID presence is not ownership proof.
