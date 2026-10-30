@@ -256,6 +256,7 @@ export function createGrokConnectorInstallationService(
 			});
 		let connection: GrokConnectorConnection | undefined;
 		let retainTarget = existing;
+		const priorEffectDispatched = record.effectDispatched;
 		let dispatched = false;
 		let result: GrokConnectorInstallationResult | undefined;
 		try {
@@ -374,9 +375,20 @@ export function createGrokConnectorInstallationService(
 					];
 					record.targetId = connection.targetId;
 				}
-				record.effectDispatched = existing
-					? record.effectDispatched || outcome.effectDispatched
-					: outcome.effectDispatched;
+				if (
+					outcome.status === "failed" &&
+					outcome.code === "grok_connector_install_form_changed" &&
+					outcome.effectDispatched === false
+				) {
+					// The final in-page guard positively refused before Add. Cancel only
+					// this attempt's provisional beforeCommit flag, never a prior effect.
+					record.effectDispatched = priorEffectDispatched;
+					dispatched = false;
+				} else {
+					record.effectDispatched = existing
+						? record.effectDispatched || outcome.effectDispatched
+						: outcome.effectDispatched;
+				}
 				// Preparation tokens belong to this transport only; never publish replayable tokens.
 				const { prepared: _prepared, ...safe } = outcome;
 				result = {
