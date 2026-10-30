@@ -22359,3 +22359,7 @@ overall command deadline unchanged. Removed ignored redundant settings-content
 wait; stronger exactsettings reader remains. 102 sequentialtests/typecheck/build/
 scopedlint pass. Previous attempt preserved as zeroactivation; freshqualification
 uses a distinct result path. No provider prompt/calendarwrite.
+
+## Turn 469 | 2026-10-30
+
+P469 primary/deadline owns integration and #514; category worker owns #515 in an isolated checkout. Base57df62b52; both unblocked, shared file integrated serially. See [Plan0469](docs/dev/plans/0469-2026-10-30-desktop-capture-refusal-integrity.md). No installed effects.
