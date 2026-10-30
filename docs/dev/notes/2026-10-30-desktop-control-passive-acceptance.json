@@ -1,0 +1,50 @@
+{
+  "plan": "0467",
+  "status": "PASSIVE_LIVE_CRITERION_PASSED_CONTENTION_NOT_REPRODUCED",
+  "source_commit": "e801e190b1e128fbdf0650f7bbbf4340ad8a726d",
+  "installed_selector_hash_unchanged": true,
+  "minimal_read": {
+    "status": "read_succeeded",
+    "elapsedMs": 342,
+    "pid": 2543066,
+    "visibility": "visible",
+    "promptSent": false
+  },
+  "full_installed_probe": {
+    "sourceCommit": "e801e190b1e128fbdf0650f7bbbf4340ad8a726d",
+    "pid": 2543066,
+    "cdpPort": 45015,
+    "browserProfile": "wsl-chrome-3/chatgpt",
+    "accountMatched": true,
+    "appMatched": true,
+    "before": {
+      "path": "/",
+      "readyState": "complete",
+      "legacyEditors": 0,
+      "idlessProseMirror": 1,
+      "modeControls": 2,
+      "workSelected": false,
+      "dialogs": 0
+    },
+    "outcome": "already-selected Chat",
+    "logs": [
+      "ChatGPT mode: Chat (already selected)"
+    ],
+    "elapsedMs": 69,
+    "promptSubmitted": false,
+    "navigationRequested": false,
+    "browserRestarted": false,
+    "diagnosticCapturePreserved": true
+  },
+  "acceptance_scope": "Existing owned root page with explicit Chat/Work controls present; no prompt or navigation. Not a live missing-controls fallback replay.",
+  "historical_contention": {
+    "status": "cause_unqualified",
+    "retained_error": "DesktopControlBusyError",
+    "missing_evidence": "Failure-time owner role, PID/liveness, acquisition time and requested/owner binding correlation. Generic error alone does not identify a particular human or automation owner.",
+    "hypotheses_tested": false,
+    "source_changes": false,
+    "instrumentation_installed": false
+  },
+  "private_evidence": "~/.auracall/diagnostics/desktop-control-20261030/",
+  "next": "Optional operator-approved failure-only ownership metadata capture; no speculative gate fix."
+}
