@@ -1,6 +1,6 @@
 # Optional desktop admission failure capture
 
-Status: APPROVED by the operator; source qualified in Plan0468, installation tracked separately.
+Status: INSTALLED_ENABLED through Plan0468/PR508. No natural failure observed yet.
 Source authority: diagnosing-bugs Phase1 when a trustworthy loop is unavailable.
 
 The guarded read and full unchanged installed selector now pass. The historical

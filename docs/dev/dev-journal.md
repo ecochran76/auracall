@@ -1,3 +1,19 @@
+## 2026-10-30 — Desktop ownership capture installed and enabled
+
+PR508/372465aaf source10c4e06c5 is active for CLI/MCP/API with658-file parity.
+Only desktopControlGate.js differs from the deployed issue384 build; dependency
+versions match.29focused tests, full build/typecheck/lint/contract, installed
+sandbox refusal/privacy/ownership checks and fresh MCP initialization pass.
+Marker `~/.auracall/diagnostics/desktop-control/enabled` is0600 under0700directory.
+API1559161healthy; config/env and23paused completions unchanged. Browser2543066
+unchanged and verified. Initial8second health read timed out; the bounded second
+read passed200 in5242ms, with no extra restart or causal attribution.
+No natural failure receipt exists yet. Plan0468 closes finite delivery; inspect a
+qualified natural refusal before diagnosis/removing temporary capture. No prompt,
+browser restart, warning clearance or ownership override. Private rollback and
+proofs: `~/.auracall/diagnostics/desktop-control-capture-20261030/`.
+[Installed receipt](notes/2026-10-30-desktop-control-capture-installed.json).
+
 ## 2026-10-30 — Approved temporary desktop ownership capture
 
 Plan0468 primary serialized source lane in an isolated checkout. The operator

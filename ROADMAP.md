@@ -1,6 +1,6 @@
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
 
-- P468 approved diagnostic packet: [Plan0468](docs/dev/plans/0468-2026-10-30-desktop-control-failure-capture.md) adds temporary opt-in terminal ownership metadata capture; no gate bypass or causal repair.
+- P468 installed diagnostic delivery: [Plan0468](docs/dev/plans/0468-2026-10-30-desktop-control-failure-capture.md) is CLOSED; PR508 capture is installed/enabled with658-file parity and preserved issue384 fixes.29focused tests and installed fixture/MCP/API proofs pass. Await one qualified natural failure before causal diagnosis and temporary-capture cleanup.
 
 - P76 accepted bounded passive selection: [Plan0467](docs/dev/plans/0467-2026-10-30-idless-chat-composer.md) is CLOSED after the existing installed selector passed on the managed root page with explicit mode controls. Source/installed fallback fixtures remain separate; the earlier transient desktop contention cause is unqualified. No research prompt sent.
 
