@@ -1,3 +1,10 @@
+## 2026-10-30 — Preserve definitive no-Add refusal in continuations
+
+Public service regression exposed existing-record OR bookkeeping retaining the
+current provisional dispatch after a positive final-guard refusal. Snapshot the
+prior effect and cancel only the current no-Add marker; prior/unknown effects
+remain fenced. No historical journal rewrite or retry extension. See Plan0467.
+
 ## 2026-10-30 — Connector pre-fill readiness and explicit recovery
 
 Plan0467 now observes delayed custom form readiness before one fill. Public
