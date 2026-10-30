@@ -1,0 +1,72 @@
+{
+  "state": "MERGED_INSTALLED_FIXTURE_PASS_LIVE_DESKTOP_BUSY",
+  "plan": "0467",
+  "pr": 503,
+  "merge_commit": "8723ff36a2be6ac188bce907a03e547dcfcced5b",
+  "qualified_source": "e801e190b1e128fbdf0650f7bbbf4340ad8a726d",
+  "installed_prefix": "~/.auracall/user-runtime-idless-e801e190b",
+  "files_matched": 657,
+  "source_checks": {
+    "focused_tests_passed": 86,
+    "test_suites": 6,
+    "full_build_exit": 0,
+    "typecheck_exit": 0,
+    "scoped_lint_exit": 0,
+    "runtime_contract_exit": 0
+  },
+  "installed_real_dom": {
+    "kind": "real CSS DOM reconstructed fixture",
+    "result": {
+      "status": "already-selected",
+      "mode": "chat"
+    },
+    "chromeExit": 0,
+    "pass": true
+  },
+  "installed_mcp": {
+    "initialized": true,
+    "serverInfo": {
+      "name": "auracall-mcp",
+      "version": "0.1.1"
+    },
+    "protocolVersion": "2024-11-05",
+    "tools_advertised": true,
+    "prompt_submitted": false
+  },
+  "activation": {
+    "api_ok": true,
+    "api_pid": 2789921,
+    "api_old_pid": 2521540,
+    "scheduler_paused": true,
+    "paused_completion_count": 23,
+    "paused_completion_states_match": true,
+    "config_env_hashes_match": true,
+    "config_files_checked": 2
+  },
+  "native_browser": {
+    "pid": 2543066,
+    "ownership_verified_after_activation": true,
+    "restarted": false
+  },
+  "live_probe": {
+    "status": "BLOCKED",
+    "error": "DesktopControlBusyError",
+    "message": "Desktop control is busy; automation or another human owns the display.",
+    "stage": "Runtime read selecting the unique visible owned root tab; selector not yet invoked",
+    "initial_predicate_failure": "Two owned root pages exist; initial unique-root predicate refused. Initial evidence retained.",
+    "ownership_overridden": false,
+    "research_prompt_sent": false,
+    "tabs_closed": false
+  },
+  "diagnostics": {
+    "failure_capture_preserved": true,
+    "source_capture_tests_passed": true
+  },
+  "rollback": "previous runtime user-runtime-full-fdc2f05ea and exact old wrappers retained privately",
+  "private_evidence": "~/.auracall/diagnostics/issue427-composer-install-20261030/",
+  "limits": [
+    "Installed reconstructed DOM success does not prove actual managed-page acceptance.",
+    "Complete historical causal attribution remains unqualified.",
+    "PR merge succeeded; no hosted CI result claimed."
+  ]
+}

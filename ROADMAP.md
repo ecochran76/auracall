@@ -1,6 +1,6 @@
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
 
-- P76 source-qualified correction: [Plan0467](docs/dev/plans/0467-2026-10-30-idless-chat-composer.md) closes the ID-less composer fallback packet (77focused checks and real-DOM replay); integration, installation and provider acceptance remain separate.
+- P76 installed correction: [Plan0467](docs/dev/plans/0467-2026-10-30-idless-chat-composer.md), merged through [PR503](https://github.com/ecochran76/auracall/pull/503), passes86focused checks and installed real-DOM replay with657file parity. Actual managed-page verification is blocked by desktop ownership; no research prompt sent.
 
 - Completed P89: [Plan0404](docs/dev/plans/0404-2026-10-10-demand-driven-desktop-pool.md) implements automatic rail Wake, configurable native capacity and guarded shrink; PR270 installed with maximum10, five occupied desktops and one ready spare;14 original routes preserved.
 
