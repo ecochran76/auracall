@@ -1269,6 +1269,17 @@ service account is a separate identity. The equivalent HTTP/MCP request is
 same input/account and `action: "reconcile"` (CLI omits `--yes`). Repeated install
 calls also reconcile; they never submit Add again for a recorded account/endpoint.
 
+Programmatic installation-service callers can explicitly select a verified fresh
+target with `preEffectTarget: {expectedPreviousTargetId, targetId}` after the
+known journaled pre-effect endpoint-observation refusal. A recorded unsupported
+`custom_form_unverified` with positively false effect dispatch and safe retry
+permits the distinct `reason: "form-readiness"` recovery, once, behind a separate
+durable claim. It preserves the same intent and previous refusal/target history;
+it does not reset the original continuation. Ordinary CLI/HTTP/MCP requests do
+not expose this selector or retry preparation automatically. Unknown/dispatched
+outcomes and stale previous targets remain ineligible. Form opening waits at
+most1500ms for unique visible inputs before one fill; Add is never retried.
+
 An observed terminal `Connection failed` result on the exact owned installation
 modal returns `failed / grok_connector_install_connection_failed`. Its target
 and installation journal are retained, and `retrySafe=false` still prevents

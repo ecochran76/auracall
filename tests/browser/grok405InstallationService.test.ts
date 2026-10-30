@@ -623,7 +623,10 @@ it("continues a known no-effect refusal on an explicitly fenced fresh target wit
 	expect(f.effects()).toBe(1);
 });
 
-it("refuses pre-effect retargeting once Add was dispatched, before connecting any target", async () => {
+it.each([
+	undefined,
+	"form-readiness" as const,
+])("refuses %s pre-effect retargeting once Add was dispatched, before connecting any target", async (reason) => {
 	const f = await fixture();
 	const request = { input, expectedProviderAccountRef, confirm: true };
 	const dispatched = await createGrokConnectorInstallationService(f.options, f.deps).install(
@@ -645,7 +648,11 @@ it("refuses pre-effect retargeting once Add was dispatched, before connecting an
 	});
 	const result = await service.install({
 		...request,
-		preEffectTarget: { expectedPreviousTargetId: "fixture-target", targetId: "fresh-target" },
+		preEffectTarget: {
+			expectedPreviousTargetId: "fixture-target",
+			targetId: "fresh-target",
+			reason,
+		},
 	});
 	expect(result).toMatchObject({
 		status: "unconfirmed",
@@ -654,5 +661,64 @@ it("refuses pre-effect retargeting once Add was dispatched, before connecting an
 		effectDispatched: true,
 	});
 	expect(connects).toBe(0);
+	expect(f.effects()).toBe(1);
+});
+
+it("recovers a recorded pre-fill refusal once with a separate fence and the same intent", async () => {
+	const f = await fixture();
+	const open = f.f.plugins.children.find(
+		(node) => node.getAttribute("aria-label") === "New Connector",
+	);
+	if (!open) throw new Error("fixture missing opener");
+	const normalOpen = open.onClick;
+	open.onClick = null;
+	const request = { input, expectedProviderAccountRef, confirm: true };
+	const first = await createGrokConnectorInstallationService(f.options, f.deps).install(request);
+	expect(first).toMatchObject({
+		status: "unsupported",
+		code: "grok_connector_install_custom_form_unverified",
+		effectDispatched: false,
+		retrySafe: true,
+	});
+	open.onClick = normalOpen;
+	let connects = 0;
+	const service = createGrokConnectorInstallationService(f.options, {
+		...f.deps,
+		resolveReconciliationOptions: async (targetId) => ({ ...f.options, tabTargetId: targetId }),
+		connect: async (options) => {
+			connects++;
+			const connection = await f.deps.connect();
+			const targetId = options.tabTargetId ?? "fixture-target";
+			return {
+				...connection,
+				targetId,
+				client: {
+					...connection.client,
+					__auracallProviderTrafficGovernor: {
+						...connection.client.__auracallProviderTrafficGovernor,
+						attribution: { provider: "grok", targetId },
+					},
+				},
+			};
+		},
+	});
+	const recovery = {
+		...request,
+		preEffectTarget: {
+			expectedPreviousTargetId: "fixture-target",
+			targetId: "fresh-target",
+			reason: "form-readiness" as const,
+		},
+	};
+	const results = await Promise.all([service.install(recovery), service.install(recovery)]);
+	expect(
+		results.some(
+			(value) => value.status === "awaiting-human" && value.operationId === first.operationId,
+		),
+	).toBe(true);
+	expect(connects).toBe(1);
+	expect(f.effects()).toBe(1);
+	await service.install(recovery);
+	expect(connects).toBe(1);
 	expect(f.effects()).toBe(1);
 });

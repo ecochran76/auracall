@@ -1,3 +1,12 @@
+## 2026-10-30 — Connector pre-fill readiness and explicit recovery
+
+Plan0467 now observes delayed custom form readiness before one fill. Public
+client regression failed first; absent/ambiguous/foreign forms remain unfilled.
+The explicit form-readiness service recovery has a separate fixed one-use claim
+for the same positively journaled no-Add intent. Previous fences/history remain
+intact; unknown/dispatched outcomes cannot retarget. Public service regression
+failed before repair.50 focused checks pass; no installed/native result implied.
+
 ## 2026-10-30 — Fenced pre-effect connector continuation
 
 Plan0467 adds an explicit expected-old/new target selector at the installation

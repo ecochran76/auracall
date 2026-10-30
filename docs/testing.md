@@ -1,3 +1,9 @@
+- Connector pre-fill readiness (provider-free, Plan0467):
+  `pnpm vitest run tests/browser/grok405Installation.test.ts tests/browser/grok405InstallationService.test.ts tests/browser/grok405NativeConnectorBinding.test.ts --maxWorkers=1`.
+  Delayed modal mount precedes one fill; absent/ambiguous/foreign forms stop.
+  Explicit no-Add recovery preserves the same intent with a separate one-use
+  claim; dispatched outcomes remain fenced. No native acceptance is inferred.
+
 - Independent tab cleanup ownership (provider-free, issue490):
   `pnpm vitest run tests/browser/configuredChatgptTabMaintenance.test.ts tests/browser/activeChatRetirement.test.ts tests/accountMirror/liveFollowTabCoordinator.test.ts tests/browser-service/tabLeaseRetirement.test.ts tests/browser/tabAffinityMaintenanceLoop.test.ts tests/browser-service/tabLeaseRestartReconciliation.test.ts --maxWorkers=1`.
   Public configured maintenance preserves unregistered and legacy census-only

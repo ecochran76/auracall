@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { validateGrokConnectorInstallationInput } from "../../src/browser/providers/grokConnectorInstallation.js";
 
 it("rejects credential-bearing or non-HTTPS custom endpoints before any browser work", () => {
@@ -316,4 +316,76 @@ it("does not settle a terminal message after the prepared modal owner changes", 
 	expect(result.status).toBe("unconfirmed");
 	expect(result.code).not.toBe("grok_connector_install_connection_failed");
 	expect(f.effects()).toBe(1);
+});
+
+// Public preparation seam: rendering may settle after the single New Connector click.
+it("waits for the custom form before filling once without dispatching Add", async () => {
+	vi.useFakeTimers();
+	try {
+		const f = installFixture();
+		const open = f.plugins.children.find(
+			(node) => node.getAttribute("aria-label") === "New Connector",
+		);
+		if (!open) throw new Error("fixture missing opener");
+		let openings = 0;
+		open.onClick = () => {
+			openings++;
+			setTimeout(() => {
+				f.form.hidden = false;
+			}, 100);
+		};
+		const client = createGrokConnectorInstallationClient(f.runtime, {
+			providerAccountRef: "account-hash",
+		});
+		const pending = client.prepare(input);
+		await vi.advanceTimersByTimeAsync(200);
+		expect(await pending).toMatchObject({ status: "prepared", effectDispatched: false });
+		expect(f.name.value).toBe("New Example");
+		expect(f.endpoint.value).toBe("https://new.example.test/mcp");
+		expect(openings).toBe(1);
+		expect(f.effects()).toBe(0);
+	} finally {
+		vi.useRealTimers();
+	}
+});
+
+it.each([
+	"absent",
+	"ambiguous",
+	"foreign",
+])("refuses %s form readiness without filling or dispatching Add", async (mode) => {
+	vi.useFakeTimers();
+	try {
+		const f = installFixture();
+		const open = f.plugins.children.find(
+			(node) => node.getAttribute("aria-label") === "New Connector",
+		);
+		if (!open) throw new Error("fixture missing opener");
+		let openings = 0;
+		open.onClick = () => {
+			openings++;
+			if (mode === "absent") return;
+			f.form.hidden = false;
+			if (mode === "ambiguous") {
+				const duplicate = new N("input", "", { placeholder: "My Connector" });
+				duplicate.parentElement = f.form;
+				f.form.children.push(duplicate);
+			} else {
+				const foreign = new N("div", "Unrelated", { role: "dialog" });
+				foreign.parentElement = f.document;
+				f.document.children.push(foreign);
+			}
+		};
+		const pending = createGrokConnectorInstallationClient(f.runtime, {
+			providerAccountRef: "account-hash",
+		}).prepare(input);
+		await vi.advanceTimersByTimeAsync(2000);
+		expect(await pending).toMatchObject({ status: "unsupported", effectDispatched: false });
+		expect(f.name.value).toBe("");
+		expect(f.endpoint.value).toBe("");
+		expect(openings).toBe(1);
+		expect(f.effects()).toBe(0);
+	} finally {
+		vi.useRealTimers();
+	}
 });

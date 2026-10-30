@@ -1,3 +1,13 @@
+## 2026-10-30 — Observe connector form readiness before one fill
+
+New Connector can mount its form after the opening click returns. Immediate
+verification rejected a delayed form before filling. Observe unique visible
+form/input readiness within a bounded deadline, then fill once. Ambiguous or
+foreign dialogs stop without input; never wrap Add or failed fill in retries.
+Explicit form-readiness recovery has a separate one-use durable claim for a
+positively journaled no-Add refusal; original continuation fences remain intact.
+See Plan0467. Native cause attribution remains separate from fixture proof.
+
 ## 2026-10-30 — Preserve installed source carry during full upgrades
 
 A composite prefix can contain qualified behavior absent from main even when its

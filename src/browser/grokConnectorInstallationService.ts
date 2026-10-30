@@ -22,8 +22,13 @@ export interface GrokConnectorInstallationRequest {
 	input: GrokConnectorInstallationInput;
 	expectedProviderAccountRef: string;
 	confirm?: boolean;
-	/** Explicit fresh target only for the one supported, journaled pre-effect refusal. */
-	preEffectTarget?: { expectedPreviousTargetId: string; targetId: string };
+	/** Explicit fresh target only for supported, journaled pre-effect refusals. */
+	preEffectTarget?: {
+		expectedPreviousTargetId: string;
+		targetId: string;
+		/** Separate one-use recovery for positively journaled pre-fill refusal. */
+		reason?: "form-readiness";
+	};
 	reconciliationTarget?: { targetId: string; connectorId: string };
 }
 export interface GrokConnectorInstallationResult extends GrokConnectorInstallationOutcome {
@@ -106,7 +111,8 @@ export function createGrokConnectorInstallationService(
 				typeof preEffectTarget.expectedPreviousTargetId !== "string" ||
 				!/^[A-Za-z0-9-]{1,512}$/.test(preEffectTarget.targetId) ||
 				!/^[A-Za-z0-9-]{1,512}$/.test(preEffectTarget.expectedPreviousTargetId) ||
-				preEffectTarget.targetId === preEffectTarget.expectedPreviousTargetId)
+				preEffectTarget.targetId === preEffectTarget.expectedPreviousTargetId ||
+				(preEffectTarget.reason !== undefined && preEffectTarget.reason !== "form-readiness"))
 		)
 			throw new Error("grok_connector_pre_effect_target_invalid");
 		if (
@@ -209,7 +215,10 @@ export function createGrokConnectorInstallationService(
 			record.result?.status === "unsupported" &&
 			record.result.retrySafe === true &&
 			record.result.effectDispatched === false &&
-			record.result.code === "grok_connector_install_existing_endpoint_unobserved";
+			record.result.code ===
+				(preEffectTarget?.reason === "form-readiness"
+					? "grok_connector_install_custom_form_unverified"
+					: "grok_connector_install_existing_endpoint_unobserved");
 		if (
 			preEffectTarget &&
 			(!canContinue || preEffectTarget.expectedPreviousTargetId !== record.targetId)
@@ -220,7 +229,9 @@ export function createGrokConnectorInstallationService(
 			};
 		if (canContinue) {
 			try {
-				const claim = await fs.open(`${file}.continuation`, "wx", 0o600);
+				const claimSuffix =
+					preEffectTarget?.reason === "form-readiness" ? "form-readiness" : "continuation";
+				const claim = await fs.open(`${file}.${claimSuffix}`, "wx", 0o600);
 				try {
 					await claim.writeFile(operationId);
 					await claim.sync();

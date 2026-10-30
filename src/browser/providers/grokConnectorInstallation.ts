@@ -292,6 +292,31 @@ export function createGrokConnectorInstallationClient(
 			);
 			if (!result.ok)
 				return outcome(input, "unsupported", "grok_connector_install_custom_form_unavailable");
+			// Opening the modal is asynchronous. Observe readiness before the single fill;
+			// never repeat New Connector or retry a fill whose readback failed.
+			const formDeadline = Date.now() + 1_500;
+			let formReady = false;
+			for (let attempt = 0; attempt < 61; attempt++) {
+				const state = await evaluate<string>(
+					expr(`
+    const matches=forms();
+    if(matches.length>1 || dialogs().some(d=>d!==plugins() && !matches.includes(d)))return 'invalid';
+    if(matches.length!==1)return 'pending';
+    const inputs=Array.from(matches[0].querySelectorAll('input')).filter(visible);
+    const names=inputs.filter(i=>i.getAttribute('placeholder')==='My Connector');
+    const urls=inputs.filter(i=>i.getAttribute('placeholder')==='https://mcp.example.com/sse');
+    if(names.length>1||urls.length>1)return 'invalid';
+    return names.length===1&&urls.length===1?'ready':'pending';`),
+				);
+				if (state === "ready") {
+					formReady = true;
+					break;
+				}
+				if (state === "invalid" || Date.now() >= formDeadline) break;
+				await delay(25);
+			}
+			if (!formReady)
+				return outcome(input, "unsupported", "grok_connector_install_custom_form_unverified");
 			const filled = await evaluate<boolean>(
 				expr(`
     const matches=forms();if(matches.length!==1)return false;const root=matches[0];
