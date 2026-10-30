@@ -616,7 +616,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "2026-10-29 PR493 merged6ad7ed6a6;414CLOSED;409/411OPEN on native gates; one review/one findings-TDD consumed; no installed adoption.",
+  "lastCheckpoint": "2026-10-29 same-browser working Bot control verified;500causality unproven;409originalsubject and411publicationbinding remainOPEN;414CLOSED;onecodingcheckout plus runtimehold.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
@@ -653,5 +653,22 @@
     "priorReviewCounters": "unchanged broad1/findings1",
     "newTrackerClosures": 0,
     "installedAdoption": "not performed"
+  },
+  "sameBrowserComparison20261029": {
+    "authority": "User approved same-browser comparison and worktree reconciliation",
+    "sourceBaseline": "121b3a0c1e42531e74fc2ccf1385a76c4f3b6fb4",
+    "sameBrowserAndAccount": true,
+    "originalBot": "navigation shell only;identity/loading unqualified",
+    "workingBot": "8534underlying characters and composer outside Plugins dialog",
+    "prior500Causality": "unproven;browser-wide failure inference withdrawn",
+    "workingReactScan": "bound exhausted;no DTO absence claim",
+    "newReloads": 0,
+    "providerWrites": 0,
+    "sourceChanges": false,
+    "codingBranch": "fix/grok409-browser-comparison",
+    "researchWorktree": "clean integrated patch-equivalent checkout removed;refs retained",
+    "implementationWorktree": "clean runtime hold;live Chrome/Node cwd retained",
+    "report": "../notes/2026-10-29-grok409-same-browser-comparison.md",
+    "reviewFindingsCounters": "unchanged1/1"
   }
 }
