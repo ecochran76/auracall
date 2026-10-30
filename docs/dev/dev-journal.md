@@ -1,3 +1,14 @@
+## 2026-10-30 — Issue384 merged, installed and closed
+
+PR385/e30c2ef535 delivers qualified startup account errors while preserving
+ID-less composer and structural capture. One Standards/Spec review0/2findings,
+one bounded TDD phase,88focused checks, final typecheck/build/lint and16source/
+installed real-DOM cases pass.658compiled files match source. API1260954 and
+CLI/MCP select the new full prefix;23paused completions/config/env and allfour
+native browser generations remain. Issue384 closes on diagnostic acceptance,
+not provider cause;377/311 remain separate. No provider prompt/recovery/browser
+restart. Plan0450 records provenance, limits, rollback and memory closeout.
+
 ## 2026-10-30 — Issue384 current-main review and TDD
 
 PR385 composed with d5a1293cc at e8a40c430, preserving ID-less composer/capture.

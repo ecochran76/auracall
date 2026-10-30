@@ -1,12 +1,37 @@
 # Plan0450 | Account-page startup diagnostics
 
-State: OPEN
+State: CLOSED
 Lane: P450
 Branch: fix/chatgpt-account-readiness
 Target: main
 Integration: merge
 
-## Current State | 2026-10-29 reconciliation
+## Current State | 2026-10-30 qualified closeout
+
+Issue384 is CLOSED. PR385 merged94d297e8d at e30c2ef535. The complete installed
+prefix `~/.auracall/user-runtime-issue384-2ff65e7b8` is built from qualified source
+2ff65e7b8; the later fixture-only change does not alter compiled production inputs.
+All658 compiled files match the build. Active CLI/MCP wrappers and API1260954
+select this prefix. Fresh MCP initialization advertises65tools. HTTP status,
+desktops and console return200. All23 active paused completion identities/states,
+scheduler pause, config/private environment bytes and four native browser
+process generations are preserved. No browser restart or provider prompt.
+
+One review completed: Standards0, Spec2/P2, both addressed through one bounded
+findings-TDD phase.88selected checks pass; the fixture-only portability refinement
+passes11/11 and final full typecheck passes. Production build, scoped lint,
+compiled runtime contract and all16real-DOM cases pass in source and installed
+code. Actual installed browser-fixture replay qualifies the diagnostic; no live
+provider outage was induced and provider/network cause remains unknown.
+No #377/#311 closure, automatic recovery, warning clearance or retry is inferred.
+
+Private source/review/red-green/package/promotion/rollback receipts live under
+`~/.local/state/auracall-384-20261030/`. The prior ID-less runtime and wrappers remain
+available for qualified rollback. Final canonical docs/custody readback and one
+qualified Graphiti receipt complete delivery. CI is excluded by operator direction.
+
+
+## Historical checkpoint | 2026-10-29 reconciliation
 
 Source checkpoint408ce37dc is qualified in open PR385. The earlier source packet was CLOSED; integration and installed qualification remain OPEN. The provider account-load cause is unresolved. No automatic reload, prompt, auth reset or warning clearance is authorized by this reconciliation.
 
