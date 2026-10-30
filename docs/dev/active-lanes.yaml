@@ -158,7 +158,7 @@ lanes:
     target: main
     plan_state: BLOCKED
     custody_state: ACTIVE_WORKTREE
-    checkpoint: 9d5bf89dd05b4bfb6b3f9998e6e8684ddebc4f90
+    checkpoint: d5a1293cc5217df0736e6662bbd3e58c36655d23
     remote_ref: refs/remotes/origin/fix/grok409-browser-comparison
     integration: merge
     dependencies: []
