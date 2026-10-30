@@ -57276,3 +57276,19 @@ patch, mutation, publication or installation.409remains OPEN on upstream loading
 411researchnote cherry-picked aa02a0f25; primary independently checked native
 caller and both receipt hashes. Exact revision/app-version mapping remains unknown.
 Existing review/findings counters stay1/1. Reports preserve private proof hashes.
+
+### 2026-10-29 — Same-browser comparison and worktree reconciliation
+
+User clarified that normal Grok browsing works; prior HTTP500capture does not
+establish a browser-wide or causal upstream failure. Begin bounded same-account
+Bot/reference comparison. Canonical checkout fast-forwarded121b3a0c1 and is sole
+coding location.411research is already integrated/patch-equivalent, clean and
+removed; published ref retained.406implementation remains clean runtime-only
+because live Chrome roots and launcher have that cwd. No process terminated.
+
+Same-browser comparison confirmed working Bot content plus composer outside the
+Plugins overlay, while original synthetic Bot remains a35-character shell. Prior
+500causality/browser-wide inference withdrawn; original identity/loading remains
+unknown. Comparison performed0reloads/writes. Evidence note corrects prior report.
+Sole coding checkout is canonical workspace; research checkout removed cleanly
+with integrated/published work preserved; old implementation remains runtime-only.

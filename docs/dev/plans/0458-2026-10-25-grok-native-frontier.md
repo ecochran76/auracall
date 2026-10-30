@@ -2,9 +2,38 @@
 
 State: BLOCKED
 Lane: P458
-Branch: fix/grok409-diagnosis-20261029
+Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
+
+## Current outcome | 2026-10-29 same-browser control
+
+Working Bot browsing is verified in the same browser/account, including a composer
+and content outside its Plugins dialog. Original test-Bot route still has only a
+navigation shell. Earlier500responses are not an established cause or a
+browser-wide outage. No new reload or source fix occurred.409remains blocked on
+original subject/loading and resource acceptance;411on publication binding.
+Comparison and worktree reconciliation are complete: sole coding checkout at
+main workspace, completed research checkout removed, implementation checkout
+retained as a clean live-runtime hold. See the same-browser comparison note.
+
+## Current comparison and custody | 2026-10-29
+
+User rejected a browser-wide failure inference and approved comparing the exact
+Bot route with a working page in the same managed browser. HTTP500responses are
+observations, not an established cause. One passive paired comparison and at
+most one governed reload of the existing working reference conversation may
+qualify whether the same errors coexist with successful rendering. The previous
+Bot reload fence stays consumed; no further Bot reload, Send, upload or mutation.
+Stop on changed route/account, captcha, warning, or navigation uncertainty.
+
+All editing now uses the main checkout and this branch. Completed411research
+was patch-equivalent to integrated main and its clean worktree was removed;
+its published branch is retained. The clean406implementation checkout remains
+runtime-only because live Chrome roots and their launcher depend on that cwd.
+It is not an independent coding branch. No browser/root process is stopped.
+Other lanes/worktrees are outside this reconciliation. Prior review/findings
+counters remain1/1; no new broad review is requested.
 
 ## Diagnostic outcome | 2026-10-29
 

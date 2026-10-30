@@ -4,6 +4,15 @@ Plan0458/P458. Original issue409 remains OPEN. Primary native source99925ed04;
 existing configured runtime and original account qualified before/after. No source
 defect or current resource absence is established by a shell-only page.
 
+## Correction after same-browser control
+
+The [subsequent comparison](2026-10-29-grok409-same-browser-comparison.md)
+found a working Bot page with a composer outside its Plugins overlay, under the
+same browser/account. The500responses below remain observations, not an
+established cause or evidence of a browser-wide outage. The original Bot's
+identity/loading is still unqualified; generic upstream recovery is not the
+sole next gate. The initial interpretation below is historical.
+
 ## Feedback loop
 
 Primary ran this private exact-target harness against the existing synthetic Bot:
