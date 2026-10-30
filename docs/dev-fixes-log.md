@@ -1,3 +1,12 @@
+## 2026-10-30 — Preserve installed source carry during full upgrades
+
+A composite prefix can contain qualified behavior absent from main even when its
+label names a newer hotfix. Compare compiled modules and recover the original
+source/test commits before installing current main. Carry only the missing
+production changes, retain newer integrated ownership fixes, and validate one
+complete source-derived candidate rather than silently dropping deployed behavior.
+See Plan0466 for app-selection/wait and private mode-capture carry.
+
 ## 2026-10-29 — Reconcile custody before removing worktrees
 
 An integrated HEAD and clean status do not prove a worktree is unused. Current

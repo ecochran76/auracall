@@ -5615,8 +5615,9 @@ async function runChatgptDeveloperAppsCliAction(
   let waitingStage = 'queue-admission';
   let waitingBudgetMs = 10 * 60 * 1000;
   const waitingSince = Date.now();
-  const waitingReporter = input.action === 'list' && !commandOptions.verbose
-    ? setInterval(() => console.error(`[apps:list] waiting stage=${waitingStage} elapsedMs=${Date.now() - waitingSince} budgetMs=${waitingBudgetMs}`), 30_000)
+  const reportsWaiting = input.action === 'list' || input.action === 'refresh-tools' || (input.action === 'test' && !input.submit);
+  const waitingReporter = reportsWaiting && !commandOptions.verbose
+    ? setInterval(() => console.error(`[apps:${input.action}] waiting stage=${waitingStage} elapsedMs=${Date.now() - waitingSince} budgetMs=${waitingBudgetMs}`), 30_000)
     : undefined;
   waitingReporter?.unref();
   try {

@@ -1016,3 +1016,15 @@ tabs in the same browser profile to retire during the same pass. A lost lease's
 inspection/retirement error is reported independently; endpoint/scope resolution
 failures still defer the scope. TTL cleanup applies to the configured AuraCall
 managed runtime, not to Agent Browser or other browsers sharing the desktop.
+
+
+## Preserved developer-app and composer diagnostics
+
+Read-only developer-app selection uses the inventory deadline and cancellation
+contract. Selection and refresh utilities retain stage/elapsed/budget wait messages
+without verbose mode; terminal errors retain the original stage and identity.
+A missing Chat/Work mode control also writes a private structural receipt under
+`~/.auracall/diagnostics/composer-mode/` with mode0600. It retains qualified counts
+and bounded ready/path categories, never page text, route IDs or conversation
+contents. Capture failure preserves the original selection error. These diagnostics
+do not reload, retry, clear warnings or prove a provider incident's cause.
