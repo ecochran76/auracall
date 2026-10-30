@@ -1041,13 +1041,22 @@ Run tests and replay harnesses with an isolated `AURACALL_HOME_DIR` while enable
 
 One failed `withAutomation` admission may write one JSON file (maximum4096bytes,
 mode0600), prefixed `DEBUG-desktop-control-busy-`. Metadata covers human ownership,
-terminal busy/cancelled waits and rejected inherited scope. It records the last
+terminal busy/cancelled waits and rejected inherited scope. Plan0469 categories
+follow the actual terminal refusal, so a concurrent abort cannot relabel a human
+refusal or an unrelated admission storage error as cancellation. The allowlisted
+boolean `cancellationObserved` records whether the supplied signal was aborted
+at refusal observation, separately from `cancellationSupplied` and the category;
+its reason is never recorded. It records the last
 successful owner read with its observation timestamp, PID presence, normalized
 acquisition time and hashed binding correlation. Existing owners lack a boot
 identifier, so `ownerBootVerified=false`; PID presence is not ownership proof.
 No owner ID/control token, raw binding, credential, process command line, page
 content, URL, error object or stack is recorded. Private storage failures preserve
-the original refusal. The capture does not acquire/release or override ownership.
+the original refusal. Source repair Plan0469 bounds the complete diagnostic wait
+(including opt-in checks) to a 100 ms timer allowance, preserves the original
+error object and observes late storage failures. Already-issued filesystem work
+may finish after the refusal returns. The capture does not acquire/release or
+override ownership. Source qualification is separate from runtime installation.
 
 Read the next qualified natural failure with its originating operation evidence.
 Then disable and remove this temporary capture/tag as part of diagnosis cleanup.

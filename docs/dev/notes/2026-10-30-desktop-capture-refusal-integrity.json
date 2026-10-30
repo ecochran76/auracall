@@ -1,0 +1,73 @@
+{
+  "spec": "https://github.com/ecochran76/auracall/issues/513",
+  "tickets": [
+    514,
+    515
+  ],
+  "base": "57df62b52f88affdf28486f456af23be3d3c2fc9",
+  "source_tip": "1b3d4c0c0",
+  "primary_commit": "9a0eb7d3d",
+  "worker_commit": "c73d4c8c20502d03065d3f55d4116ef8c70ed681",
+  "integrated_worker_commit": "1b3d4c0c0",
+  "seam": "Public desktop automation admission; isolated temporary home and ownership directory",
+  "red_green": {
+    "deadline": "red1 failed pending after100ms; green1 passed; green2 deadline and capture9passed",
+    "category": "red1 human refusal incorrectly cancelled; green1-corrected8passed; final28passed; transcription error retained"
+  },
+  "checks": {
+    "primary_typecheck": 0,
+    "worker_typecheck": 0,
+    "combined_build": 0,
+    "combined_scoped_lint": 0,
+    "integration_tests": {
+      "passed": 131,
+      "failed": 0,
+      "skipped": 0,
+      "files": 9,
+      "tier": "focused",
+      "maxWorkers": 1
+    }
+  },
+  "plan_audit": {
+    "current_errors": 67,
+    "prior_baseline_errors": 68,
+    "new_errors": 0,
+    "passed": false
+  },
+  "runtime_effects": "None; no installation, browser/service operations or provider prompts",
+  "private_artifacts": "~/.auracall/diagnostics/pr508-followup-spec-20261030/",
+  "review": {
+    "base": "57df62b52f88affdf28486f456af23be3d3c2fc9",
+    "head": "28486ce2a9961f0a61f0583d6624f358709dcffd",
+    "passes": 1,
+    "accepted_standards": 0,
+    "accepted_spec": 1,
+    "highest_spec_severity": "P2",
+    "finding": "S1 missing independent cancellation observation"
+  },
+  "remediation": {
+    "passes": 1,
+    "red": {
+      "failed": 2,
+      "passed": 1,
+      "command": "pnpm vitest run tests/browser/desktopControlCategory.test.ts --reporter=json --outputFile=remediation-red.json"
+    },
+    "green": {
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0,
+      "files": 5,
+      "command": "pnpm vitest run tests/browser/desktopControlCategory.test.ts tests/browser/desktopControlCaptureDeadline.test.ts tests/browser/desktopControlFailureCapture.test.ts tests/browser/desktopControlGate.test.ts tests/browser/desktopTransitionRecovery.test.ts --maxWorkers=1 --reporter=json --outputFile=remediation-green.json"
+    },
+    "resolution": "Allowlisted cancellationObserved boolean at refusal observation, separate from terminal category; reason excluded",
+    "status": "validated; S1 resolved by focused evidence",
+    "typecheck": 0,
+    "build": 0,
+    "scoped_lint": 0
+  },
+  "tracker": {
+    "514": "closed",
+    "515": "closed",
+    "513": "parent spec unchanged/open"
+  }
+}

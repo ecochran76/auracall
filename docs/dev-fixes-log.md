@@ -26518,3 +26518,15 @@ chunk selection now share those mounted rows, qualified by current committed
 React response ownership, exact conversation route, canonical response DOM ID,
 and matching sender/role. Hidden, inert, dialog and unowned rows remain excluded.
 The public regression executes actual browser readiness and extraction expressions.
+
+## 2026-10-30 — Desktop capture refusal integrity (#514/#515)
+
+Bound the complete optional diagnostic wait to100ms and retain the original
+refusal; late filesystem failure remains best effort. Select receipt categories
+at terminal refusal sites rather than a later abort snapshot. Public-gate
+red/green regressions and131combined focused tests pass; build/typecheck/lint
+pass. Plan0469 is source-only; no installed runtime acceptance is implied.
+
+The single P469 review found missing independent cancellation observation. A
+red/green pass adds only cancellationObserved boolean, preserving reason privacy
+and terminal category.31post-remediation tests/typecheck/rebuild/lint pass.

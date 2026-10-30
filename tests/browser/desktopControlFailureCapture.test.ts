@@ -44,6 +44,7 @@ test.skipIf(process.platform !== "linux")(
 					"inheritedScope",
 					"attempts",
 					"cancellationSupplied",
+					"cancellationObserved",
 				].sort(),
 			);
 			expect(Object.keys(record.owner).sort()).toEqual(
@@ -66,6 +67,7 @@ test.skipIf(process.platform !== "linux")(
 				bindingsMatch: true,
 				attempts: 1,
 				cancellationSupplied: false,
+				cancellationObserved: false,
 				inheritedScope: { present: false, matchesRequesterPid: false },
 			});
 			expect(record.requestedBindingSha256).toMatch(/^[a-f0-9]{64}$/);
@@ -140,6 +142,7 @@ test.skipIf(process.platform !== "linux")(
 			expect(JSON.parse(raw)).toMatchObject({
 				category: "cancelled",
 				cancellationSupplied: true,
+				cancellationObserved: true,
 				owner: { role: "automation" },
 			});
 		} finally {
