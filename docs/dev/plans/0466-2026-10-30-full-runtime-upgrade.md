@@ -95,3 +95,10 @@ qualify rollback; observation timeout alone does not prove candidate regression.
 This delivery installs AuraCall only, not a new Chromium or Agent Browser binary.
 Source composition and installed/runtime acceptance are complete; the final docs
 merge, custody readback and one qualified Graphiti receipt finish closeout.
+
+
+Final custody normalization retains P458H as an integrated runtime-only hold,
+without closing P458's broader native capability gates. P458411's ARCHIVED record
+now names its existing matching local/remote retained research refs. The primary
+ac2 coding checkout and its branch were not switched; local main was only
+fast-forwarded as an unassigned ref to reflect canonical integrated source.

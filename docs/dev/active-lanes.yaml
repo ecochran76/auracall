@@ -172,7 +172,7 @@ lanes:
     branch: fix/grok409-diagnosis-20261029
     target: main
     plan_state: BLOCKED
-    custody_state: ACTIVE_WORKTREE
+    custody_state: INTEGRATED
     checkpoint: 7efea3746db7c4ea9372db36622570af82292f9d
     remote_ref: refs/remotes/origin/fix/grok409-diagnosis-20261029
     integration: merge
@@ -182,6 +182,8 @@ lanes:
     reconciliation_note: Runtime cwd hold only; no independent source edits. Primary coding lives on the comparison branch.
     validation_status: clean-runtime-only-hold-live-browser-preserved
     updated_at: 2026-10-29
+    integration_receipt: 7efea3746db7c4ea9372db36622570af82292f9d
+    custody_note: Runtime-only integrated source hold; native frontier remains OPEN in P458 with no independent coding here
   - id: P458411
     objective: Qualify the native publication revision and app/version contract without effects
     plan: docs/dev/plans/0458-2026-10-25-grok-native-frontier.md
@@ -201,6 +203,8 @@ lanes:
     work_items: [ecochran76/auracall#411]
     validation_status: integrated-note-clean-worktree-removed-ref-retained-ticket-open
     updated_at: 2026-10-29
+    archive_ref: refs/heads/research/grok411-publication-contract-20261029
+    archive_remote_ref: refs/remotes/origin/research/grok411-publication-contract-20261029
   - id: P464
     objective: Close independent tab ownership and TTL tickets with attributed shared-browser acceptance
     work_items: [ecochran76/auracall#490, CochranResearchGroup/agent-browser#490, ecochran76/auracall#491]
