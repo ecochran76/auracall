@@ -117,4 +117,9 @@ integration and verified worker-515.bundle custody in the private diagnostics
 root. Its ignored dependency installation was disposable. Integration checkout
 is retained for the published branch/PR. Main and unrelated worktrees unchanged.
 Parent spec#513 remains open/unmodified as required by ticket publication skill.
-Memory disposition will be recorded for this qualified source outcome.
+Memory disposition: queued to auracall_main, job87e92df3-86cb-4adc-8d7b-8c3934cf2029;
+queue acceptance only, not persistence/retrieval proof. Private memory-receipt.json
+retains the single submission. Delivery PR#518 is open/mergeable, source tip
+681500629fb0fc0dfb1cfdd700e84ce425b893bb on the integration branch; source
+checks apply to that tip. This final documentation-only custody update changes
+no tested source. No merge/deployment claimed.

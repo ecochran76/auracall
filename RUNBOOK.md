@@ -22372,3 +22372,8 @@ Spec1P2(S1). One TDD pass adds independent cancellationObserved boolean;
 31post-remediation tests and final typecheck/build/lint pass. Plan0469CLOSED
 source-only; no installation/live acceptance. Worker515 clean checkout removed
 after bundle custody; primary branch retained for publication.
+
+Published PR[518](https://github.com/ecochran76/auracall/pull/518), open and
+mergeable; validated source681500629fb0fc0dfb1cfdd700e84ce425b893bb.
+Tracker readbacks514/515CLOSED. Memory disposition queued, job
+87e92df3-86cb-4adc-8d7b-8c3934cf2029 (acceptance only). No merge/deployment.
