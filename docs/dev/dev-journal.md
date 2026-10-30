@@ -1,3 +1,13 @@
+## 2026-10-30 — Pagination merged and installed
+
+PR520/3acce2b0e integrates source0f269cb28 with current registry abandonment.
+Production build,13integration tests,658compiled-file hashes and11installed
+pagination/recovery regressions pass. Fresh MCP65tools, CLI0.1.1and API1790025
+routes pass. Scheduler pause,23paused completions and config/env bytes preserved.
+Pre-upgrade census had zero managed Chrome parents and none of prior browser
+PIDs; no lifecycle attribution or preservation claim for absent processes.
+Only API restarted; no provider prompt/browser restart. See Plan0471.
+
 ## 2026-10-30 — ChatGPT pagination source TDD
 
 Plan0471 retains conversations across virtualized windows and counts new IDs as

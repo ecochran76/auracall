@@ -9,7 +9,16 @@ Base: 057b8a2426f3c055a0cbaa9b68176a2f3deef5ad
 ## Current State
 
 Source implementation, public regressions and final local checks are complete. This follows the Plan0469 audit and installed Plan0470 recovery fix.
-No merge, deployment, browser interaction or shared in-flight listing work here.
+PR520 merged at3acce2b0e4371ed19d20c4e0fbe249817c8e1c9d. Authorized installed
+acceptance now passes; no browser interaction or shared in-flight listing work.
+Immutable user-runtime-pagination-0f269cb28 contains source0f269cb28e7853598545457f7fb46ecca005d157,
+including current-main explicit unknown-effect abandonment, with658matching
+compiled files. All11installed pagination/recovery cases pass; fresh MCP65tools
+and clean exit, CLI0.1.1, API1790025status/desktops/console200. Scheduler pause,
+23paused completion identities/states and config/environment bytes preserved.
+Fresh pre-upgrade census found zero managed Chrome parent processes and none of
+the four prior browser PIDs; no browser-preservation claim follows for absent
+processes. Only API restarted9246to1790025; no provider prompt/browser restart.
 
 ## Contract and seam
 
@@ -71,3 +80,17 @@ satisfy validation. This focused Linux transport-fixture selection does not cove
 hosted matrix platforms, a comprehensive suite, installed runtime or real provider
 network behavior. CI exclusion does not establish merge/deployment acceptance.
 Installed/live coverage and real HTTP savings are not established by this packet.
+
+
+## Installed closeout — 2026-10-30
+
+Current-main composition had documentation-only conflicts between independent
+journal/fix-log entries; both histories are preserved.13affected integration
+tests pass, including registry effect-reconciliation, followed by production build.
+The installer runtime contract passes. Installed tests execute compiled modules
+with an external Chrome transport fixture, not provider pages. All658file hashes
+match. Previous prefix/wrappers remain available for rollback. HostedCI skipped;
+local Linux/WSL Node24.18.0checks satisfy validation under operator cost policy.
+Real HTTP savings and concurrent429resolution remain unqualified. Next separate
+work is equivalent in-flight conversation-list sharing with identity, coverage
+and cancellation contracts.
