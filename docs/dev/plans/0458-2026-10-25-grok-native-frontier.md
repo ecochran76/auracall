@@ -1,10 +1,22 @@
 # Plan0458 — remaining Grok native frontier
 
-State: BLOCKED
+State: OPEN
 Lane: P458
 Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
+
+## Current research outcome | 2026-10-30
+
+Official docs describe account-wide apps, per-current-Bot private-Skill enablement
+outside Settings, and Team Bot shared setup. They distinguish Grok Bot app from
+Grok chat; mapping those controls to our web target/Bot kind remains unqualified.
+Settings-only absence is not completed resource discovery.409remains OPEN for
+native product/type/management discovery and exact saved configuration, rather
+than a confirmed provider-wide capability block.411publication binding is
+unchanged. See the resource-capability research note. This research performed no
+new browser/provider operation, Bot change or installation; prior fences and
+review/findings counters remain unchanged.
 
 ## Current outcome | 2026-10-30 original Bot qualified
 

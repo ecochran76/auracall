@@ -156,7 +156,7 @@ lanes:
     plan_ref: refs/heads/fix/grok409-browser-comparison
     branch: fix/grok409-browser-comparison
     target: main
-    plan_state: BLOCKED
+    plan_state: OPEN
     custody_state: ACTIVE_WORKTREE
     checkpoint: d5a1293cc5217df0736e6662bbd3e58c36655d23
     remote_ref: refs/remotes/origin/fix/grok409-browser-comparison
@@ -164,7 +164,7 @@ lanes:
     dependencies: []
     overlaps: []
     work_items: [ecochran76/auracall#398]
-    validation_status: 409-identity-qualified-resource-controls-unavailable-411-binding-gap
+    validation_status: 409-native-management-product-discovery-open-411-binding-gap
     updated_at: 2026-10-30
   - id: P458H
     objective: Preserve the live browser roots while coding is consolidated in the main checkout

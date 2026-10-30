@@ -220,7 +220,7 @@
         404,
         408
       ],
-      "state": "blocked-native-capability-identity-requalified",
+      "state": "open-native-management-discovery",
       "scope": "original-program",
       "gate": "Fresh original-account canonical Bot route settles to shell only; no Bot identity/Settings content. One public resources read unknown; focus defect rejected. Current resource absence not established.",
       "identityGate": "PASS 2026-10-30 exact sidebar/native Settings/configured public resources"
@@ -617,7 +617,7 @@
   },
   "nativePacket": "../notes/2026-10-25-grok-native-frontier-effect-packet.md",
   "progressClassification": "blocker_reduction",
-  "lastCheckpoint": "2026-10-30 original Bot identity/Settings qualified via expanded sidebar;409 resource-controls gate OPEN,411binding gapOPEN;414CLOSED.",
+  "lastCheckpoint": "2026-10-30 official resource scopes researched;409management/product qualification OPEN;411bindinggapunchanged;414CLOSED.",
   "nativeApproval": {
     "status": "approved",
     "source": "user approved followed by continue tickets",
@@ -686,6 +686,18 @@
     "publicTests": "3/3 CLI/HTTP/MCP resource parity",
     "report": "../notes/2026-10-30-grok409-identity-and-native-entry.md",
     "newTrackerClosures": 0,
+    "reviewFindingsCounters": "unchanged1/1"
+  },
+  "resourceResearch20261030": {
+    "scope": "official primary docs and retained native evidence; no new browser/provider operations",
+    "searches": 4,
+    "officialPages": 8,
+    "findings": "account-wide apps; current-Bot private Skills; Team Bot shared setup documented",
+    "productBoundary": "Grok chat and Grok Bot app distinct; mapping to current web Bot unqualified",
+    "webAnnouncements": "web Skills/Connectors exist; per-Bot persistence not established by announcements",
+    "implementation": "Settings-only label scan;choices/granted alwaysnull;managementdiscovery unfinished",
+    "next": "read-only current-client/Bot-kind and management-surface qualification",
+    "report": "../notes/2026-10-30-grok409-resource-capability-research.md",
     "reviewFindingsCounters": "unchanged1/1"
   }
 }
