@@ -1047,7 +1047,11 @@ acquisition time and hashed binding correlation. Existing owners lack a boot
 identifier, so `ownerBootVerified=false`; PID presence is not ownership proof.
 No owner ID/control token, raw binding, credential, process command line, page
 content, URL, error object or stack is recorded. Private storage failures preserve
-the original refusal. The capture does not acquire/release or override ownership.
+the original refusal. Source repair Plan0469 bounds the complete diagnostic wait
+(including opt-in checks) to a 100 ms timer allowance, preserves the original
+error object and observes late storage failures. Already-issued filesystem work
+may finish after the refusal returns. The capture does not acquire/release or
+override ownership. Source qualification is separate from runtime installation.
 
 Read the next qualified natural failure with its originating operation evidence.
 Then disable and remove this temporary capture/tag as part of diagnosis cleanup.

@@ -133,47 +133,58 @@ export class DesktopControlGate {
 		context: { category: "human-owned" | "busy" | "stale-scope" | "cancelled" | "admission-error"; attempts: number; cancellationSupplied: boolean; inherited?: GateOwner; ownerObservedAt?: string },
 	): Promise<void> {
 		if (process.platform !== "linux") return;
-		try {
-			const directory = path.join(getAuracallHomeDir(), "diagnostics", "desktop-control");
-			const marker = path.join(directory, "enabled");
-			const [directoryStat, markerStat] = await Promise.all([fs.lstat(directory), fs.lstat(marker)]);
-			const uid = process.getuid?.();
-			if (!directoryStat.isDirectory() || directoryStat.uid !== uid || (directoryStat.mode & 0o077) !== 0 ||
-				!markerStat.isFile() || markerStat.uid !== uid || (markerStat.mode & 0o077) !== 0 || markerStat.size > 16 ||
-				(await fs.readFile(marker, "utf8")).trim() !== "1") return;
-			let pidPresent: boolean | null = null;
-			if (observedOwner) {
-				try { await fs.access(`/proc/${observedOwner.ownerPid}`); pidPresent = true; }
-				catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") pidPresent = false; }
+		const capture = (async () => {
+			try {
+				const directory = path.join(getAuracallHomeDir(), "diagnostics", "desktop-control");
+				const marker = path.join(directory, "enabled");
+				const [directoryStat, markerStat] = await Promise.all([fs.lstat(directory), fs.lstat(marker)]);
+				const uid = process.getuid?.();
+				if (!directoryStat.isDirectory() || directoryStat.uid !== uid || (directoryStat.mode & 0o077) !== 0 ||
+					!markerStat.isFile() || markerStat.uid !== uid || (markerStat.mode & 0o077) !== 0 || markerStat.size > 16 ||
+					(await fs.readFile(marker, "utf8")).trim() !== "1") return;
+				let pidPresent: boolean | null = null;
+				if (observedOwner) {
+					try { await fs.access(`/proc/${observedOwner.ownerPid}`); pidPresent = true; }
+					catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") pidPresent = false; }
+				}
+				const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+				const record = {
+					schemaVersion: 1,
+					tag: "DEBUG-desktop-control-busy",
+					capturedAt: new Date().toISOString(),
+					category: context.category,
+					requestedRole: "automation",
+					requestedBindingSha256: hash(binding),
+					ownerObservedAt: context.ownerObservedAt ?? null,
+					owner: observedOwner ? {
+						role: observedOwner.role,
+						pid: observedOwner.ownerPid,
+						acquiredAt: new Date(observedOwner.acquiredAt).toISOString(),
+						bindingSha256: hash(observedOwner.binding),
+						pidPresent,
+						ownerBootVerified: false,
+						matchesRequesterPid: observedOwner.ownerPid === process.pid,
+					} : null,
+					bindingsMatch: observedOwner ? observedOwner.binding === binding : null,
+					inheritedScope: { present: Boolean(context.inherited), matchesRequesterPid: context.inherited?.ownerPid === process.pid },
+					attempts: context.attempts,
+					cancellationSupplied: context.cancellationSupplied,
+				};
+				const body = JSON.stringify(record);
+				if (Buffer.byteLength(body) > 4096) return;
+				await fs.writeFile(path.join(directory, `DEBUG-desktop-control-busy-${randomUUID()}.json`), body, { mode: 0o600, flag: "wx" });
+			} catch {
+				// Diagnostics are best effort: preserve the original refusal and ownership.
 			}
-			const hash = (value: string) => createHash("sha256").update(value).digest("hex");
-			const record = {
-				schemaVersion: 1,
-				tag: "DEBUG-desktop-control-busy",
-				capturedAt: new Date().toISOString(),
-				category: context.category,
-				requestedRole: "automation",
-				requestedBindingSha256: hash(binding),
-				ownerObservedAt: context.ownerObservedAt ?? null,
-				owner: observedOwner ? {
-					role: observedOwner.role,
-					pid: observedOwner.ownerPid,
-					acquiredAt: new Date(observedOwner.acquiredAt).toISOString(),
-					bindingSha256: hash(observedOwner.binding),
-					pidPresent,
-					ownerBootVerified: false,
-					matchesRequesterPid: observedOwner.ownerPid === process.pid,
-				} : null,
-				bindingsMatch: observedOwner ? observedOwner.binding === binding : null,
-				inheritedScope: { present: Boolean(context.inherited), matchesRequesterPid: context.inherited?.ownerPid === process.pid },
-				attempts: context.attempts,
-				cancellationSupplied: context.cancellationSupplied,
-			};
-			const body = JSON.stringify(record);
-			if (Buffer.byteLength(body) > 4096) return;
-			await fs.writeFile(path.join(directory, `DEBUG-desktop-control-busy-${randomUUID()}.json`), body, { mode: 0o600, flag: "wx" });
-		} catch {
-			// Diagnostics are best effort: preserve the original refusal and ownership.
+		})();
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			await Promise.race([
+				capture,
+				new Promise<void>((resolve) => { timer = setTimeout(resolve, 100); }),
+			]);
+		} finally {
+			clearTimeout(timer);
 		}
 	}
 

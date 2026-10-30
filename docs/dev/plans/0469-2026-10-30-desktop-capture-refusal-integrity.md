@@ -20,7 +20,7 @@ Primary integration checkout: auracall-desktop-capture-followup.
 | Ticket | Blockers | Owner | State | Write scope | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | #514 | None | primary/deadline | running | captureFailure deadline; deadline tests | pending red/green |
-| #515 | None | category worker | pending | terminal classification; category tests | pending dispatch |
+| #515 | None | category_515 | running | terminal classification; category tests | pending dispatch |
 
 Worker uses a separate checkout from the recorded base. Source overlaps are
 limited to separate portions of desktopControlGate; primary owns integration
@@ -51,3 +51,22 @@ Both tickets implemented, integrated, validated and tracker-closed with exact
 commit evidence; one review completed and accepted blockers remediated or
 explicitly unresolved. Push validated integration branch, preserve source/runtime
 boundary and remove clean worker checkout after durable custody verification.
+
+## Worker custody
+
+Handle /root/category_515; branch fix/desktop-capture-category-515;
+checkout auracall-desktop-capture-category; base57df62b52. Worker owns only
+withAutomation category selection and desktopControlCategory.test.ts.
+Primary owns captureFailure and desktopControlCaptureDeadline.test.ts.
+Shared public signature and existing receipt schema remain unchanged.
+
+## Primary TDD evidence
+
+Public refused-admission test stalled only diagnostic writing: red1 failed
+(expected settled=true after100ms, actualfalse), then green1 passed. Early
+marker lookup stall additionally preserves the exact injected admission error.
+Combined deadline/capture green2:9passed,0failed. Private evidence directory:
+~/.auracall/diagnostics/pr508-followup-spec-20261030/deadline/.
+Exact commands use pnpm vitest run with deadline test (red1/green1), then
+both deadline and desktopControlFailureCapture.test.ts (green2), JSON reporters
+and matching log/exit files. No installed state or live ownership was touched.
