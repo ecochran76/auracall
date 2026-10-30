@@ -156,9 +156,13 @@ it("returns unknown custody through public command and MCP without losing the re
 	});
 	expect(f.effects()).toBe(1);
 });
-it("reports a rejected final form guard as no dispatched effect", async () => {
+it.each([
+	false,
+	true,
+])("reports a rejected final form guard as no dispatched effect (continuation=%s)", async (continuation) => {
 	const f = await fixture();
 	const evaluate = f.f.runtime.evaluate;
+	let missingEndpoint = continuation;
 	f.f.runtime.evaluate = async (args) => {
 		if (args.expression.includes("root.getAttribute('data-auracall-install-owner')")) {
 			const field = f.form.children.find(
@@ -166,28 +170,70 @@ it("reports a rejected final form guard as no dispatched effect", async () => {
 			);
 			if (field) field.value = "Changed by operator";
 		}
-		return evaluate(args);
+		const result = await evaluate(args);
+		const value = result.result.value as Record<string, unknown>;
+		if (missingEndpoint && value?.state === "visible" && "endpoint" in value) value.endpoint = null;
+		return result;
 	};
-	const result = await createGrokConnectorInstallationService(f.options, f.deps).install({
-		input,
-		expectedProviderAccountRef,
-		confirm: true,
+	const request = { input, expectedProviderAccountRef, confirm: true };
+	let originalOperationId: string | undefined;
+	if (continuation) {
+		const first = await createGrokConnectorInstallationService(f.options, f.deps).install(request);
+		expect(first).toMatchObject({
+			status: "unsupported",
+			code: "grok_connector_install_existing_endpoint_unobserved",
+			effectDispatched: false,
+		});
+		originalOperationId = first.operationId;
+		missingEndpoint = false;
+	}
+	const result = await createGrokConnectorInstallationService(f.options, f.deps).install(request);
+	if (originalOperationId) expect(result.operationId).toBe(originalOperationId);
+	expect(result).toMatchObject({
+		status: "failed",
+		code: "grok_connector_install_form_changed",
+		effectDispatched: false,
+		retrySafe: true,
 	});
-	expect(result).toMatchObject({ status: "failed", effectDispatched: false });
 	expect(f.effects()).toBe(0);
 });
-it("shares unknown-install fencing across runtime profiles for the same provider account", async () => {
+it.each([
+	false,
+	true,
+])("shares unknown-install fencing across runtime profiles (continuation=%s)", async (continuation) => {
 	const f = await fixture();
+	if (continuation) {
+		const evaluate = f.f.runtime.evaluate;
+		f.f.runtime.evaluate = async (args) => {
+			const result = await evaluate(args);
+			const value = result.result.value as Record<string, unknown>;
+			if (value?.state === "visible" && "endpoint" in value) value.endpoint = null;
+			return result;
+		};
+		expect(
+			await createGrokConnectorInstallationService(f.options, f.deps).install({
+				input,
+				expectedProviderAccountRef,
+				confirm: true,
+			}),
+		).toMatchObject({ status: "unsupported", effectDispatched: false });
+		f.f.runtime.evaluate = evaluate;
+	}
 	const add = f.add.onClick;
 	f.add.onClick = () => {
 		add?.();
 		f.form.hidden = true;
 		throw new Error("lost after Add");
 	};
-	await createGrokConnectorInstallationService(f.options, f.deps).install({
+	const uncertain = await createGrokConnectorInstallationService(f.options, f.deps).install({
 		input,
 		expectedProviderAccountRef,
 		confirm: true,
+	});
+	expect(uncertain).toMatchObject({
+		status: "unconfirmed",
+		effectDispatched: true,
+		retrySafe: false,
 	});
 	const otherOptions = {
 		...f.options,
@@ -199,10 +245,15 @@ it("shares unknown-install fencing across runtime profiles for the same provider
 			},
 		},
 	};
-	await createGrokConnectorInstallationService(otherOptions, f.deps).install({
+	const retained = await createGrokConnectorInstallationService(otherOptions, f.deps).install({
 		input,
 		expectedProviderAccountRef,
 		confirm: true,
+	});
+	expect(retained).toMatchObject({
+		effectDispatched: true,
+		retrySafe: false,
+		operationId: uncertain.operationId,
 	});
 	expect(f.effects()).toBe(1);
 });
