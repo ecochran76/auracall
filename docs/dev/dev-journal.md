@@ -1,3 +1,13 @@
+## 2026-10-30 — ChatGPT pagination source TDD
+
+Plan0471 retains conversations across virtualized windows and counts new IDs as
+progress. The public listing fixture reproduces lost rows, redundant initial
+observation and cancellation failures before each fix. Initial reads are reused;
+wait/read/scroll cancellation preserves caller reason. One review P2 showed a
+connection-like cancellation reason entering recovery/retry; its red/green is
+addressed. No merge, deployment, live provider call or concurrent-list sharing.
+Final validation results are recorded in the plan and private execution receipts.
+
 ## 2026-10-30 — Grok utility lock origin diagnosed
 
 Two isolated registry replays reproduce #409's workload-owned block without a

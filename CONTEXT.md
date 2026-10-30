@@ -1,5 +1,11 @@
 # Aura-Call
 
+ChatGPT history pagination accumulates unique conversation IDs in first-observed
+order across changing DOM windows, bounded by the requested row limit. New IDs
+establish progress. The initial observation is reused before scrolling. Caller
+cancellation stops waits and subsequent history commands, preserving its reason
+without recovery/retry; local cancellation cannot undo an already-issued command.
+
 Conversation-list recovery retains caller policy through the recovery wrapper and
 reopen callback. Account-mirror rate-limit hard stops are terminal to the adapter's
 connection retry; they do not authorize another identity request or browser

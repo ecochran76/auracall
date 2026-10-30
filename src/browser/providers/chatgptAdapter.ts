@@ -1037,8 +1037,19 @@ function setClientSuppressFocus(client: ChromeClient, suppressFocus: boolean | u
 	(client as ChromeClientWithFocusPolicy).__auracallSuppressFocus = Boolean(suppressFocus);
 }
 
-async function sleep(ms: number): Promise<void> {
-	await new Promise((resolve) => setTimeout(resolve, ms));
+async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+	signal?.throwIfAborted();
+	await new Promise<void>((resolve, reject) => {
+		const onAbort = () => {
+			clearTimeout(timer);
+			reject(signal?.reason ?? new Error("ChatGPT browser operation aborted."));
+		};
+		const timer = setTimeout(() => {
+			signal?.removeEventListener("abort", onAbort);
+			resolve();
+		}, ms);
+		signal?.addEventListener("abort", onAbort, { once: true });
+	});
 }
 
 function interpolateChatgptRoute(template: string, params: Record<string, string>): string {
@@ -1312,6 +1323,7 @@ async function withChatgptBlockingSurfaceRecovery<T>(
 			inspect: () => readVisibleChatgptBlockingSurfaceMatchWithClient(client),
 			dismiss: async (match) => runRecoverySequence(match),
 			classifyError: (error) => {
+				options?.providerOptions?.abortSignal?.throwIfAborted();
 				const directMessage = error instanceof Error ? error.message : String(error);
 				const match = classifyChatgptBlockingSurfaceProbe({ text: directMessage });
 				return match ? { ...match, selector: null } : null;
@@ -7906,7 +7918,8 @@ async function scrapeChatgptConversations(
 			}
 			await ensureChatgptSidebarOpen(client);
 			const readConversations = async (): Promise<Conversation[]> => {
-				const { result } = await client.Runtime.evaluate({
+				options?.abortSignal?.throwIfAborted();
+				const observation = client.Runtime.evaluate({
 					expression: `(() => {
       const expectedProjectId = ${JSON.stringify(normalizedProjectId ?? null)};
       const conversationOptionsPrefix = ${JSON.stringify(CHATGPT_CONVERSATION_OPTIONS_PREFIX)};
@@ -8126,6 +8139,8 @@ async function scrapeChatgptConversations(
       })()`,
 					returnByValue: true,
 				});
+				const { result } = await waitForChatgptOperationWithAbort(observation, options?.abortSignal);
+				options?.abortSignal?.throwIfAborted();
 				const probes = Array.isArray(result?.value)
 					? (result.value as ChatgptConversationLinkProbe[])
 					: [];
@@ -8143,12 +8158,14 @@ async function scrapeChatgptConversations(
 							normalizedProjectId,
 							historyLimit,
 							readConversations,
+							conversations,
+							options?.abortSignal,
 						);
 					}
 					return historyLimit > 0 ? conversations.slice(0, historyLimit) : conversations;
 				}
 				last = conversations;
-				await sleep(600);
+				await sleep(600, options?.abortSignal);
 			}
 			return historyLimit > 0 ? last.slice(0, historyLimit) : last;
 		},
@@ -8170,26 +8187,36 @@ async function readChatgptConversationHistory(
 	projectId: string | null,
 	limit: number,
 	readConversations: () => Promise<Conversation[]>,
+	initialConversations: readonly Conversation[],
+	signal?: AbortSignal,
 ): Promise<Conversation[]> {
 	const maxScrolls = Math.min(160, Math.max(8, Math.ceil(limit / 8) + 12));
-	let conversations = await readConversations();
+	const conversations = new Map(initialConversations.map((row) => [row.id, row]));
 	let stableReads = 0;
 	for (
 		let attempt = 0;
-		attempt < maxScrolls && conversations.length < limit && stableReads < 5;
+		attempt < maxScrolls && conversations.size < limit && stableReads < 5;
 		attempt += 1
 	) {
-		const beforeCount = conversations.length;
-		const scroll = await scrollChatgptConversationHistoryRail(client, projectId);
-		await sleep(650 + Math.floor(Math.random() * 350));
-		conversations = await readConversations();
-		if (conversations.length > beforeCount) {
+		signal?.throwIfAborted();
+		const beforeCount = conversations.size;
+		const scroll = await waitForChatgptOperationWithAbort(
+			scrollChatgptConversationHistoryRail(client, projectId),
+			signal,
+		);
+		await sleep(650 + Math.floor(Math.random() * 350), signal);
+		for (const row of await readConversations()) {
+			if (conversations.size >= limit && !conversations.has(row.id)) break;
+			conversations.set(row.id, { ...conversations.get(row.id), ...row });
+		}
+		if (conversations.size > beforeCount) {
 			stableReads = 0;
 			continue;
 		}
 		stableReads += scroll.moved || scroll.canScroll ? 1 : 2;
 	}
-	return conversations.slice(0, limit);
+	signal?.throwIfAborted();
+	return [...conversations.values()].slice(0, limit);
 }
 
 async function scrollChatgptConversationHistoryRail(
@@ -13958,6 +13985,7 @@ export function createChatgptAdapter(): Pick<
 			try {
 				return await attempt(options);
 			} catch (error) {
+				options?.abortSignal?.throwIfAborted();
 				if (
 					error &&
 					typeof error === "object" &&
