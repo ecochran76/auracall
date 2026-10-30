@@ -1,3 +1,12 @@
+## 2026-10-30 — Retain list recovery policy through retry and reopen
+
+Forwarding options only to the inner recovery wrapper is insufficient. A structured
+account-mirror rate-limit error can be reclassified as a transient connection
+failure by the outer list retry, repeating identity traffic. Preserve its hard
+stop at both seams. Reopen must independently retain navigation policy and caller
+options. Public adapter regressions prove zero recovery/reopen effects and one
+auth-session read for the rate-limit case using a simulated Chrome transport.
+
 ## 2026-10-30 — Qualify account errors outside conversation content
 
 Missing controls plus matching text are insufficient if the heading belongs to
