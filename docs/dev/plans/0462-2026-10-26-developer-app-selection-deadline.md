@@ -10,6 +10,15 @@ Integration: merge
 
 PR481 retains unmerged read-only selection bounds, utility-wait diagnostics and private structural failure capture. Issue427 is closed for its earlier delivered repair; this follow-up remains an independent open PR. Its live nested wait and installation remain unqualified. No diagnostic replay or provider retry is scheduled.
 
+## 2026-10-30 — Source delivery supersedes PR481
+
+PR500 integrates the deployed selection/wait and private mode-capture source;
+Plan0466 qualifies the complete installed package. PR481 is closed as superseded,
+and its unused source checkout removed with refs retained. Source delivery is
+complete; the original historical live nested-wait cause remains unqualified.
+No active diagnostic command or provider retry is scheduled. This remaining
+uncertainty is not an implementation or deployment failure.
+
 ## Preserved execution history
 
 State: OPEN
