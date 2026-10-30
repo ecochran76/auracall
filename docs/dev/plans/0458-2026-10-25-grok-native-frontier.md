@@ -1,12 +1,36 @@
 # Plan0458 — remaining Grok native frontier
 
-State: OPEN
+State: BLOCKED
 Lane: P458
 Branch: fix/grok409-diagnosis-20261029
 Target: main
 Integration: merge
 
-## Current State | 2026-10-29 approved diagnostic continuation
+## Diagnostic outcome | 2026-10-29
+
+409 exact-account/current-route feedback loop remains RED. One fenced controlled
+reload reproduced the shell and observed provider application HTTP500responses
+while document and session reads returned200. No source defect, current Bot data,
+resource grant surface, deletion or permanent absence is established. Native
+probes have ended; no further reload is allowed by this packet.411's retained
+native caller passes conversation/name/access only; exact revision/app-version
+mapping remains unqualified. Both original tickets remain OPEN. Research worker
+completed its single note. See the two2026-10-29evidence notes and ledger.
+
+## Diagnostic reframe after the passive-read bound
+
+Two passive probes reproduced the correct-account shell-only failure and found
+no mounted Bot component, alternate content frame, or specific Bot error/data.
+They cannot determine request failure versus a stale document. The source reader
+has no demonstrated defect. Continue the approved diagnosis with exactly ONE
+causal fresh-document comparison on the same retained owned target: governed
+Page reload, request method/status/size observations, exact route/account checks,
+then the original public loop. No second reload, new target, Bot write, prompt,
+publication or retry. A durable private pre-dispatch fence prevents replay. Stop
+with the captured result if request/data identity cannot be qualified. This is a
+named new hypothesis test, not a reset of resource/review/findings counters.
+
+## Approved initial diagnostic scope | 2026-10-29
 
 User approved diagnosing409 first and bounded research411 in parallel. Base
 5f4697f85;414 remains CLOSED. Primary owns409 and all serialized native work;
@@ -29,7 +53,7 @@ controller receipts. Output: one cited note. Stop after six relevant source
 lookups and two retained receipts, or a decisive contract. No browser/provider
 calls by the research worker and no invented revision or version aliases.
 
-## Current State | 2026-10-29 reconciliation
+## Historical reconciliation | 2026-10-29
 
 Current tracker readback:406 and414 CLOSED through PR494 and PR493;409 remains blocked on missing exact Bot resource controls,411 on current workspace/publication qualification, and477 on separate Instructions/Model defaults. Parent398 stays OPEN. One consolidated review and one findings-TDD phase are already complete. No new native action, publication, consent, installation or review is initiated. The exact worktree remains a live browser/tooling hold.
 
