@@ -57611,3 +57611,7 @@ privately. Memoryforbidden: no explicit write request.
 P474 install authorized: retain exact deployed46a31c145listing-tab reuse modules
 and tests while installing attachment deadline propagation. User authorized one
 retained ASPECT prompt; no gate bypass or automatic resubmit.
+
+P474 installed f4b984caa with661-file parity and40combined checks/build/lint.
+API273628active, old API exited, browser/config preserved. Returned to retained
+ASPECT research with one prompt budget, no automatic retry.

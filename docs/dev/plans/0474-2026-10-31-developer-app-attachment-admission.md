@@ -46,3 +46,9 @@ Operator approved install and one retained ASPECT prompt attempt. Deployed
 runtime advanced to list-reuse-46a31c145; carry its exact utility-affinity/service
 modules and test to avoid rollback. Source validation and immutable install must
 preserve config/browser generations. No lock override or automatic resubmission.
+
+Installed user-runtime-app-admission-f4b984caa,661-file parity. CLI/MCP/API align;
+prior API exited, config/env hashes and browser generations preserved. Combined
+40focused tests/build/scoped lint pass locally, existing84source checks retained.
+Deployed46a31c145listing reuse retained; only chatgptDeveloperApps.js differs from
+prior runtime. Natural app/prompt acceptance remains separate.

@@ -1,0 +1,14 @@
+{
+  "runtime": "/home/ecochran76/.auracall/user-runtime-app-admission-f4b984caa",
+  "source_commit": "f4b984caa",
+  "parity_files": 661,
+  "api_pid": 273628,
+  "old_api_exited": true,
+  "wrappers_aligned": true,
+  "browser_generations_preserved": true,
+  "config_env_hashes_preserved": true,
+  "combined_local_checks": 40,
+  "build": "passed",
+  "lint": "passed",
+  "hosted_ci": "skipped"
+}
