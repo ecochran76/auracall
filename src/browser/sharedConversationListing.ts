@@ -2,6 +2,10 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import fs from "node:fs/promises";
 import net, { type Socket } from "node:net";
 import path from "node:path";
+import {
+	isKnownBackendRequestBudgetDenial,
+	ProviderBackendRequestBudgetExceededError,
+} from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 
 type SharedInput<T> = {
 	root: string;
@@ -84,6 +88,7 @@ function remoteError(error: unknown): Frame {
 	} | null;
 	return {
 		message: value.message.slice(0, 4096),
+		backendBudgetDenied: isKnownBackendRequestBudgetDenial(error),
 		code: typeof extra?.code === "string" ? extra.code : undefined,
 		blockingSurface: extra?.blockingSurface
 			? {
@@ -260,10 +265,12 @@ function follow<T>(address: string, secret: string, input: SharedInput<T>): Prom
 			else if (ready && frame.type === "error" && frame.error && typeof frame.error === "object") {
 				const data = frame.error as Frame;
 				finish(
-					Object.assign(new Error(String(data.message)), {
-						code: data.code,
-						blockingSurface: data.blockingSurface,
-					}),
+					data.backendBudgetDenied === true
+						? new ProviderBackendRequestBudgetExceededError()
+						: Object.assign(new Error(String(data.message)), {
+								code: data.code,
+								blockingSurface: data.blockingSurface,
+							}),
 				);
 			} else finish(new Error("Shared listing authentication/protocol failure."));
 		});

@@ -1,3 +1,15 @@
+## 2026-10-31 — Preserve local quota failures through history paging and sharing
+
+A scrolling loop can mistake blocked history loading for provider exhaustion.
+The live50-row probe delivered matching nine-row arrays through one observation;
+a subsequent instrumented read grew10to39rows, then two native /conversations
+XHRs failed among local budget denials. A public adapter fixture confirms that
+a real governor frozen by backend-budget rejection previously yielded a short
+success and continued DOM work. Check existing admission state while more rows
+are needed and preserve the typed denial across authenticated process sharing.
+Fulfilled row limits remain successful; mixed cleanup failures remain unknown.
+Plan0475 retains live coverage limits and the source red/green evidence.
+
 ## 2026-10-31 — Avoid bootstrapping a page for each listing process
 
 A read-only inventory can return sidebar rows while the newly opened ChatGPT

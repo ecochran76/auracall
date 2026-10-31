@@ -6,6 +6,7 @@ import {
 	openOrReuseChromeTarget,
 } from "../../../packages/browser-service/src/chromeLifecycle.js";
 import { withCdpCommandTimeout } from "../../../packages/browser-service/src/guardedCdp.js";
+import { ProviderBackendRequestBudgetExceededError } from "../../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import type { BrowserInteractionClass } from "../../../packages/browser-service/src/service/interactionGovernor.js";
 import {
 	requireBundledServiceBaseUrl,
@@ -8190,6 +8191,11 @@ async function readChatgptConversationHistory(
 	initialConversations: readonly Conversation[],
 	signal?: AbortSignal,
 ): Promise<Conversation[]> {
+	const assertHistoryRequestBudget = () => {
+		const state = resolveProviderTrafficGovernor(client)?.snapshotAdmissionState?.();
+		if (state?.backendRequestOutcome === "budget-exhausted")
+			throw new ProviderBackendRequestBudgetExceededError();
+	};
 	const maxScrolls = Math.min(160, Math.max(8, Math.ceil(limit / 8) + 12));
 	const conversations = new Map(initialConversations.map((row) => [row.id, row]));
 	let stableReads = 0;
@@ -8199,12 +8205,15 @@ async function readChatgptConversationHistory(
 		attempt += 1
 	) {
 		signal?.throwIfAborted();
+		assertHistoryRequestBudget();
 		const beforeCount = conversations.size;
 		const scroll = await waitForChatgptOperationWithAbort(
 			scrollChatgptConversationHistoryRail(client, projectId),
 			signal,
 		);
+		assertHistoryRequestBudget();
 		await sleep(650 + Math.floor(Math.random() * 350), signal);
+		assertHistoryRequestBudget();
 		for (const row of await readConversations()) {
 			if (conversations.size >= limit && !conversations.has(row.id)) break;
 			conversations.set(row.id, { ...conversations.get(row.id), ...row });
@@ -8216,6 +8225,7 @@ async function readChatgptConversationHistory(
 		stableReads += scroll.moved || scroll.canScroll ? 1 : 2;
 	}
 	signal?.throwIfAborted();
+	if (conversations.size < limit) assertHistoryRequestBudget();
 	return [...conversations.values()].slice(0, limit);
 }
 

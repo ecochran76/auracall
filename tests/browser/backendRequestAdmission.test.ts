@@ -23,6 +23,11 @@ import type { BrowserProviderListOptions } from "../../src/browser/providers/typ
 import { DesktopControlGate } from "../../src/browser/service/desktopControlGate.js";
 import { createBrowserTabConcurrencyRuntime } from "../../src/browser/tabConcurrencyRuntime.js";
 
+// Real retained-session cases can drain multiple independently bounded 3s
+// socket closes. A shorter harness deadline aborts fixture teardown and leaks
+// asynchronous work into the next case; production deadlines stay unchanged.
+const OWNED_TRANSPORT_FIXTURE_TIMEOUT_MS = 15_000;
+
 const fixture = vi.hoisted(() => ({
 	page: undefined as
 		| undefined
@@ -1220,7 +1225,7 @@ test.each([
 		setAuracallHomeDirOverrideForTest(null);
 		await rm(home, { recursive: true, force: true });
 	}
-}, 10000);
+}, OWNED_TRANSPORT_FIXTURE_TIMEOUT_MS);
 
 test.each([
 	"factory-first",
@@ -1711,7 +1716,7 @@ test.each([
 		setAuracallHomeDirOverrideForTest(null);
 		await rm(home, { recursive: true, force: true });
 	}
-});
+}, OWNED_TRANSPORT_FIXTURE_TIMEOUT_MS);
 
 test("owned native-style backend burst drains before transport close", async () => {
 	let diagnosticNow = 0;

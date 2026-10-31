@@ -40,6 +40,11 @@ and its TTL remains valid. AuraCall reacquires custody and checks account identi
 for the new listing. This avoids loading a fresh page and its background requests
 for every CLI process; active owners and uncertain effects remain protected.
 
+When a ChatGPT listing needs more history and its local backend-request budget
+is exhausted, it returns the existing budget-denial error instead of a short
+successful inventory. A listing that already has enough rows can still succeed.
+Limits and provider-warning handling remain unchanged.
+
 ## Quick start
 
 Primary local install: `pnpm run install:user-runtime` builds the current

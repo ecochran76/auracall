@@ -339,3 +339,10 @@ settled AuraCall utility tab after its bound process has died. Reconcile and
 release only that qualified prior lease, then acquire fresh custody and verify
 identity normally. Live owners, unknown effects, foreign accounts, other routes
 and mutations remain excluded; missing/racing targets fail normal admission.
+
+ChatGPT history pagination stops with the existing backend-budget denial when
+additional rows are needed and its governor is frozen by a known local denial.
+It checks across scroll/wait/read boundaries instead of presenting a short
+successful inventory. Satisfied row limits remain successful. Shared-process
+followers reconstruct only known budget-denial errors; mixed or unknown failures
+retain generic failure semantics. The error does not erase earlier admitted effects.
