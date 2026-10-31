@@ -1,5 +1,13 @@
 # Aura-Call
 
+Equivalent overlapping Linux conversation listings can share one authenticated
+transient cross-process observation. Account expectation, browser generation,
+runtime implementation and request policy must match. Subscribers cancel
+independently; the final departure aborts work. Owner death fails current
+subscribers without provider retry. No settled inventory cache is created.
+Caller-owned traffic plans, sessions, custody and callbacks keep independent
+execution; generated service options may be rebuilt with shared cancellation.
+
 ChatGPT history pagination accumulates unique conversation IDs in first-observed
 order across changing DOM windows, bounded by the requested row limit. New IDs
 establish progress. The initial observation is reused before scrolling. Caller

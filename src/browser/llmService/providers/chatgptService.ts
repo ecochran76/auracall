@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
+import { getAuracallHomeDir } from "../../../auracallHome.js";
 import type { ResolvedUserConfig } from "../../../config.js";
 import { runConfiguredChatgptUtilityOperation } from "../../configuredChatgptUtilityAffinity.js";
+import { conversationListSharingKey } from "../../conversationListSharingKey.js";
+import { shareableConversationListOptions } from "../../conversationListSharingPolicy.js";
 import { resolveChatgptConversationUrl } from "../../providers/chatgptAdapter.js";
 import type { Conversation, Project } from "../../providers/domain.js";
 import { getProvider } from "../../providers/index.js";
@@ -10,6 +14,7 @@ import {
 	type BrowserProcessOwnerAttribution,
 	BrowserService,
 } from "../../service/browserService.js";
+import { shareConversationListing } from "../../sharedConversationListing.js";
 import { LlmService } from "../llmService.js";
 import type { IdentityPrompt, LlmServiceAdapter } from "../types.js";
 
@@ -139,6 +144,43 @@ export class ChatgptService extends LlmService {
 	}
 
 	async listConversations(
+		projectId?: string,
+		options?: BrowserProviderListOptions,
+	): Promise<Conversation[]> {
+		const portable = shareableConversationListOptions(options);
+		if (portable && process.platform === "linux") {
+			options?.abortSignal?.throwIfAborted();
+			const resolved = await this.buildListOptions(
+				{ ...portable, abortSignal: options?.abortSignal },
+				{ ensurePort: false },
+			);
+			const request = this.scopeConversationListOptions(portable, projectId);
+			const key = await conversationListSharingKey(this.getResolvedUserConfig(), resolved, request);
+			if (key) {
+				const rows = await shareConversationListing({
+					root: path.join(getAuracallHomeDir(), "conversation-list-sharing"),
+					key,
+					signal: options?.abortSignal,
+					run: (signal) =>
+						this.listConversationsUnshared(projectId, { ...request, abortSignal: signal }),
+				});
+				options?.abortSignal?.throwIfAborted();
+				const current = await this.buildListOptions(
+					{ ...portable, abortSignal: options?.abortSignal },
+					{ ensurePort: false },
+				);
+				if (
+					(await conversationListSharingKey(this.getResolvedUserConfig(), current, request)) !== key
+				) {
+					throw new Error("Browser generation changed during shared conversation listing.");
+				}
+				return rows;
+			}
+		}
+		return this.listConversationsUnshared(projectId, options);
+	}
+
+	private async listConversationsUnshared(
 		projectId?: string,
 		options?: BrowserProviderListOptions,
 	): Promise<Conversation[]> {

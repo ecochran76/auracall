@@ -1,5 +1,13 @@
 # Browser Mode
 
+On Linux/WSL, equivalent overlapping conversation listings can share one active
+listing across CLI/agent processes. Different account/browser generations,
+coverage or navigation policies remain separate. A caller can cancel without
+cancelling another subscriber. Owner process failure returns an error; it does
+not automatically rerun provider work. Finished lists are not kept as a cache.
+Calls with their own traffic plans, custody, sessions or callbacks remain
+independent. Other operating systems retain the existing listing path.
+
 ChatGPT conversation-history listing retains unique conversations as scrolling
 replaces visible rows, in first-observed order up to the requested limit. It
 stops at bounded no-progress/scroll limits. Cancellation stops pagination waits
