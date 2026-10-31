@@ -1,3 +1,11 @@
+## 2026-10-31 — Utility parent settlement source qualified
+
+Plan0476 CLOSED for finite source diagnosis/repair. Exact sequential budgeted read RED reproduced process-owned; request-budget-off and genuinely pending controls distinguished the cause. Initial two-utility expectation rejected against the intentional per-process contract. Shared request-class filter rejected by five safety regressions. Final utility-local parent-close ordering passes181/181 across8affectedfiles (Vitest75.53s; external74.21wall20.06CPU, maxRSS345492KiB), full typecheck and scoped lint at c5351194282e2c90555aec7c17ddb5dadfec9072 after clean main rebase. Only this packet carried; unrelated attachment/diagnostic commits excluded. [Evidence](docs/dev/notes/2026-10-31-utility-parent-settlement.md). No runtime installation, OAuth action or existing-fence clearance; native reauthorization remains pending. Retain worktrees/refs. Source-qualified memory admission uses reviewed auracall_main and excludes raw/private browser evidence.
+
+## 2026-10-31 — Independent utility admission diagnosis
+
+[Plan0476](docs/dev/plans/0476-2026-10-31-independent-utility-admission.md) OPEN in isolated fix/repeated-utility-lease. Initial two-utility expectation rejected against the explicit one-tab-per-process contract. Retained helper ledger and a budgeted sequential differential then reproduce the exact process-owned error. Budget-off/real-pending controls pass before repair. Close parent interaction before request reconciliation; initial shared-filter fix rejected by five safety regressions. Final source validation pending, no runtime/OAuth action.
+
 ## 2026-10-30 — Desktop ownership capture installed and enabled
 
 PR508/372465aaf source10c4e06c5 is active for CLI/MCP/API with658-file parity.
@@ -22377,3 +22385,5 @@ Published PR[518](https://github.com/ecochran76/auracall/pull/518), open and
 mergeable; validated source681500629fb0fc0dfb1cfdd700e84ce425b893bb.
 Tracker readbacks514/515CLOSED. Memory disposition queued, job
 87e92df3-86cb-4adc-8d7b-8c3934cf2029 (acceptance only). No merge/deployment.
+
+Plan0476 audit qualification: complete plan-library auditor retains69identical origin/main baseline errors, no new finding. Renumbered this packet from0475 because current main already uses that serial; no goal/review/retry reset. Product source/tests exactly match qualifiedc53511942 after documentation closeout.

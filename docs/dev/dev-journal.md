@@ -1,3 +1,7 @@
+## 2026-10-31 — Utility self-fence diagnosis and source repair
+
+Plan0476 isolates a budgeted parent-settlement ordering defect from generic profile locking and the deliberate one-utility-tab-per-process rule. Fast RED/controls established before final repair; shared-filter attempt rejected by five safety regressions. Utility-local ordering fix passes28focused cases and scoped lint. Final clean-main checkpointc53511942 passes181affectedtests, full typecheck and scoped lint; source publication prepared. No runtime or OAuth action.
+
 ## 2026-10-31 — Defer uncertain Grok contracts; integrate spec513
 
 Operator deferred409/411/477; tracker bodies preserve their criteria and require

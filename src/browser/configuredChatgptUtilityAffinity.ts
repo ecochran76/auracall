@@ -657,6 +657,15 @@ async function settleConfiguredChatgptUtilityOperation(input: {
 }): Promise<unknown> {
 	const failures: unknown[] = input.initialError ? [input.initialError] : [];
 	let effectState = input.effectState;
+	// Close the utility parent before request reconciliation inspects this operation.
+	// Its own active read is not an unfinished backend request.
+	if (input.governor) {
+		try {
+			await input.governor.close({ outcome: input.outcome, effectState });
+		} catch (error) {
+			failures.push(error);
+		}
+	}
 	try {
 		effectState =
 			(await input.backendRequests?.reconcileEffectState(effectState, input.operationError)) ??
@@ -666,13 +675,6 @@ async function settleConfiguredChatgptUtilityOperation(input: {
 		failures.push(error);
 	}
 
-	if (input.governor) {
-		try {
-			await input.governor.close({ outcome: input.outcome, effectState });
-		} catch (error) {
-			failures.push(error);
-		}
-	}
 	let claim: TabLeaseClaim = input.tab.claim;
 	// Failed liveness must not turn final settlement into a lease revival.
 	if (!input.heartbeatFailed) {
