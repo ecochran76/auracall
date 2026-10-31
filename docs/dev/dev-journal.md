@@ -8,6 +8,15 @@ Service integration retains normal identity/governance and excludes caller-owned
 policies/session/callbacks. No deployment or real provider requests. Final local
 validation and bounded review recorded in the plan/private receipts.
 
+## 2026-10-31 — Skill identity qualified; Bot assignment remains open
+
+Bounded native research compared one personal Skill detail at home and on the
+exact original Bot route. Stable id/name/enabled record matches; no Bot-specific
+identity or assignment control in inspected detail/menu. Five governed slices
+pass account continuity and cleanup. No state change, setter guess or review
+reset.409OPEN; stop repeating this inspection without new contract evidence.
+[Research](notes/2026-10-31-grok-skill-association-research.md).
+
 ## 2026-10-30 — Fresh Grok native resource discovery
 
 Normal managed startup and exact original-account/Bot access pass after approved

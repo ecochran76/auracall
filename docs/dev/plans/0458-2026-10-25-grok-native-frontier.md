@@ -6,6 +6,15 @@ Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
 
+## Current Skill association result | 2026-10-31
+
+Native Skill detail and committed data qualify one stable saved library identity,
+identical at home and on the exact original Bot route. No Bot-specific assignment
+control/identity was exposed in inspected detail/menu.409remains OPEN; global
+enabled state is not a saved Bot grant. No setter contract established, no TDD
+implementation guessed. Five governed slices pass. See
+[research](../notes/2026-10-31-grok-skill-association-research.md).
+
 ## Current native resource discovery | 2026-10-30
 
 Fresh normal managed browser and original account/Bot are qualified. Plugins
