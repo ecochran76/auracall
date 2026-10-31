@@ -1,5 +1,10 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP domain names are case-sensitive.
 import { afterEach, expect, test, vi } from "vitest";
+import {
+	createProviderTrafficGovernor,
+	ProviderBackendRequestBudgetExceededError,
+	type ProviderTrafficGovernor,
+} from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { createChatgptAdapter } from "../../src/browser/providers/chatgptAdapter.js";
 import type { Conversation } from "../../src/browser/providers/domain.js";
 import { createProviderSessionAuthority } from "../../src/browser/providers/providerSessionAuthority.js";
@@ -20,6 +25,7 @@ function listingFixture(
 	limit: number,
 	options: {
 		signal?: AbortSignal;
+		governor?: ProviderTrafficGovernor;
 		onScroll?: () => void | Promise<void>;
 		onRead?: (index: number) => void | Promise<void>;
 	} = {},
@@ -78,6 +84,7 @@ function listingFixture(
 			tabTargetId: "fixture-target",
 			configuredUrl: "https://chatgpt.com/",
 			includeHistory: true,
+			providerTrafficGovernor: options.governor,
 			historyLimit: limit,
 			accountMirrorInventory: true,
 			allowNavigation: false,
@@ -195,4 +202,65 @@ test.each([
 	expect(result.error).toBeNull();
 	expect(result.rows?.map((row) => row.id)).toEqual(expected);
 	expect(fixture.events.filter((event) => event === "scroll")).toHaveLength(scrolls);
+});
+
+test.each([
+	{ when: "initial", limit: 50, failed: true, expected: ["read"] },
+	{
+		when: "last-read",
+		limit: 50,
+		failed: true,
+		expected: ["read", "scroll", "read", "scroll", "read", "scroll", "read"],
+	},
+	{ when: "scroll", limit: 50, failed: true, expected: ["read", "scroll"] },
+	{ when: "sleep", limit: 50, failed: true, expected: ["read", "scroll"] },
+	{ when: "initial", limit: 2, failed: false, expected: ["read"] },
+])("history budget denial at $when preserves required coverage for limit $limit", async ({
+	when,
+	limit,
+	failed,
+	expected,
+}) => {
+	const governor = createProviderTrafficGovernor({
+		attribution: {
+			provider: "chatgpt",
+			runtimeProfileId: "fixture",
+			managedBrowserProfile: "/fixture/chatgpt",
+			workloadId: "listing",
+			operationId: "listing",
+			tabLeaseId: "fixture-lease",
+			targetId: "fixture-target",
+		},
+		interactionGovernor: { beforeInteraction: async () => {} },
+		mutationAudit: async () => {},
+		admitBackendRequest: async () => {
+			throw new ProviderBackendRequestBudgetExceededError();
+		},
+	});
+	// This DOM transport fixture does not emit native Fetch events. Drive the real
+	// public governor's rejection, and expose its read/action view to the adapter.
+	const { admitBackendRequest, ...readGovernor } = governor;
+	const deny = () => admitBackendRequest?.("history-page", async () => {}).catch(() => {});
+	const fixture = listingFixture([["a", "b"]], limit, {
+		governor: readGovernor,
+		onRead: async (index) => {
+			if ((when === "initial" && index === 1) || (when === "last-read" && index === 4))
+				await deny();
+		},
+		onScroll: async () => {
+			if (when === "scroll") await deny();
+			if (when === "sleep") setTimeout(() => void deny(), 100);
+		},
+	});
+	await vi.runAllTimersAsync();
+	const result = await fixture.result;
+	if (failed) {
+		expect(result.error).toBeInstanceOf(ProviderBackendRequestBudgetExceededError);
+		expect(result.rows).toBeNull();
+	} else {
+		expect(result.error).toBeNull();
+		expect(result.rows?.map((r) => r.id)).toEqual(["a", "b"]);
+	}
+	expect(fixture.events).toEqual(expected);
+	expect(transport.connect).toHaveBeenCalledTimes(1);
 });

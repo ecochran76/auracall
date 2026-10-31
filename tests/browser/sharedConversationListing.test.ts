@@ -14,7 +14,12 @@ function worker(root: string, key: string) {
 		[root, key],
 		{ execArgv: ["--import", "tsx"], stdio: ["ignore", "ignore", "pipe", "ipc"] },
 	);
-	const messages: Array<{ event: string; value?: unknown; message?: string }> = [];
+	const messages: Array<{
+		event: string;
+		value?: unknown;
+		message?: string;
+		backendBudgetDenied?: boolean;
+	}> = [];
 	const listeners = new Set<() => void>();
 	child.on("message", (message) => {
 		messages.push(message as (typeof messages)[number]);
@@ -252,6 +257,26 @@ test("cancelling every subscriber aborts the operation and releases its election
 		await later.wait("provider-start");
 		later.child.send("release");
 		await later.wait("result");
+	} finally {
+		for (const child of children) child.kill();
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("backend budget denial retains its classification for both shared callers without replay", async () => {
+	const root = await mkdtemp(path.join(os.tmpdir(), "shared-list-budget-"));
+	const children: ChildProcess[] = [];
+	try {
+		const first = worker(root, "same");
+		children.push(first.child);
+		await first.wait("provider-start");
+		const second = worker(root, "same");
+		children.push(second.child);
+		await second.wait("follower");
+		first.child.send("budget-fail");
+		expect((await first.wait("error")).backendBudgetDenied).toBe(true);
+		expect((await second.wait("error")).backendBudgetDenied).toBe(true);
+		expect(second.messages.some((m) => m.event === "provider-start")).toBe(false);
 	} finally {
 		for (const child of children) child.kill();
 		await rm(root, { recursive: true, force: true });

@@ -1,12 +1,17 @@
+import {
+	ProviderBackendRequestBudgetExceededError,
+	isKnownBackendRequestBudgetDenial,
+} from "../../packages/browser-service/src/service/providerTrafficGovernor.js";
 import { shareConversationListing } from "../../src/browser/sharedConversationListing.js";
 
 const [root, key] = process.argv.slice(2);
 const controller = new AbortController();
 let release: () => void = () => {};
-let fail: () => void = () => {};
+let fail: (budget?: boolean) => void = () => {};
 process.on("message", (message) => {
 	if (message === "release") release();
 	if (message === "fail") fail();
+	if (message === "budget-fail") fail(true);
 	if (message === "cancel") controller.abort(new Error("Caller cancelled"));
 });
 try {
@@ -19,11 +24,13 @@ try {
 			process.send?.({ event: "provider-start" });
 			await new Promise<void>((resolve, reject) => {
 				release = resolve;
-				fail = () =>
+				fail = (budget) =>
 					reject(
-						Object.assign(new Error("Synthetic provider warning"), {
-							code: "FIXTURE_PROVIDER_WARNING",
-						}),
+						budget
+							? new ProviderBackendRequestBudgetExceededError()
+							: Object.assign(new Error("Synthetic provider warning"), {
+									code: "FIXTURE_PROVIDER_WARNING",
+								}),
 					);
 				signal.addEventListener("abort", () => reject(signal.reason), { once: true });
 			});
@@ -34,6 +41,7 @@ try {
 } catch (error) {
 	process.send?.({
 		event: "error",
+		backendBudgetDenied: isKnownBackendRequestBudgetDenial(error),
 		message: error instanceof Error ? error.message : String(error),
 	});
 } finally {

@@ -57600,3 +57600,17 @@ five rows4.64s/0backend events/0rejections. Explicit composite deployment preser
 native-lock4ddb39e91, replacing only two compiled listing modules. API2711942 and
 23paused completions/config/browser generations verified. Coverage excludes auth
 and non-backend/pre-attachment traffic; cold starts still bootstrap normally.
+
+## 2026-10-31 — Plan0475 concurrent history qualification
+
+Re-anchor current app-admission runtime and preserved reuse modules. One live
+paired50-row listing plus a cancelling coordinator observer will measure sharing,
+history traffic and independent subscriber cancellation. No production edits,
+limits/config changes or automatic replay. Private evidence stays outside Git.
+
+Plan0475 found a narrow quota-propagation bug after the paired probe returned9rows
+and the instrumented trace reached39. Public adapter regression red: a real frozen
+governor was ignored and more scroll/read work continued. Added boundary checks
+and preserved known budget error classification for cross-process followers.
+Typecheck/lint pass; documented serial presubmit is running. Full50-row delivery
+remains unqualified; no limits or provider-warning state changed.
