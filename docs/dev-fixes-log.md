@@ -1,3 +1,7 @@
+## 2026-10-31 — Settle utility parents before owned-request reconciliation
+
+A budgeted utility inspected all same-operation reservations while its own read parent was still started, falsely poisoning its lease. Sequential same-caller requests reproduced process-owned without concurrency or a browser; budget-off and real-pending controls distinguished the cause. Close the parent first, then reconcile owned requests. A shared request-class filter was rejected because active non-request actions must remain fenced. Exact regression and affected safety coverage qualify source behavior; existing live unknown leases require their own evidence/reconciliation.
+
 ## 2026-10-31 — Preserve local quota failures through history paging and sharing
 
 A scrolling loop can mistake blocked history loading for provider exhaustion.

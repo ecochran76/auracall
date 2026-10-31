@@ -1,3 +1,5 @@
+Utility settlement closes its own parent interaction before reconciling owned backend requests. Otherwise an active parent read can falsely mark a successful budgeted utility call outcome-unknown and block its next call. Pending backend requests, unresolved provider effects and warning/ownership fences remain authoritative.
+
 # Aura-Call
 
 Equivalent overlapping Linux conversation listings can share one authenticated

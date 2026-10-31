@@ -1,3 +1,7 @@
+- Utility parent settlement (provider-free, Plan0475):
+  `pnpm vitest run tests/browser/utilityParentSettlement.test.ts --maxWorkers=1`.
+  Sequential budget-off/on calls, completed requests and actual unfinished requests distinguish false self-fencing from required uncertainty fences. No real browser or provider request.
+
 - Cross-process conversation listing (provider-free, Plan0472):
   `pnpm vitest run tests/browser/sharedConversationListing.test.ts tests/browser/conversationListSharingPolicy.test.ts tests/browser/chatgptService.test.ts --maxWorkers=1`.
   Linux child processes cover one overlapping observation, fresh later work,

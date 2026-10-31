@@ -1,3 +1,7 @@
+## 2026-10-31 — Independent utility admission diagnosis
+
+[Plan0475](docs/dev/plans/0475-2026-10-31-independent-utility-admission.md) OPEN in isolated fix/repeated-utility-lease. Initial two-utility expectation rejected against the explicit one-tab-per-process contract. Retained helper ledger and a budgeted sequential differential then reproduce the exact process-owned error. Budget-off/real-pending controls pass before repair. Close parent interaction before request reconciliation; initial shared-filter fix rejected by five safety regressions. Final source validation pending, no runtime/OAuth action.
+
 ## 2026-10-30 — Desktop ownership capture installed and enabled
 
 PR508/372465aaf source10c4e06c5 is active for CLI/MCP/API with658-file parity.
