@@ -57582,3 +57582,8 @@ and matching tests to preserve that lane;17combined checks and scoped lint pass.
 Immutable runtime install and scoped API restart follow full build. The exact
 vinyl-ester prompt was recovered from private20261025research notes; earlier scope
 ambiguity came from another ASPECT draft and is resolved.
+
+P473 installed:661-file parity, installed public-lock fixture pass, wrappers/API
+agree on user-runtime-native-lock-4ddb39e91. API2406461active, browser1156715and
+config/env preserved. LitScout reanchor resolved exact vinyl-ester prompt from
+retained20261025assignment. No new research prompt submitted at install closeout.

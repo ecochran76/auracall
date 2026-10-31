@@ -1,0 +1,17 @@
+{
+  "source_commit": "4ddb39e91",
+  "runtime": "~/.auracall/user-runtime-native-lock-4ddb39e91",
+  "installed_files_matching": 661,
+  "installed_fixture_passed": true,
+  "api_pid": 2406461,
+  "api_uses_runtime": true,
+  "config_env_hashes_preserved": true,
+  "wrappers_use_runtime": true,
+  "prompt_submitted": false,
+  "local_checks": {
+    "combined_tests": 17,
+    "build": "pass",
+    "scoped_lint": "pass",
+    "hosted_ci": "skipped by cost policy"
+  }
+}

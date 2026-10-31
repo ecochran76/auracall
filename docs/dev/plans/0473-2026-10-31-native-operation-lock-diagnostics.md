@@ -31,3 +31,9 @@ vinyl-ester prompt. Live baseline had advanced to user-runtime-list-generation-
 so this installation cannot regress deployed listing custody.17combined tests and
 scoped lint pass; full build precedes immutable-prefix install. API and wrappers
 must agree; browser/config identity must be preserved. No hosted CI purchased.
+
+Installation accepted: immutable user-runtime-native-lock-4ddb39e91 has661-file
+parity; installed public lock fixture passes. Both wrappers and restarted API use
+this prefix, config/env hashes and existing browser generation preserved. No
+natural contention or historical cause qualification inferred from the fixture.
+[Receipt](../notes/2026-10-31-native-operation-lock-installed.json).
