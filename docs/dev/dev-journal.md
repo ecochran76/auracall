@@ -57574,3 +57574,10 @@ churn falsely invalidating generation. Public service regression red; explicit
 request target normalization makes all 11 sharing/policy cases green. Global
 runtime not promoted yet. Observed local backend-budget rejection burst retained
 as a separate efficiency finding, not evidence of provider 429s.
+
+Plan0473 CLOSED: PR526/527 merged, final source5c4b54512 installed and promoted.
+Two real separate-process callers receive identical five-row inventory with one
+observed provider transport (other caller zero backend events). API2124267 healthy;
+23paused completions/config and both scoped browser PID births preserved. Broad
+backend event volume/local budget rejections remain separate, not a 429 cure.
+See Plan0473 for counts, exclusions, failed evidence and validation commands.

@@ -1,6 +1,6 @@
 # Plan0473 — Listing custody and provider-call measurement
 
-State: OPEN
+State: CLOSED
 Owner: primary agent
 Branch: research/chatgpt-list-call-counts-20261031
 Target: origin/main
@@ -8,11 +8,18 @@ Base: 08b8e337b
 
 ## Current State
 
-The authorized read-only warm-up on installed source d4736f476 failed before
-inventory delivery with `Provider traffic lease reservation failed: target-owned`.
-No solo/concurrent call-count comparison has run. Private command outputs and
-custody metadata remain outside Git. No lease was forcibly released, no warning
-cleared and no provider retry made.
+Complete: both reproduced defects are merged and the corrected installed runtime
+is active. Source 5c4b54512b6170b9da71a2dab813c509da3a388e; PR526 merge
+79a0be7e3c7efba4d9d591eaa553f55916ffc17f and PR527 merge
+35c55ea5bdd3ed24d4900b2805b49ff8e5fee115. The final live concurrent pair delivered
+the same five-row inventory to both callers through one observed provider
+connection. Background request churn remains a separate efficiency target.
+No provider cooldown/429-resolution claim is made.
+
+Historical warm-up failed with target-owned. No lease was forcibly released,
+no warning cleared, and no unchanged live retry was made. Private raw outputs
+and custody evidence remain outside Git. The warm-up browser later exited with
+unknown attribution; the subsequent retained browser survived final promotion.
 
 ## Objective and scope
 
@@ -88,3 +95,40 @@ Second correction green: 11 sharing/policy cases pass in 11.19s; scoped lint
 and diff check pass. The first attempted edit did not alter the source (verified
 by diff); its red run remains retained. A subsequent explicit patch landed and
 the tests then passed. No forced-red mutation is being used as acceptance.
+
+## Final acceptance and closeout
+
+Corrected installed two-process run: both return five rows with identical private
+inventory digests in 16.28/16.32s. Owner observes one connection; subscriber zero
+connections and zero backend/admission events. Owner observes 52 backend events,
+11 responses, 38 failures and three unresolved response events; 34 admission
+attempts, 11 admitted and 23 rejected, zero pending admissions. These aggregate
+counters cover only owned backend interception after attachment. They exclude
+pre-attachment and non-backend requests and must not be interpreted as complete
+network counts. Failed/unresolved response observations do not establish provider
+failure or leaked active requests. The observed count differs from the earlier
+single run, so no exact backend-request savings percentage is claimed. What is
+proven: two callers share one physical observation and receive identical results.
+
+Final installed prefix: user-runtime-list-generation-5c4b54512. All661compiled
+files match the completed build. CLI0.1.1; fresh MCP initialization exposes65tools
+and exits cleanly. Global wrappers promoted only after corrected live acceptance.
+API restarted1466575to2124267 and resolves the final prefix. Status healthy;
+/desktops and /console HTTP200. The exact23active completion IDs/states remain
+paused, scheduler remains paused, config.json/api.env bytes unchanged. Scoped
+Grok1156715 and ChatGPT2057773 PID birth identities survive promotion.
+
+Validation: custody correction111focused cases, typecheck, scoped lint and full
+build passed. After the generation correction, all11affected sharing/policy cases
+pass; scoped lint, diff check and `pnpm exec tsc -p tsconfig.build.json` pass.
+Static UI/vendor output was retained from the complete preceding build because
+only the TypeScript key changed. Hosted CI skipped; local Linux/WSL Node24.18.0 build/probes and
+Node25.9.0 installed API differ from any hosted runner. No hosted billing changes.
+A bounded final diff check against08b8e337b found no additional accepted source
+findings on the custody/generation objective. No delegation or extra review round.
+
+The next bounded efficiency investigation should attribute background backend
+routes and demand versus incidental bootstrap work. Do not increase limits or
+infer 429 relief from deduplicated listing executions. Preserve the failed
+warm-up, failed pair, fixture timeout and harness cleanup error as historical
+observations rather than replacing them with the successful run.
