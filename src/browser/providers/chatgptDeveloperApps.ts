@@ -1,3 +1,4 @@
+import { withCdpCommandAbortSignal } from "../../../packages/browser-service/src/guardedCdp.js";
 import { createHash } from "node:crypto";
 import type Protocol from "devtools-protocol";
 import type { DevToolsConnectionOptions } from "../../../packages/browser-service/src/types.js";
@@ -759,9 +760,9 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		try {
 			await this.runAttachmentStage(
 				"browserDevToolsRuntimeEnable",
-				this.cdpClient.Runtime.enable(),
+				() => connected.client.Runtime.enable(),
 			);
-			await this.runAttachmentStage("browserDevToolsPageEnable", this.cdpClient.Page.enable());
+			await this.runAttachmentStage("browserDevToolsPageEnable", () => connected.client.Page.enable());
 			this.throwIfAborted();
 			return this.cdpClient;
 		} catch (error) {
@@ -772,7 +773,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		}
 	}
 
-	private runAttachmentStage<T>(stage: string, operation: Promise<T>): Promise<T> {
+	private runAttachmentStage<T>(stage: string, operation: () => Promise<T>): Promise<T> {
 		debugDeveloperApps(`DevTools attachment stage: ${stage}`);
 		return runDeveloperAppAttachmentStage(operation, {
 			stage,
@@ -787,10 +788,13 @@ export class ChatgptDeveloperAppBrowserAdapter {
 }
 
 function runDeveloperAppAttachmentStage<T>(
-	operation: Promise<T>,
+	operation: Promise<T> | (() => Promise<T>),
 	options: { stage: string; abortSignal?: AbortSignal; timeoutMs: number },
 ): Promise<T> {
 	options.abortSignal?.throwIfAborted();
+	const controller = new AbortController();
+	const signal = options.abortSignal
+		? AbortSignal.any([controller.signal, options.abortSignal]) : controller.signal;
 	let timeout: NodeJS.Timeout | null = null;
 	let onAbort: (() => void) | null = null;
 	return new Promise<T>((resolve, reject) => {
@@ -800,29 +804,28 @@ function runDeveloperAppAttachmentStage<T>(
 				options.abortSignal.removeEventListener("abort", onAbort);
 			}
 		};
-		operation.then(
-			(value) => {
-				cleanup();
-				resolve(value);
-			},
-			(error) => {
-				cleanup();
-				reject(error);
-			},
-		);
 		onAbort = () => {
 			cleanup();
-			reject(options.abortSignal?.reason ?? new Error("DevTools attachment aborted."));
+			const error = options.abortSignal?.reason ?? new Error("DevTools attachment aborted.");
+			controller.abort(error);
+			reject(error);
 		};
 		options.abortSignal?.addEventListener("abort", onAbort, { once: true });
 		timeout = setTimeout(() => {
 			cleanup();
-			reject(
-				new Error(
-					`DevTools attachment stage ${options.stage} timed out after ${options.timeoutMs}ms.`,
-				),
+			const error = new Error(
+				`DevTools attachment stage ${options.stage} timed out after ${options.timeoutMs}ms.`,
 			);
+			controller.abort(error);
+			reject(error);
 		}, options.timeoutMs);
+		// Start the command inside cancellation scope so admission shares the stage
+		// deadline. Timing an already-started Promise cannot cancel queued input.
+		Promise.resolve().then(() => typeof operation === "function"
+			? withCdpCommandAbortSignal(signal, operation) : operation).then(
+			value => { cleanup(); resolve(value); },
+			error => { cleanup(); reject(error); },
+		);
 	});
 }
 

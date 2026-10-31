@@ -1,3 +1,9 @@
+- Developer-app attachment admission (provider-free, P474):
+  `pnpm vitest run tests/browser/chatgptDeveloperAppAdmission.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/browser/desktopControlGate.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts --maxWorkers=1`.
+  Public app adapter plus real sandbox display gate and guarded CDP, with only
+  external Chrome transport mocked, covers transient contention, caller abort,
+  stage expiry and no late wire dispatch. No installed/live acceptance implied.
+
 - Cross-process conversation listing (provider-free, Plan0472):
   `pnpm vitest run tests/browser/sharedConversationListing.test.ts tests/browser/conversationListSharingPolicy.test.ts tests/browser/chatgptService.test.ts --maxWorkers=1`.
   Linux child processes cover one overlapping observation, fresh later work,

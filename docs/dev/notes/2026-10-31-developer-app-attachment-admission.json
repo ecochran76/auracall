@@ -1,0 +1,36 @@
+{
+  "scope": "P474 source-only attachment admission repair",
+  "source_base": "0ccf2d2ffb1ca2659feaab81f671e2216aafc441",
+  "source_module_sha256": "0dd2f4ab7fe99f1e4c4e8ab01d011a1a7a21c766460082e0e38d02fe5c9cb31c",
+  "red": {
+    "command": "pnpm vitest run tests/browser/chatgptDeveloperAppAdmission.test.ts --maxWorkers=1",
+    "passed": 0,
+    "failed": 1,
+    "observed": "exact Desktop control is busy refusal before inventory"
+  },
+  "differential": {
+    "installed_gate_no_signal_ms": 2521,
+    "installed_gate_with_deadline_ms": 3518,
+    "outcome": "deadline-only change admits after ordinary owner release",
+    "limits": "sandbox gate result; does not qualify historical owner health"
+  },
+  "green": {
+    "command": "pnpm vitest run tests/browser/chatgptDeveloperAppAdmission.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/browser/desktopControlGate.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts --maxWorkers=1",
+    "passed": 84,
+    "failed": 0
+  },
+  "checks": {
+    "typecheck": "pass",
+    "build": "pass",
+    "scoped_biome_lint": "pass",
+    "hosted_ci": "skipped; local Linux checks replace hosted CI",
+    "plan_audit": {
+      "errors": 68,
+      "new_plan_findings": []
+    }
+  },
+  "preserved_failures": "Initial shared timeout helper Promise consumers failed3tests/typecheck; Promise compatibility restored before final pass.",
+  "diagnosis": "Runtime/Page enable commands start outside cancellation scope, leaving CDP display admission without the existing attachment stage deadline.",
+  "effect_bounds": "No live browser action, provider call, prompt, lock removal, restart or installation.",
+  "memory_disposition": "forbidden; no explicit memory-write request"
+}

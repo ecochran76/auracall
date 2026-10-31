@@ -1,3 +1,9 @@
+Developer-app DevTools attachment starts Runtime/Page enable commands inside a
+cancellable stage scope. The existing ten-second stage deadline includes display
+admission; timeout or caller cancellation prevents queued commands from sending
+later. Ordinary short contention waits without weakening human or generation
+custody. A busy capture alone does not establish a faulty competing owner.
+
 Native-desktop operation lock refusals include allowlisted owner PID, acquisition
 time and a bounded current boot/start-time observation. Generation comparison is
 unknown for legacy records or unreadable process metadata; a mismatch remains a

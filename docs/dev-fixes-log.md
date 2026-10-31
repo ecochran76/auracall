@@ -26567,3 +26567,13 @@ owner UUID, command line or environment is emitted. Each optional metadata read
 waits at most100ms; already-issued reads can settle later. Cross-process regression
 was red before repair;22focused tests and typecheck/build/scoped lint pass locally.
 Source only, no runtime installation or live research acceptance.
+
+## 2026-10-31 — P474 developer-app attachment deadline propagation
+
+An attachment stage timed an already-started Runtime/Page enable promise, leaving
+CDP display admission without cancellation and exposing the default100-attempt
+busy refusal. Public adapter plus guarded-CDP sandbox contention reproduces it.
+Start enable commands within a stage cancellation scope; keep existing10sdeadline
+and cancellation error semantics. Timeout/caller abort stops queued dispatch;
+legacy Promise consumers remain compatible. Gate ownership/retry policy unchanged.
+Historical competing process activity/health remains unqualified. Source-only.

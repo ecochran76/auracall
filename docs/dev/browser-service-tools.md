@@ -1,3 +1,9 @@
+Developer-app attachment uses its existing ten-second stage deadline for both
+display admission and Runtime/Page enablement. Caller cancellation and stage
+expiry cancel queued admission before send; transient contention can settle
+without a second app operation. This does not authorize taking control from a
+human, removing a live lock or replaying an uncertain prompt.
+
 Native-desktop operation lock refusals include allowlisted owner PID, acquisition
 time and a bounded current boot/start-time observation. Generation comparison is
 unknown for legacy records or unreadable process metadata; a mismatch remains a

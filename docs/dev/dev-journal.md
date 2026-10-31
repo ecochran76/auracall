@@ -57587,3 +57587,23 @@ P473 installed:661-file parity, installed public-lock fixture pass, wrappers/API
 agree on user-runtime-native-lock-4ddb39e91. API2406461active, browser1156715and
 config/env preserved. LitScout reanchor resolved exact vinyl-ester prompt from
 retained20261025assignment. No new research prompt submitted at install closeout.
+
+## 2026-10-31 — P474 attachment admission diagnosis
+
+Primary on fix/developer-app-attachment-admission. Exact installed sandbox gate
+repro fails after2521mswithout cancellation; deadline-only differential succeeds
+at3518msafter release. Live capture records100attempts,cancellationSupplied=false,
+same generation and another automation PID. Public adapter/guarded-CDP regression
+then reproduced exact busy failure. Runtime/Page enable promises started outside
+cancellation scope; existing stage timeout only observed them. Source repair
+starts those commands inside the existing10sdeadline; old helper Promise consumers
+remain compatible.84targeted tests/scoped lint pass; typecheck/build pending.
+No live action, lock override, restart, install or prompt. Owner health/history
+remain unqualified; no claim of proven leak or faulty co-tenant.
+
+P474 source complete: final84tests pass, typecheck/build/scoped lint pass. Corrected
+shared-helper Promise compatibility after3existing fixtures/typecheck failed;
+failed receipts preserved. Plan audit68findings elsewhere, none in new plan.
+Only external Chrome transport is mocked in new public adapter/real gate tests.
+No install/live effects or production debug logs; sandbox repro evidence retained
+privately. Memoryforbidden: no explicit write request.

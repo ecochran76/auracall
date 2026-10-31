@@ -1,3 +1,5 @@
+- P474: [developer-app attachment admission](docs/dev/plans/0474-2026-10-31-developer-app-attachment-admission.md), provider-free deadline propagation diagnosis/repair.
+
 - P473 bounded source repair: [native operation lock diagnostics](docs/dev/plans/0473-2026-10-31-native-operation-lock-diagnostics.md), preserving admission policy; no runtime installation.
 
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
