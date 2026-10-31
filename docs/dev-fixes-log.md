@@ -1,3 +1,14 @@
+## 2026-10-31 — Avoid bootstrapping a page for each listing process
+
+A read-only inventory can return sidebar rows while the newly opened ChatGPT
+page attempts account/model/settings/app bootstrap XHRs and retries local budget
+denials. Existing per-process tab reuse does not cross the stale-owner loss fence.
+Listings now opt into narrow reuse of an unexpired exact-route utility tab from a
+verified dead process with settled effects. Fresh lease admission and identity
+checks remain. The file-backed public utility regression detects fresh target
+creation and excludes live-owner/unknown/foreign/route/mutation cases. Plan0474
+records attribution and the remaining installed acceptance boundary.
+
 ## 2026-10-31 — Rebuild generated listing target custody
 
 A discovered target from buildListOptions is not explicit caller custody. Passing

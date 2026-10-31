@@ -3,7 +3,10 @@ import {
 	listChromeTargets,
 	openChromeTarget,
 } from "../../packages/browser-service/src/chromeLifecycle.js";
-import { verifyChromeProcessAbsent } from "../../packages/browser-service/src/processCheck.js";
+import {
+	isProcessAlive,
+	verifyChromeProcessAbsent,
+} from "../../packages/browser-service/src/processCheck.js";
 import { createBrowserInteractionGovernor } from "../../packages/browser-service/src/service/interactionGovernor.js";
 import { createLedgerBackedBrowserInteractionGovernor } from "../../packages/browser-service/src/service/ledgerInteractionGovernor.js";
 import {
@@ -68,6 +71,8 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 	utilityId: string;
 	/** Explicit utility commands need target custody even when prompts are serialized. */
 	requireTargetLease?: boolean;
+	/** Listing reads may reuse an unexpired, settled target from a dead utility process. */
+	reuseSettledTarget?: boolean;
 	buildListOptions: (overrides: BrowserProviderListOptions) => Promise<BrowserProviderListOptions>;
 	options?: BrowserProviderListOptions;
 	mutability: "read-only" | "provider-mutating";
@@ -202,6 +207,44 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 			}
 		}
 	}
+	let reusedTargetId: string | undefined;
+	const reuseEndpoint = toEndpoint(initialTarget);
+	if (
+		input.reuseSettledTarget &&
+		input.mutability === "read-only" &&
+		!input.options?.tabTargetId &&
+		!input.options?.requireExistingTarget &&
+		reuseEndpoint &&
+		!(await runtime.registry.findByProcess(scope))
+	) {
+		const candidates = await runtime.registry.list({ scope, states: ["lost"] });
+		const ownerAlive = input.deps?.isOwnerAlive ?? isProcessAlive;
+		for (const lease of candidates.sort((a, b) => b.heartbeatAt.localeCompare(a.heartbeatAt))) {
+			if (
+				lease.lossReason !== "restart-unverified" ||
+				!lease.processBinding ||
+				ownerAlive(lease.processBinding.processId) ||
+				lease.retention === "live-follow" ||
+				lease.workload.kind !== "ephemeral" ||
+				!lease.workload.operationId.startsWith("chatgpt-service-") ||
+				(lease.effectState !== "none" && lease.effectState !== "settled") ||
+				!(now().getTime() < Date.parse(lease.idleExpiresAt)) ||
+				!(now().getTime() < Date.parse(lease.absoluteExpiresAt))
+			)
+				continue;
+			const target = await inspectTarget(reuseEndpoint, lease.targetId);
+			if (!target || !isExactRoute(target.url, configuredUrl)) continue;
+			const released = await runtime.registry.releasePreserved({
+				leaseId: lease.leaseId,
+				expectedRevision: lease.revision,
+				now: now().toISOString(),
+			});
+			if (!released.ok)
+				throw new Error(`Retained utility target release failed: ${released.conflict.kind}.`);
+			reusedTargetId = lease.targetId;
+			break;
+		}
+	}
 	recordLibraryInventoryStage(input.options, "affinity-retire-leases");
 	await retireExpiredChatgptTabLeases({
 		registry: runtime.registry,
@@ -237,6 +280,12 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 		listTargets: async ({ host, port }) =>
 			(await (input.deps?.listTargets ?? listChromeTargets)(port, host))
 				.filter((target) => !target.type || target.type === "page")
+				.filter(
+					(target) =>
+						!reusedTargetId ||
+						((target as { targetId?: string; id?: string }).targetId ??
+							(target as { id?: string }).id) === reusedTargetId,
+				)
 				.map((target) => ({
 					targetId:
 						(target as { targetId?: string; id?: string }).targetId ??
@@ -244,7 +293,7 @@ export async function runConfiguredChatgptUtilityOperation<TResult>(input: {
 						"",
 					url: typeof target.url === "string" ? target.url : "",
 				})),
-		requireExistingTarget: input.options?.requireExistingTarget,
+		requireExistingTarget: input.options?.requireExistingTarget || Boolean(reusedTargetId),
 		inspectTarget,
 		openTarget: async ({ host, port }) => {
 			const url = "about:blank";

@@ -60,6 +60,7 @@ export class ChatgptService extends LlmService {
 	private async runWithUtilityAffinity<TResult>(
 		options: BrowserProviderListOptions | undefined,
 		run: (exactOptions: BrowserProviderListOptions) => Promise<TResult>,
+		reuseSettledTarget = false,
 	): Promise<TResult> {
 		if (options?.tabTargetId) {
 			const exactOptions = await this.buildListOptions(options, { ensurePort: false });
@@ -77,6 +78,7 @@ export class ChatgptService extends LlmService {
 			utilityId: this.utilityAffinityId,
 			options,
 			mutability: "read-only",
+			reuseSettledTarget,
 			buildListOptions: (overrides) => this.buildListOptions(overrides, { ensurePort: true }),
 			run,
 		})) as TResult;
@@ -195,6 +197,7 @@ export class ChatgptService extends LlmService {
 						projectId,
 						this.scopeConversationListOptions(exactOptions, projectId),
 					) as Promise<Conversation[]>,
+				true,
 			);
 		}
 		const listOptions = this.scopeConversationListOptions(

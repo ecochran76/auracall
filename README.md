@@ -34,6 +34,12 @@ The verified premium choice takes precedence over ordinary thinking-time setting
 `--browser-model-strategy current` continues to preserve the current model.
 If Pro cannot be verified, AuraCall fails before prompt submission.
 
+Read-only ChatGPT conversation listings can reuse a retained AuraCall utility tab
+when its previous process has exited, effects are settled, its route matches,
+and its TTL remains valid. AuraCall reacquires custody and checks account identity
+for the new listing. This avoids loading a fresh page and its background requests
+for every CLI process; active owners and uncertain effects remain protected.
+
 ## Quick start
 
 Primary local install: `pnpm run install:user-runtime` builds the current

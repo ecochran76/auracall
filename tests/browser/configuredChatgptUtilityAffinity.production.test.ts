@@ -1,7 +1,13 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { createInMemoryProviderInteractionLedger } from "../../packages/browser-service/src/service/interactionLedger.js";
-import { createInMemoryBrowserTabLeaseRegistry } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
+import {
+	createFileBackedBrowserTabLeaseRegistry,
+	createInMemoryBrowserTabLeaseRegistry,
+} from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 
 const chromeLifecycleMocks = vi.hoisted(() => ({
 	closeRemoteChromeTarget: vi.fn(async () => undefined),
@@ -314,4 +320,83 @@ describe("configured ChatGPT utility production target wiring", () => {
 		expect(chromeLifecycleMocks.openChromeTarget).not.toHaveBeenCalled();
 		expect(chromeLifecycleMocks.closeRemoteChromeTarget).not.toHaveBeenCalled();
 	});
+});
+
+test.each([
+	"settled",
+	"alive",
+	"unknown",
+	"foreign",
+	"route",
+	"mutation",
+])("listing target reuse preserves custody boundaries: %s", async (mode) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "utility-reuse-"));
+	const previousRegistry = createFileBackedBrowserTabLeaseRegistry({
+		registryRoot: home,
+		ownerIdentity: { processId: 99999999, instanceId: "dead-utility" },
+	});
+	const registry = createFileBackedBrowserTabLeaseRegistry({
+		registryRoot: home,
+		isOwnerAlive: () => mode === "alive",
+	});
+	try {
+		const ledger = createInMemoryProviderInteractionLedger();
+		const scope = {
+			runtimeProfileId: "runtime-1",
+			managedBrowserProfile: "/managed/runtime-1/chatgpt",
+			service: "chatgpt",
+			tenantKey: "service-account:chatgpt:account-id=account-1",
+		};
+		const reserved = await previousRegistry.reserve({
+			scope: mode === "foreign" ? { ...scope, tenantKey: "other-account" } : scope,
+			targetId: "retained-root",
+			workload: { kind: "ephemeral", operationId: "chatgpt-service-dead" },
+			operationId: "chatgpt-service-dead",
+			now: new Date().toISOString(),
+			idleTtlMs: 300000,
+			absoluteTtlMs: 3600000,
+			targetFingerprint: "https://chatgpt.com/",
+			processBound: true,
+		});
+		if (!reserved.ok) throw new Error("Fixture could not reserve its target");
+		await previousRegistry.idle({
+			claim: reserved.value.claim,
+			now: new Date().toISOString(),
+			effectState: mode === "unknown" ? "outcome-unknown" : "settled",
+		});
+		const openTarget = vi.fn(async () => ({ id: "fresh-root", url: "about:blank" }) as never);
+		const result = await runConfiguredChatgptUtilityOperation({
+			userConfig,
+			browserService: {
+				resolveServiceTarget: async () => ({
+					host: "127.0.0.1",
+					port: 45015,
+					managedBrowserProfile: scope.managedBrowserProfile,
+				}),
+			} as never,
+			utilityId: "chatgpt-service-new",
+			mutability: mode === "mutation" ? "provider-mutating" : "read-only",
+			reuseSettledTarget: true,
+			buildListOptions: async (options) => options,
+			run: async (options) => options.tabTargetId,
+			deps: {
+				createRuntime: () => ({ registry, ledger }) as never,
+				isOwnerAlive: () => mode === "alive",
+				listTargets: async () =>
+					[
+						{
+							id: "retained-root",
+							type: "page",
+							url: mode === "route" ? "https://chatgpt.com/c/other" : "https://chatgpt.com/",
+						},
+					] as never,
+				openTarget,
+				closeTarget: async () => undefined,
+			},
+		});
+		expect(result).toBe(mode === "settled" ? "retained-root" : "fresh-root");
+		expect(openTarget).toHaveBeenCalledTimes(mode === "settled" ? 0 : 1);
+	} finally {
+		await rm(home, { recursive: true, force: true });
+	}
 });
