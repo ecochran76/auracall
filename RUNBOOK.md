@@ -22359,3 +22359,21 @@ overall command deadline unchanged. Removed ignored redundant settings-content
 wait; stronger exactsettings reader remains. 102 sequentialtests/typecheck/build/
 scopedlint pass. Previous attempt preserved as zeroactivation; freshqualification
 uses a distinct result path. No provider prompt/calendarwrite.
+
+## Turn 469 | 2026-10-30
+
+P469 primary/deadline owns integration and #514; category worker owns #515 in an isolated checkout. Base57df62b52; both unblocked, shared file integrated serially. See [Plan0469](docs/dev/plans/0469-2026-10-30-desktop-capture-refusal-integrity.md). No installed effects.
+
+### P469 closeout
+
+#514/#515 tracker closed with readbacks after131focused tests; source integration
+9a0eb7d3d +1b3d4c0c0. One frozen review28486ce2a vs57df62b52: Standards0,
+Spec1P2(S1). One TDD pass adds independent cancellationObserved boolean;
+31post-remediation tests and final typecheck/build/lint pass. Plan0469CLOSED
+source-only; no installation/live acceptance. Worker515 clean checkout removed
+after bundle custody; primary branch retained for publication.
+
+Published PR[518](https://github.com/ecochran76/auracall/pull/518), open and
+mergeable; validated source681500629fb0fc0dfb1cfdd700e84ce425b893bb.
+Tracker readbacks514/515CLOSED. Memory disposition queued, job
+87e92df3-86cb-4adc-8d7b-8c3934cf2029 (acceptance only). No merge/deployment.

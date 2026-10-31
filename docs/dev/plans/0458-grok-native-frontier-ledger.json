@@ -731,5 +731,17 @@
     "decision": "409 OPEN; no guessed setter; stop repeat inspection without new evidence",
     "report": "../notes/2026-10-31-grok-skill-association-research.md",
     "reviewFindingsCounters": "unchanged1/1"
+  },
+  "operatorDeferral20261031": {
+    "tickets": [
+      409,
+      411,
+      477
+    ],
+    "state": "deferred",
+    "reason": "native capability/identity contract unqualified",
+    "revisit": "new provider/client evidence or explicit changed scope",
+    "repeatProbes": "not scheduled",
+    "acceptanceCriteria": "preserved"
   }
 }
