@@ -1,3 +1,13 @@
+## 2026-10-31 — Cross-process listing merged and installed
+
+PR524/33e5df84d integrates source d4736f476 with current Grok research history.
+Immutable installed package matches661compiled files;10installed cross-process/
+policy checks, fresh MCP65tools, CLI0.1.1and API1466575routes pass. Native browser
+birth generation1,23paused completions, scheduler pause and config/env bytes
+preserved. Only API restarted. Private fixture .ts/CommonJS failure was corrected
+with .mts; production unchanged. Plan0472 records eligibility and live-proof
+limits. No provider prompt, browser restart or hostedCI.
+
 ## 2026-10-31 — Cross-process conversation-list sharing, source
 
 Plan0472 implements transient authenticated Linux IPC election for equivalent
