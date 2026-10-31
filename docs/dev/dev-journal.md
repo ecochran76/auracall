@@ -57581,3 +57581,15 @@ observed provider transport (other caller zero backend events). API2124267 healt
 23paused completions/config and both scoped browser PID births preserved. Broad
 backend event volume/local budget rejections remain separate, not a 429 cure.
 See Plan0473 for counts, exclusions, failed evidence and validation commands.
+
+## 2026-10-31 — Plan0474 listing traffic attribution
+
+One bounded read-only listing probe adds passive route-family/method/resource/
+initiator aggregate observations to existing diagnostics. Prior counts alone
+cannot establish avoidable traffic. Keep limits and ownership unchanged; create
+an offline red-capable loop only after attribution identifies the exact risk.
+
+Plan0474 source: real file-backed stale-owner regression red on unnecessary fresh
+page creation, green with listing-only qualified retained-target reuse.37focused
+plus110custody/backend cases, typecheck and scoped lint pass. Full build and bounded
+installed observation remain. Limits and other-agent work are untouched.

@@ -333,3 +333,9 @@ not authority to retry or relax mode/account/ownership qualification.
 ownerless utility custody while retaining the unknown provider outcome and an
 immutable approval audit. It is distinct from confirming a completed effect and
 never authorizes replay or changes the preserved browser target.
+
+Read-only ChatGPT conversation listings may reuse an exact-route, unexpired,
+settled AuraCall utility tab after its bound process has died. Reconcile and
+release only that qualified prior lease, then acquire fresh custody and verify
+identity normally. Live owners, unknown effects, foreign accounts, other routes
+and mutations remain excluded; missing/racing targets fail normal admission.
