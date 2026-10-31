@@ -5,6 +5,8 @@ transient cross-process observation. Account expectation, browser generation,
 runtime implementation and request policy must match. Subscribers cancel
 independently; the final departure aborts work. Owner death fails current
 subscribers without provider retry. No settled inventory cache is created.
+Automatically discovered tab selection is rebuilt through utility custody before a
+shared listing; explicit caller-selected targets remain part of the request.
 Caller-owned traffic plans, sessions, custody and callbacks keep independent
 execution; generated service options may be rebuilt with shared cancellation.
 

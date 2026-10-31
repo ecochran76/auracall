@@ -32,6 +32,29 @@ test("generated option spreads stay portable, while caller-owned policies never 
 	expect(shareableConversationListOptions(custom)).toBeNull();
 });
 
+test("generated target selection is rebuilt while explicit target selection remains part of the request", () => {
+	const resolved: BrowserProviderListOptions = {
+		tabTargetId: "discovered-target",
+		tabUrl: "https://chatgpt.com/",
+		historyLimit: 5,
+	};
+	markGeneratedConversationListOptions(resolved, { historyLimit: 5 });
+	expect(shareableConversationListOptions({ ...resolved })).toEqual({ historyLimit: 5 });
+	const explicit: BrowserProviderListOptions = {
+		tabTargetId: "caller-target",
+		tabUrl: "https://chatgpt.com/",
+	};
+	markGeneratedConversationListOptions(explicit, { ...explicit });
+	expect(shareableConversationListOptions({ ...explicit })).toEqual({
+		tabTargetId: "caller-target",
+		tabUrl: "https://chatgpt.com/",
+	});
+	expect(shareableConversationListOptions({ ...resolved, tabTargetId: "changed-target" })).toEqual({
+		tabTargetId: "changed-target",
+		historyLimit: 5,
+	});
+});
+
 test("sharing identity separates accounts, scopes, coverage, policy and browser generations", async () => {
 	const config = { services: { chatgpt: { identity: { email: "fixture@example.invalid" } } } };
 	const authority = createProviderSessionAuthority(config);
