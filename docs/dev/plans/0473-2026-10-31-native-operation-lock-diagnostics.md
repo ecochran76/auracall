@@ -22,3 +22,12 @@ No lock reclamation policy change, polling, provider calls, runtime install, ser
 ## Acceptance / Definition of Done
 
 Real child-process contention preserves refusal and owner custody while reporting PID, acquisition time and observed process generation. Legacy records remain compatible and report unknown comparison. Diagnostic read failure cannot replace refusal. Targeted local checks, typecheck, build and scoped lint pass; record exact source commit and local/hosted differences.
+
+## Installation continuation | 2026-10-31
+
+Operator authorized installation, then return to LitScout and the retained ASPECT
+vinyl-ester prompt. Live baseline had advanced to user-runtime-list-generation-
+5c4b54512. Carry its exact two source modules and corresponding tests from5c4b54512
+so this installation cannot regress deployed listing custody.17combined tests and
+scoped lint pass; full build precedes immutable-prefix install. API and wrappers
+must agree; browser/config identity must be preserved. No hosted CI purchased.

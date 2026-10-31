@@ -80,6 +80,7 @@ test("public ChatGPT service lends its active observation to another process", a
 		started = resolve;
 	});
 	let providerOperations = 0;
+	let selectedTarget = "fixture-target";
 	const resolutionLaunchFlags: Array<boolean | undefined> = [];
 	const config = {
 		auracallProfile: "fixture",
@@ -97,13 +98,14 @@ test("public ChatGPT service lends its active observation to another process", a
 					browserProfile: "fixture",
 					managedBrowserProfile: "/fixture/managed",
 					browserProcessId: process.pid,
-					tab: { targetId: "fixture-target", url: "https://chatgpt.com/" },
+					tab: { targetId: selectedTarget, url: "https://chatgpt.com/" },
 				};
 			},
 		} as never,
 		// This stable injected utility seam represents a held provider observation.
 		runUtilityOperation: (async () => {
 			providerOperations++;
+			selectedTarget = "utility-target";
 			started();
 			await new Promise<void>((resolve) => {
 				release = resolve;

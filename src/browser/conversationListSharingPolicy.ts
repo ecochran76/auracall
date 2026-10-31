@@ -20,7 +20,11 @@ const scalarKeys = new Set([
 	"skipFeatureSignature",
 	"disableProjectClickFallback",
 ]);
-type Marked = BrowserProviderListOptions & { [generatedOptions]?: BrowserProviderListOptions };
+type GeneratedOptions = {
+	resolved: BrowserProviderListOptions;
+	requested: BrowserProviderListOptions;
+};
+type Marked = BrowserProviderListOptions & { [generatedOptions]?: GeneratedOptions };
 
 /** Custom custody, callbacks and traffic plans cannot be silently borrowed. */
 export function shareableConversationListOptions(
@@ -30,12 +34,24 @@ export function shareableConversationListOptions(
 	const portable: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(options)) {
 		if (value === undefined || key === "abortSignal") continue;
+		// A discovered service tab is not caller-selected custody. Rebuild utility
+		// ownership before using it rather than reserving its retained target again.
+		if (
+			original &&
+			(key === "tabTargetId" || key === "tabUrl") &&
+			value === original.resolved[key] &&
+			original.requested[key] === undefined
+		)
+			continue;
 		if (
 			scalarKeys.has(key) &&
 			(value === null || ["string", "number", "boolean"].includes(typeof value))
 		) {
 			portable[key] = value;
-		} else if (!original || value !== (original as unknown as Record<string, unknown>)[key])
+		} else if (
+			!original ||
+			value !== (original.resolved as unknown as Record<string, unknown>)[key]
+		)
 			return null;
 	}
 	return portable as BrowserProviderListOptions;
@@ -46,5 +62,8 @@ export function markGeneratedConversationListOptions(
 	overrides: BrowserProviderListOptions,
 ): void {
 	if (shareableConversationListOptions(overrides) === null) return;
-	(resolved as Marked)[generatedOptions] = { ...resolved };
+	(resolved as Marked)[generatedOptions] = {
+		resolved: { ...resolved },
+		requested: { ...overrides },
+	};
 }

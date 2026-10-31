@@ -57575,3 +57575,10 @@ checks replace hosted CI; no hosted runner/image matrix was exercised. Initial
 plan audit exposed one new header-format error, corrected to canonical State.
 Remaining audit debt is reported separately. Runtime is not installed; natural
 contention and original historical cause are not newly qualified.
+
+P473 installation continuation: operator authorized install then LitScout reanchor.
+Current wrappers/API had advanced to5c4b54512. Carry exact deployed listing modules
+and matching tests to preserve that lane;17combined checks and scoped lint pass.
+Immutable runtime install and scoped API restart follow full build. The exact
+vinyl-ester prompt was recovered from private20261025research notes; earlier scope
+ambiguity came from another ASPECT draft and is resolved.
