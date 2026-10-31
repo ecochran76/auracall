@@ -2532,3 +2532,72 @@ test.each([true,false])("public Grok identity bootstrap owns request admission b
 		await rm(home, { recursive: true, force: true });
 	}
 });
+
+test("listing with generated options re-enters utility custody for its retained tab", async () => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "list-generated-custody-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.page = {
+		url: "https://chatgpt.com/",
+		navigations: [],
+		bootstrapRequests: 0,
+		payloadReads: 0,
+		closeAttempts: 0,
+		beforeIdentity: () => {
+			throw new Error("fixture listing reached identity");
+		},
+	};
+	const config = {
+		auracallProfile: "public",
+		services: { chatgpt: { identity: { email: "operator@example.test" } } },
+		browser: {
+			tabConcurrencyMode: "tab-affinity",
+			chatgptUrl: "https://chatgpt.com/",
+			cache: { rootDir: home, identityKey: "fixture", useDetectedIdentity: false },
+		},
+	} as never;
+	const browserService = {
+		getConfig: () => ({}),
+		resolveServiceTarget: async () => ({
+			host: "127.0.0.1",
+			port: 45170,
+			managedBrowserProfile: "/fixture/public",
+			browserProfile: "fixture",
+			browserProcessId: process.pid,
+			tab: { targetId: "public-target", url: "https://chatgpt.com/" },
+		}),
+	} as never;
+	const runUtilityOperation: typeof runConfiguredChatgptUtilityOperation = (input) =>
+		runConfiguredChatgptUtilityOperation({
+			...input,
+			deps: {
+				listTargets: async () =>
+					[{ id: "public-target", type: "page", url: fixture.page?.url }] as never,
+				openTarget: async () => ({ id: "public-target", url: "https://chatgpt.com/" }) as never,
+				closeTarget: async () => undefined,
+			},
+		});
+	const service = ChatgptService.create(config, {
+		browserService,
+		runUtilityOperation,
+		utilityAffinityId: "fixture-listing",
+	});
+	try {
+		// A completed utility read leaves a retained tab, as identity/bootstrap does.
+		await runUtilityOperation({
+			userConfig: config,
+			browserService,
+			utilityId: "fixture-listing",
+			mutability: "read-only",
+			buildListOptions: async (options) => options,
+			run: async () => undefined,
+		});
+		const options = await service.buildListOptions({ includeHistory: false });
+		await expect(service.listConversations(undefined, { ...options })).rejects.toThrow(
+			"fixture listing reached identity",
+		);
+	} finally {
+		fixture.page = undefined;
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+});

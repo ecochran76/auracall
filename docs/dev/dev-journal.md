@@ -57559,3 +57559,11 @@ Implement spec #513 through #514 (primary deadline) and #515 (category worker); 
 
 P469 complete: both tickets closed, one two-axis review and one bounded TDD
 remediation. Final31focused tests/typecheck/build/lint pass. Source branch only.
+
+## 2026-10-31 — Plan0473 listing custody
+
+Provider-call comparison warm-up hit target-owned. Hermetic public service/adapter
+regression reproduces a generated service target bypassing utility admission.
+Preserve explicit targets; rebuild generated selection through normal utility
+custody. No live retry or lease override. Focused checks in progress; measurement
+remains unexecuted. See Plan0473.

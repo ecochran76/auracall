@@ -1,3 +1,15 @@
+## 2026-10-31 — Rebuild generated listing target custody
+
+A discovered target from buildListOptions is not explicit caller custody. Passing
+it unchanged into cross-process listing bypassed utility affinity and attempted
+a second provider-traffic reservation against a retained utility tab, failing
+with target-owned. Track requested versus generated target selection; remove only
+unchanged generated target ID/URL from the portable request, so normal utility
+admission runs. Explicit or subsequently changed caller targets remain explicit.
+The regression uses the real public service, utility registry and adapter with
+simulated Chrome transport; it stops at identity, not full inventory acceptance.
+Plan0473 records original red, green and the pending real call-count comparison.
+
 ## 2026-10-31 — Share observations across processes without caching authority
 
 Per-instance promises miss separate CLI/agent processes. A transient authenticated
