@@ -69,5 +69,24 @@
     "514": "closed",
     "515": "closed",
     "513": "parent spec unchanged/open"
+  },
+  "integration20261031": {
+    "source": "4a88e9fbd26ef8bb50c288d368e55b9c07a118a3",
+    "originalReviewedSource": "681500629fb0fc0dfb1cfdd700e84ce425b893bb",
+    "sourceAndTestsUnchangedAfterMainMerge": true,
+    "focusedCommand": "pnpm vitest run tests/browser/desktopControlCategory.test.ts tests/browser/desktopControlCaptureDeadline.test.ts tests/browser/desktopControlFailureCapture.test.ts tests/browser/desktopControlGate.test.ts tests/browser/desktopTransitionRecovery.test.ts --maxWorkers=1",
+    "tests": {
+      "passed": 31,
+      "failed": 0,
+      "files": 5,
+      "durationSeconds": 29.95
+    },
+    "typecheckExit": 0,
+    "scopedLintExit": 0,
+    "diffCheckExit": 0,
+    "hostedCI": "skipped by operator cost policy; local Linux Node checks satisfy merge validation",
+    "runtime": "no installation or restart",
+    "review": "existing one pass and one remediation retained; no new broad pass",
+    "authority": "operator requested next ready ticket implementation and closure; parent513 now eligible for source-only completion"
   }
 }

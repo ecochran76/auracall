@@ -1,10 +1,18 @@
 # Plan0458 — remaining Grok native frontier
 
-State: OPEN
+State: BLOCKED
 Lane: P458
 Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
+
+## Operator deferral | 2026-10-31
+
+409,411and477 are deferred by explicit operator decision. Their required native
+capability/identity contracts remain unqualified; do not schedule repeated probes
+or guessed setters. Preserve original criteria and evidence. Revisit on new
+provider/client evidence or explicit scope change. Parent398remains open; this
+is not a claim of universal provider absence. Delivery focus moves to ready work.
 
 ## Current Skill association result | 2026-10-31
 

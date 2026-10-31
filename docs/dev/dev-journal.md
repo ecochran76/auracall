@@ -1,3 +1,14 @@
+## 2026-10-31 — Defer uncertain Grok contracts; integrate spec513
+
+Operator deferred409/411/477; tracker bodies preserve their criteria and require
+new evidence before repeated probing. Reconciled remaining open graph:317/311
+need historical evidence,240–242retain ownership/input acceptance,513has reviewed
+source in PR518. Take custody of the clean retained follow-up branch, merge
+current main and rerun affected local checks. Existing one review/remediation
+bounds retained;31focused tests, full typecheck, scoped lint and diff check pass
+on4a88e9fbd after merging main with no reviewed source/test changes. Source-only
+integration and parent closure, no deployment.
+
 ## 2026-10-31 — Cross-process listing merged and installed
 
 PR524/33e5df84d integrates source d4736f476 with current Grok research history.
