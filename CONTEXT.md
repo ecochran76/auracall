@@ -1,5 +1,19 @@
 # Aura-Call
 
+Equivalent overlapping Linux conversation listings can share one authenticated
+transient cross-process observation. Account expectation, browser generation,
+runtime implementation and request policy must match. Subscribers cancel
+independently; the final departure aborts work. Owner death fails current
+subscribers without provider retry. No settled inventory cache is created.
+Caller-owned traffic plans, sessions, custody and callbacks keep independent
+execution; generated service options may be rebuilt with shared cancellation.
+
+ChatGPT history pagination accumulates unique conversation IDs in first-observed
+order across changing DOM windows, bounded by the requested row limit. New IDs
+establish progress. The initial observation is reused before scrolling. Caller
+cancellation stops waits and subsequent history commands, preserving its reason
+without recovery/retry; local cancellation cannot undo an already-issued command.
+
 Conversation-list recovery retains caller policy through the recovery wrapper and
 reopen callback. Account-mirror rate-limit hard stops are terminal to the adapter's
 connection retry; they do not authorize another identity request or browser
@@ -310,3 +324,8 @@ Composer-mode failure capture retains only qualified structural counts and bound
 ready/path categories in a private receipt. It never retains page content or
 changes the original mode-selection failure. A receipt is diagnostic evidence,
 not authority to retry or relax mode/account/ownership qualification.
+
+**Unknown-effect abandonment**: an explicit operator decision to release expired,
+ownerless utility custody while retaining the unknown provider outcome and an
+immutable approval audit. It is distinct from confirming a completed effect and
+never authorizes replay or changes the preserved browser target.

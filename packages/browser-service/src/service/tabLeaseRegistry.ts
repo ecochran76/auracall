@@ -83,6 +83,11 @@ export interface BrowserTabLease {
     previousEffectState: 'outcome-unknown';
     evidence: { artifactRef: string; sha256: string };
   }>;
+  unknownEffectAbandonment?: {
+    observedAt: string;
+    acknowledgeUnknownOutcome: true;
+    evidence: { artifactRef: string; sha256: string };
+  };
   acquiredAt: string;
   heartbeatAt: string;
   lastMeaningfulUseAt: string;
@@ -161,6 +166,12 @@ export interface BrowserTabLeaseRegistry {
     scope: TabLeaseScope;
     targetId: string;
     now: string;
+    evidence: { artifactRef: string; sha256: string };
+  }): Promise<TabLeaseResult<BrowserTabLease>>;
+  /** Explicit operator abandonment releases custody without confirming the provider outcome. */
+  abandonUnknownEffect(input: {
+    leaseId: string; expectedRevision: number; scope: TabLeaseScope; targetId: string;
+    now: string; acknowledgeUnknownOutcome: true;
     evidence: { artifactRef: string; sha256: string };
   }): Promise<TabLeaseResult<BrowserTabLease>>;
   findByProcess(scope: TabLeaseScope): Promise<BrowserTabLease | null>;
@@ -1003,6 +1014,30 @@ class InMemoryBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
     return { ok: true, value: cloneLease(reconciled) };
   }
 
+  async abandonUnknownEffect(input: Parameters<BrowserTabLeaseRegistry['abandonUnknownEffect']>[0]): Promise<TabLeaseResult<BrowserTabLease>> {
+    const artifactRef = requireNonEmpty(input.evidence?.artifactRef, 'operator approval artifact');
+    if (artifactRef.length > 4096 || /[\x00-\x1f\x7f]/.test(artifactRef) || !/^[a-f0-9]{64}$/.test(input.evidence?.sha256 ?? ''))
+      throw new Error('Immutable operator approval evidence is required');
+    const nowMs = parseTimestamp(input.now, 'now');
+    const existing = this.leases.get(input.leaseId);
+    if (!existing) return {ok: false, conflict: {kind: 'not-found'}};
+    if (existing.revision !== input.expectedRevision) return {ok: false, conflict: {kind: 'stale-claim', lease: cloneLease(existing)}};
+    const scope = normalizeScope(input.scope);
+    if (input.acknowledgeUnknownOutcome !== true ||
+      !Object.entries(scope).every(([key,value]) => existing.scope[key as keyof TabLeaseScope] === value) ||
+      existing.targetId !== input.targetId || !['idle','lost'].includes(existing.state) ||
+      existing.ownerOperationId !== null || existing.ownerProcessId != null || existing.ownerInstanceId != null ||
+      existing.processBinding != null || existing.effectState !== 'outcome-unknown' ||
+      isTabLeaseTtlExempt(existing) || nowMs < parseTimestamp(existing.absoluteExpiresAt, 'absolute expiry'))
+      return {ok: false, conflict: {kind: 'invalid-transition', lease: cloneLease(existing)}};
+    const released: BrowserTabLease = {...existing, revision: existing.revision + 1, state: 'released',
+      heartbeatAt: new Date(nowMs).toISOString(), finalDisposition: 'preserved',
+      unknownEffectAbandonment: {observedAt: new Date(nowMs).toISOString(), acknowledgeUnknownOutcome: true,
+        evidence: {artifactRef, sha256: input.evidence.sha256}}};
+    this.leases.set(released.leaseId, released);
+    return {ok: true, value: cloneLease(released)};
+  }
+
   async releasePreserved(input: {
     leaseId: string;
     expectedRevision: number;
@@ -1168,6 +1203,10 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
 
   reconcileEffect(input: Parameters<BrowserTabLeaseRegistry['reconcileEffect']>[0]) {
     return this.write((registry) => registry.reconcileEffect(input));
+  }
+
+  abandonUnknownEffect(input: Parameters<BrowserTabLeaseRegistry['abandonUnknownEffect']>[0]) {
+    return this.write((registry) => registry.abandonUnknownEffect(input));
   }
 
   findByProcess(scope: TabLeaseScope) {
@@ -1404,6 +1443,7 @@ function cloneLease(lease: BrowserTabLease): BrowserTabLease {
   return {
     ...lease,
     scope: { ...lease.scope },
+    ...(lease.unknownEffectAbandonment ? {unknownEffectAbandonment: {...lease.unknownEffectAbandonment, evidence: {...lease.unknownEffectAbandonment.evidence}}} : {}),
     ...(lease.processBinding ? { processBinding: { ...lease.processBinding } } : {}),
     workload: { ...lease.workload } as TabLeaseWorkload,
     actionCounts: cloneActionCounts(lease.actionCounts),

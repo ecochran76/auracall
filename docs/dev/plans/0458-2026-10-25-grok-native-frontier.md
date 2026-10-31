@@ -6,6 +6,39 @@ Branch: fix/grok409-browser-comparison
 Target: main
 Integration: merge
 
+## Current Skill association result | 2026-10-31
+
+Native Skill detail and committed data qualify one stable saved library identity,
+identical at home and on the exact original Bot route. No Bot-specific assignment
+control/identity was exposed in inspected detail/menu.409remains OPEN; global
+enabled state is not a saved Bot grant. No setter contract established, no TDD
+implementation guessed. Five governed slices pass. See
+[research](../notes/2026-10-31-grok-skill-association-research.md).
+
+## Current native resource discovery | 2026-10-30
+
+Fresh normal managed browser and original account/Bot are qualified. Plugins
+exposes native Connectors/Skills/Bots outside Settings; personal/built-in Skills
+are observed. Per-Bot saved associations and knowledge identity remain unqualified.
+409OPEN; next inspect explicit current-Bot Skill association read surfaces. No
+configuration changes. See [native report](../notes/2026-10-30-grok-resource-management-native.md).
+
+## Approved runtime recovery | 2026-10-30
+
+Operator-approved abandonment releases the exact expired unknown reservation,
+retaining its uncertainty and immutable approval audit.27focused tests, typecheck
+and scoped lint pass. No provider mutation/target close.409resource qualification
+remains open; see [recovery](../notes/2026-10-30-grok-unknown-abandonment-recovery.md).
+
+## Current diagnosis | 2026-10-30 shared utility custody
+
+The exact lock originates in another workflow's dispatched custom-connector Add,
+with unconfirmed saved identity and uncertain transport cleanup. Offline replay
+reproduces admission refusal;26registry/reconciliation checks pass. A later
+connection-failed observation has no canonical connector identity, so preserve
+unknown custody. No source fix or lock clearance justified. See the
+[diagnosis](../notes/2026-10-30-grok-utility-lock-diagnosis.md);409remains OPEN.
+
 ## Current execution gate | 2026-10-30 management discovery
 
 Approved read-only management discovery stopped at utility admission before any

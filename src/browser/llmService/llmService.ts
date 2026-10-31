@@ -1,4 +1,5 @@
 import { mergeObservedGrokContext } from "../providers/grokContext.js";
+import { markGeneratedConversationListOptions } from "../conversationListSharingPolicy.js";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -971,6 +972,7 @@ export abstract class LlmService {
 					});
 			}
 		}
+		markGeneratedConversationListOptions(resolvedOptions, overrides);
 		return resolvedOptions;
 	}
 

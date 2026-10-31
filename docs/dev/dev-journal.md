@@ -1,3 +1,89 @@
+## 2026-10-31 — Cross-process listing merged and installed
+
+PR524/33e5df84d integrates source d4736f476 with current Grok research history.
+Immutable installed package matches661compiled files;10installed cross-process/
+policy checks, fresh MCP65tools, CLI0.1.1and API1466575routes pass. Native browser
+birth generation1,23paused completions, scheduler pause and config/env bytes
+preserved. Only API restarted. Private fixture .ts/CommonJS failure was corrected
+with .mts; production unchanged. Plan0472 records eligibility and live-proof
+limits. No provider prompt, browser restart or hostedCI.
+
+## 2026-10-31 — Cross-process conversation-list sharing, source
+
+Plan0472 implements transient authenticated Linux IPC election for equivalent
+in-flight listings. Real child processes reproduce2synthetic provider operations
+before the coordinator and1after; later callers start fresh. Independent caller
+cancellation, last-subscriber abort, owner-death refusal and key isolation pass.
+Service integration retains normal identity/governance and excludes caller-owned
+policies/session/callbacks. No deployment or real provider requests. Final local
+validation and bounded review recorded in the plan/private receipts.
+
+## 2026-10-31 — Skill identity qualified; Bot assignment remains open
+
+Bounded native research compared one personal Skill detail at home and on the
+exact original Bot route. Stable id/name/enabled record matches; no Bot-specific
+identity or assignment control in inspected detail/menu. Five governed slices
+pass account continuity and cleanup. No state change, setter guess or review
+reset.409OPEN; stop repeating this inspection without new contract evidence.
+[Research](notes/2026-10-31-grok-skill-association-research.md).
+
+## 2026-10-30 — Fresh Grok native resource discovery
+
+Normal managed startup and exact original-account/Bot access pass after approved
+custody recovery. Five governed read slices positively observe Plugins Connectors/
+Skills/Bots and personal/built-in Skills. Original Bot Settings remains metadata;
+More exposes template/delete only. No assignment/persistent source identity yet.
+No settings changed;409OPEN. Broad census stalled; exact own helper stopped and
+supported exact-target reads succeeded. [Native report](notes/2026-10-30-grok-resource-management-native.md).
+
+## 2026-10-30 — Pagination merged and installed
+
+PR520/3acce2b0e integrates source0f269cb28 with current registry abandonment.
+Production build,13integration tests,658compiled-file hashes and11installed
+pagination/recovery regressions pass. Fresh MCP65tools, CLI0.1.1and API1790025
+routes pass. Scheduler pause,23paused completions and config/env bytes preserved.
+Pre-upgrade census had zero managed Chrome parents and none of prior browser
+PIDs; no lifecycle attribution or preservation claim for absent processes.
+Only API restarted; no provider prompt/browser restart. See Plan0471.
+
+## 2026-10-30 — ChatGPT pagination source TDD
+
+Plan0471 retains conversations across virtualized windows and counts new IDs as
+progress. The public listing fixture reproduces lost rows, redundant initial
+observation and cancellation failures before each fix. Initial reads are reused;
+wait/read/scroll cancellation preserves caller reason. One review P2 showed a
+connection-like cancellation reason entering recovery/retry; its red/green is
+addressed. No merge, deployment, live provider call or concurrent-list sharing.
+Final validation results are recorded in the plan and private execution receipts.
+
+## 2026-10-30 — Approved unknown-effect abandonment recovery
+
+User explicitly approved adding and using exact expired-reservation abandonment.
+Public file-backed registry red/green covers owner/expiry/scope/revision refusal,
+one concurrent winner, durable unknown-outcome audit and new work admission.
+27focused checks pass; local typecheck/lint results follow in recovery receipt.
+No hosted CI. Runtime execution is separate and retains target/provider state.
+
+## 2026-10-30 — Grok utility lock origin diagnosed
+
+Two isolated registry replays reproduce #409's workload-owned block without a
+browser. Correlated the exact lease to another workflow's custom-connector Add
+attempt: dispatched, saved identity unconfirmed, transport cleanup uncertain.
+Later terminal-failure observation lacks connector name/endpoint binding; no
+qualified clearance evidence. Two supported passive target reads did not change
+UI/state. Preserve custody; no source defect shown, no guessed fix or retry.
+26focused registry/reconciliation tests pass. [Diagnosis](notes/2026-10-30-grok-utility-lock-diagnosis.md).
+
+## 2026-10-30 — Conversation-list recovery merged and installed
+
+PR512/57df62b52 integrates source79cb4ac9b. New immutable runtime preserves all
+658compiled files and prior desktop-control capture. Installed public regressions
+pass both cases; fresh MCP initializes65tools and exits cleanly. API3345379
+returns status/desktops/console200. Four managed browser birth generations,
+23paused completions, scheduler pause and config/environment bytes remain.
+No browser restart or provider prompt. Plan0470 records harness correction,
+rollback and acceptance limits; pagination and concurrent-read sharing stay next.
+
 ## 2026-10-30 — Conversation-list recovery constraints, source TDD
 
 Plan0470 fixes the Plan0469 recovery finding through the public adapter boundary.

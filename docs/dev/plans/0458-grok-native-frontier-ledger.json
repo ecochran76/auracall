@@ -710,5 +710,26 @@
     "resourceDiscovery": "not executed",
     "report": "../notes/2026-10-30-grok409-management-admission.md",
     "reviewFindingsCounters": "unchanged1/1"
+  },
+  "nativeManagement20261030": {
+    "source": "eb7363eda",
+    "freshManagedRuntime": true,
+    "originalAccountAndBot": "qualified",
+    "governedReadSlices": 5,
+    "observed": "Plugins Connectors/Skills/Bots; personal and built-in Skills; original Bot metadata Settings and More menu",
+    "savedBotAssociation": "unqualified",
+    "providerWrites": 0,
+    "report": "../notes/2026-10-30-grok-resource-management-native.md",
+    "reviewFindingsCounters": "unchanged1/1"
+  },
+  "skillAssociationResearch20261031": {
+    "source": "ed3ec65fc",
+    "nativeSlices": 5,
+    "identity": "stable library Skill ID/name/enabled identical at home and exact original Bot route",
+    "assignment": "not qualified; no Bot-specific identity/control in inspected detail/menu",
+    "providerWrites": 0,
+    "decision": "409 OPEN; no guessed setter; stop repeat inspection without new evidence",
+    "report": "../notes/2026-10-31-grok-skill-association-research.md",
+    "reviewFindingsCounters": "unchanged1/1"
   }
 }

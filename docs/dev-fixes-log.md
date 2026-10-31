@@ -1,3 +1,29 @@
+## 2026-10-31 — Share observations across processes without caching authority
+
+Per-instance promises miss separate CLI/agent processes. A transient authenticated
+kernel socket can elect one observation owner without persisting results or adding
+a daemon. Bind exact request/account/browser generation and immutable runtime;
+keep subscriber cancellation separate from operation cancellation. Do not strip
+caller-owned governors, custody or callbacks to force equivalence. Owner death
+must return an explicit error, not an automatic provider replay.
+
+## 2026-10-30 — Count new history identities, retain earlier windows
+
+A rendered history rail is a window, not the complete result. Accumulate unique
+IDs across observations instead of replacing the result, and use newly observed
+IDs to establish progress. Reuse the initial snapshot before scrolling. Keep
+pagination storage/scroll bounds and cancel its timers and pending waits. Check
+caller cancellation before recovery classification and retry so a reason such
+as Connection failed cannot become more provider work. Public transport fixtures
+verify the red/green cases; they do not measure live provider HTTP savings.
+
+## 2026-10-30 — Distinguish abandonment from effect confirmation
+
+An expired ownerless unknown-effect reservation can block unrelated work after
+its originating workflow moves on. Explicit operator abandonment releases custody
+without asserting provider success/failure. Exact identity, revision, expiry and
+approval evidence are mandatory; ordinary release still refuses unknown effects.
+
 ## 2026-10-30 — Retain list recovery policy through retry and reopen
 
 Forwarding options only to the inner recovery wrapper is insufficient. A structured
