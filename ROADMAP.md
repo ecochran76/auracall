@@ -1,4 +1,4 @@
-- P475: [independent utility admission diagnosis](docs/dev/plans/0475-2026-10-31-independent-utility-admission.md), isolated provider-free two-caller lease reproduction.
+- CLOSED P476: [utility parent settlement](docs/dev/plans/0476-2026-10-31-independent-utility-admission.md), sequential budgeted self-fence repaired;181affectedtests/typecheck/scopedlint pass. Source only, no runtime installation.
 
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
 

@@ -1,11 +1,11 @@
 # Utility parent settlement diagnosis
 
-State: OPEN
-Lane: P475
+State: CLOSED
+Lane: P476
 
 ## Current State
 
-Confirmed source defect and focused repair. Budgeted utility settlement inspects its own still-started parent interaction before closing it, classifies that read as an unresolved backend request and idles its lease with outcome-unknown. The next sequential same-caller read fails with the exact original process-owned error. Close the utility governor first, then reconcile requests; genuinely unsettled backend requests remain fenced. Related28tests and scoped lint pass; final affected-suite/typecheck/main-base qualification pending. Initial source c9d182957, isolated branch fix/repeated-utility-lease; original checkout and installed runtime untouched.
+Source repair qualified on clean current-main base at c5351194282e2c90555aec7c17ddb5dadfec9072. Utility settlement counted its own active read parent as an unfinished request when backend budgeting was enabled, poisoning the lease and causing the next sequential call's exact process-owned refusal. Closing the parent before request reconciliation fixes it. Eight affected files/181tests pass; full typecheck and scoped lint pass. See docs/dev/notes/2026-10-31-utility-parent-settlement.md. No runtime installation or OAuth action; existing uncertain live leases remain fenced. Original source checkout/other worktrees untouched. Finite source diagnosis/repair complete; main integration and runtime rollout are separate.
 
 ## Scope and non-goals
 
@@ -26,3 +26,7 @@ An initial shared-authority filter made focused tests green but broke five activ
 ## Validation and done
 
 Original minimized budgeted reproduction must pass, plus affected ownership/request/coexistence tests, full typecheck and scoped lint. Bind results to a clean main-based branch and publish source custody. Update CONTEXT, testing guide, dev journal/fixes log and roadmap/runbook. Keep actual installed/native/OAuth boundaries explicit. Source qualification does not clear prior unknown leases or establish native reauthorization. Main integration/runtime cutover remain separate.
+
+## Closeout evidence
+
+Source-only plan closes after181affectedtests, full typecheck, scoped lint and diff checks. Main-library audit retains69exact baseline findings, verified against a clean origin/main archive; no new plan finding. Renamed0475→0476 because current main already uses0475; investigation/failure history is unchanged. See the diagnosis note for commands, rejected candidate fix, cleanup and source/installed/live boundaries.

@@ -1,4 +1,4 @@
-- Utility parent settlement (provider-free, Plan0475):
+- Utility parent settlement (provider-free, Plan0476):
   `pnpm vitest run tests/browser/utilityParentSettlement.test.ts --maxWorkers=1`.
   Sequential budget-off/on calls, completed requests and actual unfinished requests distinguish false self-fencing from required uncertainty fences. No real browser or provider request.
 
