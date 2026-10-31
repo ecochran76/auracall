@@ -1,3 +1,11 @@
+Native-desktop operation lock refusals include allowlisted owner PID, acquisition
+time and a bounded current boot/start-time observation. Generation comparison is
+unknown for legacy records or unreadable process metadata; a mismatch remains a
+refusal, not permission to reclaim. Owner UUIDs, operation keys, command lines
+and environment are excluded. Optional process reads have a 100 ms wait allowance;
+already-issued filesystem reads can settle afterward. These diagnostics apply
+before the display-control gate and do not depend on its temporary capture flag.
+
 # Browser Service Tools
 
 This doc captures the reusable browser-service helpers and the patterns we want to

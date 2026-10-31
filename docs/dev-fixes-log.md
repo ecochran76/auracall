@@ -26556,3 +26556,14 @@ pass. Plan0469 is source-only; no installed runtime acceptance is implied.
 The single P469 review found missing independent cancellation observation. A
 red/green pass adds only cancellationObserved boolean, preserving reason privacy
 and terminal category.31post-remediation tests/typecheck/rebuild/lint pass.
+
+## 2026-10-31 — Native operation lock owner diagnostics (P473)
+
+ASPECT utility admission refused at NativeDesktopStore.exclusive before temporary
+DesktopControlGate capture. Busy refusal now preserves allowlisted owner PID,
+acquisition time and observed boot/start generation, with unknown legacy/read-failure
+comparison. A generation mismatch never authorizes lock removal. No raw key,
+owner UUID, command line or environment is emitted. Each optional metadata read
+waits at most100ms; already-issued reads can settle later. Cross-process regression
+was red before repair;22focused tests and typecheck/build/scoped lint pass locally.
+Source only, no runtime installation or live research acceptance.

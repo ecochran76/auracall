@@ -1,0 +1,27 @@
+{
+  "source_base": "08b8e337b0914e4e0e5bc00f63ddaecae2866559",
+  "branch": "fix/native-desktop-lock-diagnostics",
+  "red": {
+    "command": "pnpm vitest run tests/browser/nativeDesktopRestart.test.ts --maxWorkers=1",
+    "passed": 1,
+    "failed": 1,
+    "failure": "Existing busy refusal lacks Diagnostics JSON"
+  },
+  "final": {
+    "command": "pnpm vitest run tests/browser/nativeDesktopRestart.test.ts tests/browser/nativeDesktopPool.test.ts tests/browser/nativeDesktopRecovery.test.ts tests/browser/desktopPoolMaintenance.test.ts --maxWorkers=1",
+    "passed": 22,
+    "failed": 0
+  },
+  "other_checks": {
+    "pnpm run typecheck": "pass",
+    "pnpm run build": "pass",
+    "pnpm exec biome lint src/browser/service/nativeDesktopStore.ts tests/browser/nativeDesktopRestart.test.ts": "pass"
+  },
+  "plan_audit": {
+    "errors": 68,
+    "new_plan_errors": []
+  },
+  "environment": "Local Linux Node/pnpm; hosted CI skipped, no hosted image or matrix qualification.",
+  "scope": "Source-only; no install, restart, ownership override, provider call or prompt submission",
+  "memory": "forbidden: no explicit memory-write request"
+}

@@ -18,6 +18,25 @@ export function nativeDesktopKey(config: Pick<RemoteViewDesktopConfig, 'origin' 
 }
 export function nativeBrowserGeneration(binding: NativeDesktopBrowser): string { return digest(JSON.stringify(binding)); }
 
+// Diagnostic observations never authorize reclamation. Bound optional /proc reads.
+async function operationProcessIdentity(pid: number): Promise<{ processStart: string; bootId: string } | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.all([
+        fs.readFile(`/proc/${pid}/stat`, 'utf8'),
+        fs.readFile('/proc/sys/kernel/random/boot_id', 'utf8'),
+      ]).then(([stat, boot]) => {
+        const processStart = stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19];
+        const bootId = boot.trim();
+        return /^\d+$/.test(processStart ?? '') && /^[a-f0-9-]{36}$/.test(bootId)
+          ? { processStart, bootId } : null;
+      }).catch(() => null),
+      new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), 100); }),
+    ]);
+  } finally { clearTimeout(timer); }
+}
+
 export class NativeDesktopStore {
   constructor(private readonly directory = path.join(getAuracallHomeDir(), 'native-desktops')) {}
   private async write(name: string, value: unknown): Promise<void> {
@@ -79,7 +98,8 @@ export class NativeDesktopStore {
   async exclusive<T>(key: string, operation: () => Promise<T>): Promise<T> {
     await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
     const lock = path.join(this.directory, `lock-${digest(key)}`);
-    const owner = { id: randomUUID(), pid: process.pid };
+    const identity = await operationProcessIdentity(process.pid);
+    const owner = { id: randomUUID(), pid: process.pid, acquiredAt: new Date().toISOString(), ...identity };
     const acquire = async () => {
       await fs.mkdir(lock, { mode: 0o700 });
       try { await fs.writeFile(path.join(lock, 'owner.json'), JSON.stringify(owner), { mode: 0o600, flag: 'wx' }); }
@@ -93,8 +113,18 @@ export class NativeDesktopStore {
       try { await fs.mkdir(reconcile, { mode: 0o700 }); }
       catch { throw new Error('Native desktop operation is busy; inspect retained ownership before retrying.'); }
       try {
-        const previous = z.object({ id: z.string().uuid(), pid: z.number().int().positive() }).parse(JSON.parse(await fs.readFile(path.join(lock,'owner.json'),'utf8')));
-        try { await fs.access(`/proc/${previous.pid}`); throw new Error('Native desktop operation is busy; original owner is still present.'); }
+        const previous = z.object({ id: z.string().uuid(), pid: z.number().int().positive(), acquiredAt: z.string().datetime().optional(), processStart: z.string().regex(/^\d+$/).optional(), bootId: z.string().uuid().optional() }).parse(JSON.parse(await fs.readFile(path.join(lock,'owner.json'),'utf8')));
+        try {
+          await fs.access(`/proc/${previous.pid}`);
+          const observed = await operationProcessIdentity(previous.pid);
+          const diagnostics = {
+            ownerPid: previous.pid, pidPresent: true, acquiredAt: previous.acquiredAt ?? null,
+            observedProcessStart: observed?.processStart ?? null, observedBootId: observed?.bootId ?? null,
+            generationMatch: observed && previous.processStart && previous.bootId
+              ? observed.processStart === previous.processStart && observed.bootId === previous.bootId : null,
+          };
+          throw new Error(`Native desktop operation is busy; original owner is still present. Diagnostics: ${JSON.stringify(diagnostics)}`);
+        }
         catch(e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e; }
         // The reconciliation lock prevents two stale readers from removing a newly acquired generation.
         await fs.rename(lock, path.join(this.directory, `retired-lock-${previous.id}`));

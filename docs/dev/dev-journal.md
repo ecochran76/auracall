@@ -57559,3 +57559,19 @@ Implement spec #513 through #514 (primary deadline) and #515 (category worker); 
 
 P469 complete: both tickets closed, one two-axis review and one bounded TDD
 remediation. Final31focused tests/typecheck/build/lint pass. Source branch only.
+
+## 2026-10-31 — P473 native operation refusal diagnostics
+
+Primary owns source/test/docs on fix/native-desktop-lock-diagnostics. User approved
+bounded diagnostic repair after ASPECT utility admission failed without retained
+owner identity and later inventory passed. Existing lock refusal/reclamation policy
+is preserved. Public cross-process exclusive regression failed before the patch
+and passed afterward. Local focused/typecheck/build/lint qualification pending;
+no hosted CI, installation, restart, ownership override or research submission.
+
+P473 source complete: 22 focused tests pass, including legacy/mismatched/unreadable/
+stalled identity observations; typecheck, build and scoped lint pass. Local Linux
+checks replace hosted CI; no hosted runner/image matrix was exercised. Initial
+plan audit exposed one new header-format error, corrected to canonical State.
+Remaining audit debt is reported separately. Runtime is not installed; natural
+contention and original historical cause are not newly qualified.
