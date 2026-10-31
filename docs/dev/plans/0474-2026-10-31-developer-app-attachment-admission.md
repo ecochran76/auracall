@@ -39,3 +39,10 @@ CI. Public adapter regression failed before repair, passes after repair, and
 covers deadline/caller cancellation preventing late dispatch. Existing gate
 policy unchanged; installed runtime intentionally remains previous build.
 Historical owner health remains unqualified. No temporary production logs added.
+
+## Authorized installation continuation
+
+Operator approved install and one retained ASPECT prompt attempt. Deployed
+runtime advanced to list-reuse-46a31c145; carry its exact utility-affinity/service
+modules and test to avoid rollback. Source validation and immutable install must
+preserve config/browser generations. No lock override or automatic resubmission.
