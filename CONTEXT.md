@@ -7,6 +7,8 @@ independently; the final departure aborts work. Owner death fails current
 subscribers without provider retry. No settled inventory cache is created.
 Automatically discovered tab selection is rebuilt through utility custody before a
 shared listing; explicit caller-selected targets remain part of the request.
+A discovered tab changing during utility admission is not a browser-generation
+change; process birth/boot, endpoint and account boundaries still apply.
 Caller-owned traffic plans, sessions, custody and callbacks keep independent
 execution; generated service options may be rebuilt with shared cancellation.
 

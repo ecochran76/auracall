@@ -57567,3 +57567,10 @@ regression reproduces a generated service target bypassing utility admission.
 Preserve explicit targets; rebuild generated selection through normal utility
 custody. No live retry or lease override. Focused checks in progress; measurement
 remains unexecuted. See Plan0473.
+
+Plan0473 progress: PR526 merged custody correction; isolated candidate returns
+five rows. Live pair shares one observed transport but exposes discovered-tab
+churn falsely invalidating generation. Public service regression red; explicit
+request target normalization makes all 11 sharing/policy cases green. Global
+runtime not promoted yet. Observed local backend-budget rejection burst retained
+as a separate efficiency finding, not evidence of provider 429s.

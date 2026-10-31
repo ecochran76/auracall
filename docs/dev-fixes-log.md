@@ -8,7 +8,13 @@ unchanged generated target ID/URL from the portable request, so normal utility
 admission runs. Explicit or subsequently changed caller targets remain explicit.
 The regression uses the real public service, utility registry and adapter with
 simulated Chrome transport; it stops at identity, not full inventory acceptance.
-Plan0473 records original red, green and the pending real call-count comparison.
+Plan0473 records original red, green and the real call-count comparison.
+A subsequent live pair shared one transport but both rejected delivery because
+the key treated changing discovered utility-tab selection as a browser restart.
+Normalize the context target to the explicit request target; retain browser
+birth/boot, endpoint, account and configuration checks. The public service test
+now changes discovered target during the observation and still delivers to its
+cross-process subscriber.
 
 ## 2026-10-31 — Share observations across processes without caching authority
 
