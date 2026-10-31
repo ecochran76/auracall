@@ -1,6 +1,6 @@
 # Plan0475 — Concurrent 50-row history listing qualification
 
-State: OPEN
+State: CLOSED — bounded investigation and proven defect correction; 50-row live acceptance NOT QUALIFIED
 Owner: primary agent
 Branch: research/chatgpt-list50
 Target: origin/main
@@ -14,7 +14,7 @@ instrumented follow-up identified real paging10to39, two failed native history
 XHRs and local admission rejection. A provider-free public adapter regression
 then established a specific defect: a known exhausted backend governor was ignored
 while the pager still needed rows. Source correction and typed cross-process
-error propagation are implemented; local validation is complete; installed qualification remains.
+error propagation are implemented; source and installed validation complete (see closeout).
 
 ## Bounded objective and acceptance
 
@@ -123,3 +123,36 @@ no additional provider probes are authorized by this packet.
 Full `pnpm run build` passed (TypeScript, both Vite apps, vendor/config assets).
 `pnpm run typecheck` and six-file scoped Biome lint with the 3MB adapter
 allowance passed. Hosted CI skipped under operator cost policy.
+
+
+## Installed qualification
+
+Source37058a435 (PR531, merged as eaf8da096) built the candidate under
+`~/.auracall/user-runtime-history-budget-37058a435`. Composite assembly changed
+exactly two of661compiled files and reversibly proved all unrelated adapter bytes
+and all other compiled files preserved from app-admission-f4b984caa.
+Runtime contract passed, CLI version0.1.1, fresh MCP initialized65tools.
+The14pager cases passed against candidate compiled modules with external runtime
+modules explicitly inlined into Vitest so transport mocks apply. Two earlier
+harness failures remain recorded: module import started before assembly readiness;
+then default externalization bypassed transport mocks. Neither is a passing live
+provider test. Temporary test/config files were removed.
+
+
+## Closeout and remaining evidence boundary
+
+Deployment verified API PID1240712 executing the composite candidate; authenticated
+/status healthy, /desktops and /console both200. The immediate startup readiness
+read initially refused a connection; subsequent healthy read established readiness.
+All23completion IDs/states remain paused, scheduler pause unchanged, configuration
+hashes unchanged, both scoped Chrome PID/birth identities unchanged. No browser
+restart, completion resume, warning clear, provider limit increase or provider
+retry. Private receipts remain user-scoped under
+`~/.local/state/auracall-list-50-20261031/`.
+
+Close this bounded investigation/correction with the original50-row criterion
+explicitly NOT QUALIFIED. Sharing, independent subscriber cancellation and the
+proven quota-propagation correction are accepted; current provider total, the
+first run's pre-attachment delay, and successful50-row delivery remain unknown.
+Future throughput work needs a separately bounded observation and must not
+interpret9or39rows as complete provider history. No further probes in this packet.

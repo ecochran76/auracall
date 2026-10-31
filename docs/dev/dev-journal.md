@@ -57612,5 +57612,11 @@ Plan0475 found a narrow quota-propagation bug after the paired probe returned9ro
 and the instrumented trace reached39. Public adapter regression red: a real frozen
 governor was ignored and more scroll/read work continued. Added boundary checks
 and preserved known budget error classification for cross-process followers.
-Typecheck/lint pass; documented serial presubmit is running. Full50-row delivery
+Typecheck/lint/build pass; serial selected presubmit passed124cases. Full50-row delivery
 remains unqualified; no limits or provider-warning state changed.
+
+Plan0475 source PR531 merged as eaf8da096. Candidate compiled pager14cases,
+runtime contract, CLI and MCP65tools pass. Composite preserves concurrent native
+and attachment fixes; API-only promotion verified PID1240712, both UI routes200,23paused IDs/states,
+configuration and both browser generations unchanged.
+Full50-row live delivery remains unqualified.
