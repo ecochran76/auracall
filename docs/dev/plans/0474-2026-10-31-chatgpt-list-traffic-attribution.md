@@ -1,6 +1,6 @@
 # Plan0474 — ChatGPT listing request attribution
 
-State: OPEN
+State: CLOSED
 Owner: primary agent
 Branch: research/chatgpt-list-traffic
 Target: origin/main
@@ -8,10 +8,13 @@ Base: d17220fba
 
 ## Current State
 
-Prior Plan0473 proved two callers share one listing, but observed 52 attached
-backend events and 23 local admission rejections. Those aggregate counts do not
-identify the endpoints, initiating actions or whether traffic is avoidable.
-This packet begins with attribution, not a presupposed implementation fix.
+Complete: source46a31c14580926484b4acacf8ebd8e2a7675ef0b merged through PR529 at
+9ba492bb03e678a0e71cafbeb70b650f0a729565 and is active in a qualified runtime
+assembly preserving the other agent's native-lock diagnostics. Same-candidate
+live observations show five rows in20.39s with40attached backend events and32local
+rejections on initial page creation; a later process reuses the same physical tab
+and returns five rows in4.64s with zero attached backend events/admission attempts.
+No broad provider-call or429-relief claim. Exact acceptance appears below.
 
 ## Scope and acceptance
 
@@ -69,3 +72,52 @@ backend-admission cases pass; typecheck and scoped Biome lint pass. The110case
 custody lane took70.94s. No hosted CI. Full build is running. A bounded source
 review retains the narrow dead-process, exact tenant/route, known-effect and TTL
 admission requirements; no limiter changes or generic pooling are introduced.
+
+## Installed acceptance and runtime custody
+
+The active runtime changed during this packet to native-lock source4ddb39e91,
+owned by the other agent. Do not replace it with an older full build. The isolated
+candidate copies that installed runtime and replaces exactly two compiled modules
+from46a31c145: configuredChatgptUtilityAffinity.js and chatgptService.js. All other
+compiled files remain byte-identical to the active native-lock base;661compiled
+files total. This is an explicit composite assembly, not a claim that all deployed
+files derive from one source commit. User-scoped assembly metadata records both
+inputs. An initial prefix-parent assertion prevented assembly before any copy;
+the corrected locator was then verified. No provider action occurred in that
+failed preparation step.
+
+Desktop runtime contract PASS. Fresh MCP initializes65tools and closes cleanly;
+CLI0.1.1. Full source build, typecheck, scoped lint, diff check and147selected tests
+pass. Build/probe Node24.18.0; installed API Node25.9.0; Linux/WSL local checks
+replace hosted CI. No hosted billing/capacity changes. Private passive observer
+scripts are retained as diagnostic evidence outside Git; no temporary debug
+instrumentation was added to production diagnostics.
+
+Two sequential candidate processes exercised the public service and real provider:
+
+| Observation | Rows | Elapsed | Attached backend events | Local admission rejections |
+| --- | ---: | ---: | ---: | ---: |
+| Initial listing/new target | 5 | 20.39s | 40 | 32 |
+| Later process/retained target | 5 | 4.64s | 0 | 0 |
+
+Lease readback confirms the same hashed target identity: previous settled lease
+released as preserved; new settled idle lease records one adoption and zero
+creations. First-run response observations:0responses/40failures,32admission
+attempts/0admitted. These failures include local cancellation and denial and are
+not provider429evidence. The comparison is one bounded pair, not a latency SLA.
+Counters exclude pre-attachment/non-backend traffic and authentication/session
+reads; zero observed backend events does not mean zero provider calls. Reuse
+reads the current retained DOM and still verifies account identity, without an
+implicit full page refresh or a new disk inventory cache. Cold/expired/missing
+pages can still incur normal bootstrap traffic; current limits stay unchanged.
+
+Promoted only after live acceptance and an unchanged-active-wrapper check.
+API restarted2406461to2711942; status healthy; /desktops and /console HTTP200.
+All23active completion IDs/states remain paused, scheduler paused, config.json
+and api.env hashes unchanged. Scoped Grok1156715 and ChatGPT2647408 process births
+survive promotion. Runtime prefix user-runtime-list-reuse-46a31c145 preserves the
+native-lock base. Raw receipts and metadata remain in user-scoped state.
+
+A bounded final source review found no additional accepted blocking findings on
+this packet. The next distinct performance boundary is cold-start/expired-tab
+bootstrap and larger history pagination; this packet does not expand those probes.

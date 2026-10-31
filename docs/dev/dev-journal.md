@@ -57593,3 +57593,10 @@ Plan0474 source: real file-backed stale-owner regression red on unnecessary fres
 page creation, green with listing-only qualified retained-target reuse.37focused
 plus110custody/backend cases, typecheck and scoped lint pass. Full build and bounded
 installed observation remain. Limits and other-agent work are untouched.
+
+Plan0474 CLOSED: PR529 merged source46a31c145. Candidate live pair reuses the same
+tab across processes: five rows20.39s/40backend events/32local rejections becomes
+five rows4.64s/0backend events/0rejections. Explicit composite deployment preserves
+native-lock4ddb39e91, replacing only two compiled listing modules. API2711942 and
+23paused completions/config/browser generations verified. Coverage excludes auth
+and non-backend/pre-attachment traffic; cold starts still bootstrap normally.
