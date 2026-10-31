@@ -122,8 +122,8 @@ Validation: custody correction111focused cases, typecheck, scoped lint and full
 build passed. After the generation correction, all11affected sharing/policy cases
 pass; scoped lint, diff check and `pnpm exec tsc -p tsconfig.build.json` pass.
 Static UI/vendor output was retained from the complete preceding build because
-only the TypeScript key changed. Hosted CI skipped; local Linux/WSL Node25 build,
-Node24 probe parent differ from any hosted runner. No hosted billing changes.
+only the TypeScript key changed. Hosted CI skipped; local Linux/WSL Node24.18.0 build/probes and
+Node25.9.0 installed API differ from any hosted runner. No hosted billing changes.
 A bounded final diff check against08b8e337b found no additional accepted source
 findings on the custody/generation objective. No delegation or extra review round.
 
