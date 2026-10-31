@@ -57,7 +57,9 @@ export async function conversationListSharingKey(
 						implementation,
 						config,
 						portable,
-						context,
+						// Utility admission can select another tab in the same browser.
+						// Only explicit caller selection belongs in request equivalence.
+						context: { ...context, browserTargetId: portable.tabTargetId ?? null },
 						expectation: authorization.expectation,
 						birth,
 						boot,

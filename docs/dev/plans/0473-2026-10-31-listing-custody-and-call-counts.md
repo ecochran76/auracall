@@ -52,3 +52,39 @@ review remain; source
 integration and installation qualification if checks pass. Then resume the bounded
 live measurement after current ownership and provider readiness are qualified.
 Record actual counts or the exact remaining gate. Hosted GitHub CI is skipped.
+
+## Installed candidate observations and second correction
+
+Custody correction 8ffe234e6 merged in PR526 at
+79a0be7e3c7efba4d9d591eaa553f55916ffc17f. Isolated candidate installation
+matches all 650 compiled JavaScript files; global wrappers/API were not promoted.
+One candidate listing returned five rows in 20.03s. Aggregate attached-backend
+coverage observed 49 request events, 10 responses and 39 failures; 47 admission
+attempts, 10 admitted and 37 rejected. The ledger reports local
+minute-backend-request-limit denials; no provider cooldown/warning was recorded.
+These counters exclude pre-attachment and non-backend traffic and are not HTTP
+429 evidence or a complete provider-call count.
+
+Two synchronized candidate processes shared one observed transport (1 versus 0
+connections), but both rejected delivery with Browser generation changed during
+shared conversation listing. The elected process observed 47 request events,
+10 responses/37 failures, 34 admission attempts/11 admitted/23 rejected. No
+successful concurrent inventory comparison is claimed. The private harness also
+reported IPC already disconnected after saving results; that harness cleanup
+error did not cause the service rejection. Guard duplicate disconnect in the
+harness before any further run.
+
+Second red: `pnpm vitest run tests/browser/sharedConversationListing.test.ts -t 'public ChatGPT service' --reporter=dot`
+fails with the same generation-change error when only discovered target selection
+changes during utility work. PID, endpoint, account and config remain fixed.
+Bind the context target to the explicit portable request target, not whichever
+service tab passive resolution currently selects. Keep browser birth/boot,
+endpoint, account/configuration and explicit target dimensions intact.
+
+No unchanged live retry is authorized by these results. Finish and qualify this
+correction before another bounded concurrent observation.
+
+Second correction green: 11 sharing/policy cases pass in 11.19s; scoped lint
+and diff check pass. The first attempted edit did not alter the source (verified
+by diff); its red run remains retained. A subsequent explicit patch landed and
+the tests then passed. No forced-red mutation is being used as acceptance.

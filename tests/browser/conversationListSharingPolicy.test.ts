@@ -116,7 +116,7 @@ test("sharing identity separates accounts, scopes, coverage, policy and browser 
 			},
 			request,
 		),
-	).not.toBe(key);
+	).toBe(key);
 	expect(
 		await conversationListSharingKey(
 			config,
