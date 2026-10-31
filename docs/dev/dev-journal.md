@@ -1,3 +1,13 @@
+## 2026-10-31 — Cross-process conversation-list sharing, source
+
+Plan0472 implements transient authenticated Linux IPC election for equivalent
+in-flight listings. Real child processes reproduce2synthetic provider operations
+before the coordinator and1after; later callers start fresh. Independent caller
+cancellation, last-subscriber abort, owner-death refusal and key isolation pass.
+Service integration retains normal identity/governance and excludes caller-owned
+policies/session/callbacks. No deployment or real provider requests. Final local
+validation and bounded review recorded in the plan/private receipts.
+
 ## 2026-10-30 — Fresh Grok native resource discovery
 
 Normal managed startup and exact original-account/Bot access pass after approved

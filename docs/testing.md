@@ -1,3 +1,10 @@
+- Cross-process conversation listing (provider-free, Plan0472):
+  `pnpm vitest run tests/browser/sharedConversationListing.test.ts tests/browser/conversationListSharingPolicy.test.ts tests/browser/chatgptService.test.ts --maxWorkers=1`.
+  Linux child processes cover one overlapping observation, fresh later work,
+  independent cancellation, last-subscriber abort, key isolation and owner death.
+  Key/policy contracts cover generated CLI spreads and refusal to merge custom
+  authority. These use synthetic operations, not live HTTP request counts.
+
 - ChatGPT history pagination (provider-free, Plan0471):
   `pnpm vitest run tests/browser/chatgptConversationPagination.test.ts --maxWorkers=1`.
   Public adapter with external Chrome transport fixtures covers changing-window

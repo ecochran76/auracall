@@ -1,3 +1,12 @@
+## 2026-10-31 — Share observations across processes without caching authority
+
+Per-instance promises miss separate CLI/agent processes. A transient authenticated
+kernel socket can elect one observation owner without persisting results or adding
+a daemon. Bind exact request/account/browser generation and immutable runtime;
+keep subscriber cancellation separate from operation cancellation. Do not strip
+caller-owned governors, custody or callbacks to force equivalence. Owner death
+must return an explicit error, not an automatic provider replay.
+
 ## 2026-10-30 — Count new history identities, retain earlier windows
 
 A rendered history rail is a window, not the complete result. Accumulate unique
