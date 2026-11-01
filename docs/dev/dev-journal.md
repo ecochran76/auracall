@@ -1,3 +1,13 @@
+## 2026-11-01 — Background wake consumed; refresh effect remains unknown
+
+Plan0478 corrected background wake delivered and its result was consumed. The
+single guarded refresh raised trusted-pointer activation timeout after21ms before
+a post-guard capture. Local request ledger cannot attribute its POST. Read-only
+reconciliation of the exact originating tab was denied by desktop ownership;
+retain outcome-unknown state, no replay or ownership override. Installed adapter
+bytes and original browser kernel generations unchanged. Original preservation
+symptom still lacks deterministic red feedback; no speculative source repair.
+
 ## 2026-11-01 — Fenced refresh observation with configured deadline
 
 Plan0478 continuation verifies600000msconfigured backend waiting. Earlier60/

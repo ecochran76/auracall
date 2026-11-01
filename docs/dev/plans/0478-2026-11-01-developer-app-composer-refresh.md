@@ -11,7 +11,9 @@ Source baseline: e62b336e0
 Native connector acceptance is complete in Overleaf MCP. AuraCall apps test
 refused selection as non-pristine before sending; refresh observed an attributable
 catalog but reported preservation unconfirmed. A delayed editor reproduces the composer symptom; refresh root cause remains unproven.
-Original checkout and installed composite runtime are preserved.
+Original checkout and installed composite runtime are preserved. The latest guarded
+refresh has unknown effect after trusted-pointer acknowledgement timed out;
+read-only reconciliation is blocked by current desktop ownership. Do not replay.
 
 ## Scope and acceptance
 
@@ -153,3 +155,37 @@ observation, not a replay of the already consumed fenced completion. Prior sourc
 checkpoint0c1f43e745626bc89602141cfc3b4e28e9dd1223 remains the probe baseline.
 On result, privately compare the actual guard snapshots and produce deterministic
 public-seam red feedback before hypotheses or preservation-guard changes.
+
+## Native wake consumed — terminal capture and ownership gate
+
+Background completion wake delivered this exact conversation's native continuation,
+submission6514cea5-8ea9-418a-821d-60aa61a2376d; the completion predicate was still
+true and its result consumed. This verifies delivery/consumption for this wake,
+not every route, queue deadline or idle-expiry scenario. Old wake remains cancelled.
+
+The one actual guarded refresh did not return a catalog/preservation outcome.
+It raised PredicateEvaluationTimeoutError: trusted pointer click activation after
+21ms. The trace contains one guard input before activation; no after input.
+Node job and supervisor exited. A timeout after activation starts does not prove
+no click or no provider effect. Retain the exact lease's outcome-unknown fence.
+The local request ledger lacks endpoint attribution; its generic request outcomes
+cannot qualify a particular refresh POST or authorize replay.
+
+A bounded read-only inspection of the exact originating tab through the installed
+SDK was refused by DesktopControlBusyError. An initial local lease-field check
+was corrected before connecting: process identity lives in processBinding.processId,
+not legacy ownerProcessId. No navigation/input, lock clearing, custody transfer,
+profile reset, or additional refresh was issued in reconciliation. Need the current
+desktop owner to release access before reconciling retained DOM click proof and
+connection state. Do not bypass that ownership gate or start another refresh.
+
+No deterministic red replay of the original false-preservation symptom exists:
+the latest run stopped at a different error. Diagnosing-bugs therefore does not
+justify preservation hypotheses, guard changes or another broad review. Composer
+source remains qualified by its earlier80affected tests; no new executable change
+or tests in this documentation-only checkpoint. Installed adapter SHA256 remains
+c6c946db58ad1990904ea33880013eddfd941887fb852eda30e0e85cca385448, identical to the
+captured original hook input. Original ChatGPT/Grok kernel generations remain
+2074859/866957. No installed files changed. Full raw captures and the compact
+full-closeout.private.json receipt remain outside Git in the diagnostic directory.
+Plan remains OPEN; refresh/native composer acceptance and integration are not done.
