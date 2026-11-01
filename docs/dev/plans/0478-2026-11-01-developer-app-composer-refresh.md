@@ -119,3 +119,37 @@ thread and armed completion intent wake_intent_962292367e584a16811ec1a3071b5e2c;
 monitor.ready=true, lifetime persistent, exact existing-tab route. Registration
 is not delivery or result consumption. On wake, inspect once; do not start a
 duplicate or infer permission-state preservation from elapsed time. Plan OPEN.
+
+## Continuation — route correction and full guarded capture
+
+The fenced observation terminated with DIAGNOSTIC_STOP_BEFORE_REFRESH_ACTIVATION.
+It captured actual pre-activation guard input; navigation86seconds and settings
+read68seconds explain why short custom deadlines were inconclusive. No Refresh
+tools click occurred in that observation.
+
+The first completion wake did not deliver: caller selected active_tab, freezing
+existing_tab, while the installed adapter reported active_attachment_unavailable.
+An installed-function replay changes only the route: existing_tab unsupported,
+background supported; changing busy to ready alone does not repair the mismatch.
+Monitor healthy; zero submission attempts/native delivery absent. Exact-self
+cancellation initially encountered a busy scheduler lock, later succeeded through
+the supported CLI and was independently read back via MCP as cancelled. No lock
+clearing, monitor restart, private-state editing or code fix was needed.
+
+One actual refresh capture now runs with the original guards and default690000ms
+operation deadline. Only process-local tagged instrumentation captures actual
+before/after guard inputs; production/install bytes unchanged. Maximum one refresh
+activation; no prompt, grant, sharing, project or scheduler mutation authorized.
+Private restart locators in the same diagnostic directory: full-job.private.json,
+full-run.private.log, refresh-full-trace.private.jsonl, full-result.private.json or
+full-error.private.json and full-observation.done.json. A detached supervisor
+bounds missing-marker observation; terminal:false requires child/log reconciliation.
+Do not replay this request after an ambiguous result.
+
+Corrected completion wake wake_intent_787b09876c0b4662b158172b97ee0bb7 uses exact
+same-thread background_saved/background, persistent lifetime. Scheduling armed
+and monitor ready; dispatch/consumption remain unverified. This is a new live
+observation, not a replay of the already consumed fenced completion. Prior source
+checkpoint0c1f43e745626bc89602141cfc3b4e28e9dd1223 remains the probe baseline.
+On result, privately compare the actual guard snapshots and produce deterministic
+public-seam red feedback before hypotheses or preservation-guard changes.
