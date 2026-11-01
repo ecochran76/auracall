@@ -89,3 +89,33 @@ broad review. TDD red/green precedes this review; no invented cleanup tests.
 Review summary: Standards0accepted findings; Spec1needs_evidence criterion,
 refresh preservation remains unqualified. Plan remains OPEN. No install/merge
 or native submitted test is claimed by this source checkpoint.
+
+## Continuation — configured waiting and suspended observation
+
+Read-first reconciliation: no earlier diagnostic process remains. The original
+90-second attempt's transport monkey-patch produced no usable settings capture;
+its missing observations do not prove that activation never occurred. No blind
+refresh replay was performed. A new process-local Node loader hook records actual
+refresh method/guard stages and unconditionally throws before the unique trusted
+Refresh tools activation call. It changes no installed file or production source.
+The60-second fenced observation reached refresh-enter after inventory, then timed
+out without guard input. Thus developer-mode progress is stale after inventory.
+
+Current configured backendRequestBudgetWaitMs is600000; both earlier custom60/
+90-second limits were shorter. A deadline alone does not diagnose preservation.
+A second fenced observation uses the existing default690000ms deadline and logs
+client, network, navigation and settings stages. No capacity limit was changed.
+It is live diagnostic work, not a hermetic test, native acceptance or rollout.
+
+Restart locator: private user-scoped directory
+`~/.local/state/auracall-composer-refresh-20261101/` contains budget-job.private.json,
+refresh-budget-trace.private.jsonl, budget-result.private.json or
+budget-error.private.json and the unique budget-observation.done.json marker.
+The marker is written only after a terminal artifact or the bounded monitor
+expiry; inspect its status and the actual child state before claiming completion.
+Source checkpoint for the probe:1c81638962b0b93a6f5dea49bf9361cfc3628e6c.
+A detached bounded monitor owns completion observation. Codex Wake verified this
+thread and armed completion intent wake_intent_962292367e584a16811ec1a3071b5e2c;
+monitor.ready=true, lifetime persistent, exact existing-tab route. Registration
+is not delivery or result consumption. On wake, inspect once; do not start a
+duplicate or infer permission-state preservation from elapsed time. Plan OPEN.

@@ -1,3 +1,13 @@
+## 2026-11-01 — Fenced refresh observation with configured deadline
+
+Plan0478 continuation verifies600000msconfigured backend waiting. Earlier60/
+90-second diagnostic overrides were shorter and cannot establish a product
+failure. Process-local instrumentation fences Refresh tools before activation;
+a default690000msobservation now records exact wait stages. Completion marker,
+private artifact custody and verified monitor-backed wake are recorded in the
+plan. No installed-file/source change, provider refresh replay, budget change or
+scheduler resume. Diagnosis and native acceptance remain pending.
+
 ## 2026-11-01 — Developer-app delayed composer, source repair
 
 Plan0478 reproduces the exact pre-effect empty-composer refusal when the precise
