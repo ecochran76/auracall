@@ -57620,3 +57620,12 @@ runtime contract, CLI and MCP65tools pass. Composite preserves concurrent native
 and attachment fixes; API-only promotion verified PID1240712, both UI routes200,23paused IDs/states,
 configuration and both browser generations unchanged.
 Full50-row live delivery remains unqualified.
+
+## 2026-10-31 — Plan0477 current history shortfall diagnosis
+
+Re-anchored utility-parent-da8a1cb65 composite; independently verified preserved
+adapter/shared-listing bytes. One bounded instrumented public listing returned
+50unique rows in15.53s, one connection,3observed backend events (2admitted,1rejected).
+Earlier39stall did not reproduce; no speculative source fix or new red-loop claim.
+API2365238,23paused workflow IDs/states, config/launcher and both browser generations
+preserved. Single50-row delivery accepted; current paired50-row delivery unverified.

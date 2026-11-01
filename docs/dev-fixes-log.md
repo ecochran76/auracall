@@ -26597,3 +26597,11 @@ pass. Plan0469 is source-only; no installed runtime acceptance is implied.
 The single P469 review found missing independent cancellation observation. A
 red/green pass adds only cancellationObserved boolean, preserving reason privacy
 and terminal category.31post-remediation tests/typecheck/rebuild/lint pass.
+
+## 2026-10-31 — Qualify live inventory against the named runtime
+
+Plan0477's current utility-parent composite returned50unique history rows in one
+bounded read; Plan0475's old9/39results do not establish a persistent pager defect.
+Mounted-window counts differ from retained unique inventory. Separate single-call
+row acceptance from concurrency, account-total and controlled performance claims.
+Preserve incidental rejection coverage without calling it HTTP429proof.
