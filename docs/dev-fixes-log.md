@@ -1,3 +1,11 @@
+## 2026-11-01 — Use authenticated inventory before submitted app tests
+
+Plan0480 reproduces the exact inventory preflight timeout twice at the public CLI
+seam. Submitted tests now use authenticated API inventory without the unnecessary
+Developer Mode settings read. All57CLI/inventory tests pass; identity, completeness
+and custody refusal controls remain. Installed files unchanged; native submission
+acceptance remains pending.
+
 ## 2026-11-01 — Wait for the selected refresh permission value
 
 Refresh controls and connected accounts can render before Permission's selected

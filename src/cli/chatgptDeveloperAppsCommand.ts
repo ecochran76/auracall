@@ -525,7 +525,7 @@ async function runChatgptDeveloperAppOperationWithDiagnostics(
 						action: "list" as const,
 						status: "observed" as const,
 						state: await withChatgptDeveloperAppDeadline(
-							active.adapter.readState(),
+							active.adapter.readState({ includeDeveloperMode: false, inventoryTransport: "api" }),
 							normalizePositiveTimeout(
 								dependencies.listTimeoutMs,
 								DEFAULT_CHATGPT_DEVELOPER_APP_LIST_TIMEOUT_MS +

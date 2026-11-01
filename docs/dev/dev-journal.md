@@ -1,3 +1,11 @@
+## 2026-11-01 — Submitted test preflight source-qualified
+
+Plan0480 reproduces the exact inventory preflight timeout twice at the public CLI
+seam. Submitted tests now use authenticated API inventory without the unnecessary
+Developer Mode settings read. All57CLI/inventory tests pass; identity, completeness
+and custody refusal controls remain. Installed files unchanged; native submission
+acceptance remains pending.
+
 ## 2026-11-01 — Installed retest terminal: refresh passes, submission preflight fails
 
 Plan0479 completes installation and bounded retest. Installed refresh returns35tools
