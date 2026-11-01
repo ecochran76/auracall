@@ -14,9 +14,9 @@ composer module and refresh-settings reader differ. Candidate passes49readiness
 checks and3attachment-admission checks; baseline control3also pass. CLI0.1.1,
 fresh MCP65tools, new API PID2046680 healthy. Same23paused completion IDs/states,
 paused scheduler, unchanged config/env bytes and original browser generations.
-One fresh guarded native refresh/read-only app test is now running; completion
-wake armed on the previously proven exact-self background route. No native success
-claim yet. Original uncertain request/fence remains retained and unreplayed.
+Installed native refresh completed with35tools and preservation confirmed. The
+serialized read-only app submission test is now running; completion wake armed on
+the previously proven exact-self background route. App acceptance remains pending. Original uncertain request/fence remains retained and unreplayed.
 
 ## Scope and acceptance
 
@@ -100,3 +100,12 @@ Completion wake wake_intent_0ca7e9a32c9d4d1a89fd4536c09b488b armed/monitor-ready
 background_saved/background on exact existing thread; delivery unproven for this
 new wake. On result inspect actual catalog/tool evidence, then fresh API/OS state
 before closing native acceptance. Installation accepted; native retest pending.
+
+## Installed native refresh accepted; submitted test pending
+
+Official installed refresh-tools returned completed, catalog35tools, retrySafe=false:
+identity, endpoint and connection preserved by the unchanged exact guard. This is
+new-run acceptance of refresh preservation, not proof of the earlier unknown click.
+The same installed job has entered its one read-only app-submitted check. Do not
+start another submission while its intent exists; consume the terminal result and
+verify actual native/backend tool evidence before declaring end-to-end acceptance.
