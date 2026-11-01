@@ -1,3 +1,13 @@
+## 2026-11-01 — Tab contention claim corrected against lease evidence
+
+Plan0485 finds no demonstrated cross-process tab allocation collision: actual
+failed targets have distinct creation/process bindings; latest observer matches
+its own leased target. New public provisioner characterization proves two live
+owners receive separate targets while preserving the first claim.38tests pass.
+No production allocator repair justified. Earlier contention claim withdrawn;
+foreign app selection in fresh targets and blocked bootstrap remain unresolved.
+No provider preparation or tab mutation; exact absent-target storage probe stopped.
+
 ## 2026-11-01 — Bootstrap model requests blocked by Inspector
 
 Plan0484 captures one guarded preparation on current mention-row runtime. Both
