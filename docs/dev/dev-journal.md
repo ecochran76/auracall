@@ -1,3 +1,13 @@
+## 2026-11-01 — Bootstrap model requests blocked by Inspector
+
+Plan0484 captures one guarded preparation on current mention-row runtime. Both
+/backend-api/models requests fail blockedReason inspector before the exact model
+selector error;529events,52Inspector failures,3aborts. No HTTP429or quota-rejection
+attribution established; do not raise/reset limits. The next gap is the exact local
+admission/cancellation decision. No source change or prompt Send. API574932healthy,
+same23paused IDs/config/browser generations; native/monitor exited, wake cancelled.
+Private summary/trace retained; causal public-seam regression remains pending.
+
 ## 2026-11-01 — Actual model-stage absence captured; causal loop unavailable
 
 Plan0483 reproduces the exact model-selector error under a process-local fence
