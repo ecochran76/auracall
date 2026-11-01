@@ -1,8 +1,20 @@
+## 2026-11-01 — Actual model-stage absence captured; causal loop unavailable
+
+Plan0483 reproduces the exact model-selector error under a process-local fence
+before prompt entry/Send. Actual before/after DOM has an editor but no model
+control. An internal observation retry is stopped by exclusive capture fencing;
+its EEXIST is distinct from the retained original failure. No trustworthy fast
+causal regression or root cause yet; no product/installed change. API574932healthy,
+same23paused IDs/config/browser generations. Native/monitor exited; wake cancelled.
+Next evidence gap is provider bootstrap/network outcome before the model stage.
+Concurrent launchers/API now use mention-row-8e4fd8b9f-carry30129698b; preserved,
+not deployed by this task. Diagnostic used prior pinned tree, not current runtime.
+
 ## 2026-11-01 — Native read-only acceptance stopped at model selector
 
 Plan0482 closes for the actual pre-effect refusal: Unable to locate the ChatGPT
 model selector button,91.658s, no answer/Send. Backend read-only reconciliation
-finds zero operations since intent. API408005healthy/idle, same23paused IDs,
+finds zero operations since intent. API574932healthy/idle, same23paused IDs,
 config/env and browser generations preserved. Native/monitor exited, consumed
 wake cancelled; no retry. Installed inventory fix retained. Full native connector
 acceptance remains unqualified; next packet needs a tight model-selector diagnosis.
@@ -18,7 +30,7 @@ and actual tool evidence remain pending, independently of assistant prose.
 ## 2026-11-01 — Installed API inventory preflight qualified
 
 Plan0481 installs source30129698b as immutable app-preflight-30129698b; only1of661
-artifact files differs. Compiled47CLI checks pass. CLI0.1.1/MCP65/API408005healthy,
+artifact files differs. Compiled47CLI checks pass. CLI0.1.1/MCP65/API574932healthy,
 same23paused IDs, config/env and browser generations preserved. One real installed
 preflight reaches the explicit pre-submission fence in40.625s with complete API
 inventory and zero prompt/Send/project tool calls. Native process exited; consumed
