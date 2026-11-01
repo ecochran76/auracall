@@ -1,3 +1,12 @@
+## 2026-11-01 — Native read-only acceptance stopped at model selector
+
+Plan0482 closes for the actual pre-effect refusal: Unable to locate the ChatGPT
+model selector button,91.658s, no answer/Send. Backend read-only reconciliation
+finds zero operations since intent. API408005healthy/idle, same23paused IDs,
+config/env and browser generations preserved. Native/monitor exited, consumed
+wake cancelled; no retry. Installed inventory fix retained. Full native connector
+acceptance remains unqualified; next packet needs a tight model-selector diagnosis.
+
 ## 2026-11-01 — One native read-only submitted acceptance running
 
 Plan0482 runs one actual installed submitted test after fresh API/config/browser

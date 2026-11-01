@@ -1,6 +1,7 @@
 # Plan0482 — One native read-only app acceptance
 
-State: OPEN
+State: CLOSED
+Outcome: NATIVE_PRE_EFFECT_MODEL_SELECTOR_REFUSAL
 Owner: primary agent
 Branch: fix/developer-app-composer-refresh
 Installed source: 30129698bc86e0f1a01174940e246882f3667d97
@@ -8,10 +9,11 @@ Authority: operator ok go after one bounded read-only prompt-and-tool acceptance
 
 ## Current State
 
-Plan0481 qualified installed authenticated inventory up to the explicit submission
-fence. Fresh API408005healthy, same23paused active completion IDs/statuses, no
-foreground work, config/env and browser generations preserved. This packet has
-not yet submitted its one prompt.
+The one attempt completed after91658ms with status failed and effectState pre_effect:
+Unable to locate the ChatGPT model selector button. No assistant answer, prompt Send
+or connector acceptance established. Read-only backend SQLite reconciliation found
+zero operations created since this attempt's intent. Do not equate retrySafe:true
+with authorization to replay this bounded attempt; no second attempt was made.
 
 ## Scope and acceptance
 
@@ -47,3 +49,26 @@ readonly-acceptance prefix under the private20261101evidence root. No replay.
 Completion wake wake_intent_01bc1abd0fcc4169bd6b705895dfee52 armed with a ready
 monitor for exact-self background_saved/background; receipt confirms registration,
 not delivery. Consume actual terminal evidence then cancel if manually consumed.
+
+## Terminal evidence and postflight
+
+The actual installed lifecycle passed API inventory and utility cleanup, then failed
+locating the model selector despite caller modelStrategy current. This locates the
+next failed boundary but does not establish its root cause. A new tight regression
+and captured UI evidence are needed before changing model-selector behavior.
+Source/runtime installation unchanged; original uncertain refresh unreplayed.
+
+Final API408005healthy and idle, same23active completion IDs/statuses paused,
+zero running/queued, config/env hashes and both browser generations preserved.
+Native557073and monitor558269exited. Result consumed manually and exact completion
+wake cancelled through MCP. No new project operations, catalog refresh, provider
+retry, source edit, OAuth/sharing mutation or scheduler resume performed.
+
+Private root ~/.local/state/auracall-composer-refresh-20261101/ contains the unique
+readonly-acceptance-intent.private.json, result, terminal, job and postflight
+receipts. The postflight receipt binds the native refusal, final API and zero
+backend operation readback. No product changes were made, so existing source and
+compiled qualification was reused; git diff --check validates this documentation
+slice. Current canonical artifacts suffice; no additional Graphiti discovery was
+needed for terminal consumption. Native acceptance remains unqualified; next
+bounded work is model-selector diagnosis, not another submitted prompt.
