@@ -1,3 +1,14 @@
+## 2026-11-01 — Readiness composite installed; native retest running
+
+Plan0479 installs the f4b8462f2 readiness repairs while preserving existing utility,
+attachment and history overlays. Only2of661artifact files change. Compiled candidate
+49readiness plus3admission checks pass; baseline3admission controls also pass after
+correcting private fixture dependency mocking. First invalid harness attempts are
+retained in the plan. CLI0.1.1/fresh MCP65tools/API2046680pass; same23paused entries,
+config/env hashes and browser generations. One fresh guarded refresh then one
+read-only app test runs under an intent fence and exact-self background completion
+wake. Original uncertain click unreplayed; native acceptance remains pending.
+
 ## 2026-11-01 — Permission readiness race source-qualified
 
 Operator-authorized read-only CDP inspection found the actual guard snapshot
