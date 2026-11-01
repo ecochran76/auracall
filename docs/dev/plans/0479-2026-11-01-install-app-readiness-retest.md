@@ -1,6 +1,7 @@
 # Plan0479 — Install app readiness repair and retest
 
-State: OPEN
+State: CLOSED
+Outcome: INSTALLED_REFRESH_ACCEPTED_SUBMITTED_PREFLIGHT_FAILED
 Owner: primary agent
 Branch: fix/developer-app-composer-refresh
 Source repair: f4b8462f22e81245349911426b71569ed5a194f4 / PR535
@@ -15,8 +16,9 @@ checks and3attachment-admission checks; baseline control3also pass. CLI0.1.1,
 fresh MCP65tools, new API PID2046680 healthy. Same23paused completion IDs/states,
 paused scheduler, unchanged config/env bytes and original browser generations.
 Installed native refresh completed with35tools and preservation confirmed. The
-serialized read-only app submission test is now running; completion wake armed on
-the previously proven exact-self background route. App acceptance remains pending. Original uncertain request/fence remains retained and unreplayed.
+read-only app test timed out in inventory preflight before reaching submission.
+No prompt or project tool call was sent by this test. Native submission acceptance
+is not established; the terminal result was consumed and completion wake cancelled. Original uncertain request/fence remains retained and unreplayed.
 
 ## Scope and acceptance
 
@@ -109,3 +111,29 @@ new-run acceptance of refresh preservation, not proof of the earlier unknown cli
 The same installed job has entered its one read-only app-submitted check. Do not
 start another submission while its intent exists; consume the terminal result and
 verify actual native/backend tool evidence before declaring end-to-end acceptance.
+
+## Terminal retest and final postflight
+
+Installed native refresh accepted:35tools and exact preservation guard passed.
+The subsequent app test terminated with ChatGPT developer-app test preflight timed
+out. This exception comes from inventory observation before submitTest is invoked;
+no prompt submission or native project.inspect call occurred in this test. That
+preflight path is unchanged by the two installed repairs, so this result does not
+justify rolling back the working readiness fixes or declaring the submitted path
+accepted. No retries, second refresh, new Send or custody override were issued.
+
+Fresh post-retest API readback:2046680healthy/foreground idle, scheduler paused,
+same23active completion IDs/states all paused;0running/queued. Config/env and two
+installed module hashes unchanged. Original browser kernel generations retained.
+Native job2075305and monitor2095809exited; no owned diagnostic process remains.
+The manually consumed completion wake was cancelled through the supported CLI
+and no scheduler lock was cleared. Baseline prefix/launchers retained for rollback.
+Private installed-retest-acceptance.private.json binds installation, selected
+checks, actual outcomes and preservation readback. No broader native completion
+claim. Plan CLOSED for installation and bounded retest, with the submitted-path
+failure recorded rather than suppressed. PR535 remains draft; no merge performed.
+
+Next bounded work: diagnose the submitted-test inventory preflight with a tight
+feedback loop at the official CLI/adapter seam, preserving exact account/inventory
+checks. Actual root cause is not established by the stale progress label alone.
+Do not issue another prompt merely to investigate this preflight boundary.

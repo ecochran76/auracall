@@ -1,3 +1,14 @@
+## 2026-11-01 — Installed retest terminal: refresh passes, submission preflight fails
+
+Plan0479 completes installation and bounded retest. Installed refresh returns35tools
+with preservation confirmed. The app-submitted check times out in inventory
+preflight before submitTest/Send; no project tool call, retry or provider replay.
+Keep the installed readiness fixes; the failing preflight path is unchanged.
+Final API2046680healthy/idle with same23paused IDs, config/env/module hashes and
+browser generations preserved. Native job/monitor exited; consumed wake cancelled.
+PR535draft remains unmerged. Submitted-path native acceptance is still unqualified;
+next packet is a tight diagnosis of inventory preflight, not another prompt.
+
 ## 2026-11-01 — Readiness composite installed; native retest running
 
 Plan0479 installs the f4b8462f2 readiness repairs while preserving existing utility,
