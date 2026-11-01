@@ -1,3 +1,12 @@
+## 2026-11-01 — Wait for an editor before testing its pristine state
+
+Document/navigation readiness does not establish React composer readiness.
+The public app-selection expression regression reproduces a delayed rich editor
+as the reported empty pill-free refusal. Wait boundedly for the same qualified
+editor, then apply the original draft, pill and fresh-conversation checks.
+Never poll until somebody else's draft disappears. Plan0478 separates source
+qualification from native acceptance and retains the unresolved refresh report.
+
 ## 2026-10-31 — Preserve local quota failures through history paging and sharing
 
 A scrolling loop can mistake blocked history loading for provider exhaustion.

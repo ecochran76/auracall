@@ -1,3 +1,13 @@
+## 2026-11-01 — Developer-app delayed composer, source repair
+
+Plan0478 reproduces the exact pre-effect empty-composer refusal when the precise
+rich editor mounts two seconds after navigation. A bounded readiness wait before
+the unchanged pristine guard passes the public injected-expression regression;
+draft and pill controls still refuse immediately without input. Eighty affected
+checks and full typecheck pass. Installed composite runtime is preserved.
+Refresh diagnosis remains open: one90-second installed operation timed out before
+captured settings; no replay or speculative preservation-guard change.
+
 ## 2026-10-31 — Defer uncertain Grok contracts; integrate spec513
 
 Operator deferred409/411/477; tracker bodies preserve their criteria and require
