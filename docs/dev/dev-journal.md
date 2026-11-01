@@ -1,3 +1,12 @@
+## 2026-11-01 — Installed API inventory preflight qualified
+
+Plan0481 installs source30129698b as immutable app-preflight-30129698b; only1of661
+artifact files differs. Compiled47CLI checks pass. CLI0.1.1/MCP65/API408005healthy,
+same23paused IDs, config/env and browser generations preserved. One real installed
+preflight reaches the explicit pre-submission fence in40.625s with complete API
+inventory and zero prompt/Send/project tool calls. Native process exited; consumed
+wake cancelled. Full native submitted acceptance remains separate. PR535draft.
+
 ## 2026-11-01 — Submitted test preflight source-qualified
 
 Plan0480 reproduces the exact inventory preflight timeout twice at the public CLI
