@@ -1925,8 +1925,10 @@ async function readChatgptDeveloperAppRefreshSettings(
 			state.settingsLoadError = lines.includes("Couldn't load plugin settings");
 			const start = lines.indexOf('Connected accounts');
 			const end = lines.indexOf('About', start + 1);
+			const permission = lines.indexOf('Permission');
+			const permissionReady = permission >= 0 && permission < start && lines.slice(permission + 1, start).some(line => !/^(choose when chatgpt should ask for permission when using this plugin|loading[.\\s…]*)$/i.test(line));
 			const accountsReady = start >= 0 && end > start + 1 && lines.slice(start + 1, end).some(line => !/^(connect another account|loading[.\\s…]*|no connected accounts)$/i.test(line));
-			return state.settingsLoadError || state.humanApproval || (state.refreshButtonCount === 1 && accountsReady) ? state : null;
+			return state.settingsLoadError || state.humanApproval || (state.refreshButtonCount === 1 && accountsReady && permissionReady) ? state : null;
 		})()`,
 		{
 			timeoutMs,

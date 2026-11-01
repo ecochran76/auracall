@@ -1,3 +1,12 @@
+## 2026-11-01 — Wait for the selected refresh permission value
+
+Refresh controls and connected accounts can render before Permission's selected
+value. Snapshotting then makes the later appearance of Allow low-risk look like
+a policy change. Require loaded permission selection before before/after snapshots;
+keep exact preservation comparison. Public adapter red/green and full captured-text
+replay prove the race; missing-policy and actual-change controls preserve refusal.
+Plan0478 records source qualification and the separate unknown live activation.
+
 ## 2026-11-01 — Wait for an editor before testing its pristine state
 
 Document/navigation readiness does not establish React composer readiness.

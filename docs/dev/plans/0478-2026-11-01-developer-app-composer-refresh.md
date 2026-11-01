@@ -1,6 +1,7 @@
 # Plan0478 — Developer-app composer and refresh diagnosis
 
-State: OPEN
+State: CLOSED
+Outcome: SOURCE_QUALIFIED_NATIVE_GATED
 Owner: primary agent
 Branch: fix/developer-app-composer-refresh
 Target: main
@@ -8,12 +9,12 @@ Source baseline: e62b336e0
 
 ## Current State
 
-Native connector acceptance is complete in Overleaf MCP. AuraCall apps test
-refused selection as non-pristine before sending; refresh observed an attributable
-catalog but reported preservation unconfirmed. A delayed editor reproduces the composer symptom; refresh root cause remains unproven.
-Original checkout and installed composite runtime are preserved. The latest guarded
-refresh has unknown effect after trusted-pointer acknowledgement timed out;
-read-only reconciliation is blocked by current desktop ownership. Do not replay.
+Both readiness races are source-qualified: wait for the precise composer before
+checking pristine state, and for the selected Permission value before capturing
+refresh preservation state. Installed runtime is unchanged. Integration/deployment
+and submitted native acceptance remain separate gates. The earlier one-shot live
+refresh raised activation acknowledgement timeout; its effect remains unknown.
+Preserve its retained lease fence and do not replay that request.
 
 ## Scope and acceptance
 
@@ -189,3 +190,54 @@ captured original hook input. Original ChatGPT/Grok kernel generations remain
 2074859/866957. No installed files changed. Full raw captures and the compact
 full-closeout.private.json receipt remain outside Git in the diagnostic directory.
 Plan remains OPEN; refresh/native composer acceptance and integration are not done.
+
+## Direct CDP evidence and completed source repair
+
+Operator explicitly authorized read-only inspection through the Chrome development
+port. Exact original target and app settings route were verified before evaluating
+DOM; no Input, navigation, refresh, consent or ownership mutation was sent. The
+retained click marker had no positive trusted-click proof, which does not prove
+no effect. Current page still showed two connected accounts. Comparing the actual
+pre-activation guard input with this readback found exactly one inserted line:
+Allow low-risk. The connected-account section was byte-identical. The first guard
+snapshot had the Permission heading/help but no selected permission value.
+
+Public seam: adapter.refreshTools through existing external CDP/DOM/network fixture.
+A minimal delayed-permission fixture reproduced completed expected versus
+unconfirmed observed. Command:
+`pnpm vitest run tests/browser/chatgptDeveloperAppRefreshTools.test.ts -t permission-loading-before --maxWorkers=1`
+Red:1failed/27skipped,6.98s; full initial fixture variant retained27passing/1failing.
+Ranked after red: premature permission readiness; changing account rendering;
+genuine policy change. Exact account text excludes that change in this capture;
+one-variable readiness correction plus a genuine changed-policy control resolves
+source behavior without weakening preservation comparison.
+
+Fix: require an observed selected permission value, excluding the known help and
+loading text, before accepting settings as ready. Missing selection waits to the
+existing read deadline and prevents activation. Existing approval/load-error
+handling remains terminal. Exact account/endpoint/app/policy comparisons and
+single-activation/no-retry semantics remain. Fixtures now include the observed
+Permission section; delayed selection passes, unavailable selection makes zero
+clicks and disposes timers, actual changed policy remains unconfirmed.
+
+Unminimized private replay reads the complete actual captured text without copying
+private account/app material into Git. Command:
+`node ~/.local/state/auracall-composer-refresh-20261101/replay-permission-readiness.mjs --baseline`
+reproduces readiness=true for incomplete state and fails the expected false
+assertion. Candidate command without --baseline passes with beforeReady=false,
+currentReady=true. A temporary replay extraction syntax error was corrected before
+these recorded behavioral red/green verdicts; it was not treated as defect proof.
+
+Focused validation:30refresh cases pass. Affected presubmit selection:
+`pnpm vitest run tests/browser/chatgptDeveloperAppRefreshTools.test.ts tests/browser/chatgptAppComposer.test.ts tests/browser/chatgptEcosystemMention.test.ts tests/browser/chatgptDeveloperAppLifecycle.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts --maxWorkers=1`
+129passed across5files,34.95s. Full `pnpm run typecheck` passed; scoped Biome and
+`git diff --check` passed. Linux Node24.18/pnpm10.23; hosted CI skipped under cost
+policy. Selection is not the comprehensive suite. No provider refresh was replayed.
+
+Closed-world verification addresses the prior review's one needs_evidence item:
+actual partial state now captured, red public-seam replay, minimal readiness fix,
+and retained true-change/no-input controls. No second broad review or unrelated
+pointer/ownership refactor. Plan CLOSED for diagnosis/source qualification only.
+Native deployment, successful fresh apps-test/refresh acceptance, and the retained
+unknown activation are not declared resolved by these fixtures. Private diagnostic
+loaders/prototypes remain clearly named outside Git; installed bytes unchanged.

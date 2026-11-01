@@ -267,6 +267,11 @@ Agent and team layers:
 
 ## ChatGPT developer apps
 
+Tool refresh waits for both connected accounts and the selected permission value
+before recording preservation state. If permission loading does not finish by the
+read deadline, refresh stops before activation. A real policy change remains an
+unconfirmed preservation result and must be inspected before retrying.
+
 App selection waits up to five seconds for the qualified composer to mount,
 then requires an empty composer with no selection pills. Submitted developer-app
 tests also require a fresh chat. A draft or existing pill stops selection.

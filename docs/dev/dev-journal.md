@@ -1,3 +1,15 @@
+## 2026-11-01 — Permission readiness race source-qualified
+
+Operator-authorized read-only CDP inspection found the actual guard snapshot
+missing the selected Permission value; current page adds only Allow low-risk,
+with identical connected-account text. Existing public refresh fixture reproduces
+the false-preservation outcome; wait for permission selection before snapshotting.
+Unavailable selection prevents input; changed policy still refuses preservation.
+Full captured-text replay is red against baseline and green against candidate.
+129affected tests, full typecheck and scoped checks pass. Plan0478 closes for source
+qualification only; installation/native acceptance and unknown earlier click remain
+gated. No provider replay, ownership override or installed-file changes.
+
 ## 2026-11-01 — Background wake consumed; refresh effect remains unknown
 
 Plan0478 corrected background wake delivered and its result was consumed. The
