@@ -1,10 +1,10 @@
+import { dismissOpenMenus, pressButton, waitForPredicate } from "../service/ui.js";
+import type { ChromeClient } from "../types.js";
 import {
 	buildChatgptAppComposerLookup,
 	CHATGPT_APP_COMPOSER_SELECTORS,
 	CHATGPT_APP_MENTION_SELECTOR,
 } from "./chatgptComposer.js";
-import { dismissOpenMenus, pressButton, waitForPredicate } from "../service/ui.js";
-import type { ChromeClient } from "../types.js";
 
 export interface ChatgptEcosystemMentionRequest {
 	label: string;
@@ -69,6 +69,12 @@ async function selectChatgptEcosystemMention(
 	acceptedPluginIds: string[],
 ): Promise<void> {
 	const requireFreshConversation = request.requireFreshConversation !== false;
+	// Navigation can settle before React mounts the editor. Wait only for an
+	// editor to exist; never wait for somebody else's draft or pill to disappear.
+	await waitForPredicate(client.Runtime, `Boolean(${buildChatgptAppComposerLookup()})`, {
+		timeoutMs: 5_000,
+		description: "ChatGPT app composer readiness",
+	});
 	const pristine = await client.Runtime.evaluate({
 		expression: `(() => {
       const editor = ${buildChatgptAppComposerLookup()};

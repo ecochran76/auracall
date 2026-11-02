@@ -1,3 +1,143 @@
+## 2026-11-01 — Foreign app appears before submitted preparation
+
+Plan0486 staged capture shows LitScout by the second guarded connection during
+inventory/identity; later login/readiness/mode steps preserve it. First connection
+snapshot unusable, so producer remains unproven. Current origin/target storage
+metadata and bounded cached-code search do not establish restoration. No original
+model/app selection or prompt Send; boundary retry fenced. Native/monitor exited,
+wake cancelled. No product or deployment changes. Next evidence must start before
+the first owned document executes, without resetting quotas or altering drafts.
+
+## 2026-11-01 — Tab contention claim corrected against lease evidence
+
+Plan0485 finds no demonstrated cross-process tab allocation collision: actual
+failed targets have distinct creation/process bindings; latest observer matches
+its own leased target. New public provisioner characterization proves two live
+owners receive separate targets while preserving the first claim.38tests pass.
+No production allocator repair justified. Earlier contention claim withdrawn;
+foreign app selection in fresh targets and blocked bootstrap remain unresolved.
+No provider preparation or tab mutation; exact absent-target storage probe stopped.
+
+## 2026-11-01 — Bootstrap model requests blocked by Inspector
+
+Plan0484 captures one guarded preparation on current mention-row runtime. Both
+/backend-api/models requests fail blockedReason inspector before the exact model
+selector error;529events,52Inspector failures,3aborts. No HTTP429or quota-rejection
+attribution established; do not raise/reset limits. The next gap is the exact local
+admission/cancellation decision. No source change or prompt Send. API574932healthy,
+same23paused IDs/config/browser generations; native/monitor exited, wake cancelled.
+Private summary/trace retained; causal public-seam regression remains pending.
+
+## 2026-11-01 — Actual model-stage absence captured; causal loop unavailable
+
+Plan0483 reproduces the exact model-selector error under a process-local fence
+before prompt entry/Send. Actual before/after DOM has an editor but no model
+control. An internal observation retry is stopped by exclusive capture fencing;
+its EEXIST is distinct from the retained original failure. No trustworthy fast
+causal regression or root cause yet; no product/installed change. API574932healthy,
+same23paused IDs/config/browser generations. Native/monitor exited; wake cancelled.
+Next evidence gap is provider bootstrap/network outcome before the model stage.
+Concurrent launchers/API now use mention-row-8e4fd8b9f-carry30129698b; preserved,
+not deployed by this task. Diagnostic used prior pinned tree, not current runtime.
+
+## 2026-11-01 — Native read-only acceptance stopped at model selector
+
+Plan0482 closes for the actual pre-effect refusal: Unable to locate the ChatGPT
+model selector button,91.658s, no answer/Send. Backend read-only reconciliation
+finds zero operations since intent. API574932healthy/idle, same23paused IDs,
+config/env and browser generations preserved. Native/monitor exited, consumed
+wake cancelled; no retry. Installed inventory fix retained. Full native connector
+acceptance remains unqualified; next packet needs a tight model-selector diagnosis.
+
+## 2026-11-01 — One native read-only submitted acceptance running
+
+Plan0482 runs one actual installed submitted test after fresh API/config/browser
+and23paused-ID readbacks. Prompt permits only project.inspect listing and queued
+operation.get observation. Unique private intent, bounded identity monitor and
+exact-self background completion wake retained; no replay or refresh. Outcome
+and actual tool evidence remain pending, independently of assistant prose.
+
+## 2026-11-01 — Installed API inventory preflight qualified
+
+Plan0481 installs source30129698b as immutable app-preflight-30129698b; only1of661
+artifact files differs. Compiled47CLI checks pass. CLI0.1.1/MCP65/API574932healthy,
+same23paused IDs, config/env and browser generations preserved. One real installed
+preflight reaches the explicit pre-submission fence in40.625s with complete API
+inventory and zero prompt/Send/project tool calls. Native process exited; consumed
+wake cancelled. Full native submitted acceptance remains separate. PR535draft.
+
+## 2026-11-01 — Submitted test preflight source-qualified
+
+Plan0480 reproduces the exact inventory preflight timeout twice at the public CLI
+seam. Submitted tests now use authenticated API inventory without the unnecessary
+Developer Mode settings read. All57CLI/inventory tests pass; identity, completeness
+and custody refusal controls remain. Installed files unchanged; native submission
+acceptance remains pending.
+
+## 2026-11-01 — Installed retest terminal: refresh passes, submission preflight fails
+
+Plan0479 completes installation and bounded retest. Installed refresh returns35tools
+with preservation confirmed. The app-submitted check times out in inventory
+preflight before submitTest/Send; no project tool call, retry or provider replay.
+Keep the installed readiness fixes; the failing preflight path is unchanged.
+Final API2046680healthy/idle with same23paused IDs, config/env/module hashes and
+browser generations preserved. Native job/monitor exited; consumed wake cancelled.
+PR535draft remains unmerged. Submitted-path native acceptance is still unqualified;
+next packet is a tight diagnosis of inventory preflight, not another prompt.
+
+## 2026-11-01 — Readiness composite installed; native retest running
+
+Plan0479 installs the f4b8462f2 readiness repairs while preserving existing utility,
+attachment and history overlays. Only2of661artifact files change. Compiled candidate
+49readiness plus3admission checks pass; baseline3admission controls also pass after
+correcting private fixture dependency mocking. First invalid harness attempts are
+retained in the plan. CLI0.1.1/fresh MCP65tools/API2046680pass; same23paused entries,
+config/env hashes and browser generations. One fresh guarded refresh then one
+read-only app test runs under an intent fence and exact-self background completion
+wake. Original uncertain click unreplayed; native acceptance remains pending.
+
+## 2026-11-01 — Permission readiness race source-qualified
+
+Operator-authorized read-only CDP inspection found the actual guard snapshot
+missing the selected Permission value; current page adds only Allow low-risk,
+with identical connected-account text. Existing public refresh fixture reproduces
+the false-preservation outcome; wait for permission selection before snapshotting.
+Unavailable selection prevents input; changed policy still refuses preservation.
+Full captured-text replay is red against baseline and green against candidate.
+129affected tests, full typecheck and scoped checks pass. Plan0478 closes for source
+qualification only; installation/native acceptance and unknown earlier click remain
+gated. No provider replay, ownership override or installed-file changes.
+
+## 2026-11-01 — Background wake consumed; refresh effect remains unknown
+
+Plan0478 corrected background wake delivered and its result was consumed. The
+single guarded refresh raised trusted-pointer activation timeout after21ms before
+a post-guard capture. Local request ledger cannot attribute its POST. Read-only
+reconciliation of the exact originating tab was denied by desktop ownership;
+retain outcome-unknown state, no replay or ownership override. Installed adapter
+bytes and original browser kernel generations unchanged. Original preservation
+symptom still lacks deterministic red feedback; no speculative source repair.
+
+## 2026-11-01 — Fenced refresh observation with configured deadline
+
+Plan0478 continuation verifies600000msconfigured backend waiting. Earlier60/
+90-second diagnostic overrides were shorter and cannot establish a product
+failure. Process-local instrumentation fences Refresh tools before activation;
+a default690000msobservation now records exact wait stages. Completion marker,
+private artifact custody and verified monitor-backed wake are recorded in the
+plan. No installed-file/source change, provider refresh replay, budget change or
+scheduler resume. Diagnosis and native acceptance remain pending.
+
+## 2026-11-01 — Developer-app delayed composer, source repair
+
+Plan0478 reproduces the exact pre-effect empty-composer refusal when the precise
+rich editor mounts two seconds after navigation. A bounded readiness wait before
+the unchanged pristine guard passes the public injected-expression regression;
+draft and pill controls still refuse immediately without input. Eighty affected
+checks and full typecheck pass. Installed composite runtime is preserved.
+Refresh diagnosis remains open: one90-second installed operation timed out before
+captured settings; no replay or speculative preservation-guard change.
+
 ## 2026-10-31 — Defer uncertain Grok contracts; integrate spec513
 
 Operator deferred409/411/477; tracker bodies preserve their criteria and require

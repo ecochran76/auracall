@@ -20,6 +20,9 @@ describe("developer app tool refresh", () => {
 		"settling-before",
 		"settling-after",
 		"account-loading-before",
+		"permission-loading-before",
+		"permission-unavailable",
+		"permission-change",
 		"body-fallback",
 		"foreign-refresh-link",
 		"no-refresh-request",
@@ -55,7 +58,7 @@ describe("developer app tool refresh", () => {
 						(reloads === 0 ||
 							(scenario === "settings-load-recovery-post-error" && clicks.length > 0)))
 						? "Couldn't load plugin settings\nTry again"
-						: `Connected accounts\n${scenario === "connection-change" && clicks.length ? "Other account" : scenario === "account-loading-before" && firstRead ? "Connect another account" : "Fixture account"}\nAbout\nURL\nhttps://fixture.example/mcp\nApp ID\n${["identity-change", "app-member-change"].includes(scenario) && clicks.length ? "other" : "fixture"}\nRefresh tools`;
+						: `Permission\nChoose when ChatGPT should ask for permission when using this plugin\n${scenario === "permission-unavailable" || (scenario === "permission-loading-before" && firstRead) ? "" : scenario === "permission-change" && clicks.length ? "Different policy\n" : "Allow low-risk\n"}Connected accounts\n${scenario === "connection-change" && clicks.length ? "Other account" : scenario === "account-loading-before" && firstRead ? "Connect another account" : "Fixture account"}\nAbout\nURL\nhttps://fixture.example/mcp\nApp ID\n${["identity-change", "app-member-change"].includes(scenario) && clicks.length ? "other" : "fixture"}\nRefresh tools`;
 				const control = {
 					innerText: "Refresh tools",
 					disabled:
@@ -223,6 +226,14 @@ describe("developer app tool refresh", () => {
 		if (scenario === "slow-cancel-budget")
 			setTimeout(() => controller.abort(new Error("fixture cancelled")), 1000);
 		await vi.runAllTimersAsync();
+		if (scenario === "permission-unavailable") {
+			await expect(resultPromise).rejects.toThrow(
+				"App refresh settings did not settle before refresh",
+			);
+			expect(clicks).toEqual([]);
+			expect(vi.getTimerCount()).toBe(0);
+			return;
+		}
 		if (scenario === "slow-cancel-budget") {
 			await expect(resultPromise).rejects.toThrow("fixture cancelled");
 			expect(clicks).toEqual([]);
@@ -278,6 +289,10 @@ describe("developer app tool refresh", () => {
 			return;
 		}
 		const result = await resultPromise;
+		if (scenario === "permission-change") {
+			expect(result.status).toBe("unconfirmed");
+			expect(result.message).toContain("App connection or permission state changed");
+		}
 		if (scenario === "settings-load-recovery") {
 			expect(result.status).toBe("completed");
 			expect(reloads).toBe(1);
@@ -305,6 +320,7 @@ describe("developer app tool refresh", () => {
 				"settling-before",
 				"settling-after",
 				"account-loading-before",
+				"permission-loading-before",
 			].includes(scenario)
 				? "completed"
 				: ["approval", "approval-before"].includes(scenario)
@@ -320,6 +336,7 @@ describe("developer app tool refresh", () => {
 				"settling-before",
 				"settling-after",
 				"account-loading-before",
+				"permission-loading-before",
 			].includes(scenario)
 		)
 			expect(result.catalog).toMatchObject({ toolCount: 1, toolNames: ["new_tool"] });

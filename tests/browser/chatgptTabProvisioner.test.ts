@@ -1,8 +1,12 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 
 import {
 	type BrowserTabLeaseRegistry,
 	createInMemoryBrowserTabLeaseRegistry,
+	createFileBackedBrowserTabLeaseRegistry,
 	type TabLeaseScope,
 } from "../../packages/browser-service/src/service/tabLeaseRegistry.js";
 import { createChatgptTabProvisioner } from "../../src/browser/providers/chatgptTabProvisioner.js";
@@ -15,6 +19,68 @@ const scope: TabLeaseScope = {
 };
 
 describe("ChatGPT tab provisioner", () => {
+	test("allocates separate root targets for two live process owners in the same browser", async () => {
+		const registryRoot = await mkdtemp(path.join(os.tmpdir(), "auracall-app-isolation-"));
+		try {
+			const registryFor = (processId: number) =>
+				createFileBackedBrowserTabLeaseRegistry({
+					registryRoot,
+					ownerIdentity: { processId, instanceId: `process-${processId}` },
+					isOwnerAlive: () => true,
+				});
+			const firstRegistry = registryFor(101);
+			const secondRegistry = registryFor(202);
+			const endpoint = {
+				host: "127.0.0.1",
+				port: 1,
+				managedBrowserProfile: scope.managedBrowserProfile,
+			};
+			const closeTarget = vi.fn();
+			const inspectTarget = vi.fn(async () => ({ url: "https://chatgpt.com/" }));
+			const provisionFor = (
+				registry: BrowserTabLeaseRegistry,
+				operationId: string,
+				targetId: string,
+			) => {
+				const openTarget = vi.fn(async () => ({ targetId, url: "about:blank" }));
+				return {
+					openTarget,
+					provision: createChatgptTabProvisioner({
+						registry,
+						scope,
+						operationId,
+						workload: { kind: "new-conversation", reservationId: operationId },
+						targetUrl: "https://chatgpt.com/",
+						targetCreationUrl: "about:blank",
+						idleTtlMs: 60_000,
+						absoluteTtlMs: 3_600_000,
+						resolveExistingEndpoint: async () => endpoint,
+						startBrowser: vi.fn(),
+						openTarget,
+						closeTarget,
+						inspectTarget,
+					}),
+				};
+			};
+			const first = provisionFor(firstRegistry, "first-app", "first-target");
+			const second = provisionFor(secondRegistry, "second-app", "second-target");
+			const owned = await first.provision({ interactionReservationId: "first-reservation" });
+			const before = await firstRegistry.list();
+			const isolated = await second.provision({ interactionReservationId: "second-reservation" });
+			expect(isolated.lease.targetId).toBe("second-target");
+			expect(isolated.lease.processBinding?.processId).toBe(202);
+			expect(
+				(await firstRegistry.list()).find((lease) => lease.leaseId === owned.lease.leaseId),
+			).toEqual(before.find((lease) => lease.leaseId === owned.lease.leaseId));
+			expect(first.openTarget).toHaveBeenCalledOnce();
+			expect(second.openTarget).toHaveBeenCalledOnce();
+			expect(inspectTarget).not.toHaveBeenCalled();
+			expect(closeTarget).not.toHaveBeenCalled();
+		} finally {
+			await rm(registryRoot, { recursive: true, force: true });
+		}
+	});
+
 	test("creates a guarded conversation target blank without claiming provider navigation", async () => {
 		const registry = createInMemoryBrowserTabLeaseRegistry();
 		const openTarget = vi.fn(async ({ url }: { url: string }) => ({ targetId: "guarded", url }));
