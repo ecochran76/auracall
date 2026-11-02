@@ -1,3 +1,13 @@
+## 2026-11-01 — Foreign app appears before submitted preparation
+
+Plan0486 staged capture shows LitScout by the second guarded connection during
+inventory/identity; later login/readiness/mode steps preserve it. First connection
+snapshot unusable, so producer remains unproven. Current origin/target storage
+metadata and bounded cached-code search do not establish restoration. No original
+model/app selection or prompt Send; boundary retry fenced. Native/monitor exited,
+wake cancelled. No product or deployment changes. Next evidence must start before
+the first owned document executes, without resetting quotas or altering drafts.
+
 ## 2026-11-01 — Tab contention claim corrected against lease evidence
 
 Plan0485 finds no demonstrated cross-process tab allocation collision: actual
