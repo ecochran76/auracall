@@ -57629,3 +57629,23 @@ adapter/shared-listing bytes. One bounded instrumented public listing returned
 Earlier39stall did not reproduce; no speculative source fix or new red-loop claim.
 API2365238,23paused workflow IDs/states, config/launcher and both browser generations
 preserved. Single50-row delivery accepted; current paired50-row delivery unverified.
+
+## 2026-11-03 — Native operation lock publication (issue536)
+
+The installed app inventory failed in utility admission with `Unexpected end of
+JSON input`. A hermetic public-store reproduction isolated a zero-byte operation
+owner record without Chrome or provider traffic. The actual unchanged record
+predated Linux boot; bounded operational quarantine preserved it and cleared
+that failure. The next inventory reached identity and refused missing provider
+account evidence; no prompt was submitted and connector acceptance stays open.
+
+Source regression: four invalid/missing-owner cases and one interrupted-write
+observation failed before the fix (5 failed, 2 existing tests passed).
+Owner metadata now flushes privately before atomic publication, and invalid
+ownership remains protected with explicit recovery guidance. Source checks are
+recorded in the linked PR; this slice does not replace the installed composite.
+
+Validation: focused four-file desktop selection passed23tests in11.70seconds;
+`pnpm exec tsc --noEmit`, targeted Biome lint and `git diff --check` passed.
+Hosted Actions skipped under operator policy. Linux tests include child processes
+and temporary local stores, without provider traffic or a runtime installation.

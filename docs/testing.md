@@ -3968,3 +3968,11 @@ from the saved Build summary, then green after the strict aggregate projection.
 `pnpm vitest run tests/http.grokBuild.test.ts tests/browser/grokEcosystemProgress.test.ts tests/browser/grok411PublicationControls.test.ts`
 passed7checks. The projection retains native state/button/dismissal/binding flags
 and omits the proposed name, response content and URLs.
+
+- Native operation lock publication (issue536, provider-free):
+  `pnpm vitest run tests/browser/nativeDesktopRestart.test.ts tests/browser/nativeDesktopPool.test.ts tests/browser/nativeDesktopRecovery.test.ts tests/browser/desktopPoolMaintenance.test.ts --maxWorkers=1`.
+  The public store seam injects an interrupted write and asserts that readers
+  cannot observe partial owner JSON. Empty, partial, invalid-schema and absent
+  owners retain the original lock and never execute the operation. Existing
+  child-process tests preserve live-owner refusal and proven-dead recovery.
+  These source checks do not establish installed-runtime or provider acceptance.

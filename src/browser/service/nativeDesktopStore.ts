@@ -80,9 +80,28 @@ export class NativeDesktopStore {
     await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
     const lock = path.join(this.directory, `lock-${digest(key)}`);
     const owner = { id: randomUUID(), pid: process.pid };
+    const readOwner = async () => {
+      try {
+        return z.object({ id: z.string().uuid(), pid: z.number().int().positive() })
+          .parse(JSON.parse(await fs.readFile(path.join(lock, 'owner.json'), 'utf8')));
+      } catch {
+        throw new Error('Native desktop operation is busy; owner record is missing or invalid; preserve the lock and inspect ownership before recovery.');
+      }
+    };
     const acquire = async () => {
       await fs.mkdir(lock, { mode: 0o700 });
-      try { await fs.writeFile(path.join(lock, 'owner.json'), JSON.stringify(owner), { mode: 0o600, flag: 'wx' }); }
+      try {
+        // Readers may see missing ownership during acquisition, never partial JSON.
+        const temporary = path.join(lock, `.${owner.id}.tmp`);
+        await fs.writeFile(temporary, JSON.stringify(owner), { mode: 0o600, flag: 'wx' });
+        const file = await fs.open(temporary, 'r+');
+        try { await file.sync(); } finally { await file.close(); }
+        await fs.rename(temporary, path.join(lock, 'owner.json'));
+        if (process.platform === 'linux') {
+          const directory = await fs.open(lock, 'r');
+          try { await directory.sync(); } finally { await directory.close(); }
+        }
+      }
       catch(e) { await fs.rm(lock, { recursive: true }); throw e; }
     };
     try { await acquire(); }
@@ -93,7 +112,7 @@ export class NativeDesktopStore {
       try { await fs.mkdir(reconcile, { mode: 0o700 }); }
       catch { throw new Error('Native desktop operation is busy; inspect retained ownership before retrying.'); }
       try {
-        const previous = z.object({ id: z.string().uuid(), pid: z.number().int().positive() }).parse(JSON.parse(await fs.readFile(path.join(lock,'owner.json'),'utf8')));
+        const previous = await readOwner();
         try { await fs.access(`/proc/${previous.pid}`); throw new Error('Native desktop operation is busy; original owner is still present.'); }
         catch(e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e; }
         // The reconciliation lock prevents two stale readers from removing a newly acquired generation.
@@ -103,7 +122,7 @@ export class NativeDesktopStore {
     }
     try { return await operation(); }
     finally {
-      const current = JSON.parse(await fs.readFile(path.join(lock,'owner.json'),'utf8'));
+      const current = await readOwner();
       if (current.id === owner.id) await fs.rm(lock, { recursive: true });
     }
   }
