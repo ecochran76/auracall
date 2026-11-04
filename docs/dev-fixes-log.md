@@ -26605,3 +26605,14 @@ bounded read; Plan0475's old9/39results do not establish a persistent pager defe
 Mounted-window counts differ from retained unique inventory. Separate single-call
 row acceptance from concurrency, account-total and controlled performance claims.
 Preserve incidental rejection coverage without calling it HTTP429proof.
+
+## 2026-11-03 — Publish native operation ownership before exposing it (#536)
+
+Writing directly to `owner.json` permits a reader or interrupted writer to expose
+empty JSON. The public store regression observes the in-progress write and catches
+that exact pattern. Flush the complete private file before atomically publishing
+it; flush the lock directory on Linux. Missing, partial and schema-invalid owner
+records now refuse with recovery guidance and preserve custody rather than leaking
+parse errors. This does not authorize automatic reclamation or infer a provider
+outcome. An actual preboot empty record was separately preserved and quarantined;
+the next installed inventory passed admission but failed account qualification.

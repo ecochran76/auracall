@@ -346,3 +346,7 @@ It checks across scroll/wait/read boundaries instead of presenting a short
 successful inventory. Satisfied row limits remain successful. Shared-process
 followers reconstruct only known budget-denial errors; mixed or unknown failures
 retain generic failure semantics. The error does not erase earlier admitted effects.
+
+Native-desktop operation owner metadata is flushed before atomic publication.
+Missing or invalid records retain unknown custody and refuse with explicit
+inspection guidance; atomic publication does not authorize reclaiming a lock.
