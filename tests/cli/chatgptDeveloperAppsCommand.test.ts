@@ -59,6 +59,54 @@ function createAdapter(
 }
 
 describe("executeChatgptDeveloperAppOperation", () => {
+	it("reaches the submission fence when authenticated inventory is available but settings UI stalls", async () => {
+		vi.useFakeTimers();
+		try {
+			const inventory = {
+				...(await createAdapter().readState()),
+				account: { email: "owner@example.test", plan: "Pro" },
+				developerMode: null,
+			};
+			const fence = new Error("fixture stopped before submission");
+			const submitTest = vi.fn(async () => {
+				throw fence;
+			});
+			const readState = vi.fn(
+				(options?: { includeDeveloperMode?: boolean; inventoryTransport?: "api" | "ui" }) =>
+					options?.inventoryTransport === "api"
+						? Promise.resolve(inventory)
+						: new Promise<never>(() => undefined),
+			);
+			const pending = runChatgptDeveloperAppOperationForCli(
+				{} as never,
+				{
+					action: "test",
+					app: "Corel33t",
+					submit: true,
+					prompt: "Fixture read-only check",
+					confirmed: true,
+					expectedAccount: "owner@example.test",
+				},
+				{
+					listTimeoutMs: 50,
+					createBrowser: async () => ({}) as never,
+					createAdapter: () => ({
+						...createAdapter({ readState, submitTest }),
+						close: async () => undefined,
+					}),
+				},
+			).catch((error: unknown) => error);
+			await vi.advanceTimersByTimeAsync(51);
+			expect(await pending).toBe(fence);
+			expect(submitTest).toHaveBeenCalledOnce();
+			expect(readState).toHaveBeenCalledWith(
+				expect.objectContaining({ inventoryTransport: "api" }),
+			);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it("preserves unknown cleanup attribution after a primary list timeout", async () => {
 		const failure = await runChatgptDeveloperAppOperationForCli(
 			{} as never,

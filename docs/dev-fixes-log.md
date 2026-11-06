@@ -1,3 +1,29 @@
+## 2026-11-01 — Use authenticated inventory before submitted app tests
+
+Plan0480 reproduces the exact inventory preflight timeout twice at the public CLI
+seam. Submitted tests now use authenticated API inventory without the unnecessary
+Developer Mode settings read. All57CLI/inventory tests pass; identity, completeness
+and custody refusal controls remain. Installed files unchanged; native submission
+acceptance remains pending.
+
+## 2026-11-01 — Wait for the selected refresh permission value
+
+Refresh controls and connected accounts can render before Permission's selected
+value. Snapshotting then makes the later appearance of Allow low-risk look like
+a policy change. Require loaded permission selection before before/after snapshots;
+keep exact preservation comparison. Public adapter red/green and full captured-text
+replay prove the race; missing-policy and actual-change controls preserve refusal.
+Plan0478 records source qualification and the separate unknown live activation.
+
+## 2026-11-01 — Wait for an editor before testing its pristine state
+
+Document/navigation readiness does not establish React composer readiness.
+The public app-selection expression regression reproduces a delayed rich editor
+as the reported empty pill-free refusal. Wait boundedly for the same qualified
+editor, then apply the original draft, pill and fresh-conversation checks.
+Never poll until somebody else's draft disappears. Plan0478 separates source
+qualification from native acceptance and retains the unresolved refresh report.
+
 ## 2026-10-31 — Preserve local quota failures through history paging and sharing
 
 A scrolling loop can mistake blocked history loading for provider exhaustion.

@@ -1,12 +1,12 @@
 // biome-ignore-all lint/style/useNamingConvention: CDP domains and DOM fixture constructors are case-sensitive.
 import { runInNewContext } from "node:vm";
 import { afterEach, expect, test, vi } from "vitest";
-import { clearDeveloperAppComposerForTest } from "../../src/browser/providers/chatgptDeveloperApps.js";
 import {
+	assertChatgptEcosystemMentionSelected,
 	ensureChatgptEcosystemMention,
 	readChatgptEcosystemMention,
-	assertChatgptEcosystemMentionSelected,
 } from "../../src/browser/actions/chatgptEcosystemMention.js";
+import { clearDeveloperAppComposerForTest } from "../../src/browser/providers/chatgptDeveloperApps.js";
 
 const ui = vi.hoisted(() => ({
 	pressButton: vi.fn(),
@@ -26,6 +26,7 @@ function capturedComposer(
 		dialog?: boolean;
 		count?: number;
 		disappear?: boolean;
+		mountAfterMs?: number;
 		label?: string;
 	} = {},
 ) {
@@ -68,7 +69,11 @@ function capturedComposer(
 				)
 			);
 		});
-	let present = true;
+	let present = !options.mountAfterMs;
+	if (options.mountAfterMs)
+		setTimeout(() => {
+			present = true;
+		}, options.mountAfterMs);
 	const document = {
 		getSelection: () => null,
 		querySelector: (selector: string) => (present && matches(selector) ? editor : null),
@@ -147,6 +152,29 @@ test("does not report a disappeared composer as successfully cleared", async () 
 	);
 });
 
+test.each([
+	"draft",
+	"pill",
+])("rejects an already mounted %s without waiting or typing", async (state) => {
+	vi.useFakeTimers();
+	const { editor, client } = capturedComposer();
+	if (state === "pill") {
+		editor.innerText = "";
+		editor.pills = [{ textContent: "Foreign app", getAttribute: () => null }];
+	}
+	const insertText = vi.fn();
+	ui.pressButton.mockClear();
+	await expect(
+		ensureChatgptEcosystemMention({ ...client, Input: { insertText } } as never, {
+			label: "LitScout",
+			acceptedPluginIds: ["asdk_fixture"],
+		}),
+	).rejects.toThrow("empty pill-free composer");
+	expect(insertText).not.toHaveBeenCalled();
+	expect(ui.pressButton).not.toHaveBeenCalled();
+	expect(vi.getTimerCount()).toBe(0);
+});
+
 test("reads exact app identity from the captured rich composer and rejects multiple pills", async () => {
 	const { editor, client } = capturedComposer();
 	const pill = {
@@ -195,6 +223,7 @@ test.each([
 		description: "Literature research with durable session provenance.",
 		duplicate: false,
 		selected: true,
+		mountAfterMs: 2_000,
 	},
 	{ description: null, duplicate: false, selected: false },
 	{
@@ -206,9 +235,10 @@ test.each([
 	description,
 	duplicate,
 	selected,
+	mountAfterMs,
 }) => {
 	vi.useFakeTimers();
-	const { editor, document, client } = capturedComposer();
+	const { editor, document, client } = capturedComposer(false, { mountAfterMs });
 	editor.innerText = "";
 	const makeButton = (text: string) => {
 		const attrs: Record<string, string> = { class: "min-h-[var(--app-menu-item-height,0px)]" };
