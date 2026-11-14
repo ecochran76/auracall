@@ -1,3 +1,12 @@
+## 2026-11-14 — Release repeated app inventory before independent identity
+
+Issue538/P475 reproduces same-process retained display contention through the
+public adapter and real sandbox admission. Closing the prior inventory client
+before fresh identity passes the focused regression; unknown cleanup still stops
+before another connection and preserves custody. Source-only worktree, no installed
+runtime change or native app effect. Affected146tests, typecheck, scoped lint and compiled CLI build pass. P475 source
+qualification is complete; integration and native acceptance remain separate.
+
 ## 2026-10-31 — Defer uncertain Grok contracts; integrate spec513
 
 Operator deferred409/411/477; tracker bodies preserve their criteria and require

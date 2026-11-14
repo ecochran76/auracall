@@ -1,3 +1,10 @@
+- Developer-app repeated inventory (provider-free, P475/issue538):
+  `pnpm vitest run tests/browser/backendRequestAdmission.test.ts -t 'developer-app repeated inventory' --maxWorkers=1`.
+  Public adapter plus real identity service, configured authority, guarded CDP and
+  sandbox display gate catches retained-client self-contention. External Chrome
+  responses are fixtures. Unknown transport close must stop before identity and
+  preserve custody. Source checks do not prove installation or native OAuth.
+
 - Developer-app attachment admission (provider-free, P474):
   `pnpm vitest run tests/browser/chatgptDeveloperAppAdmission.test.ts tests/browser/chatgptDeveloperApps.test.ts tests/browser/desktopControlGate.test.ts tests/cli/chatgptDeveloperAppsCommand.test.ts --maxWorkers=1`.
   Public app adapter plus real sandbox display gate and guarded CDP, with only

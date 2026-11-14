@@ -1,3 +1,5 @@
+- P475: [developer-app inventory re-observation](docs/dev/plans/0475-2026-11-14-developer-app-inventory-reobservation.md), issue538; source qualification complete, no installation.
+
 - P474: [developer-app attachment admission](docs/dev/plans/0474-2026-10-31-developer-app-attachment-admission.md), provider-free deadline propagation diagnosis/repair.
 
 - P473 bounded source repair: [native operation lock diagnostics](docs/dev/plans/0473-2026-10-31-native-operation-lock-diagnostics.md), preserving admission policy; no runtime installation.

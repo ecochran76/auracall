@@ -174,6 +174,9 @@ auracall --profile wsl-chrome-3 apps --target chatgpt list --json
 # elapsed time and declared budget to stderr every30seconds, including --json.
 # JSON stdout stays terminal-only. Global --verbose before apps reports each
 # stage immediately. Progress does not prove a particular cause for the wait.
+# Repeated readiness reads close the prior inventory connection before independent
+# identity acquisition; unknown cleanup prevents the next read. Display custody
+# and human/generation guards remain mandatory.
 # A visible Plugins load failure stops inventory with developer_app_inventory_load_error.
 # App operation failures emit bounded,
 # sanitized diagnostics (nested Error.cause and AggregateError.errors): JSON to
