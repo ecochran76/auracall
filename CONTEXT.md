@@ -1,3 +1,7 @@
+Repeated developer-app readiness inventories release the prior inventory
+transport before independent identity observation. Unknown owned cleanup remains
+a gate; matching process/binding alone never grants display reentrancy.
+
 Developer-app DevTools attachment starts Runtime/Page enable commands inside a
 cancellable stage scope. The existing ten-second stage deadline includes display
 admission; timeout or caller cancellation prevents queued commands from sending

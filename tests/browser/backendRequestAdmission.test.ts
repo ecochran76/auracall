@@ -139,7 +139,9 @@ vi.mock("chrome-remote-interface", () => ({
 							source: "app",
 							guestAuthCta: false,
 						};
-					else if (expression.includes("/api/auth/session")) {
+					else if (expression.includes("/backend-api/ps/plugins/installed"))
+							value = { ok: true, installed: { plugins: [] }, linked: { links: [] } };
+						else if (expression.includes("/api/auth/session")) {
 						fixture.page.beforeIdentity?.();
 						value = { user: { id: "fixture-user", email: "operator@example.test" } };
 					} else if (
@@ -2532,3 +2534,119 @@ test.each([true,false])("public Grok identity bootstrap owns request admission b
 		await rm(home, { recursive: true, force: true });
 	}
 });
+
+test.each([
+	false,
+	true,
+])("developer-app repeated inventory releases retained display before identity; close failure=%s", async (closeFailure) => {
+	const home = await mkdtemp(path.join(os.tmpdir(), "auracall-app-reobserve-"));
+	setAuracallHomeDirOverrideForTest(home);
+	fixture.clients = [];
+	fixture.page = {
+		url: "https://chatgpt.com/",
+		navigations: [],
+		bootstrapRequests: 0,
+		payloadReads: 0,
+		closeAttempts: 0,
+	};
+	const gate = new DesktopControlGate("app-reobserve");
+	const holds: Array<Awaited<ReturnType<typeof gate.holdAutomation>>> = [];
+	setCdpCommandAdmissionResolver(async () => ({
+		run: (_command, effect, options) => gate.withAutomation("generation", effect, options),
+		hold: async (options) => {
+			const held = await gate.holdAutomation("generation", options);
+			holds.push(held);
+			return { run: (_command, effect) => held.run(effect), close: () => held.close() };
+		},
+	}));
+	const config = {
+		auracallProfile: "fixture",
+		browser: { cache: {} },
+		services: {
+			chatgpt: { identity: { email: "operator@example.test" }, maxBackendRequestsPerMinute: 30 },
+		},
+	} as never;
+	const service = ChatgptService.create(config, {
+		browserService: {
+			getConfig: () => config,
+			resolveServiceTarget: async () => ({
+				host: "127.0.0.1",
+				port: 45170,
+				managedBrowserProfile: "/fixture/reobserve",
+				browserProfile: "fixture",
+				browserProcessId: process.pid,
+				tab: { targetId: "reobserve-target", url: fixture.page?.url },
+			}),
+		} as never,
+	});
+	const { createChatgptDeveloperAppBrowserAdapter } = await import(
+		"../../src/browser/providers/chatgptDeveloperApps.js"
+	);
+	const factory = createConfiguredProviderTrafficAuthorityFactory({
+		userConfig: config,
+		provider: "chatgpt",
+		managedBrowserProfile: "/fixture/reobserve",
+		mutationAudit: async () => undefined,
+		baseOptions: {},
+	});
+	const cancellation = new AbortController();
+	const adapter = createChatgptDeveloperAppBrowserAdapter(
+		{
+			userConfig: config,
+			getUserIdentity: (options) => service.getUserIdentity(options),
+			connectDevTools: async () => {
+				const client = await CDP({ host: "127.0.0.1", port: 45170 });
+				await annotateClientMutationContext(
+					client,
+					{ providerTrafficAuthorityFactory: factory, providerTrafficRequired: true },
+					"provider:chatgpt",
+					"reobserve-target",
+				);
+				return { client, port: 45170 } as never;
+			},
+		},
+		async () => {
+			throw new Error("unexpected browser creation");
+		},
+		{ abortSignal: cancellation.signal },
+	);
+	const bounded = setTimeout(
+		() => cancellation.abort(new Error("re-observation blocked by retained display custody")),
+		1200,
+	);
+	try {
+		await expect(adapter.readState({ inventoryTransport: "api" })).resolves.toMatchObject({
+			inventoryComplete: true,
+		});
+		if (closeFailure) {
+			fixture.page.failClose = true;
+			const before = fixture.clients.length;
+			await expect(adapter.readState({ inventoryTransport: "api" })).rejects.toThrow(
+				"Provider cleanup and authority settlement failed.",
+			);
+			expect(fixture.clients).toHaveLength(before);
+			fixture.page.failClose = false;
+		} else {
+			await expect(adapter.readState({ inventoryTransport: "api" })).resolves.toMatchObject({
+				account: { email: "operator@example.test" },
+				inventoryComplete: true,
+			});
+		}
+		await adapter.close();
+		if (closeFailure) {
+			await expect(gate.takeControl("generation")).rejects.toThrow("busy");
+		} else {
+			const human = await gate.takeControl("generation");
+			await gate.releaseControl(human.token, "generation");
+		}
+	} finally {
+		clearTimeout(bounded);
+		cancellation.abort();
+		await adapter.close();
+		await Promise.all(holds.map((held) => held.close()));
+		fixture.page = undefined;
+		setCdpCommandAdmissionResolver(undefined);
+		setAuracallHomeDirOverrideForTest(null);
+		await rm(home, { recursive: true, force: true });
+	}
+}, 5000);

@@ -1,3 +1,11 @@
+## 2026-11-14 — Release retained inventory transport before identity re-observation
+
+A second developer-app readiness read can open identity on a different governed
+connection while the adapter's first inventory connection still owns the display.
+Release that prior connection before independent identity acquisition; do not infer
+reentrancy from a matching PID/binding or relax the display gate. The real-admission
+regression covers repeat reads and unknown-close refusal (issue538/P475).
+
 ## 2026-10-31 — Share observations across processes without caching authority
 
 Per-instance promises miss separate CLI/agent processes. A transient authenticated

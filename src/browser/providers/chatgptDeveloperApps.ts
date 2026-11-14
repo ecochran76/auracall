@@ -178,6 +178,10 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		options: { includeDeveloperMode?: boolean; inventoryTransport?: "api" | "ui" } = {},
 	): Promise<ChatgptDeveloperAppBrowserState> {
 		this.throwIfAborted();
+		// A previous inventory client can retain continuous display custody.
+		// Release it before identity opens a separate governed transport.
+		if (this.cdpClient) await this.close();
+		this.throwIfAborted();
 		debugDeveloperApps("reading ChatGPT identity");
 		this.submissionOptions.onInventoryStage?.("identity");
 		const identity = await this.browser.getUserIdentity({ abortSignal: this.abortSignal });
