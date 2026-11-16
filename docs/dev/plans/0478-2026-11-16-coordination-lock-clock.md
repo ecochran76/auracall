@@ -1,7 +1,7 @@
-# Plan0475 | Coordination lock clock adjustments
+# Plan0478 | Coordination lock clock adjustments
 
 State: BLOCKED
-Lane: P475
+Lane: P478
 Owner: primary agent
 Branch: fix/coordination-lock-clock-20261116
 Base: c9d182957251db08307e80d27613928a6a7036d8
@@ -77,6 +77,18 @@ invalid-transition. Qualify installed behavior before resuming either web-client
 installation. Do not increase budgets or bypass ownership to manufacture success.
 
 Active planning audit reports42existing findings in other artifacts, none for
-Plan0475. The audit is not reported as globally passing. Validation environment:
+Plan0478. The audit is not reported as globally passing. Validation environment:
 local Linux with repository-pinned dependencies; hosted Actions skipped by cost
 policy. Original checkout and other registered worktrees were preserved.
+
+## Custody and integration gate
+
+Current origin/main6bcbb9b606e5b95a592aa6a89d5c5ca61ec637ee is not a descendant
+of this installed-runtime source base. Both affected package files on main still
+use the same Date.now wait loops. This is a published repair branch, not a
+merge-ready main integration claim. Plan serial0475 was already used on remote
+main, so this packet is renamed0478 without resetting its evidence or scope.
+The separately published utility-parent-settlement repair da8a1cb6599392414d4fcc6d81717b0fd2f31b7b
+is advisory evidence for invalid-transition follow-up, not installed acceptance.
+Apply only the bounded repair to the chosen integration base and validate it
+before merge or runtime publication. Retain the owned worktree for that gate.

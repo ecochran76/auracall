@@ -26578,7 +26578,7 @@ and cancellation error semantics. Timeout/caller abort stops queued dispatch;
 legacy Promise consumers remain compatible. Gate ownership/retry policy unchanged.
 Historical competing process activity/health remains unqualified. Source-only.
 
-## 2026-11-16 — P475 coordination lock elapsed clock
+## 2026-11-16 — P478 coordination lock elapsed clock
 
 A copied-history replay reproduced lock failures without stale lock metadata.
 Instrumented sample: monotonic3324ms versus wall10561ms for one failed reader.

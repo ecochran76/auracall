@@ -57616,7 +57616,7 @@ P474 installed f4b984caa with661-file parity and40combined checks/build/lint.
 API273628active, old API exited, browser/config preserved. Returned to retained
 ASPECT research with one prompt budget, no automatic retry.
 
-## 2026-11-16 — P475 connector-installation coordination diagnosis
+## 2026-11-16 — P478 connector-installation coordination diagnosis
 
 Primary isolated a two-store clock-jump regression after installed-runtime copied
 history reproduced exact interaction lock errors with3readers twice. Fresh
