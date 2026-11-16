@@ -26577,3 +26577,16 @@ Start enable commands within a stage cancellation scope; keep existing10sdeadlin
 and cancellation error semantics. Timeout/caller abort stops queued dispatch;
 legacy Promise consumers remain compatible. Gate ownership/retry policy unchanged.
 Historical competing process activity/health remains unqualified. Source-only.
+
+## 2026-11-16 — P475 coordination lock elapsed clock
+
+A copied-history replay reproduced lock failures without stale lock metadata.
+Instrumented sample: monotonic3324ms versus wall10561ms for one failed reader.
+Both file-backed stores used Date.now for elapsed lock timeout. Public-store
+regressions reproduce false timeout after a60sforward clock jump during a brief
+live-owner wait. Use node performance.now for elapsed budgets; keep UTC audit
+timestamps, existing wait limits and ownership handling. A frozen-clock control
+retains a bounded genuine timeout and proves the live lock is not reclaimed.
+Large-history replay can still exceed the real5sbudget after this repair;
+performance contention and provider invalid-transition are separate open gates.
+Source validation is distinct from runtime installation and web-client activation.

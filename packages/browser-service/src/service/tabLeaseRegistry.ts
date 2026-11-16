@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -1305,7 +1306,7 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
 
   private async withLock<T>(operation: () => Promise<T>): Promise<T> {
     await fs.mkdir(this.registryRoot, { recursive: true });
-    const startedAt = Date.now();
+    const startedAt = performance.now();
     let handle: Awaited<ReturnType<typeof fs.open>> | null = null;
     while (!handle) {
       try {
@@ -1314,7 +1315,7 @@ class FileBackedBrowserTabLeaseRegistry implements BrowserTabLeaseRegistry {
       } catch (error) {
         if (!isNodeError(error, 'EEXIST')) throw error;
         if (await this.removeStaleLock()) continue;
-        if (Date.now() - startedAt >= this.lockTimeoutMs) {
+        if (performance.now() - startedAt >= this.lockTimeoutMs) {
           throw new Error(`Timed out waiting for tab lease registry lock: ${this.lockPath}`);
         }
         await delay(this.lockPollMs);

@@ -22377,3 +22377,12 @@ Published PR[518](https://github.com/ecochran76/auracall/pull/518), open and
 mergeable; validated source681500629fb0fc0dfb1cfdd700e84ce425b893bb.
 Tracker readbacks514/515CLOSED. Memory disposition queued, job
 87e92df3-86cb-4adc-8d7b-8c3934cf2029 (acceptance only). No merge/deployment.
+
+## 2026-11-16 — P475 coordination lock diagnosis
+
+[Plan0475](docs/dev/plans/0475-2026-11-16-coordination-lock-clock.md): copied
+history reproduces timeout without stale metadata. A60sforward wall-clock jump
+reproduces both lock failures deterministically. Monotonic wait repair passes
+70focused checks, typecheck/build, new-test lint and docs discovery. Real5s
+contention remains red; invalid-transition and web-client installation are not
+resolved. Source only; no service restart, permission/lock/history changes.

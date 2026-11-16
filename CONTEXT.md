@@ -343,3 +343,9 @@ not authority to retry or relax mode/account/ownership qualification.
 ownerless utility custody while retaining the unknown provider outcome and an
 immutable approval audit. It is distinct from confirming a completed effect and
 never authorizes replay or changes the preserved browser target.
+
+Coordination lock wait budgets use monotonic elapsed time. Wall-clock adjustments
+cannot prematurely exhaust or extend the interaction-ledger/tab-registry lock
+wait. Persisted acquisition timestamps remain UTC wall-clock audit evidence.
+Live-owner refusal, stale-owner detection, full history and atomic persistence
+are unchanged; this does not resolve genuine large-history lock contention.

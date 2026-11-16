@@ -57615,3 +57615,17 @@ retained ASPECT prompt; no gate bypass or automatic resubmit.
 P474 installed f4b984caa with661-file parity and40combined checks/build/lint.
 API273628active, old API exited, browser/config preserved. Returned to retained
 ASPECT research with one prompt budget, no automatic retry.
+
+## 2026-11-16 — P475 connector-installation coordination diagnosis
+
+Primary isolated a two-store clock-jump regression after installed-runtime copied
+history reproduced exact interaction lock errors with3readers twice. Fresh
+fixtures required no stale lock records. Date.now elapsed checks allowed a
+wall-clock jump to exhaust a short valid wait; monotonic time fixes both stores.
+Two new forward-clock regressions were red, then green; genuine bounded-wait
+control added. Tab fixture first incorrectly expected a second process-bound
+claim to succeed; corrected assertion preserves the existing process-owned
+conflict rather than weakening ownership. Original large-history replay remains
+red on genuine contention; source clock repair is deliberately not called a full
+installation fix. No live locks/history/permissions changed. Runtime install,
+invalid-transition diagnosis and Grok/ChatGPT acceptance remain open.
