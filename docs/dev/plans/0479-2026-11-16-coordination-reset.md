@@ -1,6 +1,6 @@
 # Plan0479 | First-class idle coordination reset
 
-State: OPEN
+State: CLOSED
 Lane: P479
 Owner: primary agent
 Branch: feat/coordination-reset-20261116
@@ -57,3 +57,32 @@ Pending: source publication, scoped installed CLI activation preserving the curr
 browser runtime, installed preview and one authorized idle apply. Keep API/MCP,
 browser profiles and credentials intact. This packet does not claim the previous
 clock repair, broad WSL clock migration or web-client installation complete.
+
+## Installed and applied closeout
+
+Source f2970fea2b is published and installed into a scoped CLI carry generation.
+Three new compiled modules match source byte-for-byte.660existing compiled files
+are unchanged; the prior installed CLI entry receives only the reviewed command
+import/registration. This preserves deployed browser behavior rather than
+replacing it with other main-branch implementations. API/MCP services were not
+restarted or redirected. Source checks above apply to the new modules; they do
+not establish whole-main runtime parity.
+
+Installed preview was eligible with0blockers, using qualified StableTime. One
+installed `auracall coordination reset --yes --json` then completed successfully.
+Exact before:100774989bytes across both snapshots. After:200579bytes total
+(ledger200533, registry46),59retained recent interactions/176events/0warnings.
+1253old lease records archived. Both backup SHA256checks match; manifest state
+is applied and names both replaced files. Private installation, launcher rollback,
+apply and readback receipts remain in user-scoped deployment state, outside Git.
+API remains active at the same PID. No provider action or credential/browser data
+change occurred. The complete source/root worktree is clean after publication;
+implementation checkout retained for source integration review, not hidden implementation.
+
+Current planning audit reports46existing findings, none for this plan. Hosted CI
+was skipped under cost policy. A broad WSL clock migration, prior P478 clock fix
+integration and web-client connector installation remain separate work.
+
+The original installed-code three-reader replay against copied active state now
+passes:3/3reads,70ms total,59records,200533ledger bytes. This is a bounded observed
+sample after reset, not a long-term latency guarantee or broad clock migration.

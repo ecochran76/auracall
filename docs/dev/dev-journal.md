@@ -57663,3 +57663,10 @@ and clock qualification coverage expanded. This WSL test runner reported5stimeou
 an unchanged ledger test. Real-file integration validation uses an explicit30s
 test allowance; product wait policies are unchanged and no latency SLO is claimed. Real preview eligible:100774989bytes,25780records,
 91633events,1253leases; retain59records/176events/0warnings. No apply yet.
+
+P479 installed/applied: source f2970fea2b,3new compiled modules match source;
+660existing files preserved and only CLI entry registration patched. User CLI
+activated alone. Installed preview and one apply pass with StableTime; original
+100774989bytes reduce to200579bytes,59records/176events/0warnings. Both full
+backup checksums verified and manifest applied. API PID unchanged; browser,
+credential and provider state untouched. Private rollback and receipts retained.
