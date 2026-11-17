@@ -1429,3 +1429,46 @@ only then repeat the public same-ID reconciliation. Queue/lease settlement is
 separate from native saved-state proof. An already-open Settings buffer can hold
 unsaved input and never establishes persisted reconciliation; it remains unknown
 until the original target can be safely reopened and inspected.
+
+## Reset idle coordination state
+
+When AuraCall work is idle, use the first-class reset:
+
+```sh
+auracall coordination reset             # preview only
+auracall coordination reset --yes       # archive, then apply
+auracall coordination reset --yes --json
+```
+
+This is user-wide coordination maintenance. Stop issuing new AuraCall work before
+applying. The command refuses existing coordination locks, live tab/process-binding
+owners and profile controls not proven expired. It never kills a process or
+force-removes someone else's lock. Legacy unattributed idle leases require both
+expiry bounds to precede qualified earliest UTC; active/retiring unknown owners
+remain a blocker.
+
+The command reads the authenticated StableTime Windows authority over HTTPS using
+`~/.local/share/stable-time/client.json` (override with
+`AURACALL_STABLE_TIME_CLIENT_CONFIG`). Its pinned CA and private bearer token stay
+inside the client. Unavailable/unqualified/unbounded time stops the operation;
+there is no WSL clock fallback or client-side UTC extrapolation. UTC comparisons
+retain nanosecond precision and use the authority's conservative earliest bound.
+This slice does not migrate other existing AuraCall clock consumers.
+
+Original ledger and lease snapshots are fsynced into a private UUID directory
+under `~/.auracall/coordination-backups/`, with checksums and a StableTime manifest,
+before either active snapshot changes. Browser profiles, credentials, OAuth,
+saved conversations and retirement audit are untouched. The rolling 24-hour usage
+window, undated/future evidence and active provider warnings remain active, so a
+reset does not bypass rate limits. Orphan reserved/started records retained in
+that window become explicitly abandoned; prior outcome/unknown-effect evidence
+is retained and no success or retry is manufactured.
+
+A two-file reset is not a filesystem transaction. If replacement is interrupted,
+`partial` exits nonzero and reports the backup and applied files; inspect its
+manifest and current snapshots before any retry. Both originals remain available.
+For manual recovery, first quiesce AuraCall again; the manifest maps each archived
+filename to the matching directory under `browser-coordination/` and records
+whether it originally existed. Restore the exact archived bytes with private
+permissions; do not restore while a coordination owner is active. No automatic
+rollback, deletion of backups or provider action is performed.

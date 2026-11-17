@@ -57649,3 +57649,24 @@ Validation: focused four-file desktop selection passed23tests in11.70seconds;
 `pnpm exec tsc --noEmit`, targeted Biome lint and `git diff --check` passed.
 Hosted Actions skipped under operator policy. Linux tests include child processes
 and temporary local stores, without provider traffic or a runtime installation.
+
+## 2026-11-16 — P479 first-class idle coordination reset
+
+Operator requested a supported idle reset. New coordination reset CLI previews,
+then --yes rechecks both existing storage locks and live/process-bound owners.
+Exact private archives precede replacement; partial outcomes retain both originals
+and name changed files. Retain rolling24husage/active warnings and abandon orphan
+pending records without inventing completion. StableTime authenticated HTTPS
+client supplies finite UTC intervals; no WSL clock fallback, nanosecond comparisons.
+Initial6tests red before implementation; storage/control/identity/cache/partial
+and clock qualification coverage expanded. This WSL test runner reported5stimeouts in subsecond test bodies, including
+an unchanged ledger test. Real-file integration validation uses an explicit30s
+test allowance; product wait policies are unchanged and no latency SLO is claimed. Real preview eligible:100774989bytes,25780records,
+91633events,1253leases; retain59records/176events/0warnings. No apply yet.
+
+P479 installed/applied: source f2970fea2b,3new compiled modules match source;
+660existing files preserved and only CLI entry registration patched. User CLI
+activated alone. Installed preview and one apply pass with StableTime; original
+100774989bytes reduce to200579bytes,59records/176events/0warnings. Both full
+backup checksums verified and manifest applied. API PID unchanged; browser,
+credential and provider state untouched. Private rollback and receipts retained.

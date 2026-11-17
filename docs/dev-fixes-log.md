@@ -26616,3 +26616,13 @@ records now refuse with recovery guidance and preserve custody rather than leaki
 parse errors. This does not authorize automatic reclamation or infer a provider
 outcome. An actual preboot empty record was separately preserved and quarantined;
 the next installed inventory passed admission but failed account qualification.
+
+## 2026-11-16 — P479 idle coordination reset
+
+A supported preview/apply path archives idle coordination snapshots before reset.
+Do not equate null active owner PID with no owner: idle processBinding.processId
+also blocks while alive. Unattributed idle leases require both expiries to pass
+StableTime earliest UTC. Exact nanosecond parsing avoids premature fence expiry
+from JavaScript millisecond truncation. Backups preserve evidence; recent usage,
+unknown outcome fields and active warnings remain. Partial replacement is explicit.
+No provider, credential or browser-profile reset is included.

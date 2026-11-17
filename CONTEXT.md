@@ -350,3 +350,12 @@ retain generic failure semantics. The error does not erase earlier admitted effe
 Native-desktop operation owner metadata is flushed before atomic publication.
 Missing or invalid records retain unknown custody and refuse with explicit
 inspection guidance; atomic publication does not authorize reclaiming a lock.
+
+Idle coordination reset is an explicit user-wide maintenance action with preview
+as the default. It shares both storage locks with existing writers, rejects live
+owners (including idle process bindings) and unexpired controls, and archives exact
+private snapshots before replacement. Recent usage and active warnings persist;
+orphan work is abandoned without manufacturing provider success. Partial file
+replacement is reported with durable backup custody. Qualified finite StableTime
+Windows intervals supply provenance, conservative expiry and 24-hour retention;
+WSL wall time is not a fallback. UTC comparison retains nanosecond precision.
