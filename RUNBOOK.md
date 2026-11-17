@@ -22377,3 +22377,10 @@ Published PR[518](https://github.com/ecochran76/auracall/pull/518), open and
 mergeable; validated source681500629fb0fc0dfb1cfdd700e84ce425b893bb.
 Tracker readbacks514/515CLOSED. Memory disposition queued, job
 87e92df3-86cb-4adc-8d7b-8c3934cf2029 (acceptance only). No merge/deployment.
+
+## 2026-11-16 — P479 idle coordination reset
+
+[Plan0479](docs/dev/plans/0479-2026-11-16-coordination-reset.md) implements the
+operator-requested first-class reset. Preview/apply, exact private backups,
+current owner/control checks and StableTime interval qualification. Source and
+installed/apply outcomes remain separate until the final receipt. No hosted CI.

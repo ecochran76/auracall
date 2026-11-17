@@ -313,6 +313,7 @@ import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
 import { getAuracallHomeDir } from '../src/auracallHome.js';
+import { registerCoordinationCommand } from '../src/cli/coordinationCommand.js';
 import { BrowserAutomationClient } from '../src/browser/client.js';
 import {
   diffBrowserFeaturesContracts,
@@ -10295,6 +10296,8 @@ program
       process.exitCode = 1;
     }
   });
+
+registerCoordinationCommand(program);
 
 const profileCommand = program
   .command('profile')

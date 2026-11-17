@@ -1,3 +1,4 @@
+- P479: [first-class idle coordination reset](docs/dev/plans/0479-2026-11-16-coordination-reset.md), preview/apply with StableTime, private backup and owner guards.
 - P78 corrective diagnostic: warning-frozen interaction settlement preserves the provider-warning stop; provider-free qualification only, no warning clearance or prompt retry. See Plan0378.
 
 - P468 installed diagnostic delivery: [Plan0468](docs/dev/plans/0468-2026-10-30-desktop-control-failure-capture.md) is CLOSED; PR508 capture is installed/enabled with658-file parity and preserved issue384 fixes.29focused tests and installed fixture/MCP/API proofs pass. Await one qualified natural failure before causal diagnosis and temporary-capture cleanup.
