@@ -1,3 +1,12 @@
+## 2026-11-18 — Refresh failures must advance beyond inventory stages (#541)
+
+API inventory skips Developer-mode observation but still emits its stage label.
+The refresh method must report refresh-tools before attachment/navigation, and
+the receipt formatter must recognize it. The public CLI lifecycle regression uses
+the real adapter refresh method with an attachment failure and checks both the
+stage and unchanged unconfirmed/no-retry semantics. This fixes attribution only;
+it does not establish why the historical live refresh timed out.
+
 ## 2026-10-31 — Preserve local quota failures through history paging and sharing
 
 A scrolling loop can mistake blocked history loading for provider exhaustion.
