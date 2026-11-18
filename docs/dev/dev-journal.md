@@ -1,3 +1,14 @@
+## 2026-11-18 — Issue541 refresh-stage attribution repair
+
+Lane issue541-stage owns the isolated fix/issue541-refresh-stage checkout;
+source baseline origin/main 6bcbb9b60. Active attachment-admission checkout stays
+untouched. Write set: developer-app adapter stage union/entry, CLI formatter,
+one regression and these records. Real adapter-to-CLI regression is red before
+repair: skipped Developer-mode check remains the last reported stage when the
+refresh attachment fails. Emit refresh-tools at method entry and preserve that
+stage in error receipts. 81 focused tests, scoped lint and full typecheck pass. No live refresh,
+installation, prompt or acquisition. Historical timeout cause remains open.
+
 ## 2026-10-31 — Defer uncertain Grok contracts; integrate spec513
 
 Operator deferred409/411/477; tracker bodies preserve their criteria and require

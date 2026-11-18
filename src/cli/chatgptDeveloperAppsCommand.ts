@@ -94,6 +94,7 @@ export function formatChatgptDeveloperAppListFailure(
 		"inventory",
 		"developer-mode",
 		"restore-navigation",
+		"refresh-tools",
 		"browser-resolution",
 		"utility-admission",
 		"interaction-admission",

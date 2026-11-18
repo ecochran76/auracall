@@ -1,3 +1,13 @@
+## 2026-11-18 — Issue541-stage source repair
+
+Owner: primary issue541-stage; isolated fix/issue541-refresh-stage from current
+origin/main 6bcbb9b60. Other attachment-admission lane remains untouched.
+Bounded adapter/formatter/regression patch; no installed or provider effects.
+Red captured at actual adapter-to-CLI seam. 81 focused tests, scoped lint and full typecheck pass. Review
+against issue541 and repository standards before integration. Private reports:
+~/.local/state/litscout/pr135-release/stage-test-{red,green}.json and stage-*.log.
+Historical timeout/unknown provider outcome remain open; no refresh retry.
+
 ## 2026-10-30 — Desktop ownership capture installed and enabled
 
 PR508/372465aaf source10c4e06c5 is active for CLI/MCP/API with658-file parity.

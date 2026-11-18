@@ -4,6 +4,17 @@ work_item_tracking: optional
 historical_catalog: docs/dev/lane-history/2026-10-29-pre-reconciliation.yaml
 reconciliation_plan: docs/dev/plans/0465-2026-10-29-repository-reconciliation.md
 lanes:
+  - id: issue541-stage
+    objective: Correct refresh-tools failure attribution without retrying the historical refresh.
+    branch: fix/issue541-refresh-stage
+    target: main
+    custody_state: INTEGRATION_READY
+    worktree: /tmp/auracall541-stage
+    work_items: [ecochran76/auracall#541]
+    owner: primary
+    validation_status: 81-focused-tests-scoped-lint-and-typecheck-pass
+    disposition: Isolated source-only repair; attachment-admission lane and installed runtime unchanged.
+    updated_at: 2026-11-18
   - id: P18
     objective: Adopt integrated history-materialization fairness into the installed runtime and prove one bounded wsl-chrome-3 pass without resuming continuous live follow.
     plan: docs/dev/plans/0325-2026-09-01-installed-history-materialization-fairness-canary.md
