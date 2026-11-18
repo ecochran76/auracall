@@ -8,12 +8,11 @@ lanes:
     objective: Correct refresh-tools failure attribution without retrying the historical refresh.
     branch: fix/issue541-refresh-stage
     target: main
-    custody_state: INTEGRATION_READY
-    worktree: /tmp/auracall541-stage
+    custody_state: INTEGRATED
     work_items: [ecochran76/auracall#541]
     owner: primary
     validation_status: 81-focused-tests-scoped-lint-and-typecheck-pass
-    disposition: Isolated source-only repair; attachment-admission lane and installed runtime unchanged.
+    disposition: PR542 merged at 2b02c8d90; temporary checkout closes after this receipt. Active attachment-admission lane and installed runtime unchanged.
     updated_at: 2026-11-18
   - id: P18
     objective: Adopt integrated history-materialization fairness into the installed runtime and prove one bounded wsl-chrome-3 pass without resuming continuous live follow.

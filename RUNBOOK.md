@@ -1,3 +1,12 @@
+## 2026-11-18 — Issue541-stage merged closeout
+
+PR542 merged at 2b02c8d90. Real adapter-to-CLI red/green regression,81focused
+tests, scoped lint, full typecheck and separate Standards/Spec review pass.
+Source-only diagnostic labeling repair; issue541 stays open for the historical
+stall. Temporary checkout removed after this receipt integrates; source branch
+and exact validation artifacts retained. Active attachment-admission checkout,
+installed runtime, browser and original unconfirmed refresh remain untouched.
+
 ## 2026-11-18 — Issue541-stage source repair
 
 Owner: primary issue541-stage; isolated fix/issue541-refresh-stage from current
