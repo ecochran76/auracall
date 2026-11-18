@@ -6,7 +6,7 @@ untouched. Write set: developer-app adapter stage union/entry, CLI formatter,
 one regression and these records. Real adapter-to-CLI regression is red before
 repair: skipped Developer-mode check remains the last reported stage when the
 refresh attachment fails. Emit refresh-tools at method entry and preserve that
-stage in error receipts. 81 focused tests and scoped lint pass; typecheck pending. No live refresh,
+stage in error receipts. 81 focused tests, scoped lint and full typecheck pass. No live refresh,
 installation, prompt or acquisition. Historical timeout cause remains open.
 
 ## 2026-10-31 — Defer uncertain Grok contracts; integrate spec513

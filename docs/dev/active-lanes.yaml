@@ -8,11 +8,11 @@ lanes:
     objective: Correct refresh-tools failure attribution without retrying the historical refresh.
     branch: fix/issue541-refresh-stage
     target: main
-    custody_state: ACTIVE_WORKTREE
+    custody_state: INTEGRATION_READY
     worktree: /tmp/auracall541-stage
     work_items: [ecochran76/auracall#541]
     owner: primary
-    validation_status: 81-focused-tests-and-scoped-lint-pass-typecheck-pending
+    validation_status: 81-focused-tests-scoped-lint-and-typecheck-pass
     disposition: Isolated source-only repair; attachment-admission lane and installed runtime unchanged.
     updated_at: 2026-11-18
   - id: P18
