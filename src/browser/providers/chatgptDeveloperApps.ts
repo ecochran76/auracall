@@ -142,7 +142,8 @@ export type DeveloperAppInventoryStage =
 	| "attachment"
 	| "inventory"
 	| "developer-mode"
-	| "restore-navigation";
+	| "restore-navigation"
+	| "refresh-tools";
 export type DeveloperAppBrowserOptions = DeveloperAppSubmissionOptions & {
 	onInventoryStage?: (stage: DeveloperAppInventoryStage) => void;
 };
@@ -475,6 +476,7 @@ export class ChatgptDeveloperAppBrowserAdapter {
 		app: ChatgptDeveloperAppBrowserTarget,
 		serverUrl: string,
 	): Promise<ChatgptDeveloperAppBrowserMutationOutcome> {
+		this.submissionOptions.onInventoryStage?.("refresh-tools");
 		const client = await this.ensureClient();
 		const budgetWaitMs = resolveChatgptBackendRequestBudgetWaitMs(
 			this.browser.userConfig as Record<string, unknown>,
