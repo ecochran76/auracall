@@ -1,3 +1,14 @@
+## 2026-11-18 — Issue541 labeling repair deployed
+
+PR542 source repair is installed in user-runtime-issue541-preserved-4387e49e2.
+Exact incumbent package/dependencies and carried patches preserved;21,786files,
+only2reviewed JavaScript changes. Source rebuilds failed broader parity and were
+not promoted.88focused tests/full build, actual installed failure-stage regression
+and compiled desktops contract pass. CLI/MCP launchers promoted; API restarted.
+No live refresh, prompt, OAuth or acquisition. Historical timeout remains open.
+Receipt: docs/dev/notes/issue541-deployment.json. Temporary deployment checkout
+closes with remote source/receipt custody; active attachment lane stays intact.
+
 ## 2026-11-18 — Issue541 refresh-stage attribution repair
 
 Lane issue541-stage owns the isolated fix/issue541-refresh-stage checkout;
