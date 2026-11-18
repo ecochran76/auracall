@@ -1,0 +1,41 @@
+{
+  "status": "DEPLOYED",
+  "fix_pr": 542,
+  "fix_merge": "2b02c8d90b3bee3ba53f822833d53bdb64d31466",
+  "validated_source": "4387e49e2",
+  "baseline_runtime": "user-runtime-coordination-reset-f2970fea2b",
+  "installed_runtime": "user-runtime-issue541-preserved-4387e49e2",
+  "assembly": "Preserve incumbent package/dependencies and carried patches byte for byte; apply only reviewed compiled adapter stage entry and CLI stage allowlist insertions. Full source rebuild alone failed parity and was not promoted.",
+  "parity": {
+    "baseline_files": 21786,
+    "candidate_files": 21786,
+    "changed": [
+      "node_modules/auracall/dist/src/browser/providers/chatgptDeveloperApps.js",
+      "node_modules/auracall/dist/src/cli/chatgptDeveloperAppsCommand.js"
+    ],
+    "added": [],
+    "removed": [],
+    "metadata_copy_verified": true
+  },
+  "validation": {
+    "focused_tests_passed": 88,
+    "build_exit": 0,
+    "installed_regression": "PASS; refresh-tools stage, unconfirmed, retrySafe=false;0provider requests",
+    "compiled_desktops_contract": "PASS"
+  },
+  "limitations": [
+    "No live refresh retried",
+    "Historical refresh timeout remains unresolved"
+  ],
+  "reference_utc": "2026-11-18T21:22:20.021696516Z",
+  "runtime_verification": {
+    "api_status": {
+      "http": 200,
+      "ok": true,
+      "version": "0.1.1"
+    },
+    "api_process": "MainPID=3606632\nActiveState=active",
+    "config_preserved": true,
+    "old_api_present": false
+  }
+}
